@@ -1,0 +1,8 @@
+
+{
+  "name": "LEVELMAK Pro",
+  "description": "Plateforme d'excellence éducative propulsée par l'intelligence artificielle Gemini.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

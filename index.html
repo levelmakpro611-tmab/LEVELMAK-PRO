@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>LevelMak Pro</title>
+    <script src="https://meet.jit.si/external_api.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/index.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            DEFAULT: '#3B82F6',
+                            dark: '#2563EB',
+                            light: '#60A5FA',
+                        },
+                        secondary: {
+                            DEFAULT: '#8B5CF6',
+                            dark: '#7C3AED',
+                            light: '#A78BFA',
+                        },
+                        accent: '#F59E0B',
+                        success: '#10B981',
+                        danger: '#EF4444',
+                        background: '#0F172A',
+                        card: '#1E293B',
+                    },
+                    boxShadow: {
+                        'premium': '0 20px 50px -12px rgba(0, 0, 0, 0.5)',
+                        'glow': '0 0 20px rgba(59, 130, 246, 0.3)',
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Force hide scrollbars and overflow globally */
+        html,
+        body {
+            overflow: hidden !important;
+            height: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #0F172A !important;
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+        }
+
+        /* Target all elements for scrollbar removal */
+        * {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+        }
+
+        *::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        #root {
+            height: 100% !important;
+            width: 100% !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
+</head>
+
+
+<body class="bg-background text-slate-100 min-h-screen selection:bg-primary/30 selection:text-white">
+    <!-- Decorative Background Elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div
+            class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse">
+        </div>
+        <div class="absolute top-[20%] -right-[5%] w-[35%] h-[35%] bg-secondary/20 rounded-full blur-[100px] animate-bounce"
+            style="animation-duration: 10s"></div>
+        <div class="absolute -bottom-[10%] left-[20%] w-[30%] h-[30%] bg-accent/10 rounded-full blur-[80px]"></div>
+        <div
+            class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay">
+        </div>
+    </div>
+
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>
