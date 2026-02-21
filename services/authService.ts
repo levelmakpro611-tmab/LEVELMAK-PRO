@@ -71,6 +71,7 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
             onboardingCompleted: false
         };
 
+        console.log('Inserting new profile for ID:', newUser.id);
         const { error: insertError } = await supabase
             .from('profiles')
             .upsert({
