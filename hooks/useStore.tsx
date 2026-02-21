@@ -205,141 +205,149 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Consolidated initialization effect
   useEffect(() => {
     const initializeApp = async () => {
-      // 1. Load User from localStorage
-      const storedUser = localStorage.getItem('levelmak_user');
-      let loadedUser: User | null = null;
+      try {
+        // 1. Load User from localStorage
+        const storedUser = localStorage.getItem('levelmak_user');
+        let loadedUser: User | null = null;
 
-      if (storedUser) {
-        try {
-          loadedUser = JSON.parse(storedUser);
-          if (loadedUser) {
-            // Streak Logic
-            const now = new Date();
-            const lastLogin = loadedUser.streak?.lastLogin ? new Date(loadedUser.streak.lastLogin) : null;
+        if (storedUser) {
+          try {
+            loadedUser = JSON.parse(storedUser);
+            if (loadedUser) {
+              // Streak Logic
+              const now = new Date();
+              const lastLogin = loadedUser.streak?.lastLogin ? new Date(loadedUser.streak.lastLogin) : null;
 
-            if (lastLogin) {
-              const diffInMs = now.getTime() - lastLogin.getTime();
-              const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+              if (lastLogin) {
+                const diffInMs = now.getTime() - lastLogin.getTime();
+                const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-              if (diffInDays === 1) {
-                loadedUser.streak = {
-                  current: (loadedUser.streak?.current || 0) + 1,
-                  lastLogin: now.toISOString()
-                };
-                loadedUser.levelCoins = (loadedUser.levelCoins || 0) + 10;
-              } else if (diffInDays > 1) {
+                if (diffInDays === 1) {
+                  loadedUser.streak = {
+                    current: (loadedUser.streak?.current || 0) + 1,
+                    lastLogin: now.toISOString()
+                  };
+                  loadedUser.levelCoins = (loadedUser.levelCoins || 0) + 10;
+                } else if (diffInDays > 1) {
+                  loadedUser.streak = { current: 1, lastLogin: now.toISOString() };
+                }
+              } else {
                 loadedUser.streak = { current: 1, lastLogin: now.toISOString() };
               }
-            } else {
-              loadedUser.streak = { current: 1, lastLogin: now.toISOString() };
+
+              setUser(loadedUser);
+              localStorage.setItem('levelmak_user', JSON.stringify(loadedUser));
             }
-
-            setUser(loadedUser);
-            localStorage.setItem('levelmak_user', JSON.stringify(loadedUser));
+          } catch (error) {
+            console.error('Error parsing stored user:', error);
+            localStorage.removeItem('levelmak_user');
           }
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-          localStorage.removeItem('levelmak_user');
         }
-      }
 
-      // 2. Load Missions
-      setMissions([
-        { id: 'm1', title: 'Premier Quiz', description: 'Génère et complète ton premier quiz', rewardXp: 100, completed: false, type: 'quiz' },
-        { id: 'm2', title: 'Lecteur Assidu', description: 'Lis pendant 10 minutes', rewardXp: 50, completed: false, type: 'reading' },
-      ]);
-
-      // 3. Load Books
-      const storedBooks = localStorage.getItem('levelmak_books');
-      if (storedBooks) {
-        try {
-          setBooks(JSON.parse(storedBooks));
-        } catch (e) {
-          console.error("Error loading books", e);
-        }
-      } else {
-        setBooks([
-          { id: 'b1', title: 'L\'Enfant Noir', author: 'Camara Laye', category: 'Littérature Africaine', cover: 'https://picsum.photos/seed/book1/200/300', description: 'Un classique de la littérature africaine.', uri: 'https://www.google.fr/books/edition/L_enfant_noir/XW_uAAAAMAAJ' },
-          { id: 'b2', title: 'Les Contes d\'Amadou Koumba', author: 'Birago Diop', category: 'Contes', cover: 'https://picsum.photos/seed/book2/200/300', description: 'Recueil de contes traditionnels.', uri: 'https://www.google.fr/books/edition/Les_contes_d_Amadou_Koumba/n3_uAAAAMAAJ' },
+        // 2. Load Missions
+        setMissions([
+          { id: 'm1', title: 'Premier Quiz', description: 'Génère et complète ton premier quiz', rewardXp: 100, completed: false, type: 'quiz' },
+          { id: 'm2', title: 'Lecteur Assidu', description: 'Lis pendant 10 minutes', rewardXp: 50, completed: false, type: 'reading' },
         ]);
-      }
 
-      // 4. Load Stories
-      const storedStories = localStorage.getItem('levelmak_stories');
-      if (storedStories) {
-        try {
-          setStories(JSON.parse(storedStories));
-        } catch (e) {
-          console.error("Error loading stories", e);
+        // 3. Load Books
+        const storedBooks = localStorage.getItem('levelmak_books');
+        if (storedBooks) {
+          try {
+            setBooks(JSON.parse(storedBooks));
+          } catch (e) {
+            console.error("Error loading books", e);
+          }
+        } else {
+          setBooks([
+            { id: 'b1', title: 'L\'Enfant Noir', author: 'Camara Laye', category: 'Littérature Africaine', cover: 'https://picsum.photos/seed/book1/200/300', description: 'Un classique de la littérature africaine.', uri: 'https://www.google.fr/books/edition/L_enfant_noir/XW_uAAAAMAAJ' },
+            { id: 'b2', title: 'Les Contes d\'Amadou Koumba', author: 'Birago Diop', category: 'Contes', cover: 'https://picsum.photos/seed/book2/200/300', description: 'Recueil de contes traditionnels.', uri: 'https://www.google.fr/books/edition/Les_contes_d_Amadou_Koumba/n3_uAAAAMAAJ' },
+          ]);
         }
-      }
 
-      // 5. Load Flashcards & Decks
-      const storedFlashcards = localStorage.getItem('levelmak_flashcards');
-      const storedDecks = localStorage.getItem('levelmak_decks');
-      if (storedFlashcards) {
-        try {
-          setFlashcards(JSON.parse(storedFlashcards));
-        } catch (e) { console.error("Error loading flashcards", e); }
-      }
-      if (storedDecks) {
-        try {
-          setDecks(JSON.parse(storedDecks));
-        } catch (e) { console.error("Error loading decks", e); }
-      }
-
-      // 6. Load Settings
-      const storedSettings = localStorage.getItem('levelmak_settings');
-      if (storedSettings) {
-        try {
-          const parsed = JSON.parse(storedSettings);
-          setSettings(prev => ({ ...prev, ...parsed }));
-        } catch (e) {
-          console.error("Error loading settings", e);
+        // 4. Load Stories
+        const storedStories = localStorage.getItem('levelmak_stories');
+        if (storedStories) {
+          try {
+            setStories(JSON.parse(storedStories));
+          } catch (e) {
+            console.error("Error loading stories", e);
+          }
         }
-      }
 
-      // 7. Load Quizzes
-      const storedQuizzes = localStorage.getItem('levelmak_quizzes');
-      if (storedQuizzes) {
-        try {
-          setQuizzes(JSON.parse(storedQuizzes));
-        } catch (e) {
-          console.error("Error loading quizzes", e);
+        // 5. Load Flashcards & Decks
+        const storedFlashcards = localStorage.getItem('levelmak_flashcards');
+        const storedDecks = localStorage.getItem('levelmak_decks');
+        if (storedFlashcards) {
+          try {
+            setFlashcards(JSON.parse(storedFlashcards));
+          } catch (e) { console.error("Error loading flashcards", e); }
         }
-      }
-
-      // 8. Load Study Plan
-      const storedPlan = localStorage.getItem('levelmak_study_plan');
-      if (storedPlan) {
-        try {
-          setStudyPlan(JSON.parse(storedPlan));
-        } catch (e) {
-          console.error("Error loading study plan", e);
+        if (storedDecks) {
+          try {
+            setDecks(JSON.parse(storedDecks));
+          } catch (e) { console.error("Error loading decks", e); }
         }
+
+        // 6. Load Settings
+        const storedSettings = localStorage.getItem('levelmak_settings');
+        if (storedSettings) {
+          try {
+            const parsed = JSON.parse(storedSettings);
+            setSettings(prev => ({ ...prev, ...parsed }));
+          } catch (e) {
+            console.error("Error loading settings", e);
+          }
+        }
+
+        // 7. Load Quizzes
+        const storedQuizzes = localStorage.getItem('levelmak_quizzes');
+        if (storedQuizzes) {
+          try {
+            setQuizzes(JSON.parse(storedQuizzes));
+          } catch (e) {
+            console.error("Error loading quizzes", e);
+          }
+        }
+
+        // 8. Load Study Plan
+        const storedPlan = localStorage.getItem('levelmak_study_plan');
+        if (storedPlan) {
+          try {
+            setStudyPlan(JSON.parse(storedPlan));
+          } catch (e) {
+            console.error("Error loading study plan", e);
+          }
+        }
+
+        // 9. Load Daily Content
+        try {
+          const [{ cacheService }, { geminiService }] = await Promise.all([
+            import('../services/cache'),
+            import('../services/gemini')
+          ]);
+
+          setDailyVocab(prev => ({ ...prev, loading: true }));
+          cacheService.getDailyVocab(async () => {
+            return await geminiService.getDailyVocabulary([], settings.language);
+          }, settings.language).then(words => {
+            setDailyVocab({ words, loading: false });
+          }).catch(() => setDailyVocab(prev => ({ ...prev, loading: false })));
+
+          setDailyMotivation(prev => ({ ...prev, loading: true }));
+          cacheService.getDailyMotivation(async () => {
+            return await geminiService.getDailyMotivation([], settings.language);
+          }, settings.language).then(data => {
+            setDailyMotivation({ ...data, loading: false });
+          }).catch(() => setDailyMotivation(prev => ({ ...prev, loading: false })));
+        } catch (error) {
+          console.error("Failed to load dynamic services:", error);
+        }
+      } catch (error) {
+        console.error("Global app initialization failed:", error);
+      } finally {
+        setLoading(false);
       }
-
-      // 9. Load Daily Content
-      const [{ cacheService }, { geminiService }] = await Promise.all([
-        import('../services/cache'),
-        import('../services/gemini')
-      ]);
-
-      setDailyVocab(prev => ({ ...prev, loading: true }));
-      cacheService.getDailyVocab(async () => {
-        return await geminiService.getDailyVocabulary([], settings.language);
-      }, settings.language).then(words => {
-        setDailyVocab({ words, loading: false });
-      }).catch(() => setDailyVocab(prev => ({ ...prev, loading: false })));
-
-      setDailyMotivation(prev => ({ ...prev, loading: true }));
-      cacheService.getDailyMotivation(async () => {
-        return await geminiService.getDailyMotivation([], settings.language);
-      }, settings.language).then(data => {
-        setDailyMotivation({ ...data, loading: false });
-      }).catch(() => setDailyMotivation(prev => ({ ...prev, loading: false })));
-
-      setLoading(false);
     };
 
     initializeApp();
