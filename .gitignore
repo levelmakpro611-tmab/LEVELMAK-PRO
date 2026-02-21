@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Mobile build folders (heavy, not needed for web deploy)
+android/
+ios/
+
 # Environment variables
 .env
 .env.local
