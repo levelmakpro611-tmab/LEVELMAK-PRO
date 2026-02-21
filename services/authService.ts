@@ -12,7 +12,7 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 
         if (error && error.code !== 'PGRST116') {
             console.error('Error fetching profile:', error);
-            return null;
+            throw new Error(`Erreur Base de Données (Profil) : ${error.message}. Vérifiez que la table 'profiles' existe.`);
         }
 
         if (profile) {
@@ -90,6 +90,7 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 
         if (insertError) {
             console.error('Error creating profile:', insertError);
+            throw new Error(`Échec de création du profil : ${insertError.message}. Vos identifiants auth sont créés mais le profil a échoué.`);
         }
 
         return newUser;
@@ -165,18 +166,15 @@ export const signUpWithPhone = async (
     realEmail?: string
 ): Promise<User | null> => {
     try {
-        // On utilise TOUJOURS l'email fictif basé sur le téléphone pour l'Auth Supabase 
-        // afin que la connexion par numéro (signInWithPhone) soit toujours cohérente.
-        const authEmail = `${phone.replace(/\D/g, '')}@levelmak.local`;
+        const email = realEmail || `${phone.replace(/\D/g, '')}@levelmak.local`;
 
         const { data, error } = await supabase.auth.signUp({
-            email: authEmail,
+            email,
             password,
             options: {
                 data: {
                     name,
                     phone,
-                    email: realEmail, // On stocke le vrai email dans les métadonnées
                     gender,
                     age_range: ageRange
                 }
