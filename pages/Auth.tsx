@@ -86,14 +86,14 @@ const Auth: React.FC = () => {
           } catch (loginError: any) {
             console.log('Admin auto-creation needed...');
             try {
-              await registerWithPhone(
-                'Administrateur Principal',
-                phone.trim(),
-                'admin@levelmak.pro',
+              await registerWithPhone({
+                name: 'Administrateur Principal',
+                phone: phone.trim(),
+                email: 'admin@levelmak.pro',
                 password,
-                'HOMME',
-                '24+'
-              );
+                gender: 'HOMME',
+                ageRange: '24+'
+              });
               console.log('Admin created and logged in');
               return;
             } catch (registerError: any) {
