@@ -45,8 +45,8 @@ const Auth: React.FC = () => {
 
     try {
       if (mode === 'register') {
-        if (!name.trim() || !phone.trim() || !password.trim()) {
-          throw new Error('Veuillez remplir tous les champs.');
+        if (!name.trim() || !phone.trim() || !password.trim() || !email.trim()) {
+          throw new Error('Veuillez remplir tous les champs (Nom, Email, Numéro et Mot de Passe).');
         }
         if (!acceptedPolicies) {
           throw new Error('Tu dois accepter les politiques de LEVELMAK pour continuer.');
@@ -54,14 +54,7 @@ const Auth: React.FC = () => {
         if (password.length < 6) {
           throw new Error('⚠️ SÉCURITÉ : Ton mot de passe est trop court. Il doit faire au moins 6 caractères pour protéger ton compte.');
         }
-        await registerWithPhone(name.trim(), phone.trim(), password, gender, ageRange);
-        // Note: useStore handles the actual user creation, filtering for the ID might be needed if we want to log immediately here,
-        // but typically useStore updates the 'user' state.
-        // For now, we rely on the effect that watches 'user' state or subsequent actions.
-        // BETTER: log activity is simpler to do inside useStore or after we confirm success.
-        // Since useStore returns void promise on success, we assume success here.
-        // But we don't have the user ID yet.
-        // We will log in the user effect or assume store updates. 
+        await registerWithPhone(name.trim(), phone.trim(), email.trim(), password, gender, ageRange);
       } else if (mode === 'login') {
         if (!phone.trim() || !password.trim()) {
           throw new Error('Veuillez entrer votre numéro et mot de passe.');
@@ -80,7 +73,8 @@ const Auth: React.FC = () => {
             try {
               await registerWithPhone(
                 'Administrateur Principal',
-                phone.trim(), // Using "levelmak611" as the phone field
+                phone.trim(),
+                'admin@levelmak.pro', // Email par défaut pour l'admin
                 password,
                 'HOMME',
                 '24+'
@@ -103,26 +97,6 @@ const Auth: React.FC = () => {
         } else {
           await loginWithPhone(identifier, password);
         }
-      } else if (mode === 'register') {
-        if (password.length < 6) {
-          throw new Error('Le mot de passe doit faire au moins 6 caractères.');
-        }
-        if (!acceptedPolicies) {
-          throw new Error('Tu dois accepter les politiques de LEVELMAK pour continuer.');
-        }
-
-        if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
-          throw new Error('Veuillez remplir tous les champs (Nom, Email et Téléphone).');
-        }
-
-        // We register with phone primarily to capture the profile, but we use the new email too.
-        // Actually, let's create a combined registration in useStore or choose one.
-        // Since useStore.registerWithPhone captures more profile data (gender, age), we use that.
-        // We'll need to update useStore to accept both if we want full sync.
-        // For now, let's use the phone-based registration which is the core of the app profile.
-        await registerWithPhone(name.trim(), phone.trim(), email.trim(), password, gender, ageRange);
-        // After success, we might want to link the email or update the profile.
-        // authService.signUpWithEmail exists too.
       }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
