@@ -165,15 +165,18 @@ export const signUpWithPhone = async (
     realEmail?: string
 ): Promise<User | null> => {
     try {
-        const email = realEmail || `${phone.replace(/\D/g, '')}@levelmak.local`;
+        // On utilise TOUJOURS l'email fictif basé sur le téléphone pour l'Auth Supabase 
+        // afin que la connexion par numéro (signInWithPhone) soit toujours cohérente.
+        const authEmail = `${phone.replace(/\D/g, '')}@levelmak.local`;
 
         const { data, error } = await supabase.auth.signUp({
-            email,
+            email: authEmail,
             password,
             options: {
                 data: {
                     name,
                     phone,
+                    email: realEmail, // On stocke le vrai email dans les métadonnées
                     gender,
                     age_range: ageRange
                 }
