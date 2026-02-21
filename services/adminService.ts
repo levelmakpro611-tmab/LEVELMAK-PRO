@@ -9,8 +9,24 @@ import {
     User,
     Report,
     SecurityLog,
-    ShopItem
+    ShopItem,
+    AdminUserAnalytics
 } from '../types';
+import { db } from './firebase';
+import {
+    collection,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    doc,
+    Timestamp,
+    query,
+    where,
+    getDocs,
+    orderBy,
+    limit,
+    serverTimestamp
+} from 'firebase/firestore';
 
 // ========== CONSTANTS ==========
 const ADMIN_USERNAME = 'levelmak611';
@@ -532,14 +548,13 @@ export const getReports = async (limitCount: number = 50): Promise<Report[]> => 
             id: r.id,
             reporterId: r.reporter_id,
             targetId: r.target_id,
-            targetType: r.target_type,
+            type: (r.target_type as Report['type']) || 'user',
             reason: r.reason,
-            details: r.details,
             status: r.status,
             adminNote: r.admin_note,
             resolvedAt: r.resolved_at,
             timestamp: r.timestamp
-        } as Report));
+        }));
     } catch (error) {
         console.error('Error getting reports:', error);
         return [];

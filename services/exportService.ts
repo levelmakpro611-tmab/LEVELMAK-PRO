@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { Document, Packer, Paragraph, TextRun, Table, TableCell, TableRow, HeadingLevel } from 'docx';
-import { AdminStats, UserAnalytics, UserComment, PlatformRating } from '../types';
+import { AdminStats, UserAnalytics, UserComment, PlatformRating, AdminUserAnalytics } from '../types';
 
 // ========== PDF EXPORT ==========
 
@@ -50,7 +50,7 @@ export const exportStatsToPDF = (stats: AdminStats, period: string): void => {
     doc.save(`levelmak-stats-${period}-${Date.now()}.pdf`);
 };
 
-export const exportUsersToPDF = (users: UserAnalytics[]): void => {
+export const exportUsersToPDF = (users: AdminUserAnalytics[]): void => {
     const doc = new jsPDF('landscape');
 
     doc.setFontSize(20);
@@ -157,7 +157,7 @@ export const exportStatsToExcel = (stats: AdminStats, period: string): void => {
     XLSX.writeFile(workbook, `levelmak-stats-${period}-${Date.now()}.xlsx`);
 };
 
-export const exportUsersToExcel = (users: UserAnalytics[]): void => {
+export const exportUsersToExcel = (users: AdminUserAnalytics[]): void => {
     const worksheetData = [
         ['LEVELMAK - Liste des Utilisateurs'],
         [`Total: ${users.length} utilisateurs`],
@@ -174,10 +174,10 @@ export const exportUsersToExcel = (users: UserAnalytics[]): void => {
             u.ageRange || 'N/A',
             u.gender || 'N/A',
             u.education || 'N/A',
-            u.level,
-            u.xp,
-            u.quizzesCompleted,
-            u.storiesWritten,
+            String(u.level),
+            String(u.xp),
+            String(u.quizzesCompleted),
+            String(u.storiesWritten),
             new Date(u.registrationDate).toLocaleDateString('fr-FR'),
             new Date(u.lastActive).toLocaleDateString('fr-FR')
         ]);
@@ -204,7 +204,7 @@ export const exportCommentsToExcel = (comments: UserComment[]): void => {
             c.userName,
             c.userPhone || 'N/A',
             c.category,
-            c.rating,
+            String(c.rating),
             c.content,
             c.status,
             c.adminResponse || '',
@@ -242,8 +242,8 @@ export const exportStatsToWord = async (stats: AdminStats, period: string): Prom
                     rows: [
                         new TableRow({
                             children: [
-                                new TableCell({ children: [new Paragraph({ text: 'Métrique', bold: true })] }),
-                                new TableCell({ children: [new Paragraph({ text: 'Valeur', bold: true })] })
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Métrique', bold: true })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Valeur', bold: true })] })] })
                             ]
                         }),
                         createStatsRow('Utilisateurs totaux', stats.totalUsers.toString()),

@@ -323,7 +323,7 @@ const AdminDashboard: React.FC = () => {
 // Overview Tab
 interface OverviewTabProps {
     stats: AdminStats;
-    users: UserAnalytics[];
+    users: AdminUserAnalytics[];
     comments: UserComment[];
     averageRatings: any;
 }
