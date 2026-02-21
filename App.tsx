@@ -94,7 +94,7 @@ const AppContent: React.FC = () => {
 
   // Check if user is admin (username: levelmak611)
   const isAdmin = user.name?.toLowerCase() === 'administrateur principal' ||
-    user.phone === 'levelmak611' ||
+    user.phoneNumber === 'levelmak611' ||
     user.email?.includes('levelmak611');
   if (isAdmin) {
     return <AdminDashboard />;

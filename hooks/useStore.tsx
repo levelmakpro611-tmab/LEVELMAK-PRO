@@ -530,7 +530,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const loginWithPhone = useCallback(async (phone: string, password: string) => {
     try {
       setLoading(true);
-      const { signInWithPhone } = await import('../services/authService');
       const loggedUser = await signInWithPhone(phone, password);
       if (loggedUser) {
         if (loggedUser.status && loggedUser.status !== 'active') {
