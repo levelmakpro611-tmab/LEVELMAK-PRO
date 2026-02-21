@@ -1,4 +1,4 @@
-# 🚀 LEVELMAK - Plateforme Éducative avec IA
+# 🚀 LEVELMAK - Plateforme Éducative avec IA (Vercel)
 
 Une plateforme d'apprentissage interactive propulsée par l'intelligence artificielle, avec authentification Firebase et génération de contenu par Gemini AI.
 
