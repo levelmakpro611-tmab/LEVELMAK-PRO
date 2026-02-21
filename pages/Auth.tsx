@@ -52,7 +52,7 @@ const Auth: React.FC = () => {
           throw new Error('Tu dois accepter les politiques de LEVELMAK pour continuer.');
         }
         if (password.length < 6) {
-          throw new Error('Le mot de passe doit faire au moins 6 caractères.');
+          throw new Error('⚠️ SÉCURITÉ : Ton mot de passe est trop court. Il doit faire au moins 6 caractères pour protéger ton compte.');
         }
         await registerWithPhone(name.trim(), phone.trim(), password, gender, ageRange);
         // Note: useStore handles the actual user creation, filtering for the ID might be needed if we want to log immediately here,
