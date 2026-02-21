@@ -163,23 +163,20 @@ export const signInWithGoogle = async (): Promise<User | null> => {
     }
 };
 
-// Sign up with Phone (Note: Supabase handles phone auth differently, but for Levelmak pro we use derived emails as before for simplicity OR real phone auth)
-export const signUpWithPhone = async (
+// Sign up with Phone
+export const signUpWithPhone = async (params: {
     name: string,
     phone: string,
     password: string,
     gender: 'HOMME' | 'FEMME',
     ageRange: '15-18' | '19-23' | '24+',
     realEmail?: string
-): Promise<User | null> => {
+}): Promise<User | null> => {
+    const { name, phone, password, gender, ageRange, realEmail } = params;
     try {
-        console.log('--- DEBUG signUpWithPhone ---');
-        console.log('Name received:', name ? 'YES' : 'NO');
-        console.log('Phone received:', phone ? 'YES' : 'NO');
+        console.log('--- DEBUG signUpWithPhone (NAMED PARAMS) ---');
         console.log('Password length:', password?.length);
-        console.log('Gender received:', gender);
-        console.log('AgeRange received:', ageRange);
-        console.log('RealEmail received:', realEmail);
+        console.log('Gender:', gender);
 
         const email = realEmail || `${phone.replace(/\D/g, '')}@levelmak.local`;
 

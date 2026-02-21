@@ -60,7 +60,14 @@ const Auth: React.FC = () => {
         if (password.length < 6) {
           throw new Error('⚠️ SÉCURITÉ : Ton mot de passe est trop court. Il doit faire au moins 6 caractères pour protéger ton compte.');
         }
-        await registerWithPhone(name.trim(), phone.trim(), email.trim(), password, gender, ageRange);
+        await registerWithPhone({
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          password,
+          gender,
+          ageRange
+        });
         console.log('Inscription réussie !');
       } else if (mode === 'login') {
         console.log('Tentative de connexion...');
@@ -203,18 +210,7 @@ const Auth: React.FC = () => {
             </div>
           )}
 
-          {error && (
-            <div className="p-4 bg-red-500/20 border-2 border-red-500 rounded-2xl text-red-500 text-center text-xs font-black animate-shake shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Sparkles size={14} />
-                <span>ERREUR D'INSCRIPTION</span>
-              </div>
-              {error}
-              <div className="mt-2 text-[9px] opacity-70">
-                Vérifiez votre connexion ou contactez le support si le problème persiste.
-              </div>
-            </div>
-          )}
+
 
           {mode === 'forgot' ? (
             <div className="space-y-6">
@@ -469,20 +465,34 @@ const Auth: React.FC = () => {
                 </div>
               )}
 
+              {error && (
+                <div className="p-4 bg-red-500/20 border-2 border-red-500 rounded-2xl text-red-500 text-center text-xs font-black animate-shake shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Sparkles size={14} />
+                    <span>⚠️ ERREUR CRITIQUE</span>
+                  </div>
+                  {error}
+                  <div className="mt-2 text-[9px] opacity-70 font-bold uppercase tracking-widest text-white bg-red-600 p-1 rounded">
+                    Action Requise : Augmente ton mot de passe !
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <button
                   type="submit"
+                  id="auth-submit-button"
                   disabled={isLoading || (mode === 'register' && !acceptedPolicies)}
-                  className={`w-full py-4 rounded-xl font-black text-xs transition-all relative z-30 shadow-lg ${isLoading || (mode === 'register' && !acceptedPolicies) ? 'bg-slate-800 text-slate-500' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'}`}
+                  className={`w-full py-5 rounded-xl font-black text-sm transition-all relative z-30 shadow-2xl hover:scale-[1.02] active:scale-95 ${isLoading || (mode === 'register' && !acceptedPolicies) ? 'bg-slate-800 text-slate-500' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40'}`}
                 >
-                  <span className="flex items-center justify-center gap-2">
+                  <span className="flex items-center justify-center gap-3">
                     {isLoading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     ) : (
                       <>
-                        <Rocket size={16} />
-                        <span>{mode === 'register' ? 'Propulser mon Apprentissage' : 'Accéder au Dashboard'}</span>
-                        <ArrowRight size={14} />
+                        <Rocket size={20} className="animate-bounce" />
+                        <span>{mode === 'register' ? 'CLIQUE ICI : PROPULSER MON APPRENTISSAGE' : 'Accéder au Dashboard'}</span>
+                        <ArrowRight size={18} />
                       </>
                     )}
                   </span>

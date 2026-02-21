@@ -42,7 +42,7 @@ interface AppState {
   };
   loading: boolean;
   login: (name: string) => void;
-  registerWithPhone: (name: string, phone: string, email: string, password: string, gender: User['gender'], ageRange: User['ageRange']) => Promise<void>;
+  registerWithPhone: (params: { name: string, phone: string, email: string, password: string, gender: User['gender'], ageRange: User['ageRange'] }) => Promise<void>;
   loginWithPhone: (phone: string, password: string) => Promise<void>;
   registerWithEmail: (name: string, email: string, password: string) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
@@ -501,14 +501,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  const registerWithPhone = useCallback(async (name: string, phone: string, email: string, password: string, gender: User['gender'], ageRange: User['ageRange']) => {
+  const registerWithPhone = useCallback(async (params: { name: string, phone: string, email: string, password: string, gender: User['gender'], ageRange: User['ageRange'] }) => {
+    const { name, phone, email, password, gender, ageRange } = params;
     try {
       setLoading(true);
-      console.log('--- STORE registerWithPhone ---');
-      console.log('Passing to signUpWithPhone:');
+      console.log('--- STORE registerWithPhone (OBJECT) ---');
       console.log('Password length:', password?.length);
-      console.log('Gender:', gender);
-      const newUser = await signUpWithPhone(name, phone, password, gender!, ageRange!, email);
+      const newUser = await signUpWithPhone({
+        name,
+        phone,
+        password,
+        gender: gender!,
+        ageRange: ageRange!,
+        realEmail: email
+      });
       if (newUser) {
         setUser(newUser);
         localStorage.setItem('levelmak_user', JSON.stringify(newUser));
