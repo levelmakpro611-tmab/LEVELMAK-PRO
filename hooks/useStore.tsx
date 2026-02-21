@@ -504,6 +504,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const registerWithPhone = useCallback(async (name: string, phone: string, email: string, password: string, gender: User['gender'], ageRange: User['ageRange']) => {
     try {
       setLoading(true);
+      console.log('--- STORE registerWithPhone ---');
+      console.log('Passing to signUpWithPhone:');
+      console.log('Password length:', password?.length);
+      console.log('Gender:', gender);
       const newUser = await signUpWithPhone(name, phone, password, gender!, ageRange!, email);
       if (newUser) {
         setUser(newUser);

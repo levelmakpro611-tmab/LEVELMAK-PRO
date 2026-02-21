@@ -173,6 +173,14 @@ export const signUpWithPhone = async (
     realEmail?: string
 ): Promise<User | null> => {
     try {
+        console.log('--- DEBUG signUpWithPhone ---');
+        console.log('Name received:', name ? 'YES' : 'NO');
+        console.log('Phone received:', phone ? 'YES' : 'NO');
+        console.log('Password length:', password?.length);
+        console.log('Gender received:', gender);
+        console.log('AgeRange received:', ageRange);
+        console.log('RealEmail received:', realEmail);
+
         const email = realEmail || `${phone.replace(/\D/g, '')}@levelmak.local`;
 
         const { data, error } = await supabase.auth.signUp({
