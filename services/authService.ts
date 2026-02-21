@@ -42,7 +42,9 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
             name: supabaseUser.user_metadata?.name || 'Nouvel Apprenant',
             username: supabaseUser.email?.split('@')[0] || 'user',
             email: supabaseUser.email || '',
-            phoneNumber: supabaseUser.phone || undefined,
+            phoneNumber: supabaseUser.user_metadata?.phone || supabaseUser.phone || undefined,
+            gender: supabaseUser.user_metadata?.gender || undefined,
+            ageRange: supabaseUser.user_metadata?.age_range || undefined,
             level: SchoolLevel.MIDDLE,
             avatar: {
                 baseColor: '#3B82F6',
@@ -79,6 +81,9 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
                 name: newUser.name,
                 username: newUser.username,
                 email: newUser.email,
+                phone_number: newUser.phoneNumber,
+                gender: newUser.gender,
+                age_range: newUser.ageRange,
                 level: newUser.level,
                 xp: newUser.xp,
                 total_xp: newUser.totalXp,
@@ -91,13 +96,14 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 
         if (insertError) {
             console.error('Error creating profile:', insertError);
-            throw new Error(`Échec de création du profil : ${insertError.message}. Vos identifiants auth sont créés mais le profil a échoué.`);
+            throw insertError;
         }
 
+        console.log('Profile created successfully for:', newUser.id);
         return newUser;
-    } catch (error) {
-        console.error('Error converting Supabase user:', error);
-        return null;
+    } catch (error: any) {
+        console.error('CRITICAL: convertSupabaseUser failed:', error);
+        throw error;
     }
 };
 

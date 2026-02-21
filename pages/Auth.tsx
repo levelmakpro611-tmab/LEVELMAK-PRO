@@ -40,13 +40,19 @@ const Auth: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('--- DEBUT SUBMISSION ---');
+    console.log('Mode:', mode);
+    console.log('Nom:', name);
+    console.log('Email:', email);
+    console.log('Phone:', phone);
     setError(null);
     setLocalLoading(true);
 
     try {
       if (mode === 'register') {
-        if (!name.trim() || !phone.trim() || !password.trim()) {
-          throw new Error('Veuillez remplir au moins le Pseudo, le Numéro et le Mot de Passe.');
+        console.log('Tentative d\'inscription...');
+        if (!name.trim() || !phone.trim() || !password.trim() || !email.trim()) {
+          throw new Error('Veuillez remplir tous les champs (Nom, Email, Numéro et Mot de Passe).');
         }
         if (!acceptedPolicies) {
           throw new Error('Tu dois accepter les politiques de LEVELMAK pour continuer.');
@@ -55,35 +61,36 @@ const Auth: React.FC = () => {
           throw new Error('⚠️ SÉCURITÉ : Ton mot de passe est trop court. Il doit faire au moins 6 caractères pour protéger ton compte.');
         }
         await registerWithPhone(name.trim(), phone.trim(), email.trim(), password, gender, ageRange);
+        console.log('Inscription réussie !');
       } else if (mode === 'login') {
+        console.log('Tentative de connexion...');
         if (!phone.trim() || !password.trim()) {
           throw new Error('Veuillez entrer votre numéro et mot de passe.');
         }
 
         // Check if admin credentials using phone field as username - auto-create admin account if needed
         if (isAdminCredentials(phone.trim(), password)) {
+          console.log('Admin credentials detected');
           setIsAdminUser(true);
           try {
-            // Try to login with admin username as phone number
             await loginWithPhone(phone.trim(), password);
+            console.log('Admin login success');
             logUserActivity('admin_temp_id', 'Admin User', 'auth', 'Admin Login', { method: 'Special Phone' });
           } catch (loginError: any) {
-            // If admin account doesn't exist, create it automatically
-            console.log('Admin account not found, creating automatically...');
+            console.log('Admin auto-creation needed...');
             try {
               await registerWithPhone(
                 'Administrateur Principal',
                 phone.trim(),
-                'admin@levelmak.pro', // Email par défaut pour l'admin
+                'admin@levelmak.pro',
                 password,
                 'HOMME',
                 '24+'
               );
-              // Account created successfully, will auto-login through useStore
+              console.log('Admin created and logged in');
               return;
             } catch (registerError: any) {
-              console.error('Error creating admin account:', registerError);
-              // If account already exists, try login again
+              console.error('CRITICAL ADMIN ERROR:', registerError);
               await loginWithPhone(phone.trim(), password);
             }
           }
@@ -91,16 +98,21 @@ const Auth: React.FC = () => {
         }
 
         // Normal user login
-        const identifier = phone.trim(); // We reuse the phone state for the unified identifier in login
+        const identifier = phone.trim();
         if (identifier.includes('@')) {
+          console.log('Login with email:', identifier);
           await loginWithEmail(identifier, password);
         } else {
+          console.log('Login with phone:', identifier);
           await loginWithPhone(identifier, password);
         }
+        console.log('Login success');
       }
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+      console.error('SUBMISSION ERROR:', err);
+      setError(err.message || 'Une erreur inconnue est survenue.');
     } finally {
+      console.log('--- FIN SUBMISSION ---');
       setLocalLoading(false);
     }
   };
@@ -142,7 +154,7 @@ const Auth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060915] selection:bg-primary/30 flex items-start md:items-center justify-center p-4 md:p-8 relative">
+    <div className="min-h-screen bg-[#060915] overflow-y-auto overflow-x-hidden selection:bg-primary/30 flex items-start md:items-center justify-center p-4 md:p-8 relative">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10"></div>
       <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
@@ -192,8 +204,15 @@ const Auth: React.FC = () => {
           )}
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-center text-[10px] font-bold animate-shake">
+            <div className="p-4 bg-red-500/20 border-2 border-red-500 rounded-2xl text-red-500 text-center text-xs font-black animate-shake shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Sparkles size={14} />
+                <span>ERREUR D'INSCRIPTION</span>
+              </div>
               {error}
+              <div className="mt-2 text-[9px] opacity-70">
+                Vérifiez votre connexion ou contactez le support si le problème persiste.
+              </div>
             </div>
           )}
 
@@ -307,8 +326,8 @@ const Auth: React.FC = () => {
               </form>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="max-h-[35vh] overflow-y-auto pr-2 custom-scrollbar space-y-4">
                 {mode === 'register' && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -330,14 +349,15 @@ const Auth: React.FC = () => {
                       <div className="space-y-1.5">
                         <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
                           <Book size={11} />
-                          E-mail (Optionnel)
+                          E-mail
                         </label>
                         <input
                           type="email"
+                          required
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
-                          placeholder="Tu peux laisser vide"
+                          placeholder="Ex: mail@example.com"
                         />
                       </div>
                       <div className="space-y-1.5">
