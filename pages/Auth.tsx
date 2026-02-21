@@ -45,8 +45,8 @@ const Auth: React.FC = () => {
 
     try {
       if (mode === 'register') {
-        if (!name.trim() || !phone.trim() || !password.trim() || !email.trim()) {
-          throw new Error('Veuillez remplir tous les champs (Nom, Email, Numéro et Mot de Passe).');
+        if (!name.trim() || !phone.trim() || !password.trim()) {
+          throw new Error('Veuillez remplir au moins le Pseudo, le Numéro et le Mot de Passe.');
         }
         if (!acceptedPolicies) {
           throw new Error('Tu dois accepter les politiques de LEVELMAK pour continuer.');
@@ -142,13 +142,13 @@ const Auth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060915] overflow-y-auto overflow-x-hidden selection:bg-primary/30 flex items-start md:items-center justify-center p-4 md:p-8 relative">
+    <div className="min-h-screen bg-[#060915] selection:bg-primary/30 flex items-start md:items-center justify-center p-4 md:p-8 relative">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10"></div>
       <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
 
       <div className="relative z-20 w-full max-w-2xl mt-4 md:mt-0">
-        <div className="glass p-6 md:p-12 lg:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-6 md:space-y-8 animate-slide-up relative overflow-hidden">
+        <div className="glass p-6 md:p-12 lg:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-6 md:space-y-8 animate-slide-up relative">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
 
           <div className="text-center space-y-4">
@@ -307,227 +307,177 @@ const Auth: React.FC = () => {
               </form>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-              {mode === 'register' && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5 md:col-span-2">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
+                {mode === 'register' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
                       <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
                         <UserIcon size={11} />
-                        Ton Pseudo
+                        Ton Pseudo (Obligatoire)
                       </label>
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-700"
+                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
                         placeholder="Ex: alimou1234"
                       />
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                        <Book size={11} />
-                        E-mail
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                        placeholder="Ex: email@example.com"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
+                          <Book size={11} />
+                          E-mail (Optionnel)
+                        </label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
+                          placeholder="Tu peux laisser vide"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
+                          <Phone size={11} />
+                          Numéro
+                        </label>
+                        <input
+                          type="tel"
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
+                          placeholder="Ex: 620 00 00 00"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3">Genre</label>
+                        <div className="flex gap-2">
+                          {(['HOMME', 'FEMME'] as const).map((g) => (
+                            <button
+                              key={g}
+                              type="button"
+                              onClick={() => setGender(g)}
+                              className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all border ${gender === g ? 'bg-blue-600 border-blue-500 text-white' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                            >
+                              {g}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3">Âge</label>
+                        <select
+                          value={ageRange}
+                          onChange={(e) => setAgeRange(e.target.value as any)}
+                          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[10px] outline-none"
+                        >
+                          <option value="15-18" className="bg-slate-900">15-18 ans</option>
+                          <option value="19-23" className="bg-slate-900">19-23 ans</option>
+                          <option value="24+" className="bg-slate-900">24+ ans</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {mode === 'login' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                        <Phone size={11} />
-                        Numéro
+                        <UserIcon size={11} />
+                        E-mail ou Numéro
                       </label>
                       <input
-                        type="tel"
+                        type="text"
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                        placeholder="Ex: +224 610 00 00"
+                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
+                        placeholder="Identifiant"
                       />
                     </div>
                   </div>
+                )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3">Genre</label>
-                      <div className="flex gap-2">
-                        {(['HOMME', 'FEMME'] as const).map((g) => (
-                          <button
-                            key={g}
-                            type="button"
-                            onClick={() => setGender(g)}
-                            className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all border ${gender === g ? 'bg-blue-600 border-blue-500 text-white' : 'bg-white/5 border-white/10 text-slate-500'}`}
-                          >
-                            {g}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3">Tranche d'âge</label>
-                      <select
-                        value={ageRange}
-                        onChange={(e) => setAgeRange(e.target.value as any)}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[10px] outline-none appearance-none cursor-pointer"
-                      >
-                        <option value="15-18" className="bg-slate-900">De 15 à 18 ans</option>
-                        <option value="19-23" className="bg-slate-900">De 19 à 23 ans</option>
-                        <option value="24+" className="bg-slate-900">De 24 ans et plus</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Education and Employment fields removed */}
-                </>
-              )}
-
-              {mode === 'login' && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                      <UserIcon size={11} />
-                      E-mail ou Numéro
-                    </label>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
+                    <Lock size={11} />
+                    Mot de Passe (Min. 6)
+                  </label>
+                  <div className="relative group">
                     <input
-                      type="text"
+                      type={showPassword ? 'text' : 'password'}
                       required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                      placeholder="Identifiant de récupération"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all pr-12"
+                      placeholder="••••••••"
                     />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                  <Lock size={11} />
-                  Mot de Passe
-                </label>
-                <div className="relative group">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-primary/50 transition-all placeholder:text-slate-700 pr-12"
-                    placeholder="Ex: Lelemak14"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {mode === 'login' && (
-                  <div className="flex justify-end px-1">
                     <button
                       type="button"
-                      onClick={() => setMode('forgot')}
-                      className="text-[9px] font-bold text-blue-400 hover:text-blue-300 transition-all uppercase tracking-widest"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
                     >
-                      Mot de passe oublié ?
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                )}
+                </div>
               </div>
 
               {mode === 'register' && (
-                <div className="space-y-3">
-                  <div className={`p-4 rounded-2xl border transition-all ${acceptedPolicies ? 'bg-blue-600/10 border-blue-500/30' : 'bg-white/5 border-white/10'}`}>
-                    <div className="flex items-start gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setAcceptedPolicies(!acceptedPolicies)}
-                        className={`mt-1 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${acceptedPolicies ? 'bg-blue-600 border-blue-500' : 'bg-white/10 border-white/20'}`}
-                      >
-                        {acceptedPolicies && <Sparkles size={12} className="text-white" />}
-                      </button>
-                      <div className="flex-1 space-y-1">
-                        <p className="text-[10px] text-slate-300 font-bold leading-relaxed">
-                          J'ai lu et j'accepte les <button type="button" onClick={() => setShowPolicyDetail(!showPolicyDetail)} className="text-blue-400 underline hover:text-blue-300">Politiques de LEVELMAK</button> concernant le respect, la progression et mes données.
-                        </p>
-                      </div>
-                    </div>
+                <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={acceptedPolicies}
+                      onChange={(e) => setAcceptedPolicies(e.target.checked)}
+                      className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-600"
+                    />
+                    <p className="text-[10px] text-slate-300 font-bold">
+                      J'accepte les politiques de LEVELMAK
+                    </p>
                   </div>
-
-                  <AnimatePresence>
-                    {showPolicyDetail && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="bg-black/40 rounded-2xl p-4 border border-white/5 space-y-4 max-h-[200px] overflow-y-auto custom-scrollbar text-[9px] leading-relaxed text-slate-400">
-                          <section className="space-y-1">
-                            <p className="font-black text-blue-400 uppercase tracking-widest text-[8px]">1. Respect Mutuel</p>
-                            <p>LEVELMAK est un espace d'apprentissage d'élite. Tout comportement irrespectueux, harcèlement ou contenu inapproprié entraînera un bannissement immédiat et définitif du compte sans remboursement des LevelCoins.</p>
-                          </section>
-                          <section className="space-y-1">
-                            <p className="font-black text-purple-400 uppercase tracking-widest text-[8px]">2. Progression & Mérites</p>
-                            <p>Le système de niveaux et de récompenses est basé sur l'effort réel. Toute tentative de triche ou d'exploitation de bugs pour gagner des XP injustement est strictement interdite.</p>
-                          </section>
-                          <section className="space-y-1">
-                            <p className="font-black text-orange-400 uppercase tracking-widest text-[8px]">3. Protection des Données</p>
-                            <p>TMAB GROUP s'engage à protéger vos données personnelles. Tes informations de profil et de progression ne sont utilisées que pour améliorer ton expérience éducative au sein de la plateforme.</p>
-                          </section>
-                          <section className="space-y-1">
-                            <p className="font-black text-green-400 uppercase tracking-widest text-[8px]">4. Propriété & Mission</p>
-                            <p>LEVELMAK est une propriété de TMAB GROUP. En utilisant cette app, tu rejoins une mission visant à démocratiser l'éducation d'excellence à travers l'Afrique et le monde.</p>
-                          </section>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={isLoading || (mode === 'register' && !acceptedPolicies)}
-                className={`w-full py-4 mt-2 rounded-2xl font-black text-xs shadow-glow hover:scale-[1.01] active:scale-[0.99] transition-all relative overflow-hidden group disabled:opacity-50 ${mode === 'register' ? 'bg-gradient-to-r from-primary to-secondary' : 'bg-gradient-to-r from-secondary to-accent'} text-white`}
-              >
-                <span className="relative z-10 flex items-center justify-center gap-3">
-                  {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      <Rocket size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                      <span>{mode === 'register' ? 'Propulser mon Apprentissage' : 'Accéder au Dashboard'}</span>
-                      <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
-                    </>
-                  )}
-                </span>
-              </button>
+              <div className="space-y-3">
+                <button
+                  type="submit"
+                  disabled={isLoading || (mode === 'register' && !acceptedPolicies)}
+                  className={`w-full py-4 rounded-xl font-black text-xs transition-all relative z-30 shadow-lg ${isLoading || (mode === 'register' && !acceptedPolicies) ? 'bg-slate-800 text-slate-500' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'}`}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <Rocket size={16} />
+                        <span>{mode === 'register' ? 'Propulser mon Apprentissage' : 'Accéder au Dashboard'}</span>
+                        <ArrowRight size={14} />
+                      </>
+                    )}
+                  </span>
+                </button>
 
-              <div className="relative py-2">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-                <div className="relative flex justify-center text-[8px] font-black uppercase tracking-[0.3em] text-slate-700 bg-transparent px-4">OU</div>
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-black text-[10px] text-white uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                >
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-3 h-3" />
+                  Google
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl font-black text-[10px] text-white uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
-              >
-                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
-                Continuer avec Google
-              </button>
             </form>
           )}
 
