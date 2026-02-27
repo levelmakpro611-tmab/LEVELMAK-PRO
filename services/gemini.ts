@@ -103,7 +103,7 @@ const rotateKey = () => {
 console.log(`🔑 Gemini : ${apiKeys.length} clé(s) configurée(s). Clé active index : ${currentKeyIndex}`);
 
 // Modèle Gemini exact observé dans ton dashboard Google AI Studio
-const MODEL_NAME = "gemini-1.5-flash-latest";
+const MODEL_NAME = "gemini-2.0-flash-exp";
 
 // Délai entre les requêtes pour éviter de saturer trop vite
 const waitBeforeRequest = async () => {

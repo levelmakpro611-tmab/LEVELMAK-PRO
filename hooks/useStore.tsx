@@ -614,19 +614,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const logout = useCallback(async () => {
+    // Always clear user state immediately, regardless of Supabase result
+    setUser(null);
+    localStorage.removeItem('levelmak_user');
+
     try {
-      console.log('Logging out...');
-      await supabase.auth.signOut();
-      setUser(null);
-      // We keep quizzes and stories in localStorage as requested by the user
-      // so they can find them back on next login. Only clear session info.
-      localStorage.removeItem('levelmak_user');
+      // Attempt Supabase signOut with a 5-second timeout
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Logout timeout')), 5000))
+      ]);
       console.log('Logged out successfully');
     } catch (error) {
-      console.error('Logout error:', error);
-      // Force user to null even on error to ensure redirection
-      setUser(null);
-      localStorage.removeItem('levelmak_user');
+      // LockManager timeout or network error - user is already logged out locally
+      console.warn('Supabase signOut warning (user already logged out locally):', error);
     }
   }, []);
 
