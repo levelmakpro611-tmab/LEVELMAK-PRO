@@ -390,17 +390,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Supabase Auth State Listener (Session Recovery)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('--- AUTH STATE CHANGE ---', event);
       if (session?.user) {
         try {
           const userData = await convertSupabaseUser(session.user);
           if (userData) {
-            if (userData.status && userData.status !== 'active') {
+            // Check for blocked/deactivated accounts
+            if (userData.status === 'blocked' || userData.status === 'suspended') {
+              console.warn('Account is restricted:', userData.status);
               await supabase.auth.signOut();
               setUser(null);
               localStorage.removeItem('levelmak_user');
               return;
             }
+
             if (!user) {
+              console.log('Auth synced: User session restored');
               setUser(userData);
               if (userData.quizzes) setQuizzes(userData.quizzes);
               if (userData.stories) setStories(userData.stories);
@@ -610,15 +615,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const logout = useCallback(async () => {
     try {
+      console.log('Logging out...');
       await supabase.auth.signOut();
       setUser(null);
-      setQuizzes([]);
-      setStories([]);
+      // We keep quizzes and stories in localStorage as requested by the user
+      // so they can find them back on next login. Only clear session info.
       localStorage.removeItem('levelmak_user');
-      localStorage.removeItem('levelmak_quizzes');
-      localStorage.removeItem('levelmak_stories');
+      console.log('Logged out successfully');
     } catch (error) {
       console.error('Logout error:', error);
+      // Force user to null even on error to ensure redirection
+      setUser(null);
+      localStorage.removeItem('levelmak_user');
     }
   }, []);
 

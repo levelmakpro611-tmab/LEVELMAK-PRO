@@ -81,24 +81,31 @@ const AdminDashboard: React.FC = () => {
         try {
             switch (tab) {
                 case 'overview':
-                    const [sData, cData, rData, avgR] = await Promise.all([
+                    const [sData, cData, rData, avgR] = await Promise.allSettled([
                         getGlobalStats(period), getAllComments(50), getAllRatings(50), getAverageRatings()
                     ]);
-                    setStats(sData); setComments(cData); setRatings(rData); setAverageRatings(avgR);
+                    if (sData.status === 'fulfilled') setStats(sData.value);
+                    else setStats({ totalUsers: 0, activeUsers: 0, newUsersToday: 0, newUsersWeek: 0, newUsersMonth: 0, newUsersYear: 0, quizzesGenerated: 0, quizzesToday: 0, flashcardsCreated: 0, flashcardsToday: 0, storiesWritten: 0, storiesToday: 0, booksRead: 0, booksToday: 0, totalLearningHours: 0, averageEngagementRate: 0 });
+                    if (cData.status === 'fulfilled') setComments(cData.value);
+                    if (rData.status === 'fulfilled') setRatings(rData.value);
+                    if (avgR.status === 'fulfilled') setAverageRatings(avgR.value);
                     break;
                 case 'users':
-                    setUsers(await getUserAnalytics(100));
+                    try { setUsers(await getUserAnalytics(100)); } catch { setUsers([]); }
                     break;
                 case 'comments':
-                    setComments(await getAllComments(50));
+                    try { setComments(await getAllComments(50)); } catch { setComments([]); }
                     break;
                 case 'ratings':
-                    const [ratingsData, avgRatingsData] = await Promise.all([getAllRatings(50), getAverageRatings()]);
-                    setRatings(ratingsData); setAverageRatings(avgRatingsData);
+                    try {
+                        const [ratingsData, avgRatingsData] = await Promise.all([getAllRatings(50), getAverageRatings()]);
+                        setRatings(ratingsData); setAverageRatings(avgRatingsData);
+                    } catch { setRatings([]); }
                     break;
                 case 'stats':
-                    const [statsData, demogData] = await Promise.all([getGlobalStats(period), getDemographicStats()]);
-                    setStats(statsData); setDemographicStats(demogData);
+                    const [statsResult, demogResult] = await Promise.allSettled([getGlobalStats(period), getDemographicStats()]);
+                    if (statsResult.status === 'fulfilled') setStats(statsResult.value);
+                    if (demogResult.status === 'fulfilled') setDemographicStats(demogResult.value);
                     break;
             }
         } catch (error) {
@@ -114,7 +121,7 @@ const AdminDashboard: React.FC = () => {
         logout();
     };
 
-    if (loading || !stats) {
+    if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
                 <div className="text-center space-y-4">
