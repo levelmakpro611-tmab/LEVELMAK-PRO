@@ -7,6 +7,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase URL or Anon Key is missing in .env');
 }
 
+// Build Version: 0.1.75 - Supabase Lock Fix + OpenRouter IA
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         persistSession: true,
