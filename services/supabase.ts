@@ -3,6 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// DIAGNOSTIC LOGS (Safe)
+console.log('--- SYSTEM CHECK ---');
+console.log('VITE_SUPABASE_URL presence:', !!supabaseUrl);
+if (supabaseUrl) console.log('VITE_SUPABASE_URL length:', supabaseUrl.length);
+console.log('VITE_SUPABASE_ANON_KEY presence:', !!supabaseAnonKey);
+console.log('--------------------');
+
 if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase URL or Anon Key is missing in .env');
 }
