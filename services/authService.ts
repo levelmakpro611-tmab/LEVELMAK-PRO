@@ -11,10 +11,21 @@ const phoneToEmail = (phone: string): string => {
 
 // ======================================================
 // Convert Supabase User to App User (with profile creation)
+// Optimized with a short-lived deduplication cache to prevent redundant DB calls
 // ======================================================
+const convertCache = new Map<string, Promise<User | null>>();
+
 export const convertSupabaseUser = async (supabaseUser: any): Promise<User | null> => {
-    try {
-        // Try to fetch existing profile
+    const userId = supabaseUser.id;
+    
+    // If a conversion is already in progress for this user, reuse the promise
+    if (convertCache.has(userId)) {
+        return convertCache.get(userId)!;
+    }
+
+    const conversionPromise = (async () => {
+        try {
+        // 1. Check for existing profile FIRST
         const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -23,10 +34,14 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 
         if (error && error.code !== 'PGRST116') {
             console.error('Error fetching profile:', error);
-            // Don't throw - try to build user from auth data instead
         }
 
         if (profile) {
+            // Check if profile is already up to date with auth email if it's missing
+            if (!profile.email && supabaseUser.email) {
+                await supabase.from('profiles').update({ email: supabaseUser.email }).eq('id', supabaseUser.id);
+            }
+
             const appUser: User = {
                 ...profile,
                 phoneNumber: profile.phone_number,
@@ -58,14 +73,14 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
             return appUser;
         }
 
-        // Profile doesn't exist yet - create it from auth metadata
+        // 2. Profile doesn't exist yet - create it from auth metadata
         const metadata = supabaseUser.user_metadata || {};
         const newUser: User = {
             id: supabaseUser.id,
             name: metadata.name || 'Nouvel Apprenant',
             username: (supabaseUser.email?.split('@')[0] || 'user').replace(/[^a-zA-Z0-9]/g, '').substring(0, 15),
             email: metadata.real_email || supabaseUser.email || '',
-            phoneNumber: metadata.phone || undefined,
+            phoneNumber: metadata.phone ? metadata.phone.replace(/\D/g, '') : undefined,
             gender: metadata.gender || undefined,
             ageRange: metadata.age_range || undefined,
             level: SchoolLevel.MIDDLE,
@@ -98,6 +113,7 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
         };
 
         console.log('Creating new profile for:', newUser.id, newUser.name);
+        // Using upsert with ON CONFLICT if necessary, but here we already checked selectivity
         const { error: insertError } = await supabase
             .from('profiles')
             .upsert({
@@ -106,6 +122,7 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
                 username: newUser.username,
                 email: newUser.email,
                 phone_number: newUser.phoneNumber,
+                auth_email: metadata.auth_email || supabaseUser.email || '',
                 gender: newUser.gender,
                 age_range: newUser.ageRange,
                 level: newUser.level,
@@ -121,16 +138,21 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 
         if (insertError) {
             console.error('Error creating profile (non-fatal):', insertError);
-            // Return user anyway - profile creation failure shouldn't block access
-        } else {
-            console.log('Profile created for:', newUser.id);
         }
 
         return newUser;
-    } catch (error: any) {
-        console.error('convertSupabaseUser error:', error);
-        throw error;
-    }
+        } catch (error: any) {
+            console.error('convertSupabaseUser error:', error);
+            throw error;
+        }
+    })();
+
+    convertCache.set(userId, conversionPromise);
+    
+    // Auto-cleanup cache after 5 seconds to prevent stale data while handling the login burst
+    setTimeout(() => convertCache.delete(userId), 5000);
+
+    return conversionPromise;
 };
 
 // ======================================================
@@ -255,6 +277,18 @@ export const signUpWithPhone = async (params: {
             throw new Error('Erreur lors de la création du compte. Réessaie.');
         }
 
+        // Save auth_email and normalized phone to the profile so we can find it during login
+        try {
+            const normalizedPhone = phone.replace(/\D/g, '');
+            await supabase.from('profiles').update({
+                auth_email: authEmail,
+                phone_number: normalizedPhone
+            }).eq('id', data.user.id);
+            console.log('Saved auth_email and phone to profile:', authEmail, normalizedPhone);
+        } catch (updateErr) {
+            console.warn('Could not save auth_email to profile (non-fatal):', updateErr);
+        }
+
         // data.user is always present even if email confirmation is required
         return await convertSupabaseUser(data.user);
     } catch (error: any) {
@@ -268,42 +302,120 @@ export const signUpWithPhone = async (params: {
 // Tries multiple email formats to find the account
 // ======================================================
 export const signInWithPhone = async (phone: string, password: string): Promise<User | null> => {
+    const startTime = Date.now();
     try {
-        console.log('--- signInWithPhone ---');
+        console.log('🚀 --- signInWithPhone (OPTIMIZED) ---');
+        const identifier = phone.trim();
+        const normalizedDigits = identifier.replace(/\D/g, '');
 
-        const normalizedPhone = phone.replace(/\D/g, '');
-        const emailFormats = [
-            phoneToEmail(phone),                          // normalizedDigits@levelmak.app
-            `${normalizedPhone}@levelmak.local`,          // legacy format
-        ];
-
-        let lastError: any = null;
-
-        for (const email of emailFormats) {
-            console.log('Trying email format:', email);
+        // 1. Handle Admin Case (Direct Username) - High priority
+        const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'levelmak611';
+        if (identifier.toLowerCase() === ADMIN_USERNAME.toLowerCase()) {
             const { data, error } = await supabase.auth.signInWithPassword({
-                email,
+                email: '611@levelmak.app',
                 password
             });
+            if (error) throw error;
+            if (!data.user) return null;
+            return await convertSupabaseUser(data.user);
+        }
 
-            if (!error && data.user) {
-                console.log('Login successful with:', email);
-                return await convertSupabaseUser(data.user);
+        // 2. FAST-PATH: Try cached auth_email from LocalStorage (Instant reconnection)
+        const cacheKey = `levelmak_auth_email_${normalizedDigits}`;
+        const cachedEmail = localStorage.getItem(cacheKey);
+        
+        if (cachedEmail) {
+            console.log('⚡ Fast-Path: Trying cached email:', cachedEmail);
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: cachedEmail,
+                    password
+                });
+                if (!error && data.user) {
+                    console.log(`✅ Login successful via Fast-Path in ${Date.now() - startTime}ms`);
+                    return await convertSupabaseUser(data.user);
+                }
+            } catch (fastErr) {
+                console.warn('Fast-Path failed, falling back to full discovery');
             }
-            lastError = error;
         }
 
-        // All formats failed
-        if (lastError?.message.includes('Invalid login credentials')) {
-            throw new Error('Numéro ou mot de passe incorrect. Si tu viens de t\'inscrire, utilise l\'email à la place.');
+        // 3. FULL DISCOVERY: Parallelize Profile Lookup + Fallback attempts
+        console.log('🔍 Starting parallel discovery...');
+        
+        // Preparation: Generate formats and lookup promise
+        const fallbackApp = `${normalizedDigits}@levelmak.app`;
+        const fallbackLocal = `${normalizedDigits}@levelmak.local`;
+        
+        // Discovery worker: Profile Lookup + trials
+        const discoveryAttempt = async (): Promise<any> => {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('email, auth_email')
+                .or(`phone_number.eq."${identifier}",phone_number.eq."${normalizedDigits}"`)
+                .maybeSingle();
+            
+            const discoveryEmails = [];
+            if (profile?.auth_email) discoveryEmails.push(profile.auth_email);
+            if (profile?.email && profile.email !== profile?.auth_email) discoveryEmails.push(profile.email);
+            
+            // Try all discovered emails from profile in parallel
+            if (discoveryEmails.length > 0) {
+                return Promise.any(discoveryEmails.map(email => 
+                    supabase.auth.signInWithPassword({ email, password })
+                        .then(res => { if (res.error) throw res.error; return { ...res, usedEmail: email }; })
+                ));
+            }
+            throw new Error('No profile emails found');
+        };
+
+        // Fallback worker: Direct trial of generated emails
+        const fallbackAttempt = async (): Promise<any> => {
+            const fallbacks = [fallbackApp, fallbackLocal];
+            return Promise.any(fallbacks.map(email => 
+                supabase.auth.signInWithPassword({ email, password })
+                    .then(res => { if (res.error) throw res.error; return { ...res, usedEmail: email }; })
+            ));
+        };
+
+        // Run both workers in parallel
+        const finalResult = await Promise.any([discoveryAttempt(), fallbackAttempt()]);
+        
+        if (finalResult.data.user) {
+            const usedEmail = finalResult.usedEmail;
+            console.log(`✅ Login successful via Discovery in ${Date.now() - startTime}ms with:`, usedEmail);
+            
+            // Update Cache for next time
+            localStorage.setItem(cacheKey, usedEmail);
+            
+            // Save to profile in background if it was missing (missing auth_email)
+            (async () => {
+                try {
+                    await supabase.from('profiles').update({ 
+                        auth_email: usedEmail,
+                        phone_number: normalizedDigits 
+                    }).eq('id', finalResult.data.user.id);
+                } catch (_) {}
+            })();
+
+            return await convertSupabaseUser(finalResult.data.user);
         }
-        if (lastError?.message.includes('Email not confirmed')) {
-            throw new Error('Confirme ton email avant de te connecter, ou connecte-toi avec ton email directement.');
-        }
-        throw new Error(lastError?.message || 'La connexion a échoué. Réessaie.');
+
+        return null;
     } catch (error: any) {
+        // Promise.any can throw an AggregateError if all fail
         console.error('Phone sign in error:', error);
-        throw new Error(error.message);
+        
+        // Flatten error for UI
+        let message = 'La connexion a échoué. Vérifie tes identifiants.';
+        if (error.errors) {
+            const invalidCreds = error.errors.some((e: any) => e.message?.includes('Invalid login credentials'));
+            if (invalidCreds) message = 'Numéro ou mot de passe incorrect.';
+        } else if (error.message?.includes('Invalid login credentials')) {
+            message = 'Numéro ou mot de passe incorrect.';
+        }
+        
+        throw new Error(message);
     }
 };
 

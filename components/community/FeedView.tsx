@@ -13,6 +13,8 @@ const FeedView: React.FC = () => {
     const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
     const [mediaPreview, setMediaPreview] = useState<string | null>(null);
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const [expandedComments, setExpandedComments] = useState<string | null>(null);
+    const [commentText, setCommentText] = useState('');
     const mediaInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -68,6 +70,22 @@ const FeedView: React.FC = () => {
     const handleLike = (postId: string) => {
         if (!user) return;
         chatService.likePost(postId, user.id);
+    };
+
+    const handleAddComment = async (postId: string) => {
+        if (!commentText.trim() || !user) return;
+        try {
+            await chatService.addComment(
+                postId,
+                user.id,
+                user.name,
+                user.avatar?.image || '',
+                commentText.trim()
+            );
+            setCommentText('');
+        } catch (error) {
+            console.error("Comment failed", error);
+        }
     };
 
     const handleDeletePost = async (postId: string) => {
@@ -234,7 +252,10 @@ const FeedView: React.FC = () => {
                                             <Heart size={18} fill={post.likes?.includes(user?.id || '') ? 'currentColor' : 'none'} />
                                             <span className="text-xs font-bold">{post.likes?.length || 0}</span>
                                         </button>
-                                        <button className="flex items-center gap-1.5 p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                                        <button
+                                            onClick={() => setExpandedComments(expandedComments === post.id ? null : post.id)}
+                                            className={`flex items-center gap-1.5 p-2 rounded-xl transition-all ${expandedComments === post.id ? 'text-blue-400 bg-blue-400/10' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                                        >
                                             <MessageCircle size={18} />
                                             <span className="text-xs font-bold">{post.comments?.length || 0}</span>
                                         </button>
@@ -246,6 +267,63 @@ const FeedView: React.FC = () => {
                                         <Share2 size={18} />
                                     </button>
                                 </div>
+
+                                {/* Comments Section */}
+                                <AnimatePresence>
+                                    {expandedComments === post.id && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="border-t border-white/5 overflow-hidden"
+                                        >
+                                            <div className="p-4 space-y-4">
+                                                {/* Comments List */}
+                                                <div className="space-y-3">
+                                                    {(post.comments || []).map((comment: any) => (
+                                                        <div key={comment.id} className="flex gap-3">
+                                                            <div className="shrink-0">
+                                                                <img src={comment.userAvatar} className="w-8 h-8 rounded-lg object-cover border border-white/5" alt="" />
+                                                            </div>
+                                                            <div className="flex-1 bg-white/5 rounded-2xl p-2.5 px-3">
+                                                                <div className="flex items-baseline justify-between gap-2 mb-1">
+                                                                    <span className="text-xs font-black text-white">{comment.userName}</span>
+                                                                    <span className="text-[9px] text-slate-500 font-bold uppercase">
+                                                                        {new Date(comment.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-slate-300 leading-normal">{comment.text}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Add Comment Input */}
+                                                <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                                                    <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 shrink-0 overflow-hidden">
+                                                        <img src={user?.avatar?.image} className="w-full h-full object-cover" alt="" />
+                                                    </div>
+                                                    <div className="flex-1 relative">
+                                                        <input
+                                                            type="text"
+                                                            value={commentText}
+                                                            onChange={(e) => setCommentText(e.target.value)}
+                                                            onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                                                            placeholder="Ajouter un commentaire..."
+                                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 pr-10 text-xs text-white focus:outline-none focus:border-primary/50 transition-all font-bold"
+                                                        />
+                                                        <button
+                                                            onClick={() => handleAddComment(post.id)}
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-primary hover:scale-110 active:scale-95 transition-all"
+                                                        >
+                                                            <Send size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </motion.div>
                         ))
                     ) : (

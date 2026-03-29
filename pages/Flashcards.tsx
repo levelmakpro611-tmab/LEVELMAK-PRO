@@ -18,7 +18,7 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
-import { geminiService } from '../services/gemini';
+import { openrouterService } from '../services/openrouter';
 import { FlashcardDeck, Flashcard } from '../types';
 import { logUserActivity } from '../services/activityService';
 
@@ -38,7 +38,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
 
         setIsGenerating(true);
         try {
-            const cards = await geminiService.generateFlashcards(generatorInput, generatorInput, settings.language);
+            const cards = await openrouterService.generateFlashcards(generatorInput, generatorInput, settings.language);
 
             const newDeck: FlashcardDeck = {
                 id: `deck_${Date.now()}`,
@@ -83,7 +83,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                     <div className="flex items-center gap-2 md:gap-3 text-primary-light font-black uppercase tracking-[0.2em] text-[8px] md:text-xs">
                         <Zap size={12} md:size={16} /> {t('flashcards.memorization')}
                     </div>
-                    <h1 className="text-2xl md:text-5xl font-display font-black text-white tracking-tighter">Flashcards <span className="text-gradient-primary">IA</span></h1>
+                    <h1 className="text-2xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">Flashcards <span className="text-gradient-primary">IA</span></h1>
                     <p className="text-slate-400 text-base md:text-lg font-medium max-w-xl">{t('flashcards.aiSubtitle')}</p>
                 </div>
 
@@ -110,7 +110,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                             <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-primary/10 text-primary rounded-full text-[8px] md:text-xs font-black uppercase tracking-widest border border-primary/20">
                                 <Sparkles size={12} md:size={14} /> Intelligence Artificielle
                             </div>
-                            <h2 className="text-xl md:text-3xl font-display font-black text-white leading-tight">
+                            <h2 className="text-xl md:text-3xl font-display font-black text-slate-900 dark:text-white leading-tight">
                                 {t('flashcards.aiPrompt').split('\n').map((line, i) => <React.Fragment key={i}>{line}<br className="hidden md:block" /></React.Fragment>)}
                             </h2>
                             <form onSubmit={handleGenerateDeck} className="relative">
@@ -154,7 +154,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
             {/* Decks Grid */}
             <div className="space-y-8">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-2xl font-display font-bold text-white flex items-center gap-3">
+                    <h3 className="text-2xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
                         <div className="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center border border-secondary/20">
                             <Layers size={20} />
                         </div>
@@ -220,7 +220,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                         </div>
 
                                         <div>
-                                            <h4 className="text-lg md:text-xl font-bold text-white mb-1.5 md:mb-2 leading-tight group-hover:text-primary-light transition-colors">{deck.title}</h4>
+                                            <h4 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-1.5 md:mb-2 leading-tight group-hover:text-primary-light transition-colors">{deck.title}</h4>
                                             <div className="flex items-center gap-3 md:gap-4 text-[10px] md:text-xs text-slate-500 font-medium">
                                                 <span className="flex items-center gap-1.5"><Clock size={10} md:size={12} /> {deck.lastStudied ? t('flashcards.studiedYesterday') : t('flashcards.neverStudied')}</span>
                                                 <span className="flex items-center gap-1.5"><Calendar size={10} md:size={12} /> {new Date(deck.createdAt).toLocaleDateString()}</span>
@@ -247,7 +247,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                 <BookOpen size={40} />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-white font-bold text-xl">{t('flashcards.emptyState')}</p>
+                                <p className="text-slate-900 dark:text-white font-bold text-xl">{t('flashcards.emptyState')}</p>
                             </div>
                         </div>
                     )}

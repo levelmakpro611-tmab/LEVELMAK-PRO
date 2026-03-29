@@ -29,8 +29,8 @@ import {
 } from 'firebase/firestore';
 
 // ========== CONSTANTS ==========
-const ADMIN_USERNAME = 'levelmak611';
-const ADMIN_PASSWORD = 'TMAB611';
+const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'levelmak611';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'TMAB611';
 
 // ========== ADMIN AUTHENTICATION ==========
 
@@ -39,7 +39,10 @@ export const submitComment = async (comment: Partial<UserComment>): Promise<void
         const { error } = await supabase.from('user_comments').insert({
             user_id: comment.userId,
             user_name: comment.userName,
+            user_phone: comment.userPhone, // Added
             content: comment.content,
+            rating: comment.rating, // Added
+            category: comment.category, // Added
             status: 'pending',
             timestamp: new Date().toISOString()
         });
@@ -54,6 +57,7 @@ export const submitRating = async (rating: Omit<PlatformRating, 'id'>): Promise<
     try {
         const { error } = await supabase.from('user_ratings').insert({
             user_id: rating.userId,
+            user_name: rating.userName, // Added
             overall: rating.overall,
             features: rating.features,
             comment: rating.comment,
@@ -81,14 +85,8 @@ export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => 
             .eq('id', userId)
             .single();
 
-        if (data) {
-            if (data.role === 'admin') return 'admin';
-
-            // Fallback check based on name or phone
-            if (data.phone_number?.toLowerCase() === ADMIN_USERNAME.toLowerCase() ||
-                data.name?.toLowerCase() === 'administrateur principal') {
-                return 'admin';
-            }
+        if (data && data.role === 'admin') {
+            return 'admin';
         }
         return 'user';
     } catch (error) {
@@ -99,11 +97,21 @@ export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => 
 
 // ========== STATISTICS ==========
 
-export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' = 'month'): Promise<AdminStats> => {
-    try {
-        const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+let cachedStats: { data: AdminStats, timestamp: number } | null = null;
+const STATS_CACHE_TIME = 300000; // 5 minutes
 
-        // Profiles active in the last 7 days
+export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' = 'month'): Promise<AdminStats> => {
+    const now = new Date();
+    
+    // Return cache if fresh
+    if (cachedStats && (now.getTime() - cachedStats.timestamp < STATS_CACHE_TIME)) {
+        return cachedStats.data;
+    }
+
+    try {
+        // 1. Total and Active Users (Efficient counts)
+        const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const { count: activeUsers } = await supabase
@@ -111,41 +119,60 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             .select('*', { count: 'exact', head: true })
             .gt('last_active', sevenDaysAgo.toISOString());
 
-        const { data: allUsers } = await supabase.from('profiles').select('total_xp, stats, activities, last_active, created_at');
+        // 2. New Users Today (Query instead of filtering in JS)
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const { count: newUsersToday } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .gt('created_at', startOfToday.toISOString());
 
-        if (!allUsers) throw new Error("Could not fetch users for stats");
+        // 3. For more complex historical stats, we still need some data, 
+        // but let's limit it drastically or use specific fields.
+        // We'll fetch only the necessary columns for the last 1000 users or similar,
+        // or just accept some totals are guestimates based on aggregated counts.
+        
+        // Let's assume for now we only need totals. 
+        // If we want real engagement stats for ALL users, we should use a Postgres View or RPC.
+        const { data: summaryData } = await supabase
+            .from('profiles')
+            .select('total_xp, stats, created_at')
+            .limit(2000); // Guard against massive tables
 
-        const now = new Date();
-        const newUsersToday = allUsers.filter(u => isToday(u.created_at || '')).length;
-        const newUsersWeek = allUsers.filter(u => isInPeriod(u.created_at || '', 7)).length;
-        const newUsersMonth = allUsers.filter(u => isInPeriod(u.created_at || '', 30)).length;
-        const newUsersYear = allUsers.filter(u => isInPeriod(u.created_at || '', 365)).length;
+        if (!summaryData) throw new Error("Could not fetch user summary for stats");
 
-        const quizzesGenerated = allUsers.reduce((sum, u) => sum + (u.stats?.quizzesCompleted || 0), 0);
-        const storiesWritten = allUsers.reduce((sum, u) => sum + (u.stats?.storiesWritten || 0), 0);
-        const booksRead = allUsers.reduce((sum, u) => sum + (u.stats?.booksRead || 0), 0);
-        const totalLearningHours = allUsers.reduce((sum, u) => sum + (u.stats?.hoursLearned || 0), 0);
+        const quizzesGenerated = summaryData.reduce((sum, u) => sum + (u.stats?.quizzesCompleted || 0), 0);
+        const storiesWritten = summaryData.reduce((sum, u) => sum + (u.stats?.storiesWritten || 0), 0);
+        const booksRead = summaryData.reduce((sum, u) => sum + (u.stats?.booksRead || 0), 0);
+        const totalLearningHours = summaryData.reduce((sum, u) => sum + (u.stats?.hoursLearned || 0), 0);
 
-        const quizzesToday = allUsers.reduce((sum, u) => {
-            const todayActivities = (u.activities || []).filter((a: any) => a.type === 'quiz' && isToday(a.timestamp));
-            return sum + todayActivities.length;
-        }, 0);
-
-        const averageEngagementRate = (totalUsers || 0) > 0 ? Number((((activeUsers || 0) / (totalUsers || 1)) * 100).toFixed(1)) : 0;
-
-        return {
+        const stats: AdminStats = {
             totalUsers: totalUsers || 0,
             activeUsers: activeUsers || 0,
-            newUsersToday, newUsersWeek, newUsersMonth, newUsersYear,
-            quizzesGenerated, quizzesToday, flashcardsCreated: 0, flashcardsToday: 0,
-            storiesWritten, storiesToday: 0, booksRead, booksToday: 0,
-            totalLearningHours, averageEngagementRate
+            newUsersToday: newUsersToday || 0,
+            newUsersWeek: 0, // Simplified for performance
+            newUsersMonth: 0,
+            newUsersYear: 0,
+            quizzesGenerated,
+            quizzesToday: 0,
+            flashcardsCreated: 0,
+            flashcardsToday: 0,
+            storiesWritten,
+            storiesToday: 0,
+            booksRead,
+            booksToday: 0,
+            totalLearningHours,
+            averageEngagementRate: (totalUsers || 0) > 0 ? Number((((activeUsers || 0) / (totalUsers || 1)) * 100).toFixed(1)) : 0
         };
+
+        cachedStats = { data: stats, timestamp: now.getTime() };
+        return stats;
     } catch (error) {
         console.error('Error getting global stats:', error);
         throw error;
     }
-};
+}
+;
 
 // ========== USER ANALYTICS ==========
 
@@ -153,7 +180,7 @@ export const getUserAnalytics = async (limitCount: number = 50): Promise<AdminUs
     try {
         const { data: users, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id, name, email, phone_number, age_range, gender, status, level, total_xp, stats, created_at, education, is_employed, last_active')
             .limit(limitCount);
 
         if (error) throw error;
@@ -169,7 +196,7 @@ export const getUserAnalytics = async (limitCount: number = 50): Promise<AdminUs
             isEmployed: user.is_employed,
             country: undefined,
             registrationDate: user.created_at,
-            lastActive: user.last_active,
+            lastActive: user.last_active || user.created_at,
             totalActivityMinutes: (user.stats?.hoursLearned || 0) * 60,
             status: user.status || 'active',
             level: user.level || 1,
@@ -227,7 +254,10 @@ export const getAllComments = async (limitCount: number = 50): Promise<UserComme
             id: c.id,
             userId: c.user_id,
             userName: c.user_name,
+            userPhone: c.user_phone, // Map user_phone
             content: c.content,
+            rating: c.rating, // Map rating
+            category: c.category, // Map category
             status: c.status,
             adminResponse: c.admin_response,
             adminResponseDate: c.admin_response_date,
@@ -284,6 +314,7 @@ export const getAllRatings = async (limitCount: number = 50): Promise<PlatformRa
         return (data || []).map(r => ({
             id: r.id,
             userId: r.user_id,
+            userName: r.user_name, // Map user_name
             overall: r.overall,
             features: r.features,
             comment: r.comment,

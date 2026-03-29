@@ -37,8 +37,12 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
-import { geminiService } from '../services/gemini';
-import { XP_PER_LEVEL, AVATAR_LEVELS } from '../constants';
+import { openrouterService } from '../services/openrouter';
+import { XP_PER_LEVEL, AVATAR_LEVELS, LEAGUES, getLeagueFromXp, getXpForNextLevel } from '../constants';
+import { MindGarden } from '../components/MindGarden';
+import { WorldBrainMap } from '../components/WorldBrainMap';
+import { CollaborativeDoodle } from '../components/CollaborativeDoodle';
+import { feedbackService } from '../services/feedbackService';
 
 interface DashboardProps {
   onNavigate: (tab: string) => void;
@@ -55,15 +59,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   if (!user) return null;
 
+  const prevLevelRef = React.useRef(user.avatar.currentLevel);
+
+  React.useEffect(() => {
+    if (user.avatar.currentLevel > prevLevelRef.current) {
+      feedbackService.fullSuccess();
+      prevLevelRef.current = user.avatar.currentLevel;
+    }
+  }, [user.avatar.currentLevel]);
+
   const currentLevelInfo = React.useMemo(() =>
     AVATAR_LEVELS.find(l => l.level === user.avatar.currentLevel) || AVATAR_LEVELS[0],
     [user.avatar.currentLevel]
   );
 
-  const xpPercentage = React.useMemo(() =>
-    (user.xp / XP_PER_LEVEL) * 100,
-    [user.xp]
-  );
+  const xpPercentage = React.useMemo(() => {
+    const xpNeeded = getXpForNextLevel(user.avatar.currentLevel || 1);
+    return Math.min(100, Math.max(0, (user.xp / xpNeeded) * 100));
+  }, [user.xp, user.avatar.currentLevel]);
 
   const today = React.useMemo(() => new Date().toISOString().split('T')[0], []);
   const canRollDice = React.useMemo(() =>
@@ -102,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
       // If surprise, fetch from Gemini
       if (result.reward.type === 'surprise') {
-        const surpriseData = await geminiService.getDiceSurprise(settings.language);
+        const surpriseData = await openrouterService.getDiceSurprise(settings.language);
         setSurprise(surpriseData);
       }
     } catch (error: any) {
@@ -180,9 +193,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               <div className="text-center md:text-left space-y-2 md:space-y-4 flex-1 w-full">
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-8">
                   <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
-                    <h2 className="text-3xl md:text-6xl font-display font-black text-slate-900 dark:text-white tracking-tighter whitespace-nowrap">
-                      {user.name}<span className="text-primary">.</span>
-                    </h2>
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                      <h2 className="text-3xl md:text-6xl font-display font-black text-slate-900 dark:text-white tracking-tighter whitespace-nowrap">
+                        {user.name}<span className="text-primary">.</span>
+                      </h2>
+                      {(() => {
+                        const leagueId = getLeagueFromXp(user.totalXp);
+                        const league = LEAGUES.find(l => l.id === leagueId);
+                        if (!league) return null;
+                        return (
+                          <motion.div 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 bg-black/20 backdrop-blur-md shadow-lg group/league cursor-help"
+                            style={{ borderColor: `${league.color}33` }}
+                            title={league.name}
+                          >
+                            <span className="text-lg md:text-xl">{league.icon}</span>
+                            <span className="text-[10px] md:text-xs font-black uppercase tracking-widest" style={{ color: league.color }}>{league.name}</span>
+                          </motion.div>
+                        );
+                      })()}
+                    </div>
                     {user.streak?.current > 0 && (
                       <div className="inline-flex items-center gap-2 bg-orange-500/10 dark:bg-orange-500/20 px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-2xl border border-orange-500/20 shadow-glow-orange animate-bounce">
                         <span className="text-orange-600 dark:text-orange-400 font-bold text-lg md:text-2xl">{user.streak.current}</span>
@@ -229,7 +261,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   </div>
                   <div className="flex justify-between px-0.5">
                     <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter">{user.xp} XP</span>
-                    <span className="text-[7px] md:text-[10px] font-black text-blue-600 uppercase tracking-tighter">{XP_PER_LEVEL - user.xp} {t('dashboard.profile.remaining')}</span>
+                    <span className="text-[7px] md:text-[10px] font-black text-blue-600 uppercase tracking-tighter">
+                      {Math.round(getXpForNextLevel(user.avatar?.currentLevel || 1) - user.xp)} {t('dashboard.profile.remaining')}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -345,34 +379,52 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {dailyVocab.words.map((item, idx) => (
-                <div key={idx} className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-blue-500/30 transition-all group">
-                  <div className="flex items-start justify-between mb-4 md:mb-6">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
-                      <BookMarked size={20} className="md:w-6 md:h-6" />
+              {dailyVocab.loading ? (
+                // Squelettes de chargement
+                [1, 2].map((i) => (
+                  <div key={i} className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-white/10 animate-pulse">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-white/5 mb-6"></div>
+                    <div className="h-8 bg-slate-200 dark:bg-white/5 rounded-lg w-3/4 mb-4"></div>
+                    <div className="space-y-3">
+                      <div className="h-12 bg-slate-200 dark:bg-white/5 rounded-xl w-full"></div>
+                      <div className="h-16 bg-slate-200 dark:bg-white/5 rounded-xl w-full"></div>
                     </div>
                   </div>
-
-                  <h4 className="text-xl md:text-2xl font-display font-black text-slate-900 dark:text-white mb-3 tracking-tight group-hover:text-blue-600 transition-colors">
-                    {item.word}
-                  </h4>
-
-                  <div className="space-y-4">
-                    <div className="p-3 md:p-4 bg-slate-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-slate-100 dark:border-white/5">
-                      <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">
-                        "{item.explanation}"
-                      </p>
+                ))
+              ) : dailyVocab.words && dailyVocab.words.length > 0 ? (
+                dailyVocab.words.map((item, idx) => (
+                  <div key={idx} className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-blue-500/30 transition-all group">
+                    <div className="flex items-start justify-between mb-4 md:mb-6">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                        <BookMarked size={20} className="md:w-6 md:h-6" />
+                      </div>
                     </div>
 
-                    <div>
-                      <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">{t('dashboard.vocab.example')}</p>
-                      <p className="text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed bg-blue-500/5 p-3 md:p-4 rounded-xl md:rounded-2xl border-l-4 border-blue-500">
-                        {item.usage}
-                      </p>
+                    <h4 className="text-xl md:text-2xl font-display font-black text-slate-900 dark:text-white mb-3 tracking-tight group-hover:text-blue-600 transition-colors">
+                      {item.word}
+                    </h4>
+
+                    <div className="space-y-4">
+                      <div className="p-3 md:p-4 bg-slate-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-slate-100 dark:border-white/5">
+                        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">
+                          "{item.explanation}"
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">{t('dashboard.vocab.example')}</p>
+                        <p className="text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed bg-blue-500/5 p-3 md:p-4 rounded-xl md:rounded-2xl border-l-4 border-blue-500">
+                          {item.usage}
+                        </p>
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="col-span-full p-8 text-center glass rounded-3xl border border-white/10">
+                  <p className="text-slate-400 font-bold">Aucun mot disponible pour le moment.</p>
                 </div>
-              ))}
+              )}
             </div>
           </section>
 
@@ -384,16 +436,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </h3>
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary transition-colors"
+                className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary dark:hover:text-primary-light transition-colors"
               >
                 {showHistory ? t('dashboard.activity.reduce') : t('dashboard.activity.viewAll')}
               </button>
             </div>
             <div className="space-y-3 md:space-y-4">
               {(user.activities && user.activities.length > 0) ? (showHistory ? user.activities : user.activities.slice(0, 3)).map(activity => (
-                <div key={activity.id} className="glass p-4 rounded-2xl md:rounded-3xl border border-white/5 flex items-center justify-between group hover:border-primary/30 transition-all">
+                <div key={activity.id} className="glass p-4 rounded-2xl md:rounded-3xl border border-black/5 dark:border-white/5 flex items-center justify-between group hover:border-primary/30 transition-all">
                   <div className="flex items-center gap-4 md:gap-5">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-primary/5 dark:bg-primary/10 text-primary flex items-center justify-center border border-primary/10 dark:border-primary/20">
                       {activity.type === 'quiz' ? <BrainCircuit size={20} className="md:w-7 md:h-7" /> :
                         activity.type === 'badge' ? <Award size={20} className="md:w-7 md:h-7" /> :
                           activity.type === 'post' ? <Sparkles size={20} className="md:w-7 md:h-7" /> :
@@ -401,23 +453,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     </div>
                     <div>
                       <p className="font-bold text-slate-900 dark:text-white text-sm md:text-lg tracking-tight line-clamp-1">{activity.title}</p>
-                      <p className="text-[9px] md:text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
+                      <p className="text-[9px] md:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
                         {activity.description}
                       </p>
                     </div>
                   </div>
                 </div>
               )) : (
-                <div className="bg-slate-900/10 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] p-10 text-center">
+                <div className="bg-black/5 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] p-10 text-center">
                   <p className="text-slate-500 font-bold text-sm">{t('dashboard.activity.empty')}</p>
                 </div>
               )}
             </div>
           </section>
+
+          {/* World Brain Map */}
+          <WorldBrainMap />
+
+          {/* Collaborative Doodle */}
+          <CollaborativeDoodle />
         </div>
 
         {/* Sidebar Column */}
         <div className="space-y-8">
+          {/* Mind Garden */}
+          <MindGarden />
+
           {/* Mission Widgets */}
           <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 shadow-premium">
             <h3 className="text-lg md:text-xl font-display font-bold text-slate-900 dark:text-white mb-6 md:mb-8 flex items-center gap-3">
@@ -497,6 +558,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <h2 className="text-2xl md:text-4xl font-display font-black text-white">🎲 {t('dashboard.dice.modalTitle')}</h2>
                     <p className="text-slate-400 font-bold text-xs md:text-sm">{t('dashboard.dice.modalSubtitle')}</p>
                   </div>
+                  
 
                   {/* Dice Animation */}
                   {!diceResult && (
@@ -610,7 +672,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </p>
         <div className="relative group/logo">
           <div className="absolute -inset-6 bg-blue-600/5 rounded-full blur-2xl opacity-0 group-hover/logo:opacity-100 transition-opacity duration-700"></div>
-          <div className="glass-light p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-white/5 group-hover/logo:border-blue-500/30 transition-all duration-500 shadow-inner relative z-10">
+          <div 
+            className="glass-light p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-white/5 group-hover/logo:border-blue-500/30 transition-all duration-500 shadow-inner relative z-10"
+          >
             <img
               src="/tmab_logo.png"
               alt="TMAB GROUP"

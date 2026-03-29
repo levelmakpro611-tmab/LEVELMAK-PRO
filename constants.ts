@@ -1,5 +1,21 @@
 
-export const XP_PER_LEVEL = 500;
+export const XP_PER_LEVEL = 1000; // Base XP for level 1
+
+export const getXpForNextLevel = (level: number) => {
+  // Formula for how much XP is needed to complete the current level
+  // Level 1: 1200
+  // Level 2: 2400
+  return Math.floor(level * 1000 * 1.2);
+};
+
+export const getTotalXpAtLevel = (level: number) => {
+  // Sum of all XP needed for all levels up to this one
+  let total = 0;
+  for (let i = 1; i < level; i++) {
+    total += getXpForNextLevel(i);
+  }
+  return total;
+};
 
 export const AVATAR_LEVELS = [
   { level: 1, name: 'Débutant', minXp: 0, color: '#3B82F6' },
@@ -8,6 +24,23 @@ export const AVATAR_LEVELS = [
   { level: 4, name: 'Expert', minXp: 4000, color: '#F59E0B' },
   { level: 5, name: 'Maître du Savoir', minXp: 10000, color: '#EF4444' },
 ];
+
+export const LEAGUES = [
+  { id: 'bronze', name: 'Ligue Bronze', minXp: 0, color: '#CD7F32', icon: '🥉' },
+  { id: 'silver', name: 'Ligue Argent', minXp: 5000, color: '#C0C0C0', icon: '🥈' },
+  { id: 'gold', name: 'Ligue Or', minXp: 15000, color: '#FFD700', icon: '🥇' },
+  { id: 'diamond', name: 'Ligue Diamant', minXp: 50000, color: '#B9F2FF', icon: '💎' },
+  { id: 'master', name: 'Ligue Master', minXp: 100000, color: '#EF4444', icon: '🔥' },
+];
+
+export const getLeagueFromXp = (xp: number) => {
+  for (let i = LEAGUES.length - 1; i >= 0; i--) {
+    if (xp >= LEAGUES[i].minXp) {
+      return LEAGUES[i].id;
+    }
+  }
+  return LEAGUES[0].id;
+};
 
 export const SUBJECTS = [
   'Mathématiques',
@@ -88,5 +121,25 @@ export const POTIONS = [
     icon: 'Coins',
     image: '/assets/fiole magique/WhatsApp Image 2026-02-10 at 02.26.04.jpeg',
     duration: 10 * 60 * 1000 // 10 minutes in ms
+  },
+  {
+    id: 'water_can',
+    name: 'Bidon d\'Eau',
+    description: 'Permet d\'arroser tes plantes pour les garder en bonne santé et les faire grandir.',
+    price: 30,
+    color: '#3B82F6',
+    icon: 'Droplets',
+    image: '/assets/garden/water_can.png',
+    category: 'garden'
+  },
+  {
+    id: 'fertilizer',
+    name: 'Engrais Magique',
+    description: 'Accélère instantanément la croissance d\'une plante.',
+    price: 75,
+    color: '#10B981',
+    icon: 'Sparkles',
+    image: '/assets/garden/fertilizer.png',
+    category: 'garden'
   }
 ];

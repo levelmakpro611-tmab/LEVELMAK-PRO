@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { User as UserIcon, Sparkles, Rocket, Phone, Lock, Eye, EyeOff, ArrowRight, Book } from 'lucide-react';
+import { User as UserIcon, Sparkles, Rocket, Phone, Lock, Eye, EyeOff, ArrowRight, Book, Mail, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
 import { User as UserType } from '../types';
 import { isAdminCredentials } from '../services/adminService';
 import { logUserActivity } from '../services/activityService';
+import { biometricService } from '../services/biometricService';
 
 const Auth: React.FC = () => {
   const { registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, loading: storeLoading } = useStore();
@@ -23,14 +24,26 @@ const Auth: React.FC = () => {
   const [showPolicyDetail, setShowPolicyDetail] = useState(false);
   const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [registerStep, setRegisterStep] = useState<1 | 2>(1);
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+
+  React.useEffect(() => {
+    const checkBiometrics = async () => {
+      const isEnabled = await biometricService.isEnabled();
+      setBiometricAvailable(isEnabled);
+    };
+    checkBiometrics();
+  }, []);
 
   const isLoading = storeLoading || localLoading;
 
   const resetForm = () => {
     setName('');
+    setEmail('');
     setPhone('');
     setPassword('');
+    setRegisterStep(1);
     setError(null);
     setResetSuccess(false);
     setRecoveryStep(1);
@@ -50,16 +63,25 @@ const Auth: React.FC = () => {
 
     try {
       if (mode === 'register') {
-        console.log('Tentative d\'inscription...');
-        if (!name.trim() || !phone.trim() || !password.trim() || !email.trim()) {
-          throw new Error('Veuillez remplir tous les champs (Nom, Email, Numéro et Mot de Passe).');
+        console.log('Tentative d\'inscription transition...');
+        if (registerStep === 1) {
+          if (!name.trim() || !phone.trim() || !email.trim()) {
+            throw new Error('Veuillez remplir tous les champs d\'identité.');
+          }
+          setRegisterStep(2);
+          return;
+        }
+
+        if (!password.trim()) {
+          throw new Error('Veuillez définir un mot de passe.');
         }
         if (!acceptedPolicies) {
           throw new Error('Tu dois accepter les politiques de LEVELMAK pour continuer.');
         }
         if (password.length < 6) {
-          throw new Error('⚠️ SÉCURITÉ : Ton mot de passe est trop court. Il doit faire au moins 6 caractères pour protéger ton compte.');
+          throw new Error('⚠️ SÉCURITÉ : Ton mot de passe est trop court (min. 6 caractères).');
         }
+
         await registerWithPhone({
           name: name.trim(),
           phone: phone.trim(),
@@ -75,36 +97,7 @@ const Auth: React.FC = () => {
           throw new Error('Veuillez entrer votre numéro et mot de passe.');
         }
 
-        // Check if admin credentials using phone field as username - auto-create admin account if needed
-        if (isAdminCredentials(phone.trim(), password)) {
-          console.log('Admin credentials detected');
-          setIsAdminUser(true);
-          try {
-            await loginWithPhone(phone.trim(), password);
-            console.log('Admin login success');
-            logUserActivity('admin_temp_id', 'Admin User', 'auth', 'Admin Login', { method: 'Special Phone' });
-          } catch (loginError: any) {
-            console.log('Admin auto-creation needed...');
-            try {
-              await registerWithPhone({
-                name: 'Administrateur Principal',
-                phone: phone.trim(),
-                email: 'admin@levelmak.pro',
-                password,
-                gender: 'HOMME',
-                ageRange: '24+'
-              });
-              console.log('Admin created and logged in');
-              return;
-            } catch (registerError: any) {
-              console.error('CRITICAL ADMIN ERROR:', registerError);
-              await loginWithPhone(phone.trim(), password);
-            }
-          }
-          return;
-        }
-
-        // Normal user login
+        // Normal user login - Admin role will be handled by the database
         const identifier = phone.trim();
         if (identifier.includes('@')) {
           console.log('Login with email:', identifier);
@@ -130,6 +123,27 @@ const Auth: React.FC = () => {
       await loginWithGoogle();
     } catch (err: any) {
       setError(err.message || 'La connexion avec Google a échoué.');
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    setError(null);
+    setLocalLoading(true);
+    try {
+      const creds = await biometricService.authenticate();
+      if (creds && creds.identifier && creds.password) {
+         if (creds.identifier.includes('@')) {
+           await loginWithEmail(creds.identifier, creds.password);
+         } else {
+           await loginWithPhone(creds.identifier, creds.password);
+         }
+      } else {
+         setError('Échec de la biométrie ou identifiants manquants.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'La connexion biométrique a échoué.');
+    } finally {
+      setLocalLoading(false);
     }
   };
 
@@ -166,8 +180,8 @@ const Auth: React.FC = () => {
       <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
 
-      <div className="relative z-20 w-full max-w-2xl mt-4 md:mt-0">
-        <div className="glass p-6 md:p-12 lg:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-6 md:space-y-8 animate-slide-up relative">
+      <div className="relative z-20 w-full max-w-xl mt-4 md:mt-0">
+        <div className="glass p-8 md:p-12 lg:p-14 rounded-[3rem] md:rounded-[4rem] border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.6)] space-y-8 animate-slide-up relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
 
           <div className="text-center space-y-4">
@@ -179,17 +193,24 @@ const Auth: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <h1 className="text-xl md:text-4xl font-display font-black text-white leading-tight tracking-tighter">
+              <h1 className="text-2xl md:text-3xl font-display font-black text-white leading-tight tracking-tighter">
                 {mode === 'register' ? (
                   <>Rejoins <span className="text-blue-400 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]">l'Élite</span></>
                 ) : mode === 'login' ? (
-                  <>Bon retour, <span className="text-purple-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">Champion</span></>
+                  <>Le retour du <span className="text-purple-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">Champion</span></>
                 ) : (
                   <>Récupère <span className="text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">ton Trône</span></>
                 )}
               </h1>
             </div>
           </div>
+
+          {mode === 'register' && (
+            <div className="flex justify-center gap-2 mb-4">
+              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 1 ? 'bg-blue-500 shadow-glow' : 'bg-white/10'}`} />
+              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 2 ? 'bg-blue-500 shadow-glow' : 'bg-white/10'}`} />
+            </div>
+          )}
 
           {mode !== 'forgot' && (
             <div className="space-y-4">
@@ -215,297 +236,361 @@ const Auth: React.FC = () => {
           {mode === 'forgot' ? (
             <div className="space-y-6">
               <div className="text-center space-y-2">
-                <p className="text-xs text-slate-500 font-bold">
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
                   {recoveryStep === 1
-                    ? "Entre ton pseudo et ton numéro pour prouver ton identité."
-                    : "Identité confirmée ! Choisis ton nouveau mot de passe d'Élite."}
+                    ? "Vérification d'Identité"
+                    : "Accès Autorisé"}
                 </p>
               </div>
 
-              <form onSubmit={handleRecovery} className="space-y-4">
-                {recoveryStep === 1 ? (
-                  <>
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                        <UserIcon size={11} />
-                        Ton Pseudo
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                        placeholder="Ex: alimou1234"
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                          <Book size={11} />
-                          E-mail
+              <form onSubmit={handleRecovery} className="space-y-5">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={recoveryStep}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-4"
+                  >
+                    {recoveryStep === 1 ? (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                            <UserIcon size={12} className="text-orange-500" />
+                            Pseudo ou Email
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700"
+                            placeholder="Ex: mouctar1234"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                            <Phone size={12} className="text-orange-500" />
+                            Numéro de téléphone
+                          </label>
+                          <input
+                            type="tel"
+                            required
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700"
+                            placeholder="Ex: 610000000"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                          <Lock size={12} className="text-orange-500" />
+                          Nouveau Mot de Passe (Min. 6)
                         </label>
-                        <input
-                          type="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                          placeholder="Ex: email@example.com"
-                        />
+                        <div className="relative group">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700 pr-12"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                          <Phone size={11} />
-                          Numéro
-                        </label>
-                        <input
-                          type="tel"
-                          required
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                          placeholder="Ex: +224 610 00 00"
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                      <Lock size={11} />
-                      Nouveau Mot de Passe
-                    </label>
-                    <div className="relative group">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700 pr-12"
-                        placeholder="Ex: Lelemak14"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                    )}
+                  </motion.div>
+                </AnimatePresence>
 
                 {resetSuccess ? (
-                  <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl text-orange-500 text-center space-y-2">
-                    <Sparkles className="mx-auto" size={24} />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white">Demande de réinitialisation envoyée !</p>
-                    <p className="text-[9px]">TMAB GROUP traite ta demande... Redirection imminente.</p>
+                  <div className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-[2rem] text-orange-500 text-center space-y-3">
+                    <Sparkles className="mx-auto" size={32} />
+                    <p className="text-xs font-black uppercase tracking-widest text-white">Demande validée !</p>
+                    <p className="text-[10px] font-medium opacity-80">TMAB GROUP met à jour ton accès Élite...</p>
                   </div>
                 ) : (
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-2xl font-black text-xs shadow-glow transition-all active:scale-[0.98]"
+                    className="w-full py-5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-glow transition-all active:scale-[0.98] hover:shadow-orange-500/20"
                   >
-                    {isLoading ? "Traitement..." : recoveryStep === 1 ? "Vérifier mon Identité" : "Changer mon Mot de Passe"}
+                    {isLoading ? "Vérification..." : recoveryStep === 1 ? "Vérifier Identité" : "Changer l'accès"}
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => { setMode('login'); resetForm(); }}
-                  className="w-full text-[9px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all"
+                  className="w-full text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all py-2"
                 >
                   Retour à la connexion
                 </button>
               </form>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="max-h-[35vh] overflow-y-auto pr-2 custom-scrollbar space-y-4">
-                {mode === 'register' && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                        <UserIcon size={11} />
-                        Ton Pseudo (Obligatoire)
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
-                        placeholder="Ex: alimou1234"
-                      />
-                    </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <AnimatePresence mode="wait">
+                {mode === 'register' ? (
+                  <motion.div
+                    key={`reg-step-${registerStep}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-5"
+                  >
+                    {registerStep === 1 ? (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                            <UserIcon size={12} className="text-blue-500" />
+                            Ton Pseudo
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                            placeholder="Ex: mouctar1234"
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                          <Book size={11} />
-                          E-mail
-                        </label>
-                        <input
-                          type="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
-                          placeholder="Ex: mail@example.com"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                          <Phone size={11} />
-                          Numéro
-                        </label>
-                        <input
-                          type="tel"
-                          required
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
-                          placeholder="Ex: 620 00 00 00"
-                        />
-                      </div>
-                    </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                            <Mail size={12} className="text-blue-500" />
+                            E-mail Personnel
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                            placeholder="Ex: mail@ecole.com"
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3">Genre</label>
-                        <div className="flex gap-2">
-                          {(['HOMME', 'FEMME'] as const).map((g) => (
-                            <button
-                              key={g}
-                              type="button"
-                              onClick={() => setGender(g)}
-                              className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all border ${gender === g ? 'bg-blue-600 border-blue-500 text-white' : 'bg-white/5 border-white/10 text-slate-500'}`}
-                            >
-                              {g}
-                            </button>
-                          ))}
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                            <Phone size={12} className="text-blue-500" />
+                            Numéro de Mobile
+                          </label>
+                          <input
+                            type="tel"
+                            required
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                            placeholder="Ex: 610000000"
+                          />
                         </div>
                       </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Genre</label>
+                            <div className="flex gap-2">
+                              {(['HOMME', 'FEMME'] as const).map((g) => (
+                                <button
+                                  key={g}
+                                  type="button"
+                                  onClick={() => setGender(g)}
+                                  className={`flex-1 py-4 rounded-xl text-[10px] font-black transition-all border ${gender === g ? 'bg-blue-600 border-blue-500 text-white shadow-glow' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                                >
+                                  {g}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3">Âge</label>
-                        <select
-                          value={ageRange}
-                          onChange={(e) => setAgeRange(e.target.value as any)}
-                          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[10px] outline-none"
-                        >
-                          <option value="15-18" className="bg-slate-900">15-18 ans</option>
-                          <option value="19-23" className="bg-slate-900">19-23 ans</option>
-                          <option value="24+" className="bg-slate-900">24+ ans</option>
-                        </select>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Tranche d'Âge</label>
+                            <select
+                              value={ageRange}
+                              onChange={(e) => setAgeRange(e.target.value as any)}
+                              className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[11px] outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
+                            >
+                              <option value="15-18" className="bg-slate-900">15-18 ans</option>
+                              <option value="19-23" className="bg-slate-900">19-23 ans</option>
+                              <option value="24+" className="bg-slate-900">24+ ans</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                            <Lock size={12} className="text-blue-500" />
+                            Mot de Passe (Min. 6)
+                          </label>
+                          <div className="relative group">
+                            <input
+                              type={showPassword ? 'text' : 'password'}
+                              required
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700 pr-12"
+                              placeholder="••••••••"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                            >
+                              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex items-center gap-4 group cursor-pointer" onClick={() => setAcceptedPolicies(!acceptedPolicies)}>
+                          <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${acceptedPolicies ? 'bg-blue-600 border-blue-500 shadow-glow' : 'border-white/20'}`}>
+                            {acceptedPolicies && <Sparkles size={10} className="text-white" />}
+                          </div>
+                          <p className="text-[10px] text-slate-300 font-bold leading-relaxed selection:bg-transparent">
+                            J'accepte les politiques de confidentialité de LEVELMAK
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {mode === 'login' && (
-                  <div className="space-y-4">
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="login-form"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                        <UserIcon size={11} />
-                        E-mail ou Numéro
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                        <Phone size={12} className="text-purple-500" />
+                        Numéro de Mobile
                       </label>
                       <input
-                        type="text"
+                        type="tel"
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all"
-                        placeholder="Identifiant"
+                        className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700"
+                        placeholder="Ex: 610000000"
                       />
                     </div>
-                  </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center px-1">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
+                          <Lock size={12} className="text-purple-500" />
+                          Mot de Passe
+                        </label>
+                        <button type="button" onClick={() => setMode('forgot')} className="text-[9px] font-black text-slate-500 hover:text-purple-400 uppercase tracking-widest transition-colors">Perdu ?</button>
+                      </div>
+                      <div className="relative group">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700 pr-12"
+                          placeholder="••••••••"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
-
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-3 flex items-center gap-2">
-                    <Lock size={11} />
-                    Mot de Passe (Min. 6)
-                  </label>
-                  <div className="relative group">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-sm outline-none focus:border-blue-500 transition-all pr-12"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {mode === 'register' && (
-                <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={acceptedPolicies}
-                      onChange={(e) => setAcceptedPolicies(e.target.checked)}
-                      className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-600"
-                    />
-                    <p className="text-[10px] text-slate-300 font-bold">
-                      J'accepte les politiques de LEVELMAK
-                    </p>
-                  </div>
-                </div>
-              )}
+              </AnimatePresence>
 
               {error && (
-                <div className="p-4 bg-red-500/20 border-2 border-red-500 rounded-2xl text-red-500 text-center text-xs font-black animate-shake shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-5 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-500 text-center text-xs font-black animate-shake shadow-lg shadow-red-500/10"
+                >
                   <div className="flex items-center justify-center gap-2 mb-1">
-                    <Sparkles size={14} />
-                    <span>⚠️ ERREUR CRITIQUE</span>
+                    <Sparkles size={16} />
+                    <span>SYSTÈME : ERREUR</span>
                   </div>
                   {error}
-                  <div className="mt-2 text-[9px] opacity-70 font-bold uppercase tracking-widest text-white bg-red-600 p-1 rounded">
-                    Action Requise : Augmente ton mot de passe !
-                  </div>
-                </div>
+                </motion.div>
               )}
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <button
                   type="submit"
-                  id="auth-submit-button"
-                  disabled={isLoading || (mode === 'register' && !acceptedPolicies)}
-                  className={`w-full py-5 rounded-xl font-black text-sm transition-all relative z-30 shadow-2xl hover:scale-[1.02] active:scale-95 ${isLoading || (mode === 'register' && !acceptedPolicies) ? 'bg-slate-800 text-slate-500' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40'}`}
+                  disabled={isLoading || (mode === 'register' && registerStep === 2 && !acceptedPolicies)}
+                  className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all relative z-30 shadow-2xl hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-4 ${isLoading || (mode === 'register' && registerStep === 2 && !acceptedPolicies)
+                    ? 'bg-slate-800 text-slate-500'
+                    : mode === 'register'
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40'
+                      : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/40'
+                    }`}
                 >
-                  <span className="flex items-center justify-center gap-3">
-                    {isLoading ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    ) : (
-                      <>
-                        <Rocket size={20} className="animate-bounce" />
-                        <span>{mode === 'register' ? 'CLIQUE ICI : PROPULSER MON APPRENTISSAGE' : 'Accéder au Dashboard'}</span>
-                        <ArrowRight size={18} />
-                      </>
-                    )}
-                  </span>
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      {mode === 'register' ? (registerStep === 1 ? <ArrowRight size={20} /> : <Rocket size={20} className="animate-bounce" />) : <ArrowRight size={20} />}
+                      <span>
+                        {mode === 'login'
+                          ? 'Accéder au Dashboard'
+                          : registerStep === 1
+                            ? 'Continuer'
+                            : 'Propulser mon Savoir'
+                        }
+                      </span>
+                    </>
+                  )}
                 </button>
+
+                {mode === 'register' && registerStep === 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setRegisterStep(1)}
+                    className="w-full text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all"
+                  >
+                    Retour à l'étape précédente
+                  </button>
+                )}
+
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+                  <div className="relative flex justify-center text-[10px]"><span className="px-3 bg-[#060915] text-slate-600 font-bold uppercase tracking-widest leading-none">Ou via</span></div>
+                </div>
+
+                {mode === 'login' && biometricAvailable && (
+                  <button
+                    type="button"
+                    onClick={handleBiometricLogin}
+                    disabled={isLoading}
+                    className="w-full py-4 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-2xl font-black text-[10px] text-purple-400 uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all"
+                  >
+                    <Fingerprint size={16} />
+                    Connexion Biométrique
+                  </button>
+                )}
 
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isLoading}
-                  className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-black text-[10px] text-white uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl font-black text-[10px] text-white uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all"
                 >
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-3 h-3" />
-                  Google
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 grayscale group-hover:grayscale-0" />
+                  Authentification Google
                 </button>
               </div>
             </form>

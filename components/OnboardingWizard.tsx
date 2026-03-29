@@ -43,28 +43,32 @@ const OnboardingWizard: React.FC = () => {
 
     const steps = [
         {
-            icon: <Rocket className="text-primary" size={48} />,
+            icon: <Rocket className="text-blue-400" size={48} />,
             title: t.step1Title,
             description: t.step1Desc,
-            color: 'from-primary/20 to-primary/5'
+            color: 'from-blue-600/20 to-blue-600/5',
+            glow: 'shadow-blue-500/20'
         },
         {
-            icon: <Target className="text-secondary" size={48} />,
+            icon: <Target className="text-purple-400" size={48} />,
             title: t.step2Title,
             description: t.step2Desc,
-            color: 'from-secondary/20 to-secondary/5'
+            color: 'from-purple-600/20 to-purple-600/5',
+            glow: 'shadow-purple-500/20'
         },
         {
-            icon: <Brain className="text-accent" size={48} />,
+            icon: <Brain className="text-pink-400" size={48} />,
             title: t.step3Title,
             description: t.step3Desc,
-            color: 'from-accent/20 to-accent/5'
+            color: 'from-pink-600/20 to-pink-600/5',
+            glow: 'shadow-pink-500/20'
         },
         {
-            icon: <Trophy className="text-success" size={48} />,
+            icon: <Trophy className="text-orange-400" size={48} />,
             title: t.step4Title,
             description: t.step4Desc,
-            color: 'from-success/20 to-success/5'
+            color: 'from-orange-600/20 to-orange-600/5',
+            glow: 'shadow-orange-500/20'
         }
     ];
 
@@ -81,7 +85,7 @@ const OnboardingWizard: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="w-full max-w-xl bg-slate-900 rounded-[2.5rem] md:rounded-[3.5rem] border border-white/5 shadow-2xl overflow-hidden relative"
+                className="w-full max-w-xl glass rounded-[3rem] md:rounded-[4rem] border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.6)] overflow-hidden relative"
             >
                 {/* Close Button */}
                 <button
@@ -92,11 +96,11 @@ const OnboardingWizard: React.FC = () => {
                 </button>
 
                 {/* Progress Bar */}
-                <div className="absolute top-0 left-0 right-0 flex gap-1 p-2">
+                <div className="absolute top-0 left-0 right-0 flex gap-1 p-3">
                     {steps.map((_, i) => (
                         <div
                             key={i}
-                            className={`h-1 flex-1 rounded-full transition-all duration-500 ${i + 1 <= step ? 'bg-primary shadow-glow' : 'bg-white/5'}`}
+                            className={`h-1.5 flex-1 rounded-full transition-all duration-700 ${i + 1 <= step ? 'bg-blue-500 shadow-glow' : 'bg-white/5'}`}
                         />
                     ))}
                 </div>
@@ -110,8 +114,8 @@ const OnboardingWizard: React.FC = () => {
                             exit={{ opacity: 0, x: -20 }}
                             className="flex flex-col items-center text-center space-y-8"
                         >
-                            <div className={`w-24 h-24 md:w-32 md:h-32 rounded-[2rem] md:rounded-[3rem] bg-gradient-to-br ${currentStepData.color} flex items-center justify-center animate-float relative`}>
-                                <div className="absolute inset-0 bg-current opacity-10 blur-2xl rounded-full" />
+                            <div className={`w-24 h-24 md:w-32 md:h-32 rounded-[2.5rem] md:rounded-[3.5rem] bg-gradient-to-br ${currentStepData.color} flex items-center justify-center animate-float relative`}>
+                                <div className={`absolute inset-0 bg-white/5 blur-2xl rounded-full`} />
                                 {currentStepData.icon}
                             </div>
 
@@ -128,10 +132,10 @@ const OnboardingWizard: React.FC = () => {
                                         if (step < steps.length) setStep(step + 1);
                                         else handleComplete();
                                     }}
-                                    className="w-full py-4 md:py-6 bg-primary hover:bg-primary-glow text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-[0.2em] text-xs md:text-sm shadow-glow flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 group"
+                                    className="w-full py-5 md:py-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-[0.2em] text-xs md:text-sm shadow-glow flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 group"
                                 >
                                     {step === steps.length ? t.start : t.next}
-                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </button>
 
                                 {step < steps.length && (

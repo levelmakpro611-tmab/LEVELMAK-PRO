@@ -24,10 +24,20 @@ interface BookReaderProps {
 }
 
 const BookReader: React.FC<BookReaderProps> = ({ book, onClose }) => {
-    const { t, addActivity } = useStore();
+    const { t, addActivity, trackTime } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
+
+    // Track time spent reading
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                trackTime(1);
+            }
+        }, 60000);
+        return () => clearInterval(interval);
+    }, [trackTime]);
 
     // Some URLs might need the Google Docs viewer for better mobile compatibility
     const getViewerUrl = (url: string) => {

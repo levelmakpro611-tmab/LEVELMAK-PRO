@@ -24,11 +24,12 @@ interface FlashcardPlayerProps {
 }
 
 const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose }) => {
-    const { user, addXp, addActivity, incrementFlashcardsStudied, updateSRSMetadata } = useStore();
+    const { user, addXp, addLevelCoins, addActivity, incrementFlashcardsStudied, updateSRSMetadata, trackTime } = useStore();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
     const [stats, setStats] = useState({ known: 0, struggling: 0 });
     const [isFinished, setIsFinished] = useState(false);
+    const [startTime] = useState(Date.now());
 
     const currentCard = cards[currentIndex];
     const progress = ((currentIndex) / cards.length) * 100;
@@ -54,18 +55,28 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
     };
 
     const finishSession = () => {
-        const xpGained = cards.length * 5;
+        // More rewarding for known cards, minimal for struggling
+        const xpGained = (stats.known * 10) + (stats.struggling * 2); 
+        const coinsGained = Math.floor(stats.known / 3); // 1 coin per 3 known cards
+        
         addXp(xpGained);
+        if (coinsGained > 0) {
+            addLevelCoins(coinsGained);
+        }
+        
         HapticFeedback.success();
         incrementFlashcardsStudied(cards.length);
-        addActivity('study', 'Session Flashcards terminée', `Tu as révisé ${cards.length} cartes sur "${deck.title}".`);
+        const timeSpent = Math.floor((Date.now() - startTime) / 60000) || 1;
+        addActivity('study', 'Session Flashcards terminée', `Tu as maîtrisé ${stats.known} cartes sur ${cards.length} !`);
+        trackTime(timeSpent);
+        
         if (user) {
             logUserActivity(
                 user.id,
                 user.name,
                 'creative',
                 `Session Flashcards terminée: ${deck.title}`,
-                { cards: cards.length, xp: xpGained }
+                { cards: cards.length, known: stats.known, xp: xpGained, coins: coinsGained, timeSpent }
             );
         }
         setIsFinished(true);

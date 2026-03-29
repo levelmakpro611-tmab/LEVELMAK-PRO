@@ -1,13 +1,12 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="fr" class="dark transition-colors duration-500">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>LevelMak Pro v0.1.7 - POKE VERCEL</title>
+    <title>LevelMak Pro v0.1.7</title>
     <script src="https://meet.jit.si/external_api.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- index.css removed as it is missing from disk -->
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -31,11 +30,13 @@
                         accent: '#F59E0B',
                         success: '#10B981',
                         danger: '#EF4444',
-                        background: '#0F172A',
-                        card: '#1E293B',
+                        background: 'var(--background)',
+                        card: 'var(--card)',
+                        surface: 'var(--surface)',
                     },
                     boxShadow: {
                         'premium': '0 20px 50px -12px rgba(0, 0, 0, 0.5)',
+                        'premium-light': '0 10px 30px -10px rgba(0, 0, 0, 0.05)',
                         'glow': '0 0 20px rgba(59, 130, 246, 0.3)',
                     },
                     backgroundImage: {
@@ -46,6 +47,59 @@
         }
     </script>
     <style>
+        :root {
+            --background: #f1f5f9;  /* Slate 100 - Plus doux que Slate 50 */
+            --card: #f8fafc;        /* Slate 50 - Remplace le blanc pur */
+            --surface: #e2e8f0;    /* Slate 200 */
+            --text-main: #0f172a;  /* Slate 900 */
+            --base-font-size: 16px;
+        }
+
+        .dark {
+            --background: #0f172a;
+            --card: #1e293b;
+            --surface: #334155;
+            --text-main: #f1f5f9;
+        }
+
+        /* Classe Glassmorphism épurée et lisible */
+        .glass {
+            background: rgba(248, 250, 252, 0.7); /* Basé sur Slate 50 */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .dark .glass {
+            background: rgba(30, 41, 59, 0.7); /* Basé sur Slate 800 */
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Root font sizing for Tailwind scalability */
+        html {
+            font-size: var(--base-font-size) !important;
+        }
+
+        .font-size-xs {
+            --base-font-size: 14px;
+        }
+
+        .font-size-sm {
+            --base-font-size: 15px;
+        }
+
+        .font-size-base {
+            --base-font-size: 16px;
+        }
+
+        .font-size-lg {
+            --base-font-size: 18px;
+        }
+
+        .font-size-xl {
+            --base-font-size: 20px;
+        }
+
         /* Force hide scrollbars and overflow globally */
         html,
         body {
@@ -54,7 +108,8 @@
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
-            background-color: #0F172A !important;
+            background-color: var(--background);
+            transition: background-color 0.5s ease;
             -ms-overflow-style: none !important;
             scrollbar-width: none !important;
         }
@@ -77,6 +132,40 @@
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch;
         }
+
+        /* Custom Premium Scrollbar for specific sections */
+        .custom-scrollbar {
+            scrollbar-width: thin !important;
+            scrollbar-color: rgba(148, 163, 184, 0.2) transparent !important;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            display: block !important;
+            width: 5px !important;
+            height: 5px !important;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.2) !important;
+            border-radius: 20px !important;
+            transition: background 0.3s ease;
+        }
+
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.4) !important;
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2) !important;
+        }
     </style>
 </head>
 
@@ -91,7 +180,7 @@
             style="animation-duration: 10s"></div>
         <div class="absolute -bottom-[10%] left-[20%] w-[30%] h-[30%] bg-accent/10 rounded-full blur-[80px]"></div>
         <div
-            class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay">
+            class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%220%200%20200%20200%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter%20id=%22noiseFilter%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.65%22%20numOctaves=%223%22%20stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect%20width=%22100%25%22%20height=%22100%25%22%20filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')] opacity-20 mix-blend-overlay">
         </div>
     </div>
 

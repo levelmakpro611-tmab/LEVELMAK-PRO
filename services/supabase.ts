@@ -7,4 +7,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase URL or Anon Key is missing in .env');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: 'levelmak-auth-token',
+        flowType: 'implicit',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        // Bypass Web Locks API to prevent Navigator LockManager timeout errors.
+        // The lock function simply executes the callback immediately without acquiring a lock.
+        lock: async (name: string, acquireTimeout: number, fn: () => Promise<any>) => {
+            return await fn();
+        },
+    }
+});

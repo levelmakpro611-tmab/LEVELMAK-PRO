@@ -115,56 +115,103 @@ export const chatService = {
      * Rechercher des utilisateurs
      */
     async searchUsers(searchTerm: string, currentUserId: string): Promise<UserPresence[]> {
-        const { data, error } = await supabase
+      try {
+        // Try full select first, fallback to minimal if columns don't exist
+        let data: any[] | null = null;
+        
+        const fullQuery = await supabase
             .from('profiles')
             .select('id, name, avatar_config, status, last_active')
             .ilike('name', `%${searchTerm}%`)
             .neq('id', currentUserId)
             .limit(20);
 
-        if (error) {
-            console.error('Error search users:', error);
-            return [];
+        if (fullQuery.error) {
+            console.warn('[Community] Full search query failed, trying minimal:', fullQuery.error?.message);
+            // Fallback: minimal columns only
+            const minimalQuery = await supabase
+                .from('profiles')
+                .select('id, name, avatar_config')
+                .ilike('name', `%${searchTerm}%`)
+                .neq('id', currentUserId)
+                .limit(20);
+            if (minimalQuery.error) {
+                console.error('[Community] Search completely failed:', JSON.stringify(minimalQuery.error));
+                return [];
+            }
+            data = minimalQuery.data;
+        } else {
+            data = fullQuery.data;
         }
 
-        return (data || []).map(u => ({
+        return (data || []).map((u: any) => ({
             userId: u.id,
-            name: u.name,
-            avatar: u.avatar_config?.baseColor || '#3B82F6',
-            status: u.status as any,
-            lastSeen: u.last_active
+            name: u.name || 'Utilisateur',
+            avatar: u.avatar_config?.image || u.avatar_config?.baseColor || '#3B82F6',
+            status: (u.status || 'offline') as any,
+            lastSeen: u.last_active || null,
+            online: u.status === 'online'
         }));
+      } catch (err) {
+        console.error('[Community] searchUsers crashed:', err);
+        return [];
+      }
     },
 
     /**
      * Récupérer tous les utilisateurs
      */
     async getAllUsers(currentUserId: string): Promise<UserPresence[]> {
-        const { data, error } = await supabase
+      try {
+        console.log('[Community] Fetching all users for discovery...');
+        let data: any[] | null = null;
+
+        // Try full select first
+        const fullQuery = await supabase
             .from('profiles')
             .select('id, name, avatar_config, status, last_active')
             .neq('id', currentUserId)
             .limit(100);
 
-        if (error) {
-            console.error('Error get all users:', error);
-            return [];
+        if (fullQuery.error) {
+            console.warn('[Community] Full query failed:', fullQuery.error?.message, '— trying minimal query...');
+            // Fallback: query with only guaranteed columns
+            const minimalQuery = await supabase
+                .from('profiles')
+                .select('id, name, avatar_config')
+                .neq('id', currentUserId)
+                .limit(100);
+
+            if (minimalQuery.error) {
+                console.error('[Community] ALL queries failed:', JSON.stringify(minimalQuery.error));
+                return [];
+            }
+            data = minimalQuery.data;
+        } else {
+            data = fullQuery.data;
         }
 
-        const users: UserPresence[] = (data || []).map(u => ({
+        console.log(`[Community] Found ${data?.length || 0} users`);
+
+        const users: UserPresence[] = (data || []).map((u: any) => ({
             userId: u.id,
-            name: u.name,
-            avatar: u.avatar_config?.baseColor || '#3B82F6',
-            status: u.status as any,
-            lastSeen: u.last_active
+            name: u.name || 'Utilisateur',
+            avatar: u.avatar_config?.image || u.avatar_config?.baseColor || '#3B82F6',
+            status: (u.status || 'offline') as any,
+            lastSeen: u.last_active || null,
+            online: u.status === 'online'
         }));
 
-        // Trier par statut (en ligne d'abord)
+        // Sort: online first, then by name
         return users.sort((a, b) => {
             if (a.status === 'online' && b.status !== 'online') return -1;
             if (a.status !== 'online' && b.status === 'online') return 1;
             return a.name.localeCompare(b.name);
         });
+      } catch (err) {
+        console.error('[Community] getAllUsers crashed:', err);
+        return [];
+      }
     },
 
     /**
@@ -205,16 +252,16 @@ export const chatService = {
         }).eq('id', friendId);
     },
 
-    /**
-     * Obtenir ou créer une conversation
-     */
     async getOrCreateConversation(userId1: string, userId2: string, userName1: string, userName2: string, avatar1: string, avatar2: string): Promise<string> {
+        // Trier les participants pour assurer l'ordre et l'unicité
+        const sortedIds = [userId1, userId2].sort();
+        
         // Chercher une conversation existante (individuelle)
         const { data: conversations, error } = await supabase
             .from('conversations')
             .select('id')
             .eq('is_group', false)
-            .contains('participants', [userId1, userId2]);
+            .contains('participants', sortedIds);
 
         if (error) {
             console.error('Error fetching conversation:', error);
@@ -228,7 +275,7 @@ export const chatService = {
         const { data: newConv, error: createError } = await supabase
             .from('conversations')
             .insert({
-                participants: [userId1, userId2],
+                participants: sortedIds,
                 participant_names: {
                     [userId1]: userName1,
                     [userId2]: userName2
@@ -248,9 +295,11 @@ export const chatService = {
             .single();
 
         if (createError) {
-            console.error('Error creating conversation:', createError);
-            throw createError;
+            console.error('[Community] Error creating conversation:', JSON.stringify(createError));
+            throw new Error(createError.message || 'Erreur DB');
         }
+
+        if (!newConv) throw new Error("La conversation n'a pas pu être créée");
 
         return newConv.id;
     },
@@ -828,26 +877,34 @@ export const chatService = {
      * Publier une story (status d'apprentissage)
      */
     async postStory(userId: string, userName: string, userAvatar: string, content: string, type: 'achievement' | 'update' | 'quiz_score' | 'text', imageUrl?: string, backgroundColor?: string) {
+        console.log("🚀 postStory starting...", { userId, type });
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const { error } = await supabase
-            .from('stories_social')
-            .insert({
-                user_id: userId,
-                user_name: userName,
-                user_avatar: userAvatar,
-                content,
-                image_url: imageUrl || null,
-                background_color: backgroundColor || null,
-                type,
-                timestamp: new Date().toISOString(),
-                expires_at: tomorrow.toISOString(),
-                views: [],
-                reactions: {}
-            });
+        console.log("📡 Calling Supabase insert on 'stories_social'...");
+        try {
+            const { data, error } = await supabase
+                .from('stories_social')
+                .insert({
+                    user_id: userId,
+                    user_name: userName,
+                    user_avatar: userAvatar,
+                    content,
+                    image_url: imageUrl || null,
+                    background_color: backgroundColor || null,
+                    type,
+                    timestamp: new Date().toISOString(),
+                    expires_at: tomorrow.toISOString(),
+                    views: [],
+                    reactions: {}
+                });
 
-        if (error) throw error;
+            console.log("✅ Supabase insert response received", { error });
+            if (error) throw error;
+        } catch (e) {
+            console.error("❌ Exception in postStory:", e);
+            throw e;
+        }
     },
 
     /**
@@ -882,9 +939,11 @@ export const chatService = {
      * Écouter les stories actives (moins de 24h)
      */
     listenToStories(callback: (stories: LearningStory[]) => void) {
+        console.log("👂 listenToStories started");
         const fetchStories = async () => {
+            console.log("📡 fetchStories: calling Supabase select...");
             const now = new Date().toISOString();
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('stories_social')
                 .select('*')
                 .gt('expires_at', now)

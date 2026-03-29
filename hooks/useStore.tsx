@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { User, SchoolLevel, Quiz, Story, Mission, Book, Flashcard, FlashcardDeck, Activity, StudyPlan, StudyTask, UserAnalytics } from '../types';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
+import { User, SchoolLevel, Quiz, Story, Mission, Book, Flashcard, FlashcardDeck, Activity, StudyPlan, StudyTask, UserAnalytics, GardenPlant, CoachMessage, CoachSession, League } from '../types';
 import { AppNotification, notificationService } from '../services/notificationService';
 import { audioService } from '../services/audio';
-import { XP_PER_LEVEL, POTIONS } from '../constants';
+import { openrouterService } from '../services/openrouter';
+import { XP_PER_LEVEL, POTIONS, getLeagueFromXp, getXpForNextLevel } from '../constants';
 import { supabase } from '../services/supabase';
 import { signUpWithPhone, signInWithPhone, convertSupabaseUser, changeUserPassword } from '../services/authService';
 import { translations, Language } from '../utils/translations';
@@ -91,6 +92,18 @@ interface AppState {
   offlinePacks: string[]; // List of offline course IDs
   t: (key: string) => string;
   dir: 'ltr' | 'rtl';
+  plantInGarden: (type: 'flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus') => void;
+  waterGarden: (plantId?: string, itemType?: 'water_can' | 'fertilizer') => boolean;
+  updateLocation: (latitude: number, longitude: number, isPublic: boolean) => void;
+  continuousStudyTime: number;  showBubbleWrap: boolean;
+  setShowBubbleWrap: (show: boolean) => void;
+  lastActivityTimestamp: number;
+  resolveBattle: (winnerId: string, isDraw?: boolean) => void;
+  coachSessions: CoachSession[];
+  saveCoachMessage: (sessionId: string, message: CoachMessage) => void;
+  createCoachSession: (firstMessage?: string) => string;
+  deleteCoachSession: (sessionId: string) => void;
+  xpPercentage: number;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -120,15 +133,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   });
   const [dailyVocab, setDailyVocab] = useState<AppState['dailyVocab']>({
-    words: [
-      { word: "Onirique", explanation: "Qui semble sortir d'un rêve.", usage: "L'atmosphère onirique du film transportait le spectateur loin du réel." },
-      { word: "Quintessence", explanation: "Ce qu'il y a de plus raffiné ou de plus pur dans quelque chose.", usage: "Ce texte est la quintessence de la pensée humaniste." }
-    ],
-    loading: false
+    words: [],
+    loading: true
   });
   const [dailyMotivation, setDailyMotivation] = useState<AppState['dailyMotivation']>({
+    quote: "Le succès, c’est d’aller d’échec en échec sans perdre son enthousiasme.",
+    author: "Winston Churchill",
     loading: false
   });
+  const [continuousStudyTime, setContinuousStudyTime] = useState(0);
+  const [showBubbleWrap, setShowBubbleWrap] = useState(false);
+  const [lastActivityTimestamp, setLastActivityTimestamp] = useState(Date.now());
+  const [coachSessions, setCoachSessions] = useState<CoachSession[]>([]);
+  const locationUpdateTimer = useRef<NodeJS.Timeout | null>(null);
 
   // ========== HELPER FUNCTIONS ==========
 
@@ -145,6 +162,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             badges: updatedUser.badges,
             streak: updatedUser.streak,
             inventory: updatedUser.inventory,
+            avatar_config: updatedUser.avatar, // Store avatar and location info in avatar_config JSONB
+            coach_sessions: updatedUser.coachSessions,
             last_active: new Date().toISOString()
           })
           .eq('id', updatedUser.id);
@@ -235,7 +254,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 loadedUser.streak = { current: 1, lastLogin: now.toISOString() };
               }
 
+
               setUser(loadedUser);
+              if (loadedUser.coachSessions) setCoachSessions(loadedUser.coachSessions);
               localStorage.setItem('levelmak_user', JSON.stringify(loadedUser));
             }
           } catch (error) {
@@ -320,29 +341,52 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
 
-        // 9. Load Daily Content
-        try {
-          const [{ cacheService }, { geminiService }] = await Promise.all([
-            import('../services/cache'),
-            import('../services/gemini')
-          ]);
+        // 9. Load Daily Content — Background Load
+        const startDailyContent = async () => {
+          try {
+            const [{ cacheService }] = await Promise.all([
+              import('../services/cache'),
+            ]);
 
-          setDailyVocab(prev => ({ ...prev, loading: true }));
-          cacheService.getDailyVocab(async () => {
-            return await geminiService.getDailyVocabulary([], settings.language);
-          }, settings.language).then(words => {
-            setDailyVocab({ words, loading: false });
-          }).catch(() => setDailyVocab(prev => ({ ...prev, loading: false })));
+            const staticQuotes = [
+              { quote: "Le succès n'est pas final, l'échec n'est pas fatal. C'est le courage de continuer qui compte.", author: "Winston Churchill" },
+              { quote: "L'éducation est l'arme la plus puissante qu'on puisse utiliser pour changer le monde.", author: "Nelson Mandela" },
+              { quote: "Le savoir est la seule matière qui s'accroît quand on la partage.", author: "Socrate" },
+              { quote: "Vis comme si tu devais mourir demain. Apprends comme si tu devais vivre éternellement.", author: "Gandhi" },
+              { quote: "Soyez le changement que vous voulez voir dans le monde.", author: "Gandhi" }
+            ];
 
-          setDailyMotivation(prev => ({ ...prev, loading: true }));
-          cacheService.getDailyMotivation(async () => {
-            return await geminiService.getDailyMotivation([], settings.language);
-          }, settings.language).then(data => {
-            setDailyMotivation({ ...data, loading: false });
-          }).catch(() => setDailyMotivation(prev => ({ ...prev, loading: false })));
-        } catch (error) {
-          console.error("Failed to load dynamic services:", error);
-        }
+            const staticVocab = [
+              [{ word: "Résilience", explanation: "Capacité à surmonter les épreuves.", usage: "Sa résilience l'a mené au succès." }, { word: "Paradigme", explanation: "Modèle de pensée.", usage: "Un changement de paradigme." }],
+              [{ word: "Altruisme", explanation: "Souci du bien-être d'autrui.", usage: "Son altruisme est exemplaire." }, { word: "Pragmatique", explanation: "Qui privilégie l'action.", usage: "Une approche pragmatique." }]
+            ];
+
+            const dayIndex = new Date().getDate() - 1;
+            setDailyMotivation({ ...staticQuotes[dayIndex % staticQuotes.length], loading: false });
+            setDailyVocab({ words: staticVocab[dayIndex % staticVocab.length] || [], loading: false });
+
+            // IA Background Refresh
+            setTimeout(() => {
+              cacheService.getDailyVocab(async () => {
+                return await openrouterService.getDailyVocabulary([], settings.language);
+              }, settings.language).then(words => {
+                if (words?.length) setDailyVocab({ words, loading: false });
+              }).catch(() => {});
+
+              cacheService.getDailyMotivation(async () => {
+                return await openrouterService.getDailyMotivation([], settings.language);
+              }, settings.language).then(data => {
+                if (data?.quote) setDailyMotivation({ ...data, loading: false });
+              }).catch(() => {});
+            }, 2000);
+          } catch (e) {
+            console.warn("Background content error:", e);
+          }
+        };
+
+        // Don't await this, let it run in background
+        startDailyContent();
+
       } catch (error) {
         console.error("Global app initialization failed:", error);
       } finally {
@@ -409,6 +453,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               setUser(userData);
               if (userData.quizzes) setQuizzes(userData.quizzes);
               if (userData.stories) setStories(userData.stories);
+              if (userData.coachSessions) setCoachSessions(userData.coachSessions);
               localStorage.setItem('levelmak_user', JSON.stringify(userData));
             }
           }
@@ -445,6 +490,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             badges: user.badges,
             streak: user.streak,
             inventory: user.inventory,
+            avatar_config: user.avatar, // Store avatar and location info in avatar_config JSONB
+            coach_sessions: user.coachSessions,
             last_active: syncData.last_sync
           })
           .eq('id', user.id);
@@ -479,7 +526,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       localStorage.setItem('levelmak_books', JSON.stringify(newBooks));
       return newBooks;
     });
-    addXp(20);
+    // Pas d'XP pour sauvegarder un livre (c'est juste un bookmark)
   }, []);
 
   const deleteBook = useCallback((id: string) => {
@@ -632,9 +679,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
 
-  const getXpForNextLevel = (level: number) => {
-    return Math.floor(level * 1000 * 1.2);
-  };
 
   const addXp = useCallback((amount: number) => {
     setUser(prev => {
@@ -670,7 +714,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         xp: prev.xp + finalAmount,
         totalXp: (prev.totalXp || 0) + finalAmount,
         levelCoins: (prev.levelCoins || 0) + bonusCoins,
-        progression: newProgression
+        progression: newProgression,
+        league: getLeagueFromXp((prev.totalXp || 0) + finalAmount) as League
       };
 
       let xpNeeded = getXpForNextLevel(updated.avatar?.currentLevel || 1);
@@ -699,22 +744,78 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (!prev) return null;
       const activeEffects = prev.activeEffects || {};
       const now = Date.now();
-      let multiplier = 1;
+      let bonusMulti = 1;
+      if (activeEffects['fortune'] && activeEffects['fortune'] > now) bonusMulti = 2;
 
-      if (activeEffects['fortune'] && activeEffects['fortune'] > now) {
-        multiplier = 2;
-      }
-
-      const finalAmount = amount * multiplier;
-      const updated: User = {
-        ...prev,
-        levelCoins: (prev.levelCoins || 0) + finalAmount
-      };
-
+      const finalAmount = amount * bonusMulti;
+      const updated: User = { ...prev, levelCoins: (prev.levelCoins || 0) + finalAmount };
       localStorage.setItem('levelmak_user', JSON.stringify(updated));
       return updated;
     });
   };
+
+  const saveCoachMessage = useCallback((sessionId: string, message: CoachMessage) => {
+    setCoachSessions(prev => {
+      const sessionIndex = prev.findIndex(s => s.id === sessionId);
+      let newSessions = [...prev];
+
+      if (sessionIndex >= 0) {
+        const session = { ...newSessions[sessionIndex] };
+        session.messages = [...session.messages, message];
+        session.lastUpdated = new Date().toISOString();
+        // Update title if it was "Nouvelle Discussion"
+        if (session.title === "Nouvelle Discussion" && message.role === 'user') {
+          session.title = message.text.substring(0, 30) + (message.text.length > 30 ? '...' : '');
+        }
+        newSessions[sessionIndex] = session;
+      }
+
+      setUser(userPrev => {
+        if (!userPrev) return null;
+        const updated = { ...userPrev, coachSessions: newSessions };
+        localStorage.setItem('levelmak_user', JSON.stringify(updated));
+        return updated;
+      });
+
+      return newSessions;
+    });
+  }, []);
+
+  const createCoachSession = useCallback((firstMessage?: string) => {
+    const newId = `session_${Date.now()}`;
+    const newSession: CoachSession = {
+      id: newId,
+      title: firstMessage ? (firstMessage.substring(0, 30) + (firstMessage.length > 30 ? '...' : '')) : "Nouvelle Discussion",
+      messages: [],
+      lastUpdated: new Date().toISOString()
+    };
+
+    setCoachSessions(prev => {
+      const newSessions = [newSession, ...prev];
+      setUser(userPrev => {
+        if (!userPrev) return null;
+        const updated = { ...userPrev, coachSessions: newSessions };
+        localStorage.setItem('levelmak_user', JSON.stringify(updated));
+        return updated;
+      });
+      return newSessions;
+    });
+
+    return newId;
+  }, []);
+
+  const deleteCoachSession = useCallback((sessionId: string) => {
+    setCoachSessions(prev => {
+      const newSessions = prev.filter(s => s.id !== sessionId);
+      setUser(userPrev => {
+        if (!userPrev) return null;
+        const updated = { ...userPrev, coachSessions: newSessions };
+        localStorage.setItem('levelmak_user', JSON.stringify(updated));
+        return updated;
+      });
+      return newSessions;
+    });
+  }, []);
 
   const betLevelCoins = (amount: number): boolean => {
     if (!user || (user.levelCoins || 0) < amount) return false;
@@ -778,7 +879,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return newQuizzes;
     });
 
-    addXp(50);
+    addXp(10); // Petit bonus pour la génération, la vraie récompense vient du jeu
   }, [user, addXp]);
 
   const updateProfile = useCallback((name: string, phoneNumber?: string, updates?: Partial<User>) => {
@@ -805,6 +906,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
       localStorage.setItem('levelmak_settings', JSON.stringify(updated));
+
+      if (newSettings.soundEnabled !== undefined) {
+        audioService.setEnabled(newSettings.soundEnabled);
+      }
+
       return updated;
     });
   }, []);
@@ -855,7 +961,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return updatedFlashcards;
     });
 
-    addXp(100); // Reward for creating a full deck
+    addXp(20); // Petit bonus pour la création, la vraie récompense vient de l'étude
   };
 
   const saveFlashcard = (card: Flashcard) => {
@@ -867,7 +973,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         newFlashcards[existingIdx] = card;
       } else {
         newFlashcards = [card, ...prev];
-        addXp(10); // Reward for creating a card
+        // Pas d'XP pour ajouter une carte individuelle
       }
       localStorage.setItem('levelmak_flashcards', JSON.stringify(newFlashcards));
       return newFlashcards;
@@ -915,6 +1021,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const trackTime = useCallback((minutes: number) => {
+    const nowMs = Date.now();
+    
+    // Check for idle reset (10 minutes = 600,000 ms)
+    setContinuousStudyTime(prev => {
+      const isIdle = (nowMs - lastActivityTimestamp) > 10 * 60 * 1000;
+      const newTime = isIdle ? minutes : prev + minutes;
+      
+      if (newTime >= 30 && (isIdle || prev < 30)) {
+        setShowBubbleWrap(true);
+      }
+      return newTime;
+    });
+
+    setLastActivityTimestamp(nowMs);
+
     setUser(prev => {
       if (!prev) return null;
       const hoursToAdd = Number((minutes / 60).toFixed(2));
@@ -928,7 +1049,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // Note: skip localStorage write for every single minute to improve speed
       return updated;
     });
-  }, []);
+  }, [lastActivityTimestamp]);
 
 
   const incrementBooksRead = useCallback(() => {
@@ -963,9 +1084,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   }, []);
 
-  const purchasePotion = (potionId: string): boolean => {
+  const purchasePotion = useCallback((potionId: string): boolean => {
     if (!user) return false;
-    const { POTIONS } = require('../constants');
     const potion = POTIONS.find((p: any) => p.id === potionId);
     if (!potion || (user.levelCoins || 0) < potion.price) return false;
 
@@ -982,7 +1102,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('levelmak_user', JSON.stringify(updated));
     addActivity('badge', 'Achat Magique 🧪', `Tu as acheté : ${potion.name}`);
     return true;
-  };
+  }, [user, addActivity]);
 
   const usePotion = useCallback((potionId: string) => {
     setUser(prev => {
@@ -1136,9 +1256,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const saveStudyPlan = useCallback((plan: StudyPlan) => {
+    if (!plan || !plan.tasks || !Array.isArray(plan.tasks)) {
+      console.error("❌ Tentative de sauvegarde d'un plan d'étude invalide:", plan);
+      return;
+    }
     setStudyPlan(plan);
     localStorage.setItem('levelmak_study_plan', JSON.stringify(plan));
-    addXp(150);
+    addXp(30); // Récompense modérée pour la planification
     addActivity('study', 'Nouveau Plan d\'Étude', `Plan généré : ${plan.title}`);
   }, [addActivity, addXp]);
 
@@ -1158,7 +1282,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       const task = updatedTasks.find(t => t.id === taskId);
       if (task?.completed) {
-        addXp(30);
+        addXp(15); // Récompense modérée pour compléter une tâche de révision
         addActivity('study', 'Tâche Complétée', `Révision de ${task.subject} terminée.`);
       }
 
@@ -1200,7 +1324,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     updateProfile(user.name, user.phoneNumber || '', { analytics: newAnalytics });
     addXp(Math.floor(minutes / 2)); // 1 XP per 2 minutes studied
-  }, [user, updateProfile, addXp]);
+    
+    // Manage continuous study time for Bubble Wrap
+    const nowMs = Date.now();
+    setContinuousStudyTime(prev => {
+      const isIdle = (nowMs - lastActivityTimestamp) > 10 * 60 * 1000;
+      const newTime = isIdle ? minutes : prev + minutes;
+      if (newTime >= 30 && (isIdle || prev < 30)) {
+        setShowBubbleWrap(true);
+      }
+      return newTime;
+    });
+    setLastActivityTimestamp(nowMs);
+  }, [user, updateProfile, addXp, lastActivityTimestamp]);
 
   const updateQuizPerformance = useCallback((subject: string, score: number, total: number) => {
     if (!user) return;
@@ -1378,6 +1514,167 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [user]);
 
+  const plantInGarden = useCallback((type: 'flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus') => {
+    setUser(prev => {
+      if (!prev) return null;
+      const now = new Date().toISOString();
+      const currentGarden = prev.garden || { lastWatered: now, plants: [] };
+      
+      const newPlant: GardenPlant = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        type,
+        plantedAt: now,
+        lastWateredAt: now,
+        growthStage: 2, // Start visible as a tiny tree/plant instead of a bean!
+        state: 'healthy' as const
+      };
+      
+      const updatedUser = {
+        ...prev,
+        garden: {
+          ...currentGarden,
+          plants: [...currentGarden.plants, newPlant]
+        }
+      };
+      
+      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  }, []);
+
+  const waterGarden = useCallback((plantId?: string, itemType: 'water_can' | 'fertilizer' = 'water_can'): boolean => {
+    let success = false;
+    setUser(prev => {
+      if (!prev || !prev.garden) return prev;
+      
+      // Check if user has the item
+      const currentCount = prev.consumables?.[itemType] || 0;
+      if (currentCount <= 0) return prev;
+
+      const updatedConsumables = { ...prev.consumables };
+      updatedConsumables[itemType] = currentCount - 1;
+      if (updatedConsumables[itemType] === 0) delete updatedConsumables[itemType];
+
+      const now = new Date().toISOString();
+      const updatedPlants = prev.garden.plants.map(p => {
+        if (plantId && p.id !== plantId) return p;
+        
+        let newStage = p.growthStage;
+        if (itemType === 'fertilizer' && p.growthStage < 4) {
+          newStage = Math.min(4, p.growthStage + 1);
+        } else if (itemType === 'water_can' && p.state !== 'healthy') {
+          // Watering a non-healthy plant makes it healthy but doesn't necessarily grow it
+          // Grow logic is handled by daily check or can be added here
+        }
+
+        return {
+          ...p,
+          state: 'healthy' as const,
+          lastWateredAt: now,
+          growthStage: newStage
+        };
+      });
+      
+      const updatedUser = {
+        ...prev,
+        consumables: updatedConsumables,
+        garden: {
+          lastWatered: now,
+          plants: updatedPlants
+        }
+      };
+      
+      success = true;
+      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+    return success;
+  }, []);
+
+  const updateLocation = useCallback((latitude: number, longitude: number, isPublic: boolean) => {
+    // 1. Update local state immediately for UI responsiveness
+    const locationData = {
+        latitude,
+        longitude,
+        isPublic,
+        lastUpdated: new Date().toISOString()
+    };
+
+    setUser(prev => {
+      if (!prev) return null;
+      const updatedUser = {
+        ...prev,
+        location: locationData,
+        avatar: {
+          ...(prev.avatar || {}),
+          location: locationData
+        }
+      };
+      
+      // Save to localStorage immediately
+      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+
+    // 2. Debounce Supabase update to prevent LockManager timeouts (10s)
+    if (locationUpdateTimer.current) clearTimeout(locationUpdateTimer.current);
+
+    locationUpdateTimer.current = setTimeout(async () => {
+        const currentUserStr = localStorage.getItem('levelmak_user');
+        if (!currentUserStr) return;
+        const currentUser = JSON.parse(currentUserStr);
+
+        if (currentUser && currentUser.id && !currentUser.id.includes('anon')) {
+            console.log("Syncing location to Supabase (Debounced)...");
+            const { error } = await supabase.from('profiles').update({
+                avatar_config: currentUser.avatar
+            }).eq('id', currentUser.id);
+
+            if (error) {
+                if (error.message?.includes('LockManager')) {
+                    console.warn('Supabase Lock contention, skipping this update. Will retry on next movement.');
+                } else {
+                    console.error('Error syncing location:', error);
+                }
+            }
+        }
+    }, 10000);
+  }, []);
+
+  useEffect(() => {
+    if (!user || !user.garden) return;
+
+    const lastWatered = new Date(user.garden.lastWatered);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - lastWatered.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays >= 3) {
+      const needsUpdate = user.garden.plants.some(p => p.state === 'healthy');
+      if (needsUpdate) {
+        setUser(prev => {
+          if (!prev || !prev.garden) return prev;
+          const updatedPlants = prev.garden.plants.map(p => ({
+            ...p,
+            state: (diffDays >= 7 ? 'dead' : 'yellowing') as 'healthy' | 'yellowing' | 'dead'
+          }));
+          const updatedUser = {
+            ...prev,
+            garden: { ...prev.garden, plants: updatedPlants }
+          };
+          localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+          return updatedUser;
+        });
+        
+        addNotification(
+          'info', 
+          settings.language === 'fr' ? "Ton jardin a soif ! 🪴" : "Your garden is thirsty! 🪴",
+          settings.language === 'fr' ? "Tes plantes commencent à jaunir. Arrose-les vite !" : "Your plants are starting to yellow. Water them quickly!"
+        );
+      }
+    }
+  }, [user?.id]); // Only run on login/mount
+
+
   // Automated Notifications Logic
   useEffect(() => {
     if (!user) return;
@@ -1524,6 +1821,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [dir, settings.language, settings.fontSize]);
 
+  const resolveBattle = useCallback((winnerId: string, isDraw: boolean = false) => {
+    setUser(prev => {
+      if (!prev) return null;
+      let coinDelta = 0;
+      let xpDelta = 20; // XP de participation
+
+      if (!isDraw) {
+        if (prev.id === winnerId) {
+          coinDelta = 10; // Gagner: +10 LevelCoins
+          xpDelta = 50;  // Bonus XP
+        } else {
+          coinDelta = -10; // Perdre: -10 LevelCoins
+        }
+      }
+
+      const updated: User = {
+        ...prev,
+        levelCoins: Math.max(0, (prev.levelCoins || 0) + coinDelta),
+        totalXp: (prev.totalXp || 0) + xpDelta,
+        xp: (prev.xp || 0) + xpDelta
+      };
+      localStorage.setItem('levelmak_user', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const xpPercentage = useMemo(() => {
+    if (!user) return 0;
+    const xpNeeded = getXpForNextLevel(user.avatar?.currentLevel || 1);
+    const xpForCurrentLevel = user.avatar?.currentLevel === 1 ? 0 : getXpForNextLevel((user.avatar?.currentLevel || 1) - 1);
+    const currentLevelXp = user.xp - xpForCurrentLevel;
+    const xpToNextLevel = xpNeeded - xpForCurrentLevel;
+    return Math.min(100, Math.max(0, (currentLevelXp / xpToNextLevel) * 100));
+  }, [user?.xp, user?.avatar?.currentLevel]);
+
   const contextValue = useMemo(() => ({
     user, quizzes, stories, missions, flashcards, decks, books, studyPlan, loading,
     login, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, logout, addXp, saveQuiz, saveStory, deleteStory, saveBook,
@@ -1554,7 +1886,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     incrementFlashcardsStudied,
     updateSRSMetadata,
     downloadCourse,
-    offlinePacks
+    offlinePacks,
+    plantInGarden,
+    waterGarden,
+    continuousStudyTime,
+    showBubbleWrap,
+    setShowBubbleWrap,
+    updateLocation,
+    resolveBattle,
+    coachSessions,
+    saveCoachMessage,
+    createCoachSession,
+    deleteCoachSession
   }), [
     user, quizzes, stories, missions, flashcards, decks, books, studyPlan, loading,
     login, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, logout, addXp, saveQuiz, saveStory, deleteStory, saveBook,
@@ -1577,7 +1920,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     dir,
     completeOnboarding,
     downloadCourse,
-    offlinePacks
+    offlinePacks,
+    plantInGarden,
+    waterGarden,
+    continuousStudyTime,
+    showBubbleWrap,
+    setShowBubbleWrap,
+    updateLocation,
+    resolveBattle,
+    coachSessions,
+    saveCoachMessage,
+    createCoachSession,
+    deleteCoachSession
   ]);
 
   return (

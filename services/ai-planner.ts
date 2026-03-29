@@ -1,4 +1,4 @@
-import { geminiService } from './gemini';
+import { openrouterService } from './openrouter';
 import { StudyPlan, StudyTask } from '../types';
 
 export const aiPlannerService = {
@@ -9,8 +9,8 @@ Les matières à réviser sont : ${subjects.join(', ')}.
 Retourne UNIQUEMENT un objet JSON valide avec la structure suivante :
 {
   "title": "Nom du plan de révision",
-  "startDate": "YYYY-MM-DD",
-  "endDate": "YYYY-MM-DD",
+  "startDate": "${new Date().toISOString().split('T')[0]}",
+  "endDate": "${examDate}",
   "tasks": [
     {
       "id": "task_1",
@@ -18,15 +18,17 @@ Retourne UNIQUEMENT un objet JSON valide avec la structure suivante :
       "subject": "Nom de la matière",
       "description": "Objectif précis de la révision",
       "duration": "Durée (ex: 2h)",
-      "priority": "high" | "medium" | "low",
+      "priority": "high",
       "date": "YYYY-MM-DD"
     }
   ]
 }
 
-Assure-toi que les sessions sont réparties intelligemment de maintenant jusqu'à la veille de l'examen. Varie les matières et prévois des temps de pause.`;
+Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de l'examen. Varie les matières et prévois des temps de pause.`;
 
-        const response = await geminiService.generateText(prompt);
+        console.log("🚀 Envoi requête Plan Textuel à OpenRouter...");
+        const response = await openrouterService.generateText(prompt);
+        console.log("📥 Réponse brute reçue:", response.substring(0, 100) + "...");
 
         try {
             // Nettoyer la réponse pour extraire le JSON si nécessaire
@@ -42,6 +44,6 @@ Assure-toi que les sessions sont réparties intelligemment de maintenant jusqu'�
     },
 
     async generatePlanWithImages(examDate: string, subjects: string[], base64Images: string[]): Promise<StudyPlan> {
-        return await geminiService.generatePlanWithImages(examDate, subjects, base64Images);
+        return await openrouterService.generatePlanWithImages(examDate, subjects, base64Images);
     }
 };

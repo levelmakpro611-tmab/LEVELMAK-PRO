@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { audioService } from '../services/audio';
+import { biometricService } from '../services/biometricService';
+import { feedbackService } from '../services/feedbackService';
+import { Fingerprint } from 'lucide-react';
 
 const Settings: React.FC = () => {
     const { user, updateProfile, addActivity, settings, updateSettings, changePassword, t } = useStore();
@@ -27,6 +30,15 @@ const Settings: React.FC = () => {
     const [phone, setPhone] = useState(user?.phoneNumber || '');
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [biometricEnabled, setBiometricEnabled] = useState(false);
+
+    React.useEffect(() => {
+        const checkBiometric = async () => {
+            const enabled = await biometricService.isEnabled();
+            setBiometricEnabled(enabled);
+        };
+        checkBiometric();
+    }, []);
 
     // Password change state (for security section)
     const [oldPassword, setOldPassword] = useState('');
@@ -99,8 +111,8 @@ const Settings: React.FC = () => {
                 <div className="flex items-center gap-3 text-primary-light font-black uppercase tracking-[0.2em] text-xs">
                     <Info size={16} /> {t('settings.panel')}
                 </div>
-                <h1 className="text-3xl md:text-5xl font-display font-black text-white tracking-tighter">{t('settings.title')} <span className="text-gradient-primary">{t('settings.subtitle')}</span></h1>
-                <p className="text-slate-400 text-sm md:text-lg font-medium max-w-xl">{t('settings.desc')}</p>
+                <h1 className="text-3xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter transition-colors">{t('settings.title')} <span className="text-gradient-primary">{t('settings.subtitle')}</span></h1>
+                <p className="text-slate-500 dark:text-slate-400 text-sm md:text-lg font-medium max-w-xl transition-colors">{t('settings.desc')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
@@ -111,8 +123,8 @@ const Settings: React.FC = () => {
                             key={section.id}
                             onClick={() => setActiveSection(section.id as any)}
                             className={`flex items-center gap-4 p-4 rounded-2xl transition-all border shrink-0 md:w-full ${activeSection === section.id
-                                ? 'bg-white/5 border-white/10 text-white shadow-lg shadow-black/20'
-                                : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'
+                                ? 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-900 dark:text-white shadow-lg dark:shadow-black/20'
+                                : 'border-transparent text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                                 }`}
                         >
                             <div className={`p-2.5 rounded-xl ${section.bg} ${section.color}`}>
@@ -149,8 +161,8 @@ const Settings: React.FC = () => {
                                             </div>
                                         </div>
                                         <div>
-                                            <h3 className="text-lg md:text-xl font-bold text-white">{t.photoTitle}</h3>
-                                            <p className="text-xs md:text-sm text-slate-400">Visite la boutique pour changer d'avatar !</p>
+                                            <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white transition-colors">{t.photoTitle}</h3>
+                                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Visite la boutique pour changer d'avatar !</p>
                                         </div>
                                     </div>
 
@@ -161,8 +173,8 @@ const Settings: React.FC = () => {
                                                 type="text"
                                                 value={name}
                                                 onChange={(e) => setName(e.target.value)}
-                                                placeholder="Ex: Jean Dupont"
-                                                className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-primary/50 text-white font-bold transition-all text-sm md:text-base"
+                                                placeholder="Ex: Mouctar"
+                                                className="w-full p-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all text-sm md:text-base placeholder:text-slate-400"
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -173,8 +185,8 @@ const Settings: React.FC = () => {
                                                     type="tel"
                                                     value={phone}
                                                     onChange={(e) => setPhone(e.target.value)}
-                                                    placeholder="+243 ..."
-                                                    className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-primary/50 text-white font-bold transition-all text-sm md:text-base"
+                                                    placeholder="+224 6100000000"
+                                                    className="w-full pl-12 pr-4 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all text-sm md:text-base placeholder:text-slate-400"
                                                 />
                                             </div>
                                         </div>
@@ -209,8 +221,8 @@ const Settings: React.FC = () => {
 
                             {activeSection === 'appearance' && (
                                 <div className="space-y-6">
-                                    <div className="glass p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl">
-                                        <h3 className="text-lg md:text-xl font-black text-white mb-6 flex items-center gap-3">
+                                    <div className="glass p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-black/5 dark:border-white/5 shadow-2xl">
+                                        <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white mb-6 flex items-center gap-3 transition-colors">
                                             <Palette className="text-secondary" /> {t('settings.appearance')}
                                         </h3>
 
@@ -223,8 +235,8 @@ const Settings: React.FC = () => {
                                                     <Moon size={20} className="md:w-6 md:h-6" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <h4 className="font-bold text-white text-xs md:text-sm">{t('settings.darkMode')}</h4>
-                                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none">
+                                                    <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.darkMode')}</h4>
+                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
                                                         {settings.theme === 'dark' ? t('settings.darkOn') : t('settings.lightOn')}
                                                     </p>
                                                 </div>
@@ -241,8 +253,8 @@ const Settings: React.FC = () => {
                                                     <Volume2 size={20} className="md:w-6 md:h-6" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <h4 className="font-bold text-white text-xs md:text-sm">{t('settings.appSounds')}</h4>
-                                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none">
+                                                    <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.appSounds')}</h4>
+                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
                                                         {settings.soundEnabled ? t('settings.soundsOn') : t('settings.soundsOff')}
                                                     </p>
                                                 </div>
@@ -270,8 +282,8 @@ const Settings: React.FC = () => {
                                                     <Globe size={20} className="md:w-6 md:h-6" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <h4 className="font-bold text-white text-xs md:text-sm">{t('settings.lang')}</h4>
-                                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">
+                                                    <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.lang')}</h4>
+                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">
                                                         {settings.language === 'fr' ? 'Français (France)' : settings.language === 'ar' ? 'العربية (AR)' : 'English (US)'}
                                                     </p>
                                                 </div>
@@ -286,8 +298,8 @@ const Settings: React.FC = () => {
                                                         <Type size={20} className="md:w-6 md:h-6" />
                                                     </div>
                                                     <div className="flex-1">
-                                                        <h4 className="font-bold text-white text-xs md:text-sm">{t('settings.fontSize')}</h4>
-                                                        <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{t('settings.fontSizeDesc')}</p>
+                                                        <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.fontSize')}</h4>
+                                                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">{t('settings.fontSizeDesc')}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center justify-between gap-2 bg-black/20 p-2 rounded-2xl border border-white/5">
@@ -313,8 +325,8 @@ const Settings: React.FC = () => {
                                             <Info size={20} className="md:w-6 md:h-6" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-white text-[10px] md:text-xs">{t('settings.version')}</h4>
-                                            <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('settings.build')}</p>
+                                            <h4 className="font-bold text-slate-900 dark:text-white text-[10px] md:text-xs transition-colors">{t('settings.version')}</h4>
+                                            <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">{t('settings.build')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -323,10 +335,10 @@ const Settings: React.FC = () => {
                             {activeSection === 'notifications' && (
                                 <div className="glass p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl">
                                     <div className="space-y-2 mb-8 text-center md:text-left">
-                                        <h3 className="text-lg md:text-xl font-black text-white flex items-center justify-center md:justify-start gap-3">
+                                        <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white flex items-center justify-center md:justify-start gap-3 transition-colors">
                                             <Bell className="text-accent" /> {t('settings.notifTitle')}
                                         </h3>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('settings.notifDesc')}</p>
+                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">{t('settings.notifDesc')}</p>
                                     </div>
 
                                     <div className="space-y-4">
@@ -348,8 +360,8 @@ const Settings: React.FC = () => {
                                                     className="flex items-center justify-between p-5 md:p-6 bg-white/5 rounded-3xl border border-white/5 hover:bg-white/10 transition-all cursor-pointer group"
                                                 >
                                                     <div className="space-y-1 flex-1 pr-4">
-                                                        <p className="font-bold text-white text-xs md:text-sm">{item.title}</p>
-                                                        <p className="text-[9px] md:text-[10px] text-slate-500 tracking-tight font-medium leading-tight">{item.desc}</p>
+                                                        <p className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{item.title}</p>
+                                                        <p className="text-[9px] md:text-[10px] text-slate-500 dark:text-slate-400 tracking-tight font-medium leading-tight">{item.desc}</p>
                                                     </div>
                                                     <div className={`w-10 h-6 md:w-12 md:h-7 rounded-full relative border transition-colors ${isEnabled ? 'bg-success/20 border-success/30' : 'bg-slate-700/50 border-white/10'}`}>
                                                         <div className={`absolute top-1 w-3 h-3 md:w-4 md:h-4 rounded-full transition-all ${isEnabled ? 'right-1 bg-success shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'left-1 bg-slate-500'}`}></div>
@@ -365,10 +377,10 @@ const Settings: React.FC = () => {
                                 <div className="space-y-6">
                                     <div className="glass p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl space-y-6 md:space-y-8">
                                         <div className="space-y-2 text-center md:text-left">
-                                            <h3 className="text-lg md:text-xl font-black text-white flex items-center justify-center md:justify-start gap-3">
+                                            <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white flex items-center justify-center md:justify-start gap-3 transition-colors">
                                                 <Shield className="text-success" /> {t('settings.securityTitle')}
                                             </h3>
-                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('settings.securityDesc')}</p>
+                                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">{t('settings.securityDesc')}</p>
                                         </div>
 
                                         <div className="bg-black/20 p-5 md:p-8 rounded-3xl border border-white/5 space-y-6">
@@ -379,7 +391,7 @@ const Settings: React.FC = () => {
                                                         type="password"
                                                         value={oldPassword}
                                                         onChange={(e) => setOldPassword(e.target.value)}
-                                                        className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-success/50 outline-none transition-all placeholder:text-slate-700"
+                                                        className="w-full bg-black/5 dark:bg-slate-900 border border-black/5 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-success/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
                                                         placeholder="••••••••"
                                                     />
                                                 </div>
@@ -389,7 +401,7 @@ const Settings: React.FC = () => {
                                                         type="password"
                                                         value={newPassword}
                                                         onChange={(e) => setNewPassword(e.target.value)}
-                                                        className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-success/50 outline-none transition-all placeholder:text-slate-700"
+                                                        className="w-full bg-black/5 dark:bg-slate-900 border border-black/5 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-success/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
                                                         placeholder="Nouveau code d'accès"
                                                     />
                                                 </div>
@@ -422,12 +434,47 @@ const Settings: React.FC = () => {
                                                 <Smartphone size={20} className="md:w-6 md:h-6" />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-white text-xs">{t('settings.sessions')}</h4>
-                                                <p className="text-[9px] md:text-[10px] text-slate-500 font-bold tracking-tight">{t('settings.sessionsDesc')}</p>
+                                                <h4 className="font-bold text-slate-900 dark:text-white text-xs transition-colors">{t('settings.sessions')}</h4>
+                                                <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-tight">{t('settings.sessionsDesc')}</p>
                                             </div>
                                         </div>
                                         <div className="text-[8px] md:text-[9px] font-black text-success uppercase tracking-widest bg-success/10 px-2 md:px-3 py-1 md:py-1.5 rounded-full border border-success/20 animate-pulse">
                                             Actif
+                                        </div>
+                                    </div>
+
+                                    <div 
+                                        onClick={async () => {
+                                            const newState = !biometricEnabled;
+                                            if (newState) {
+                                                const password = window.prompt("Veuillez entrer votre mot de passe pour autoriser TouchID/FaceID:");
+                                                if (!password) return; // Annulé par l'utilisateur
+                                                
+                                                const identifier = user?.phone || user?.email || user?.id || '';
+                                                const success = await biometricService.enable(identifier, password);
+                                                if (success) {
+                                                    setBiometricEnabled(true);
+                                                    feedbackService.fullSuccess();
+                                                }
+                                            } else {
+                                                await biometricService.disable();
+                                                setBiometricEnabled(false);
+                                                feedbackService.mediumImpact();
+                                            }
+                                        }}
+                                        className="glass p-5 md:p-6 rounded-3xl border border-white/5 flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors ${biometricEnabled ? 'bg-blue-500/10 text-blue-500' : 'bg-slate-800 text-slate-500'}`}>
+                                                <Fingerprint size={20} className="md:w-6 md:h-6" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 dark:text-white text-xs transition-colors">Connexion Biométrique</h4>
+                                                <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-tight">Utiliser FaceID / TouchID pour te connecter.</p>
+                                            </div>
+                                        </div>
+                                        <div className={`w-10 h-6 md:w-12 md:h-7 rounded-full relative border transition-colors ${biometricEnabled ? 'bg-blue-500/20 border-blue-500/30' : 'bg-slate-700/50 border-white/10'}`}>
+                                            <div className={`absolute top-1 w-3 h-3 md:w-4 md:h-4 rounded-full transition-all ${biometricEnabled ? 'right-1 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'left-1 bg-slate-500'}`}></div>
                                         </div>
                                     </div>
                                 </div>

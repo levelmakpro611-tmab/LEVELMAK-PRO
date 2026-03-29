@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
-import { geminiService } from '../services/gemini';
+import { openrouterService } from '../services/openrouter';
 import { fetchAllLivre21Books, Livre21Book } from '../services/livre21';
 import { getLocalBooks, formatFileSize } from '../services/localBooks';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from '../types';
@@ -27,6 +27,7 @@ import {
     Wifi,
     WifiOff
 } from 'lucide-react';
+import Skeleton from '../components/Skeleton';
 
 interface LibraryProps {
     onNavigate: (tab: string) => void;
@@ -70,7 +71,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                 if (isSearching) setSearchStatus(t('library.geminiAnalyze'));
             }, 1500);
 
-            const results = await geminiService.searchBooksWithGemini(searchQuery, settings.language);
+            const results = await openrouterService.searchBooksWithGemini(searchQuery, settings.language);
             setSearchResults(results.links);
             setSearchIntro(results.text || '');
         } catch (error) {
@@ -96,7 +97,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
     const handleSummarizeBook = async (book: any) => {
         setIsSummarizing(true);
         try {
-            const summary = await geminiService.summarizeBook(book.title, book.author, book.description, settings.language);
+            const summary = await openrouterService.summarizeBook(book.title, book.author, book.description, settings.language);
             setActiveSummary({ ...summary, bookTitle: book.title });
         } catch (error) {
             alert("Erreur lors de la génération du résumé.");
@@ -123,7 +124,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                 description: ''
             });
         }
-        incrementBooksRead();
+        // Ne pas compter comme "lu" au simple clic d'ouverture
     };
 
     const handleReadSummary = (book: any) => {
@@ -142,7 +143,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                 estimatedReadingTime: summaryData.estimatedReadingTime || '5 min',
                 definitions: summaryData.definitions || []
             });
-            incrementBooksRead();
+            // Ne pas compter comme "lu" ici, l'élève n'a fait qu'ouvrir le résumé
         } catch (e) {
             console.error("Failed to parse summary content", e);
             window.open(book.uri, '_blank');
@@ -152,7 +153,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
     const handleCreateQuizFromBook = async (book: any) => {
         setIsSearching(true);
         try {
-            const quiz = await geminiService.generateQuiz(book.description, book.title, 'Intermédiaire', settings.language);
+            const quiz = await openrouterService.generateQuiz(book.description, book.title, 'Intermédiaire', settings.language);
             onQuizGenerated(quiz);
             onNavigate('quiz');
         } catch (error) {
@@ -169,7 +170,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                 ? book.description
                 : book.title + " " + (book.author || '');
 
-            const cards = await geminiService.generateFlashcards(strDescription, book.title, settings.language);
+            const cards = await openrouterService.generateFlashcards(strDescription, book.title, settings.language);
 
             const deck: FlashcardDeck = {
                 id: `deck_${Date.now()}`,
@@ -356,6 +357,21 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                 </button>
             </div>
 
+            {isLoadingLivre21 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="glass p-6 rounded-[2rem] border border-white/5 space-y-4">
+                            <Skeleton className="h-6 w-3/4" />
+                            <Skeleton className="h-4 w-1/2" />
+                            <div className="space-y-2 pt-3 border-t border-white/5">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-8 w-full" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {showLocalBooks && localBooks.length > 0 && (
                 <div className="space-y-8 animate-slide-up">
                     <div className="flex items-center justify-between">
@@ -411,6 +427,31 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {isSearching && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
+                    {[1, 2].map(i => (
+                        <div key={i} className="glass p-6 rounded-[2.5rem] border border-white/5 space-y-6">
+                            <div className="flex gap-2">
+                                <Skeleton className="h-6 w-20 rounded-full" />
+                                <Skeleton className="h-6 w-24 rounded-full" />
+                            </div>
+                            <Skeleton className="aspect-[3/4] w-full rounded-xl" />
+                            <div className="space-y-3">
+                                <Skeleton className="h-6 w-3/4" />
+                                <Skeleton className="h-4 w-1/2" />
+                                <div className="space-y-2 pt-3 border-t border-white/5">
+                                    <Skeleton className="h-12 w-full" />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Skeleton className="h-10 w-full" />
+                                        <Skeleton className="h-10 w-full" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
 

@@ -19,11 +19,15 @@ import {
     Heart,
     X,
     Loader2,
-    FlaskConical
+    FlaskConical,
+    Activity,
+    CheckCircle2,
+    RefreshCw,
+    Languages
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
-import { geminiService } from '../services/gemini';
+import { openrouterService } from '../services/openrouter';
 import { Story } from '../types';
 
 const CATEGORY_KEYS = ['story', 'poem', 'column', 'essay', 'other'] as const;
@@ -47,6 +51,17 @@ const CreativeWriting: React.FC = () => {
     // AI Suggestions state
     const [aiSuggestions, setAiSuggestions] = useState<{ id: string, text: string, type: 'suggestion' | 'review' }[]>([]);
     const [aiError, setAiError] = useState<string | null>(null);
+
+    // Writing Lab State
+    const [writingAnalysis, setWritingAnalysis] = useState<{
+        score: number;
+        criteria: { style: number; grammar: number; vocabulary: number; structure: number };
+        feedback: string;
+        corrections: { original: string; correction: string; reason: string }[];
+        synonyms: { word: string; suggestions: string[]; context: string }[];
+    } | null>(null);
+    const [isLabLoading, setIsLabLoading] = useState(false);
+    const [activeLabTab, setActiveLabTab] = useState<'corrections' | 'synonyms'>('corrections');
 
     // View Modal state
     const [viewingStory, setViewingStory] = useState<Story | null>(null);
@@ -134,13 +149,13 @@ const CreativeWriting: React.FC = () => {
                 prompt = `Agis comme un critique littéraire bienveillant. Analyse ce texte ("${title}"): "${content}". Donne ton avis honnête : ce que tu aimes, ce qui pourrait être amélioré (style, rythme, vocabulaire). Sois constructif et encourageant. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
             }
 
-            const response = await geminiService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
+            const response = await openrouterService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
 
             setAiSuggestions(prev => [
                 { id: `ai_${Date.now()}`, text: response, type: mode === 'write' ? 'suggestion' : 'review' },
                 ...prev
             ]);
-            addXp(mode === 'write' ? 10 : 15);
+            addXp(mode === 'write' ? 5 : 10);
         } catch (e: any) {
             console.error("AI Action failed", e);
             if (e.message?.includes('429')) {
@@ -164,7 +179,7 @@ const CreativeWriting: React.FC = () => {
             "content": Un premier paragraphe (environ 100 mots) immersif qui lance l'intrigue.
             Sois très créatif, évite les clichés.`;
 
-            const response = await geminiService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
+            const response = await openrouterService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
 
             // Extract JSON from response if possible, simplified for now
             let data = { title: "Nouvelle Idée", content: response };
@@ -180,7 +195,7 @@ const CreativeWriting: React.FC = () => {
                 { id: `ai_${Date.now()}`, text: "L'Essence d'Inspiration a fonctionné ! Voici ton idée de génie.", type: 'suggestion' },
                 ...prev
             ]);
-            addXp(50);
+            addXp(15);
         } catch (e) {
             console.error("Inspiration failed", e);
             setAiError("La magie de l'inspiration a échoué. Réessaie.");
@@ -196,6 +211,38 @@ const CreativeWriting: React.FC = () => {
         });
     };
 
+    const handleAnalyzeWriting = async () => {
+        if (content.length < 50) return;
+        setIsLabLoading(true);
+        setAiError(null);
+        try {
+            const analysis = await openrouterService.analyzeWriting(content, title, language);
+            setWritingAnalysis(analysis);
+            addXp(10);
+        } catch (e: any) {
+            console.error("Analysis failed", e);
+            setAiError(t('creativeWriting.coach.errorGeneral'));
+        } finally {
+            setIsLabLoading(false);
+        }
+    };
+
+    const applyCorrection = (original: string, correction: string) => {
+        setContent(prev => prev.replace(original, correction));
+        setWritingAnalysis(prev => prev ? {
+            ...prev,
+            corrections: prev.corrections.filter(c => c.original !== original)
+        } : null);
+    };
+
+    const applySynonym = (word: string, synonym: string) => {
+        setContent(prev => prev.replace(word, synonym));
+        setWritingAnalysis(prev => prev ? {
+            ...prev,
+            synonyms: prev.synonyms.filter(s => s.word !== word)
+        } : null);
+    };
+
     return (
         <div className="max-w-7xl mx-auto py-4 md:py-8 px-4 space-y-8 md:space-y-12 animate-fade-in">
             {/* Header */}
@@ -205,11 +252,11 @@ const CreativeWriting: React.FC = () => {
                         <PenTool size={10} md:size={14} className="animate-pulse" /> {t('creativeWriting.tag')}
                     </div>
                     <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
-                        <h1 className="text-2xl md:text-5xl font-display font-black text-white tracking-tighter">{t('creativeWriting.title').split(' ')[0]} {t('creativeWriting.title').split(' ').slice(1, -1).join(' ')} <span className="text-gradient-primary">{t('creativeWriting.title').split(' ').pop()}</span></h1>
+                        <h1 className="text-2xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter transition-colors">{t('creativeWriting.title').split(' ')[0]} {t('creativeWriting.title').split(' ').slice(1, -1).join(' ')} <span className="text-gradient-primary">{t('creativeWriting.title').split(' ').pop()}</span></h1>
                         {editingId && (
                             <button
                                 onClick={handleNew}
-                                className="w-fit px-4 md:px-6 py-1.5 md:py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all flex items-center gap-1.5 md:gap-2"
+                                className="w-fit px-4 md:px-6 py-1.5 md:py-2 bg-black/5 dark:bg-white/5 text-slate-900 dark:text-white rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-black/5 dark:border-white/10 transition-all flex items-center gap-1.5 md:gap-2"
                             >
                                 <PenTool size={12} md:size={14} /> {t('creativeWriting.newDraft')}
                             </button>
@@ -254,7 +301,7 @@ const CreativeWriting: React.FC = () => {
                                             value={title}
                                             onChange={(e) => setTitle(e.target.value)}
                                             placeholder={t('creativeWriting.form.titlePlaceholder')}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-2xl px-4 md:px-8 py-3 md:py-6 text-base md:text-3xl font-display font-black text-white placeholder:text-slate-800 focus:border-secondary/50 outline-none transition-all"
+                                            className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl md:rounded-2xl px-4 md:px-8 py-3 md:py-6 text-base md:text-3xl font-display font-black text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:border-secondary/50 outline-none transition-all"
                                         />
                                     </div>
 
@@ -279,7 +326,7 @@ const CreativeWriting: React.FC = () => {
                                             value={content}
                                             onChange={(e) => setContent(e.target.value)}
                                             placeholder={t('creativeWriting.form.contentPlaceholder')}
-                                            className="w-full h-[300px] md:h-[600px] bg-white/5 border border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-4 md:p-12 text-sm md:text-xl leading-relaxed text-slate-300 placeholder:text-slate-800 focus:border-secondary/50 outline-none transition-all resize-none custom-scrollbar"
+                                            className="w-full h-[300px] md:h-[600px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-4 md:p-12 text-sm md:text-xl leading-relaxed text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:border-secondary/50 outline-none transition-all resize-none custom-scrollbar"
                                         />
                                     </div>
                                 </div>
@@ -295,9 +342,9 @@ const CreativeWriting: React.FC = () => {
                                         <div className="w-10 h-10 bg-secondary/20 text-secondary rounded-xl flex items-center justify-center border border-secondary/20 shrink-0">
                                             <Sparkles size={20} />
                                         </div>
-                                        <div className="min-w-0">
-                                            <h4 className="font-display font-bold text-xl text-white truncate">{t('creativeWriting.coach.title')}</h4>
-                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest truncate">{t('creativeWriting.coach.subtitle')}</p>
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-display font-bold text-base md:text-lg text-slate-900 dark:text-white truncate leading-tight transition-colors">{t('creativeWriting.coach.title')}</h4>
+                                            <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{t('creativeWriting.coach.subtitle')}</p>
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-2">
@@ -305,7 +352,7 @@ const CreativeWriting: React.FC = () => {
                                             <button
                                                 onClick={() => handleAiAction('review')}
                                                 disabled={isAiLoading || (!content && !title)}
-                                                className="flex-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                                className="flex-1 px-3 py-2 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
                                             >
                                                 {t('creativeWriting.coach.reviewBtn')}
                                             </button>
@@ -332,55 +379,127 @@ const CreativeWriting: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="flex-1 space-y-6 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
-                                    {aiError && (
-                                        <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl text-danger text-[10px] font-bold uppercase tracking-widest text-center animate-shake">
-                                            {aiError}
+                            {/* Writing Lab Area */}
+                            <div className="glass rounded-[2rem] md:rounded-[3rem] border border-white/5 p-6 md:p-8 space-y-6 md:space-y-8 flex flex-col">
+                                <div className="space-y-4 border-b border-white/5 pb-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-primary/20 text-primary rounded-xl flex items-center justify-center border border-primary/20 shrink-0">
+                                                <FlaskConical size={20} />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <h4 className="font-display font-bold text-base md:text-lg text-slate-900 dark:text-white truncate leading-tight transition-colors">{t('creativeWriting.writingLab.title')}</h4>
+                                                <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{t('creativeWriting.writingLab.strength')}</p>
+                                            </div>
+                                        </div>
+                                        {writingAnalysis && (
+                                            <div className="relative w-12 h-12 flex items-center justify-center">
+                                                <svg className="w-full h-full -rotate-90">
+                                                    <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="4" className="text-black/5 dark:text-white/5" />
+                                                    <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={125.6} strokeDashoffset={125.6 * (1 - writingAnalysis.score / 100)} className="text-primary transition-all duration-1000" />
+                                                </svg>
+                                                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-slate-900 dark:text-white">{writingAnalysis.score}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {!writingAnalysis ? (
+                                        <button
+                                            onClick={handleAnalyzeWriting}
+                                            disabled={isLabLoading || content.length < 50}
+                                            className="w-full py-4 bg-primary text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-glow flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                                        >
+                                            {isLabLoading ? <Loader2 className="animate-spin" size={18} /> : <Activity size={18} />}
+                                            {isLabLoading ? t('creativeWriting.writingLab.analyzing') : t('creativeWriting.writingLab.analyzeBtn')}
+                                        </button>
+                                    ) : (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => setActiveLabTab('corrections')}
+                                                className={`py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeLabTab === 'corrections' ? 'bg-primary/20 border-primary/40 text-primary font-bold' : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500'}`}
+                                            >
+                                                {t('creativeWriting.writingLab.corrections')} ({writingAnalysis.corrections.length})
+                                            </button>
+                                            <button
+                                                onClick={() => setActiveLabTab('synonyms')}
+                                                className={`py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeLabTab === 'synonyms' ? 'bg-primary/20 border-primary/40 text-primary font-bold' : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500'}`}
+                                            >
+                                                {t('creativeWriting.writingLab.synonyms')} ({writingAnalysis.synonyms.length})
+                                            </button>
                                         </div>
                                     )}
+                                </div>
 
-                                    <AnimatePresence initial={false}>
-                                        {aiSuggestions.length === 0 ? (
-                                            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 opacity-40">
-                                                <MessageSquare size={48} className="text-slate-600" />
-                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                                                    {t('creativeWriting.coach.empty')}
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            aiSuggestions.map((sig) => (
-                                                <motion.div
-                                                    key={sig.id}
-                                                    initial={{ opacity: 0, x: 20, scale: 0.95 }}
-                                                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                                                    className={`p-6 rounded-2xl border transition-all relative group ${sig.type === 'review' ? 'bg-primary/5 border-primary/20' : 'bg-white/5 border-white/10'}`}
-                                                >
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <span className={`text-[8px] font-black uppercase tracking-[0.2rem] ${sig.type === 'review' ? 'text-primary' : 'text-secondary'}`}>
-                                                            {sig.type === 'review' ? t('creativeWriting.coach.analysis') : t('creativeWriting.coach.suggestion')}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => setAiSuggestions(prev => prev.filter(s => s.id !== sig.id))}
-                                                            className="text-slate-600 hover:text-danger p-1 transition-colors"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                    </div>
-                                                    <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{sig.text}</p>
-
-                                                    {sig.type === 'suggestion' && (
-                                                        <button
-                                                            onClick={() => applySuggestion(sig.text)}
-                                                            className="mt-4 w-full py-3 bg-secondary/10 hover:bg-secondary text-secondary hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                                                        >
-                                                            <Send size={12} /> {t('creativeWriting.coach.insert')}
-                                                        </button>
+                                <div className="flex-1 space-y-6 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                                    {!writingAnalysis ? (
+                                        <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 opacity-40">
+                                            <FlaskConical size={48} className="text-slate-600" />
+                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+                                                {t('creativeWriting.writingLab.empty')}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {activeLabTab === 'corrections' ? (
+                                                <div className="space-y-4">
+                                                    {writingAnalysis.corrections.length === 0 ? (
+                                                        <div className="p-8 text-center bg-success/5 border border-success/20 rounded-3xl">
+                                                            <CheckCircle2 size={32} className="mx-auto mb-3 text-success" />
+                                                            <p className="text-[10px] font-black text-success uppercase tracking-widest">{t('common.success')}</p>
+                                                        </div>
+                                                    ) : (
+                                                        writingAnalysis.corrections.map((corr, i) => (
+                                                            <div key={i} className="p-5 bg-danger/5 border border-danger/10 rounded-2xl space-y-3 group hover:border-danger/30 transition-all">
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <p className="text-xs text-slate-400 line-through decoration-danger/50 italic">"{corr.original}"</p>
+                                                                    <button
+                                                                        onClick={() => applyCorrection(corr.original, corr.correction)}
+                                                                        className="p-1.5 bg-primary text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                                                                        title={t('creativeWriting.writingLab.apply')}
+                                                                    >
+                                                                        <RefreshCw size={12} />
+                                                                    </button>
+                                                                </div>
+                                                                <p className="text-sm text-slate-900 dark:text-white font-bold transition-colors">→ {corr.correction}</p>
+                                                                <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{corr.reason}</p>
+                                                            </div>
+                                                        ))
                                                     )}
-                                                </motion.div>
-                                            ))
-                                        )}
-                                    </AnimatePresence>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    {writingAnalysis.synonyms.map((syn, i) => (
+                                                        <div key={i} className="p-5 bg-primary/5 border border-primary/10 rounded-2xl space-y-3">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <Languages size={14} className="text-primary" />
+                                                                <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest transition-colors">{syn.word}</span>
+                                                            </div>
+                                                            <p className="text-[9px] text-slate-500 leading-relaxed mb-3">"{syn.context}"</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {syn.suggestions.map((s, si) => (
+                                                                    <button
+                                                                        key={si}
+                                                                        onClick={() => applySynonym(syn.word, s)}
+                                                                        className="px-3 py-1.5 bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/5 dark:border-white/10 rounded-lg text-[10px] font-bold transition-all text-slate-600 dark:text-slate-300"
+                                                                    >
+                                                                        {s}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <button
+                                                        onClick={handleAnalyzeWriting}
+                                                        className="w-full py-3 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <RefreshCw size={12} /> {t('creativeWriting.writingLab.getSynonyms')}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -388,7 +507,7 @@ const CreativeWriting: React.FC = () => {
                             <div className="glass rounded-[2rem] md:rounded-[3rem] border border-white/5 p-6 md:p-8 space-y-6 md:space-y-8">
                                 <div className="space-y-6">
                                     <div className="space-y-4">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-1">{t('creativeWriting.form.documentSettings')}</label>
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-1 truncate block">{t('creativeWriting.form.documentSettings')}</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {CATEGORY_KEYS.map(catKey => (
                                                 <button
@@ -404,10 +523,10 @@ const CreativeWriting: React.FC = () => {
 
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-lg ${isPublic ? 'bg-success/10 text-success' : 'bg-slate-800 text-slate-500'}`}>
+                                            <div className={`p-2 rounded-lg ${isPublic ? 'bg-success/10 text-success' : 'bg-black/10 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
                                                 {isPublic ? <Globe size={18} /> : <Lock size={18} />}
                                             </div>
-                                            <p className="text-[10px] font-black text-white uppercase tracking-widest">{t('creativeWriting.form.public')}</p>
+                                            <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest transition-colors">{t('creativeWriting.form.public')}</p>
                                         </div>
                                         <button
                                             onClick={() => setIsPublic(!isPublic)}
@@ -449,11 +568,11 @@ const CreativeWriting: React.FC = () => {
                                     animate={{ opacity: 1 }}
                                     className="col-span-full py-20 flex flex-col items-center justify-center text-center space-y-6"
                                 >
-                                    <div className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center border border-white/10 text-slate-700">
+                                    <div className="w-24 h-24 bg-black/5 dark:bg-white/5 rounded-[2rem] flex items-center justify-center border border-black/5 dark:border-white/10 text-slate-400 dark:text-slate-700">
                                         <PenTool size={48} strokeWidth={1} />
                                     </div>
-                                    <h3 className="text-2xl font-display font-bold text-white uppercase tracking-tighter">{t('creativeWriting.list.empty')}</h3>
-                                    <button onClick={() => setActiveTab('write')} className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest text-[10px]">{t('creativeWriting.list.startBtn')}</button>
+                                    <h3 className="text-2xl font-display font-bold text-slate-900 dark:text-white uppercase tracking-tighter transition-colors">{t('creativeWriting.list.empty')}</h3>
+                                    <button onClick={() => setActiveTab('write')} className="px-8 py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-glow hover:scale-105 transition-all">{t('creativeWriting.list.startBtn')}</button>
                                 </motion.div>
                             ) : (
                                 stories.map(story => (
@@ -482,9 +601,9 @@ const CreativeWriting: React.FC = () => {
                                                 </button>
                                             </div>
                                         </div>
-                                        <h4 className="text-2xl font-display font-bold text-white leading-tight mb-4 group-hover:text-secondary-light transition-colors line-clamp-2">{story.title}</h4>
-                                        <p className="text-sm text-slate-500 line-clamp-3 mb-8 flex-1">{story.content}</p>
-                                        <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                                        <h4 className="text-2xl font-display font-bold text-slate-900 dark:text-white leading-tight mb-4 group-hover:text-secondary-light transition-colors line-clamp-2">{story.title}</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mb-8 flex-1 transition-colors">{story.content}</p>
+                                        <div className="flex items-center justify-between pt-6 border-t border-black/5 dark:border-white/5">
                                             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{new Date(story.createdAt).toLocaleDateString()}</span>
                                             <button
                                                 onClick={() => handleEdit(story)}
@@ -510,15 +629,15 @@ const CreativeWriting: React.FC = () => {
                         {discoverStories.map(story => (
                             <div key={story.id} className="bg-slate-900/40 rounded-[3rem] border border-white/5 p-10 space-y-6 hover:border-primary/30 transition-all cursor-pointer group">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-white/5 rounded-2xl overflow-hidden border border-white/10">
+                                    <div className="w-12 h-12 bg-black/5 dark:bg-white/5 rounded-2xl overflow-hidden border border-black/5 dark:border-white/10">
                                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
                                     </div>
                                     <div>
-                                        <p className="text-white font-bold text-sm tracking-tight">{story.authorName}</p>
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{story.category}</p>
+                                        <p className="text-slate-900 dark:text-white font-bold text-sm tracking-tight transition-colors">{story.authorName}</p>
+                                        <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{story.category}</p>
                                     </div>
                                 </div>
-                                <h3 className="text-3xl font-display font-black text-white leading-tight group-hover:text-primary-light transition-colors">{story.title}</h3>
+                                <h3 className="text-3xl font-display font-black text-slate-900 dark:text-white leading-tight group-hover:text-primary-light transition-colors">{story.title}</h3>
                                 <div className="flex items-center gap-6 pt-4 border-t border-white/5">
                                     <div className="flex items-center gap-2 text-[10px] font-black text-danger uppercase tracking-widest">
                                         <Heart size={14} className="fill-danger" /> {story.likes}
@@ -558,14 +677,14 @@ const CreativeWriting: React.FC = () => {
                                 <div className="space-y-8">
                                     <div className="space-y-4">
                                         <span className="px-4 py-1.5 bg-secondary/20 text-secondary-light text-[10px] font-black uppercase tracking-widest rounded-full border border-secondary/20">{t(`creativeWriting.categories.${viewingStory.category as any}`)}</span>
-                                        <h2 className="text-5xl font-display font-black text-white leading-none">{viewingStory.title}</h2>
-                                        <div className="flex items-center gap-4 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                                        <h2 className="text-5xl font-display font-black text-slate-900 dark:text-white leading-none transition-colors">{viewingStory.title}</h2>
+                                        <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest transition-colors">
                                             <span>{t('creativeWriting.list.by')} {viewingStory.authorName}</span>
                                             <span>•</span>
                                             <span>{new Date(viewingStory.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                                         </div>
                                     </div>
-                                    <p className="text-xl text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
+                                    <p className="text-xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium transition-colors">
                                         {viewingStory.content}
                                     </p>
                                     <div className="pt-8 border-t border-white/5 flex justify-end">
@@ -582,7 +701,7 @@ const CreativeWriting: React.FC = () => {
                     )}
                 </AnimatePresence>
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

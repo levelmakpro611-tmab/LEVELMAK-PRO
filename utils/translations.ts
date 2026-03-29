@@ -65,7 +65,7 @@ export const translations = {
             lang: 'Langue',
             currentLang: 'Français (France)',
             version: 'Version',
-            build: 'v2.4.0 (Build Elite)',
+            build: 'v2.4.0',
             notifTitle: 'Préférences de Notifications',
             notifDesc: 'Choisis comment tu souhaites rester informé.',
             notifMissions: 'Rappels de Missions',
@@ -186,7 +186,8 @@ export const translations = {
                 characters: 'car.',
                 public: 'Public',
                 saveBtn: 'Sauvegarder',
-                saving: 'Enregistrement...'
+                saving: 'Enregistrement...',
+                documentSettings: 'Config. du Document'
             },
             coach: {
                 title: 'Coach IA',
@@ -207,6 +208,24 @@ export const translations = {
                 deleteConfirm: "Es-tu sûr de vouloir supprimer cette œuvre ?",
                 modified: 'Modifier',
                 by: 'Par'
+            },
+            writingLab: {
+                title: "Assistant Labo d'Écriture",
+                analyzeBtn: "Lancer l'Analyse Premium",
+                analyzing: "Analyse en cours...",
+                score: "Score de rédaction",
+                criteria: {
+                    style: "Style & Fluidité",
+                    grammar: "Grammaire & Orthographe",
+                    vocabulary: "Richesse Lexicale",
+                    structure: "Structure & Rythme"
+                },
+                corrections: "Améliorations suggérées",
+                synonyms: "Synonymes & Élégance",
+                getSynonyms: "Enrichir le vocabulaire",
+                apply: "Appliquer",
+                empty: "Rédige au moins 50 caractères pour lancer l'analyse pédagogique.",
+                strength: "Force du texte"
             }
         },
         library: {
@@ -267,6 +286,7 @@ export const translations = {
             active: 'Actif',
             equip: 'Équiper',
             buy: 'Acheter',
+            use: 'Utiliser',
             empty: 'Aucun item trouvé dans cette catégorie.',
             insufficient: 'Pas assez de LevelCoins ! 🪙'
         },
@@ -426,6 +446,13 @@ export const translations = {
             start: "Commencer l'aventure",
             skip: "Passer l'introduction",
             next: "Suivant"
+        },
+        levelBot: {
+            sessions: 'Mes Discussions',
+            newChat: 'Nouvelle Discussion',
+            deleteConfirm: 'Supprimer cette discussion ?',
+            empty: 'Aucune discussion active.',
+            back: 'Retour au chat'
         }
     },
     en: {
@@ -494,7 +521,7 @@ export const translations = {
             lang: 'Language',
             currentLang: 'English (US)',
             version: 'Version',
-            build: 'v2.4.0 (Elite Build)',
+            build: 'v2.4.0',
             notifTitle: 'Notification Preferences',
             notifDesc: 'Choose how you want to stay informed.',
             notifMissions: 'Mission Reminders',
@@ -615,7 +642,8 @@ export const translations = {
                 characters: 'chars.',
                 public: 'Public',
                 saveBtn: 'Save',
-                saving: 'Saving...'
+                saving: 'Saving...',
+                documentSettings: 'Document Config.'
             },
             coach: {
                 title: 'AI Coach',
@@ -636,6 +664,24 @@ export const translations = {
                 deleteConfirm: 'Are you sure you want to delete this work?',
                 modified: 'Edit',
                 by: 'By'
+            },
+            writingLab: {
+                title: "Writing Lab Assistant",
+                analyzeBtn: "Launch Premium Analysis",
+                analyzing: "Analyzing...",
+                score: "Writing Score",
+                criteria: {
+                    style: "Style & Fluency",
+                    grammar: "Grammar & Spelling",
+                    vocabulary: "Lexical Richness",
+                    structure: "Structure & Rhythm"
+                },
+                corrections: "Suggested Improvements",
+                synonyms: "Synonyms & Elegance",
+                getSynonyms: "Enrich Vocabulary",
+                apply: "Apply",
+                empty: "Write at least 50 characters to launch pedagogical analysis.",
+                strength: "Text Strength"
             }
         },
         library: {
@@ -696,6 +742,7 @@ export const translations = {
             active: 'Active',
             equip: 'Equip',
             buy: 'Buy',
+            use: 'Use',
             empty: 'No items found in this category.',
             insufficient: 'Not enough LevelCoins! 🪙'
         },
@@ -855,6 +902,13 @@ export const translations = {
             start: "Start Adventure",
             skip: "Skip Intro",
             next: "Next"
+        },
+        levelBot: {
+            sessions: 'My Discussions',
+            newChat: 'New Discussion',
+            deleteConfirm: 'Delete this discussion?',
+            empty: 'No active discussions.',
+            back: 'Back to chat'
         }
     },
     ar: {
@@ -923,7 +977,7 @@ export const translations = {
             lang: 'اللغة',
             currentLang: 'العربية (AR)',
             version: 'الإصدار',
-            build: 'v2.4.0 (نسخة النخبة)',
+            build: 'v2.4.0',
             notifTitle: 'تفضيلات الإشعارات',
             notifDesc: 'اختر كيف تريد أن تبقى على اطلاع.',
             notifMissions: 'تذكيرات المهام',
@@ -1044,7 +1098,8 @@ export const translations = {
                 characters: 'حرف',
                 public: 'عام',
                 saveBtn: 'حفظ',
-                saving: 'جاري الحفظ...'
+                saving: 'جاري الحفظ...',
+                documentSettings: 'إعدادات المستند'
             },
             coach: {
                 title: 'مدرب الذكاء الاصطناعي',
@@ -1065,6 +1120,24 @@ export const translations = {
                 deleteConfirm: 'هل أنت متأكد أنك تريد حذف هذا العمل؟',
                 modified: 'تعديل',
                 by: 'بواسطة'
+            },
+            writingLab: {
+                title: "مساعد مختبر الكتابة",
+                analyzeBtn: "إطلاق التحليل المتميز",
+                analyzing: "جاري التحليل...",
+                score: "درجة الكتابة",
+                criteria: {
+                    style: "الأسلوب والطلاقة",
+                    grammar: "القواعد والإملاء",
+                    vocabulary: "الثراء اللغوي",
+                    structure: "البنية والإيقاع"
+                },
+                corrections: "التحسينات المقترحة",
+                synonyms: "المترادفات والأناقة",
+                getSynonyms: "إثراء المفردات",
+                apply: "تطبيق",
+                empty: "اكتب 50 حرفًا على الأقل لإطلاق التحليل التربوي.",
+                strength: "قوة النص"
             }
         },
         library: {
@@ -1125,6 +1198,7 @@ export const translations = {
             active: 'نشط',
             equip: 'تجهيز',
             buy: 'شراء',
+            use: 'استخدام',
             empty: 'لا توجد عناصر في هذه الفئة.',
             insufficient: 'لا توجد عملات LevelCoins كافية! 🪙'
         },
@@ -1284,6 +1358,13 @@ export const translations = {
             start: "ابدأ المغامرة",
             skip: "تخطى المقدمة",
             next: "التالي"
+        },
+        levelBot: {
+            sessions: 'محادثاتي',
+            newChat: 'محادثة جديدة',
+            deleteConfirm: 'حذف هذه المحادثة؟',
+            empty: 'لا توجد محادثات نشطة.',
+            back: 'العودة للمحادثة'
         }
     }
 };

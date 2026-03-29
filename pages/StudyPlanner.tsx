@@ -20,11 +20,11 @@ import {
     FileText,
     Download
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
 import { useStore } from '../hooks/useStore';
 import { aiPlannerService } from '../services/ai-planner';
-import { geminiService } from '../services/gemini';
+import { openrouterService } from '../services/openrouter';
 import { StudyPlan } from '../types';
 import mammoth from 'mammoth';
 
@@ -43,6 +43,7 @@ const StudyPlanner: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [files, setFiles] = useState<{ id: string, file: File, preview: string, type: 'image' | 'pdf' | 'word' }[]>([]);
+    const [isExporting, setIsExporting] = useState(false);
 
     const getFileType = (file: File): 'image' | 'pdf' | 'word' => {
         if (file.type.includes('image')) return 'image';
@@ -73,87 +74,101 @@ const StudyPlanner: React.FC = () => {
     };
 
     const handleExportPDF = () => {
-        if (!plan) return;
+        if (!plan || !plan.tasks) return;
+        setIsExporting(true);
+        try {
+            const doc = new jsPDF();
 
-        const doc = new jsPDF();
+            // Header
+            doc.setFillColor(79, 70, 229); // indigo-600
+            doc.rect(0, 0, 210, 40, 'F');
 
-        // Header
-        doc.setFillColor(79, 70, 229); // indigo-600
-        doc.rect(0, 0, 210, 40, 'F');
-
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(22);
-        doc.setFont('helvetica', 'bold');
-        doc.text('LEVELMAK - PLAN DE RÉVISION', 20, 25);
-
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Examen le: ${new Date(examDate).toLocaleDateString()}`, 150, 25);
-
-        // Content
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Ma Timeline Stratégique', 20, 55);
-
-        let yPos = 70;
-
-        plan.tasks.forEach((task, i) => {
-            if (yPos > 250) { doc.addPage(); yPos = 20; }
-
-            doc.setFillColor(248, 250, 252); // slate-50
-            doc.rect(15, yPos - 5, 180, 25, 'F');
-
-            doc.setFontSize(12);
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(79, 70, 229);
-            doc.text(`${new Date(task.date).toLocaleDateString()} - ${task.subject}`, 20, yPos + 2);
+            doc.text('LEVELMAK - PLAN DE RÉVISION', 20, 25);
 
             doc.setFontSize(10);
-            doc.setTextColor(30, 41, 59);
-            doc.text(`${task.title} (${task.duration})`, 20, yPos + 10);
-
             doc.setFont('helvetica', 'normal');
-            doc.setTextColor(100, 116, 139);
-            const splitDesc = doc.splitTextToSize(task.description, 170);
-            doc.text(splitDesc, 20, yPos + 16);
+            doc.text(`Examen le: ${new Date(examDate).toLocaleDateString()}`, 150, 25);
 
-            yPos += 30 + (splitDesc.length > 1 ? (splitDesc.length - 1) * 5 : 0);
-        });
+            // Content
+            doc.setTextColor(30, 41, 59);
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Ma Timeline Stratégique', 20, 55);
 
-        // AI Tips
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-        yPos += 10;
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text("Conseils de l'IA pour ta réussite", 20, yPos);
-        yPos += 10;
+            // @ts-ignore - autoTable is added by the import
+            (doc as any).autoTable({
+                startY: 65,
+                head: [[t('common.date'), t('planner.subjectsToReview'), t('planner.duration')]],
+                body: plan.tasks.map(task => [new Date(task.date).toLocaleDateString(), task.subject, task.duration]),
+                theme: 'striped',
+                headStyles: { fillColor: [99, 102, 241] }
+            });
 
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text("Focus & Productivité:", 20, yPos);
-        doc.setFont('helvetica', 'normal');
-        const splitFocus = doc.splitTextToSize(t('planner.focusDesc'), 170);
-        doc.text(splitFocus, 20, yPos + 5);
-        yPos += 15 + (splitFocus.length * 5);
+            // @ts-ignore
+            let yPos = (doc as any).lastAutoTable.finalY + 15;
 
-        doc.setFont('helvetica', 'bold');
-        doc.text("Technique Pomodoro:", 20, yPos);
-        doc.setFont('helvetica', 'normal');
-        const splitPomo = doc.splitTextToSize(t('planner.pomodoroDesc'), 170);
-        doc.text(splitPomo, 20, yPos + 5);
+            plan.tasks.forEach((task, i) => {
+                if (yPos > 250) { doc.addPage(); yPos = 20; }
 
-        // Footer
-        const pageCount = (doc as any).internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(`Page ${i} sur ${pageCount} - Généré par LEVELMAK AI`, 105, 290, { align: 'center' });
+                doc.setFillColor(248, 250, 252); // slate-50
+                doc.rect(15, yPos - 5, 180, 25, 'F');
+
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(79, 70, 229);
+                doc.text(`${new Date(task.date).toLocaleDateString()} - ${task.subject}`, 20, yPos + 2);
+
+                doc.setFontSize(10);
+                doc.setTextColor(30, 41, 59);
+                doc.text(`${task.title} (${task.duration})`, 20, yPos + 10);
+
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(100, 116, 139);
+                const splitDesc = doc.splitTextToSize(task.description, 170);
+                doc.text(splitDesc, 20, yPos + 16);
+
+                yPos += 30 + (splitDesc.length > 1 ? (splitDesc.length - 1) * 5 : 0);
+            });
+
+            // AI Tips
+            if (yPos > 220) { doc.addPage(); yPos = 20; }
+            yPos += 10;
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 41, 59);
+            doc.text("Conseils de l'IA pour ta réussite", 20, yPos);
+            yPos += 10;
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Focus & Productivité:", 20, yPos);
+            doc.setFont('helvetica', 'normal');
+            const splitFocus = doc.splitTextToSize(t('planner.focusDesc'), 170);
+            doc.text(splitFocus, 20, yPos + 5);
+            yPos += 15 + (splitFocus.length * 5);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text("Technique Pomodoro:", 20, yPos);
+            doc.setFont('helvetica', 'normal');
+            const splitPomo = doc.splitTextToSize(t('planner.pomodoroDesc'), 170);
+            doc.text(splitPomo, 20, yPos + 5);
+
+            // Footer
+            const pageCount = (doc as any).internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text(`Page ${i} sur ${pageCount} - Généré par LEVELMAK AI`, 105, 290, { align: 'center' });
+            }
+
+            doc.save(`Plan_Revision_LEVELMAK_${new Date().getTime()}.pdf`);
+        } finally {
+            setIsExporting(false);
         }
-
-        doc.save(`Plan_Revision_LEVELMAK_${new Date().getTime()}.pdf`);
     };
 
     const removeFile = (id: string) => {
@@ -197,7 +212,7 @@ const StudyPlanner: React.FC = () => {
                         sources.push({ type: f.type, data: base64 });
                     }
                 }
-                result = await geminiService.generatePlanMultimodal(examDate, subjects, sources, settings.language);
+                result = await openrouterService.generatePlanMultimodal(examDate, subjects, sources, settings.language);
             } else {
                 result = await aiPlannerService.generatePlan(examDate, subjects);
             }
@@ -223,7 +238,7 @@ const StudyPlanner: React.FC = () => {
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 text-primary-light font-black uppercase tracking-[0.2em] text-[10px]">
                         <Calendar size={14} className="animate-pulse" /> {t('planner.strategic')}
                     </div>
-                    <h1 className="text-3xl md:text-5xl font-display font-black text-white tracking-tighter">
+                    <h1 className="text-3xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">
                         {t('planner.successScheduled').split(' ').map((word, i) => i === 1 ? <span key={i} className="text-gradient-primary"> {word} </span> : word + ' ')}
                     </h1>
                     <p className="text-slate-400 max-w-xl font-medium leading-relaxed">
@@ -369,7 +384,7 @@ const StudyPlanner: React.FC = () => {
                                 <Target size={32} className="text-primary-light" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-display font-black text-white">{plan.title}</h2>
+                                <h2 className="text-2xl font-display font-black text-slate-900 dark:text-white">{plan.title}</h2>
                                 <p className="text-sm text-slate-500 font-medium">{t('planner.start')} : {plan.startDate} • {t('planner.end')} : {plan.endDate}</p>
                             </div>
                         </div>
@@ -404,9 +419,9 @@ const StudyPlanner: React.FC = () => {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-6">
-                            <h3 className="text-lg font-display font-black text-white px-2">{t('planner.timeline')}</h3>
+                            <h3 className="text-lg font-display font-black text-slate-900 dark:text-white px-2">{t('planner.timeline')}</h3>
                             <div className="space-y-4">
-                                {plan.tasks.map((task, i) => (
+                                {plan?.tasks?.map((task, i) => (
                                     <motion.div
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -432,7 +447,7 @@ const StudyPlanner: React.FC = () => {
                                                     <span className="text-[10px] font-bold">{task.duration} {t('planner.duration')}</span>
                                                 </div>
                                             </div>
-                                            <h4 className="text-lg font-bold text-white group-hover:text-primary-light transition-colors">{task.title}</h4>
+                                            <h4 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary-light transition-colors">{task.title}</h4>
                                             <p className="text-sm text-slate-500 font-medium leading-relaxed">{task.description}</p>
                                         </div>
 
@@ -451,13 +466,13 @@ const StudyPlanner: React.FC = () => {
                         </div>
 
                         <div className="space-y-6">
-                            <h3 className="text-lg font-display font-black text-white px-2">{t('planner.aiTips')}</h3>
+                            <h3 className="text-lg font-display font-black text-slate-900 dark:text-white px-2">{t('planner.aiTips')}</h3>
                             <div className="bg-gradient-to-br from-secondary/20 to-primary/20 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6">
                                 <div className="space-y-4">
                                     <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white">
                                         <Zap size={24} className="text-accent" />
                                     </div>
-                                    <h4 className="font-bold text-white">{t('planner.focusTitle')}</h4>
+                                    <h4 className="font-bold text-slate-900 dark:text-white">{t('planner.focusTitle')}</h4>
                                     <p className="text-sm text-slate-400 font-medium leading-relaxed">
                                         {t('planner.focusDesc')}
                                     </p>
@@ -467,7 +482,7 @@ const StudyPlanner: React.FC = () => {
                                     <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white">
                                         <BookOpen size={24} className="text-primary-light" />
                                     </div>
-                                    <h4 className="font-bold text-white">{t('planner.pomodoroTitle')}</h4>
+                                    <h4 className="font-bold text-slate-900 dark:text-white">{t('planner.pomodoroTitle')}</h4>
                                     <p className="text-sm text-slate-400 font-medium leading-relaxed">
                                         {t('planner.pomodoroDesc')}
                                     </p>

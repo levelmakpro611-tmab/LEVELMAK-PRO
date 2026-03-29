@@ -19,7 +19,7 @@ import {
     Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { geminiService } from '../services/gemini';
+import { openrouterService } from '../services/openrouter';
 import { useStore } from '../hooks/useStore';
 import mammoth from 'mammoth';
 
@@ -108,7 +108,7 @@ const AISummary: React.FC<{
             }
 
             setStatus('Analyse & Synthèse par l\'IA...');
-            const summaryData = await geminiService.summarizeMultimodal(sources, 'Cours Multimodal', settings.language);
+            const summaryData = await openrouterService.summarizeMultimodal(sources, 'Cours Multimodal', settings.language);
             setSummary(summaryData);
             setStatus('');
         } catch (err: any) {
@@ -149,9 +149,7 @@ const AISummary: React.FC<{
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 rounded-full border border-blue-500/20 text-blue-400 font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
                         <Sparkles size={10} className="animate-pulse" /> Synthèse Intelligente
                     </div>
-                    <h1 className="text-3xl md:text-6xl font-display font-black text-white tracking-tighter leading-tight md:leading-none">
-                        Résumé <span className="text-gradient-primary">IA Élite</span>
-                    </h1>
+                    <h1 className="text-4xl md:text-7xl font-display font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-4 md:mb-6 transition-colors">Résumé <span className="text-blue-500">IA Élite</span></h1>
                     <p className="text-slate-400 text-[10px] md:text-xl font-medium max-w-2xl leading-relaxed">
                         Obtiens l'essentiel de tes cours en quelques secondes. <span className="text-white font-bold">Gagne du temps</span> sur tes révisions.
                     </p>
@@ -331,7 +329,7 @@ const AISummary: React.FC<{
                                     <Sparkles size={28} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tight">{summary.title}</h2>
+                                    <h2 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tight">{summary?.title || "Résumé sans titre"}</h2>
                                     <p className="text-[10px] md:text-xs text-slate-500 font-black uppercase tracking-[0.2em]">Synthèse Intelligente LEVELMAK</p>
                                 </div>
                             </div>
@@ -358,7 +356,7 @@ const AISummary: React.FC<{
                                         <BookOpen size={16} /> Synthèse Globale
                                     </h3>
                                     <div className="text-slate-200 leading-relaxed text-sm md:text-lg font-medium whitespace-pre-wrap">
-                                        {summary.mainSummary}
+                                        {summary?.mainSummary || "Contenu du résumé non disponible."}
                                     </div>
                                 </div>
 
@@ -367,7 +365,7 @@ const AISummary: React.FC<{
                                         <BarChart3 size={16} className="text-blue-500" /> Points Clés à Retenir
                                     </h3>
                                     <div className="grid gap-3">
-                                        {summary.keyPoints.map((point: string, i: number) => (
+                                        {(summary?.keyPoints || []).map((point: string, i: number) => (
                                             <div key={i} className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-blue-500/20 transition-all group">
                                                 <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center text-[10px] font-black shrink-0">
                                                     {i + 1}
@@ -387,13 +385,13 @@ const AISummary: React.FC<{
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                             <span className="text-xs text-slate-500 font-bold uppercase">Lecture</span>
-                                            <span className="text-sm font-black text-blue-400">{summary.estimatedReadingTime}</span>
+                                            <span className="text-sm font-black text-blue-400">{summary?.estimatedReadingTime || "5 min"}</span>
                                         </div>
                                         <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                             <span className="text-xs text-slate-500 font-bold uppercase">Difficulté</span>
-                                            <span className={`text-sm font-black ${summary.difficulty === 'Facile' ? 'text-green-500' :
-                                                summary.difficulty === 'Intermédiaire' ? 'text-orange-500' : 'text-red-500'
-                                                }`}>{summary.difficulty}</span>
+                                            <span className={`text-sm font-black ${summary?.difficulty === 'Facile' ? 'text-green-500' :
+                                                summary?.difficulty === 'Intermédiaire' ? 'text-orange-500' : 'text-red-500'
+                                                }`}>{summary?.difficulty || "Intermédiaire"}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -404,10 +402,10 @@ const AISummary: React.FC<{
                                             <Type size={16} className="text-blue-500" /> Glossaire
                                         </h3>
                                         <div className="space-y-4">
-                                            {summary.definitions.map((def: any, i: number) => (
+                                            {(summary?.definitions || []).map((def: any, i: number) => (
                                                 <div key={i} className="space-y-1">
-                                                    <p className="text-sm font-black text-white">{def.term}</p>
-                                                    <p className="text-xs text-slate-500 font-medium leading-relaxed italic">"{def.definition}"</p>
+                                                    <p className="text-sm font-black text-white">{def?.term}</p>
+                                                    <p className="text-xs text-slate-500 font-medium leading-relaxed italic">"{def?.definition}"</p>
                                                 </div>
                                             ))}
                                         </div>

@@ -5,12 +5,14 @@ import { Trophy, Medal, Crown, Star, ArrowUp, Search, User as UserIcon, Zap, Tar
 import { getLeaderboard } from '../services/adminService';
 import { User } from '../types';
 import { useStore } from '../hooks/useStore';
+import { LEAGUES, getLeagueFromXp } from '../constants';
 
 const Ranking: React.FC = () => {
     const { user: currentUser, t } = useStore();
     const [leaderboard, setLeaderboard] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedLeague, setSelectedLeague] = useState<string | 'all'>('all');
 
     const fetchRankings = async () => {
         try {
@@ -171,22 +173,55 @@ const Ranking: React.FC = () => {
                 )}
             </div>
 
+            {/* League Selection Tabs */}
+            <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar">
+                <button
+                    onClick={() => setSelectedLeague('all')}
+                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${
+                        selectedLeague === 'all' 
+                        ? 'bg-primary text-white border-primary shadow-glow' 
+                        : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10'
+                    }`}
+                >
+                    Toutes les Ligues
+                </button>
+                {LEAGUES.map(league => (
+                    <button
+                        key={league.id}
+                        onClick={() => setSelectedLeague(league.id)}
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border flex items-center gap-2 ${
+                            selectedLeague === league.id 
+                            ? 'bg-slate-900 text-white border-white/20 shadow-xl' 
+                            : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10'
+                        }`}
+                        style={selectedLeague === league.id ? { color: league.color, borderColor: league.color + '44' } : {}}
+                    >
+                        <span>{league.icon}</span>
+                        {league.name}
+                    </button>
+                ))}
+            </div>
+
             {/* Leaderboard List */}
             <div className="glass rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
                 <div className="p-6 md:p-8 bg-white/5 border-b border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Target size={18} className="text-primary" />
-                        <h2 className="text-lg font-black uppercase tracking-widest text-white">{t('ranking.allChallengers')}</h2>
+                        <h2 className="text-lg font-black uppercase tracking-widest text-slate-900 dark:text-white">
+                            {selectedLeague === 'all' ? t('ranking.allChallengers') : LEAGUES.find(l => l.id === selectedLeague)?.name}
+                        </h2>
                     </div>
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-black/20 px-3 py-1 rounded-full">{t('ranking.top50')}</span>
                 </div>
 
                 <div className="divide-y divide-white/5">
-                    {others.map((player, index) => {
-                        const rank = index + 4;
-                        const isMe = player.id === currentUser?.id;
-
-                        return (
+                    {leaderboard
+                        .filter(p => selectedLeague === 'all' || getLeagueFromXp(p.totalXp) === selectedLeague)
+                        .map((player, index) => {
+                            const rank = leaderboard.findIndex(lp => lp.id === player.id) + 1;
+                            const isMe = player.id === currentUser?.id;
+                            const pLeague = LEAGUES.find(l => l.id === getLeagueFromXp(player.totalXp)); 
+                            return (
                             <motion.div
                                 key={player.id}
                                 initial={{ opacity: 0, x: -10 }}
@@ -195,12 +230,18 @@ const Ranking: React.FC = () => {
                                 className={`flex items-center justify-between p-4 md:p-6 transition-all hover:bg-white/5 group ${isMe ? 'bg-primary/10' : ''}`}
                             >
                                 <div className="flex items-center gap-4 md:gap-6">
-                                    <span className={`w-8 text-center text-sm font-black ${rank <= 10 ? 'text-white' : 'text-slate-500'}`}>
-                                        #{rank}
-                                    </span>
+                                    <div className="w-10 text-center flex flex-col items-center gap-1">
+                                        <span className={`text-sm font-black ${rank <= 3 ? 'text-amber-500' : rank <= 10 ? 'text-white' : 'text-slate-500'}`}>
+                                            #{rank}
+                                        </span>
+                                        {pLeague && (
+                                            <span className="text-xs" title={pLeague.name}>{pLeague.icon}</span>
+                                        )}
+                                    </div>
 
                                     <div className="relative">
-                                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-slate-800 border border-white/10 overflow-hidden relative group-hover:scale-105 transition-transform">
+                                        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-slate-800 border-2 overflow-hidden relative group-hover:scale-105 transition-transform`}
+                                             style={{ borderColor: pLeague?.color || 'transparent' }}>
                                             {player.avatar?.image ? (
                                                 <img src={player.avatar.image} alt={player.name} className="w-full h-full object-cover" />
                                             ) : (
@@ -217,10 +258,15 @@ const Ranking: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <h4 className={`font-display font-bold text-sm md:text-base ${isMe ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>
-                                            {player.name} {isMe && <span className="ml-2 text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-md uppercase font-black">{t('ranking.me')}</span>}
+                                        <h4 className={`font-display font-bold text-sm md:text-base flex items-center gap-2 ${isMe ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>
+                                            {player.name} 
+                                            {isMe && <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-md uppercase font-black">{t('ranking.me')}</span>}
                                         </h4>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('ranking.level')} {player.avatar?.currentLevel || 1}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('ranking.level')} {player.avatar?.currentLevel || 1}</p>
+                                            <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
+                                            <p className="text-[10px] font-black uppercase tracking-tighter" style={{ color: pLeague?.color }}>{pLeague?.name}</p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -234,7 +280,7 @@ const Ranking: React.FC = () => {
                         );
                     })}
 
-                    {others.length === 0 && !loading && (
+                    {leaderboard.filter(p => selectedLeague === 'all' || getLeagueFromXp(p.totalXp) === selectedLeague).length === 0 && !loading && (
                         <div className="p-20 text-center space-y-4">
                             <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto text-slate-600">
                                 <Search size={32} />

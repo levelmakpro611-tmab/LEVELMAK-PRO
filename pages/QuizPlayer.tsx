@@ -21,10 +21,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { logUserActivity } from '../services/activityService';
 import { Quiz } from '../types';
 import { useStore } from '../hooks/useStore';
-import confetti from 'canvas-confetti';
-import { HapticFeedback } from '../services/nativeAdapters';
+import { feedbackService } from '../services/feedbackService';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { WorldBrainMap } from '../components/WorldBrainMap';
 
 interface QuizPlayerProps {
   quiz: Quiz;
@@ -32,7 +32,7 @@ interface QuizPlayerProps {
 }
 
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
-  const { user, addXp, addActivity, trackTime, usePotion, betLevelCoins, addLevelCoins, updateSRSMetadata, t } = useStore();
+  const { user, addXp, addActivity, trackTime, usePotion, betLevelCoins, addLevelCoins, updateSRSMetadata, plantInGarden, t } = useStore();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -50,6 +50,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
   const [shieldActive, setShieldActive] = useState(false);
   const [showOracle, setShowOracle] = useState(true);
+  const [isInviting, setIsInviting] = useState(false);
   const [betAmount, setBetAmount] = useState(0);
   const [betTarget, setBetTarget] = useState(80); // Target score percentage
 
@@ -73,6 +74,19 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
   const encouragements = t('quiz.player.feedback.success', { returnObjects: true }) as string[];
 
+  if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center p-4">
+        <div className="bg-slate-900 border border-white/10 p-8 rounded-[2rem] text-center space-y-4 max-w-sm w-full shadow-2xl">
+          <AlertCircle size={48} className="text-danger mx-auto animate-pulse" />
+          <h2 className="text-xl font-bold text-white">Quiz Corrompu</h2>
+          <p className="text-slate-400 text-sm">Oups ! Ce quiz n'a pas été généré correctement ou ne contient aucune question.</p>
+          <button onClick={onClose} className="w-full py-3 mt-4 bg-white/10 hover:bg-white/20 rounded-xl text-white font-bold transition-all">Retourner à l'accueil</button>
+        </div>
+      </div>
+    );
+  }
+
   const currentQuestion = quiz.questions[currentIdx];
 
   const handleOptionClick = (idx: number) => {
@@ -85,12 +99,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     if (correct) {
       setScore(prev => prev + 1);
       setEncouragement(encouragements[Math.floor(Math.random() * encouragements.length)]);
-      HapticFeedback.correctAnswer();
-
-      // Play minor success sound if possible
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
-      audio.volume = 0.2;
-      audio.play().catch(() => { });
+      feedbackService.answerFeedback(true);
     } else {
       if (shieldActive) {
         setShieldActive(false);
@@ -100,7 +109,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         return;
       }
       setEncouragement(t('quiz.player.feedback.fail'));
-      HapticFeedback.wrongAnswer();
+      feedbackService.answerFeedback(false);
     }
   };
 
@@ -215,21 +224,48 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     setShowOracle(false);
   };
 
+  const handleInviteFromMap = () => {
+    if (betAmount > 0 && user && user.levelCoins < betAmount) {
+      alert("Tu n'as pas assez de LevelCoins pour parier cette somme ! 🪙");
+      return;
+    }
+    setIsInviting(true);
+  };
+
   const finishQuiz = () => {
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-    const xpGained = score * 10 + 50; // 10 XP per right answer + 50 bonus
-    HapticFeedback.success();
-
     const successPercentage = (score / quiz.questions.length) * 100;
+
+    // Strict performance based rewards
+    const maxXP = quiz.questions.length * 10; // e.g. 100 max XP for 10 questions
+    const xpGained = Math.round((successPercentage / 100) * maxXP) || 0;
+    
+    // Base coins scaling
+    const baseCoins = Math.round((successPercentage / 100) * 15) || 0;
+
+    feedbackService.mediumImpact();
+
     const betWon = betAmount > 0 ? successPercentage >= betTarget : null;
 
     if (betWon) {
-      addLevelCoins(betAmount * 3);
+      addLevelCoins(betAmount * 3 + baseCoins);
       addActivity('badge', 'Oracle Validé ! 🔮', `Tu as triplé ton pari de ${betAmount} coins !`);
+    } else {
+      if (baseCoins > 0) addLevelCoins(baseCoins);
     }
 
-    addXp(xpGained);
+    if (xpGained > 0) addXp(xpGained);
     trackTime(timeSpent / 60); // Convert seconds to minutes for trackTime
+
+    // Plant in garden if score is >= 50%
+    if (successPercentage >= 50) {
+      const plantTypes: ('flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus')[] = ['flower', 'tree', 'cactus', 'bonsai', 'lotus'];
+      // Increase probability of getting an actual tree since the user specifically requested 'l'arbre'
+      const weightedTypes = [...plantTypes, 'tree', 'tree', 'tree'];
+      const randomType = weightedTypes[Math.floor(Math.random() * weightedTypes.length)] as any;
+      plantInGarden(randomType);
+      addActivity('mission', 'Nouvelle Plante ! 🌱', `Bravo ! Ton score de ${Math.round(successPercentage)}% a fait pousser une nouvelle plante dans ton jardin.`);
+    }
 
     // SRS Update for Quiz
     let srsRating: 1 | 3 | 4 | 5 = 1;
@@ -255,14 +291,22 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     setShowResults(true);
 
     if (score > quiz.questions.length * 0.7) {
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#3B82F6', '#8B5CF6', '#F59E0B']
-      });
+      feedbackService.celebrate();
     }
   };
+
+  if (isInviting) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-950 animate-fade-in">
+        <WorldBrainMap 
+          customBattleMode="custom_quiz" 
+          customBattleData={quiz} 
+          customBetAmount={betAmount} 
+          onCloseMap={() => setIsInviting(false)} 
+        />
+      </div>
+    );
+  }
 
   if (showOracle) {
     return (
@@ -314,12 +358,20 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
             </div>
           </div>
 
-          <button
-            onClick={handleStartWithBet}
-            className="w-full py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-glow hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-          >
-            {t('quiz.player.oracle.startBtn')}
-          </button>
+          <div className="space-y-4">
+            <button
+              onClick={handleStartWithBet}
+              className="w-full py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-glow hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+            >
+              {t('quiz.player.oracle.startBtn')}
+            </button>
+            <button
+              onClick={handleInviteFromMap}
+              className="w-full py-4 bg-transparent border-2 border-primary/30 text-primary hover:bg-primary/10 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-glow"
+            >
+              Défier sur la Carte 🗺️
+            </button>
+          </div>
         </motion.div>
       </div>
     );

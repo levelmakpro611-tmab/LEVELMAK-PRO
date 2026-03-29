@@ -6,6 +6,56 @@ export enum SchoolLevel {
   UNIVERSITY = 'Université'
 }
 
+export enum League {
+  BRONZE = 'bronze',
+  SILVER = 'silver',
+  GOLD = 'gold',
+  DIAMOND = 'diamond',
+  MASTER = 'master'
+}
+
+export interface BattlePlayer {
+  id: string;
+  name: string;
+  avatar: string;
+  score: number;
+}
+
+export type BattleType = 'quiz' | 'doodle' | 'custom_quiz';
+
+export interface BattleRequest {
+  id: string;
+  type: BattleType;
+  host: BattlePlayer;
+  guest: BattlePlayer;
+  status: 'pending' | 'accepted' | 'declined' | 'active' | 'finished';
+  questions: QuizQuestion[];
+  timestamp: number;
+  customQuiz?: Quiz;
+  betAmount?: number;
+}
+
+export interface BattleState {
+  id: string;
+  type: BattleType;
+  host: BattlePlayer;
+  guest: BattlePlayer;
+  status: 'active' | 'finished';
+  winnerId: string | null;
+  customQuiz?: Quiz;
+  betAmount?: number;
+  // Quiz specific
+  currentQuestionIndex?: number;
+  hostAnswers?: number[];
+  guestAnswers?: number[];
+  // Doodle specific
+  grid?: string[];
+  hostScore?: number;
+  guestScore?: number;
+  timeLeft?: number;
+}
+
+
 export interface Activity {
   id: string;
   type: 'quiz' | 'post' | 'comment' | 'profile' | 'badge' | 'mission' | 'study' | 'reading' | 'writing';
@@ -13,6 +63,21 @@ export interface Activity {
   description: string;
   timestamp: string;
   icon?: string;
+}
+
+export interface CoachMessage {
+  id: string;
+  role: 'user' | 'bot';
+  text: string;
+  image?: string;
+  timestamp: string;
+}
+
+export interface CoachSession {
+  id: string;
+  title: string;
+  messages: CoachMessage[];
+  lastUpdated: string;
 }
 
 export interface User {
@@ -56,6 +121,39 @@ export interface User {
   activeEffects?: { [type: string]: number };
   quizzes?: Quiz[];
   stories?: Story[];
+  garden?: UserGarden;
+  location?: {
+    latitude: number;
+    longitude: number;
+    lastUpdated: string;
+    isPublic: boolean;
+  };
+  league?: League;
+  coachSessions?: CoachSession[];
+}
+
+
+export interface GardenPlant {
+  id: string;
+  type: 'flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus';
+  plantedAt: string;
+  lastWateredAt: string;
+  growthStage: number; // 0: seed, 1: sprout, 2: growing, 3: mature, 4: bloom
+  state: 'healthy' | 'yellowing' | 'dead';
+}
+
+export interface UserGarden {
+  lastWatered: string;
+  plants: GardenPlant[];
+}
+
+export interface ActiveUser {
+  user_id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  avatar?: string; // This is the image URL or baseColor
+  timestamp: number;
 }
 
 export interface AvatarConfig {
@@ -64,6 +162,12 @@ export interface AvatarConfig {
   aura: string;
   currentLevel: number;
   image?: string; // For high-quality real avatars
+  location?: {
+    latitude: number;
+    longitude: number;
+    isPublic: boolean;
+    lastUpdated: string;
+  };
 }
 
 export interface QuizQuestion {

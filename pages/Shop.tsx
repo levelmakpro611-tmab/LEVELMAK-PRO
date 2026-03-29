@@ -21,7 +21,7 @@ import { ShopItem } from '../types';
 import { getAllShopItems } from '../services/adminService';
 
 const Shop: React.FC = () => {
-    const { user, purchaseItem, equipItem, purchasePotion, t } = useStore();
+    const { user, purchaseItem, equipItem, purchasePotion, usePotion, t } = useStore();
     const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'theme' | 'potion'>('all');
     const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
     const [items, setItems] = useState<ShopItem[]>([]);
@@ -567,6 +567,15 @@ const Shop: React.FC = () => {
         }
     };
 
+    const handleUse = (item: ShopItem) => {
+        const translatedName = t(`items.${item.id}.name`);
+        const displayName = translatedName.startsWith('items.') ? item.name : translatedName;
+
+        usePotion(item.id);
+        setPurchaseSuccess(`${t('shop.active')}: ${displayName}`);
+        setTimeout(() => setPurchaseSuccess(null), 3000);
+    };
+
     return (
         <div className="max-w-7xl mx-auto py-8 px-4 space-y-8 animate-fade-in">
             {/* Header */}
@@ -575,7 +584,7 @@ const Shop: React.FC = () => {
                     <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-secondary/10 rounded-full border border-secondary/20 text-secondary font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
                         <ShoppingBag size={12} md:size={14} className="animate-pulse" /> {t('shop.title')}
                     </div>
-                    <h1 className="text-3xl md:text-5xl font-display font-black text-white tracking-tighter">
+                    <h1 className="text-3xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">
                         {t('shop.subtitle')}
                     </h1>
                     <p className="text-slate-400 text-sm md:text-base max-w-xl font-medium leading-relaxed">
@@ -587,14 +596,14 @@ const Shop: React.FC = () => {
                     <div className="flex flex-col items-end">
                         <span className="text-[8px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest">{t('shop.balance')}</span>
                         <div className="flex items-center gap-1.5 md:gap-2">
-                            <span className="text-xl md:text-3xl font-display font-black text-white">{coins}</span>
+                            <span className="text-xl md:text-3xl font-display font-black text-slate-900 dark:text-white">{coins}</span>
                             <Coins className="text-secondary" size={18} md:size={24} />
                         </div>
                     </div>
                     <div className="w-px h-8 md:h-10 bg-white/10" />
                     <div className="flex flex-col items-end">
                         <span className="text-[8px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest">{t('shop.items')}</span>
-                        <span className="text-lg md:text-2xl font-display font-black text-white">{inventory.length}</span>
+                        <span className="text-lg md:text-2xl font-display font-black text-slate-900 dark:text-white">{inventory.length}</span>
                     </div>
                 </div>
             </div>
@@ -704,12 +713,20 @@ const Shop: React.FC = () => {
 
                             {/* Content */}
                             <div className="space-y-1 md:space-y-2 mb-4 md:mb-6">
-                                <h3 className="text-sm md:text-xl font-display font-black text-white line-clamp-1">{displayName}</h3>
+                                <h3 className="text-sm md:text-xl font-display font-black text-slate-900 dark:text-white line-clamp-1">{displayName}</h3>
                                 <p className="text-slate-500 text-[10px] md:text-sm font-medium line-clamp-2 md:line-clamp-none">{displayDesc}</p>
                             </div>
 
-                            {/* Purchase/Equip Button */}
-                            {item.category !== 'potion' && inventory.includes(item.id) ? (
+                            {/* Purchase/Equip/Use Button */}
+                            {item.category === 'potion' && user?.consumables?.[item.id] ? (
+                                <button
+                                    onClick={() => handleUse(item)}
+                                    className="w-full py-2.5 md:py-4 rounded-xl md:rounded-2xl flex items-center justify-center gap-2 md:gap-3 text-[9px] md:text-xs font-black uppercase tracking-[0.15em] md:tracking-[0.2em] transition-all bg-secondary text-white shadow-glow hover:bg-secondary-light active:scale-95"
+                                >
+                                    <FlaskConical size={14} md={16} />
+                                    {t('shop.use')} ({user.consumables[item.id]})
+                                </button>
+                            ) : item.category !== 'potion' && inventory.includes(item.id) ? (
                                 <button
                                     onClick={() => equipItem(item.id, item.category, item.image)}
                                     className={`w-full py-2.5 md:py-4 rounded-xl md:rounded-2xl flex items-center justify-center gap-2 md:gap-3 text-[9px] md:text-xs font-black uppercase tracking-[0.15em] md:tracking-[0.2em] transition-all ${(item.category === 'avatar' && user?.avatar?.image === item.image)

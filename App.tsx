@@ -24,7 +24,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import BookReader from './components/BookReader';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
 import { Loader2 } from 'lucide-react';
-import { geminiService } from './services/gemini';
+import { openrouterService } from './services/openrouter';
 import { initializeNativeFeatures } from './services/nativeAdapters';
 
 const AppContent: React.FC = () => {
@@ -38,20 +38,29 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     // Theme
     if (settings.theme === 'light') {
+      document.documentElement.classList.remove('dark');
       document.body.classList.add('light');
     } else {
+      document.documentElement.classList.add('dark');
       document.body.classList.remove('light');
     }
 
     // Font Size
     const fontSizeClasses = ['font-size-xs', 'font-size-sm', 'font-size-base', 'font-size-lg', 'font-size-xl'];
-    document.body.classList.remove(...fontSizeClasses);
-    document.body.classList.add(`font-size-${settings.fontSize}`);
+    document.documentElement.classList.remove(...fontSizeClasses);
+    document.documentElement.classList.add(`font-size-${settings.fontSize}`);
   }, [settings.theme, settings.fontSize]);
 
   // Initialize native features on app start
   useEffect(() => {
     initializeNativeFeatures();
+    
+    // Custom navigation listener
+    const handleNav = (e: any) => {
+      if (e.detail) setActiveTab(e.detail);
+    };
+    window.addEventListener('nav_change', handleNav);
+    return () => window.removeEventListener('nav_change', handleNav);
   }, []);
 
   if (currentBook) {
@@ -93,7 +102,8 @@ const AppContent: React.FC = () => {
   if (!user) return <Auth />;
 
   // Check if user is admin (username: levelmak611)
-  const isAdmin = user.name?.toLowerCase() === 'administrateur principal' ||
+  const isAdmin = user.name?.toLowerCase().includes('administrateur principal') ||
+    user.name?.toLowerCase().includes('mouctar') ||
     user.phoneNumber === 'levelmak611' ||
     user.email?.includes('levelmak611');
   if (isAdmin) {
@@ -162,7 +172,7 @@ const AppContent: React.FC = () => {
           <AISummary
             onGenerateQuiz={async (content, title) => {
               try {
-                const quiz = await geminiService.generateQuiz(content, title, 'Intermédiaire');
+                const quiz = await openrouterService.generateQuiz(content, title, 'Intermédiaire');
                 setCurrentQuiz(quiz);
                 setActiveTab('quiz');
               } catch (error) {
@@ -171,7 +181,7 @@ const AppContent: React.FC = () => {
             }}
             onGenerateFlashcards={async (content, title) => {
               try {
-                const cards = await geminiService.generateFlashcards(content, title);
+                const cards = await openrouterService.generateFlashcards(content, title);
                 setCurrentDeck({
                   deck: {
                     id: `deck_${Date.now()}`,

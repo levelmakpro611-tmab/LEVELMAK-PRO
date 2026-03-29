@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Upload,
   FileText,
@@ -14,18 +14,18 @@ import {
   Zap,
   BookOpen,
   Info,
-  Plus
+  Plus,
+  X,
+  Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { geminiService } from '../services/gemini';
+import { openrouterService } from '../services/openrouter';
 import { useStore } from '../hooks/useStore';
 import { SUBJECTS } from '../constants';
 import { Quiz } from '../types';
-import mammoth from 'mammoth';
-
 const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGenerated }) => {
   const { saveQuiz, completeMission, t, settings } = useStore();
-  const [files, setFiles] = useState<{ id: string, file: File, preview: string, type: 'image' | 'pdf' | 'word' }[]>([]);
+  const [files, setFiles] = useState<{ id: string, file: File, preview: string, type: 'image' }[]>([]);
   const [manualText, setManualText] = useState('');
   const [subject, setSubject] = useState(SUBJECTS[0]);
   const [difficulty, setDifficulty] = useState('Intermédiaire');
@@ -34,11 +34,68 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
   const [status, setStatus] = useState('');
   const [inputMode, setInputMode] = useState<'file' | 'text'>('file');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Camera state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
 
-  const getFileType = (file: File): 'image' | 'pdf' | 'word' => {
-    if (file.type.includes('image')) return 'image';
-    if (file.type === 'application/pdf') return 'pdf';
-    return 'word';
+  // Cleanup camera on unmount or mode change
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      setIsCameraActive(true);
+      // Need a small timeout to ensure video element is rendered before setting srcObject
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.play().catch(e => console.error("Video play error:", e));
+        }
+      }, 100);
+    } catch (err) {
+      console.error("Camera error:", err);
+      setError("Impossible d'accéder à la caméra. Vérifiez les permissions de votre navigateur.");
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        fetch(dataUrl)
+          .then(res => res.blob())
+          .then(blob => {
+            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            const id = Math.random().toString(36).substr(2, 9);
+            setFiles(prev => [...prev, { id, file, preview: dataUrl, type: 'image' }]);
+          });
+      }
+    }
+  };
+
+  const getFileType = (file: File): 'image' => {
+    return 'image';
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,32 +137,29 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
     setStatus(t('quiz.generator.status.init'));
 
     try {
-      const sources: { type: 'text' | 'image' | 'pdf' | 'word', data: string }[] = [];
+      const sources: { type: 'text' | 'image', data: string }[] = [];
 
       if (inputMode === 'text') {
         sources.push({ type: 'text', data: manualText });
       } else {
         setStatus(t('quiz.generator.status.prep'));
         for (const f of files) {
-          if (f.type === 'word') {
-            setStatus(`${t('quiz.generator.status.read')} ${f.file.name}...`);
-            const arrayBuffer = await (f.file as File).arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer });
-            sources.push({ type: 'text', data: result.value });
-          } else {
-            setStatus(`${t('quiz.generator.status.process')} ${f.file.name}...`);
-            const base64 = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string || '');
-              reader.readAsDataURL(f.file as File);
-            });
-            sources.push({ type: f.type, data: base64 });
-          }
+          setStatus(`${t('quiz.generator.status.process')} ${f.file.name}...`);
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string || '');
+            reader.readAsDataURL(f.file as File);
+          });
+          sources.push({ type: f.type, data: base64 });
         }
       }
 
       setStatus(t('quiz.generator.status.analyze'));
-      const quizData = await geminiService.generateMultimodalQuiz(sources, subject, difficulty, settings.language);
+      const quizData = await openrouterService.generateMultimodalQuiz(sources, subject, difficulty, settings.language);
+
+      if (!quizData || !quizData.questions || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
+        throw new Error("L'IA n'a pas pu générer les questions correctement à partir de ce document. Essaie avec un texte plus clair.");
+      }
 
       const newQuiz: Quiz = {
         id: `quiz_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -143,11 +197,11 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
           <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-primary/10 rounded-full border border-primary/20 text-primary-light font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
             <Sparkles size={10} md:size={14} className="animate-pulse" /> {t('quiz.generator.badge')}
           </div>
-          <h1 className="text-2xl md:text-6xl font-display font-black text-white tracking-tighter leading-tight md:leading-none">
+          <h1 className="text-2xl md:text-6xl font-display font-black text-slate-900 dark:text-white tracking-tighter leading-tight md:leading-none">
             {t('quiz.generator.title')} <span className="text-gradient-primary">{t('quiz.generator.subtitle')}</span>
           </h1>
           <p className="text-slate-400 text-xs md:text-xl font-medium max-w-2xl leading-relaxed">
-            {t('quiz.generator.desc')} <span className="text-white font-bold">{t('quiz.generator.active')}</span>.
+            {t('quiz.generator.desc')} <span className="text-slate-900 dark:text-white font-bold">{t('quiz.generator.active')}</span>.
           </p>
         </div>
       </motion.div>
@@ -159,7 +213,7 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
               onClick={() => setInputMode('file')}
               className={`flex-1 flex items-center justify-center gap-2 md:gap-3 py-3 md:py-5 rounded-[1.2rem] md:rounded-[2rem] font-black uppercase tracking-widest text-[8px] md:text-xs transition-all duration-500 ${inputMode === 'file' ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-glow' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
             >
-              <Upload size={14} md:size={18} /> {t('quiz.generator.uploadBtn')}
+              <ImageIcon size={14} md:size={18} /> PHOTOS
             </button>
             <button
               onClick={() => setInputMode('text')}
@@ -192,33 +246,45 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
                 </motion.div>
               ) : inputMode === 'file' ? (
                 <motion.div key="file-mode" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col space-y-6">
-                  {/* Mobile-Specific Quick Actions */}
-                  <div className="flex flex-col md:hidden gap-4 mb-4">
-                    <button
-                      onClick={() => {
-                        if (fileInputRef.current) {
-                          fileInputRef.current.setAttribute('capture', 'environment');
-                          fileInputRef.current.setAttribute('accept', 'image/*');
-                          fileInputRef.current.click();
-                        }
-                      }}
-                      className="w-full flex items-center justify-center gap-3 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-glow active:scale-95 transition-all"
-                    >
-                      <ImageIcon size={20} /> Prendre une Photo
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (fileInputRef.current) {
-                          fileInputRef.current.removeAttribute('capture');
-                          fileInputRef.current.setAttribute('accept', 'image/*,.pdf,.docx');
-                          fileInputRef.current.click();
-                        }
-                      }}
-                      className="w-full flex items-center justify-center gap-3 py-4 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-xs border border-white/5 active:scale-95 transition-all"
-                    >
-                      <Upload size={20} /> Parcourir Documents
-                    </button>
-                  </div>
+                  {/* Universal Quick Actions for Camera and Gallery */}
+                  {isCameraActive ? (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full aspect-[4/3] md:aspect-video bg-black rounded-3xl overflow-hidden mb-6 shadow-2xl flex flex-col items-center justify-center border border-white/10">
+                       <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                       
+                       <div className="absolute top-4 right-4">
+                         <button onClick={stopCamera} className="w-10 h-10 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-all">
+                           <X size={18} />
+                         </button>
+                       </div>
+
+                       <div className="absolute bottom-6 inset-x-0 flex justify-center items-center gap-6 px-4">
+                         <button onClick={capturePhoto} className="w-16 h-16 md:w-20 md:h-20 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-all outline outline-4 outline-white/30 border-4 border-black/20">
+                           <Camera size={28} className="md:w-8 md:h-8" />
+                         </button>
+                       </div>
+                    </motion.div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <button
+                        onClick={startCamera}
+                        className="w-full flex items-center justify-center gap-3 py-4 md:py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-widest text-xs md:text-sm shadow-glow active:scale-95 transition-all"
+                      >
+                        <Camera size={20} /> Appareil Photo
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (fileInputRef.current) {
+                            fileInputRef.current.removeAttribute('capture');
+                            fileInputRef.current.setAttribute('accept', 'image/*');
+                            fileInputRef.current.click();
+                          }
+                        }}
+                        className="w-full flex items-center justify-center gap-3 py-4 md:py-5 bg-white/5 hover:bg-white/10 text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-widest text-xs md:text-sm border border-white/5 active:scale-95 transition-all"
+                      >
+                        <Upload size={20} /> Parcourir Galerie
+                      </button>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <AnimatePresence>
@@ -230,14 +296,7 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
                           exit={{ opacity: 0, scale: 0.8 }}
                           className="relative aspect-square rounded-2xl md:rounded-3xl border border-white/10 overflow-hidden group/item bg-white/5"
                         >
-                          {f.type === 'image' ? (
-                            <img src={f.preview} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center space-y-2 p-4">
-                              <FileText size={32} className="text-primary" />
-                              <span className="text-[8px] font-black uppercase text-slate-500 truncate w-full text-center">{f.file.name}</span>
-                            </div>
-                          )}
+                          <img src={f.preview} className="w-full h-full object-cover" />
                           <button
                             onClick={() => removeFile(f.id)}
                             className="absolute top-2 right-2 p-2 bg-red-500/80 text-white rounded-xl md:opacity-0 md:group-hover/item:opacity-100 transition-opacity z-20"
@@ -247,23 +306,6 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
                         </motion.div>
                       ))}
                     </AnimatePresence>
-
-                    {/* Desktop/Default Add Button - Hidden on small screens in favor of quick actions */}
-                    <button
-                      onClick={() => {
-                        if (fileInputRef.current) {
-                          fileInputRef.current.removeAttribute('capture');
-                          fileInputRef.current.setAttribute('accept', 'image/*,.pdf,.docx');
-                          fileInputRef.current.click();
-                        }
-                      }}
-                      className="hidden md:flex aspect-square rounded-3xl border-2 border-dashed border-white/10 hover:border-primary/50 hover:bg-primary/5 flex-col items-center justify-center gap-3 transition-all"
-                    >
-                      <div className="p-3 bg-white/5 rounded-2xl text-slate-500 group-hover:text-primary transition-colors">
-                        <Plus size={24} />
-                      </div>
-                      <span className="text-[10px] font-black text-slate-500 uppercase">Ajouter</span>
-                    </button>
                   </div>
 
                   <input
@@ -272,11 +314,11 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
                     className="hidden"
                     multiple
                     onChange={handleFileChange}
-                    accept="image/*,.pdf,.docx"
+                    accept="image/*"
                   />
 
                   <p className="text-center text-[10px] md:text-xs text-slate-500 font-medium italic">
-                    {t('quiz.generator.uploadDesc')}
+                    Combine tes photos de cahiers pour générer un quiz précis.
                   </p>
                 </motion.div>
               ) : (

@@ -10,7 +10,9 @@ import {
     Target,
     Clock,
     AlertCircle,
-    Info
+    Info,
+    Volume2,
+    VolumeX
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { AppNotification } from '../services/notificationService';
@@ -21,7 +23,7 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
-    const { notifications, markNotificationAsRead, clearNotifications, settings } = useStore();
+    const { notifications, markNotificationAsRead, clearNotifications, settings, updateSettings } = useStore();
     const isFrench = settings.language === 'fr';
 
     const t = {
@@ -29,6 +31,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
         empty: isFrench ? 'Pas de nouvelles notifications' : 'No new notifications',
         clearAll: isFrench ? 'Tout effacer' : 'Clear all',
         markRead: isFrench ? 'Marquer comme lu' : 'Mark as read',
+        soundsOn: isFrench ? 'Désactiver le son' : 'Mute notifications',
+        soundsOff: isFrench ? 'Activer le son' : 'Unmute notifications',
     };
 
     const getIcon = (type: AppNotification['type']) => {
@@ -82,6 +86,16 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                     </button>
                                 )}
                                 <button
+                                    onClick={() => updateSettings({ soundEnabled: !settings.soundEnabled })}
+                                    className={`p-2 rounded-lg transition-all ${settings.soundEnabled
+                                        ? 'text-blue-500 hover:bg-blue-500/10'
+                                        : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
+                                        }`}
+                                    title={settings.soundEnabled ? t.soundsOn : t.soundsOff}
+                                >
+                                    {settings.soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                                </button>
+                                <button
                                     onClick={onClose}
                                     className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 rounded-lg transition-colors"
                                 >
@@ -99,8 +113,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         className={`group p-4 rounded-2xl border transition-all ${notif.read
-                                                ? 'bg-transparent border-slate-100 dark:border-white/5'
-                                                : 'bg-primary/5 border-primary/20 shadow-sm'
+                                            ? 'bg-transparent border-slate-100 dark:border-white/5'
+                                            : 'bg-primary/5 border-primary/20 shadow-sm'
                                             }`}
                                     >
                                         <div className="flex gap-4">
