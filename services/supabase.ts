@@ -26,10 +26,23 @@ if (supabaseUrl && supabaseAnonKey) {
     });
 } else {
     console.error('Supabase client could not be initialized: missing URL or Key');
-    // Mock minimal pour éviter les erreurs d'importation
+    // Mock plus complet pour éviter les TypeError si les clés manquent au build
+    const mockError = () => Promise.resolve({ data: null, error: { message: 'Configuration Supabase manquante sur Vercel' } });
     supabaseInstance = {
-        from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Missing Config') }) }) }), insert: () => Promise.resolve({ error: new Error('Missing Config') }), upsert: () => Promise.resolve({ error: new Error('Missing Config') }) }),
-        auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }), getSession: () => Promise.resolve({ data: { session: null } }), signOut: () => Promise.resolve() }
+        from: () => ({ 
+            select: () => ({ eq: () => ({ single: mockError, order: () => ({ limit: mockError }) }) }), 
+            insert: mockError, 
+            upsert: mockError,
+            update: () => ({ eq: mockError }) 
+        }),
+        auth: { 
+            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }), 
+            getSession: () => Promise.resolve({ data: { session: null } }), 
+            signOut: () => Promise.resolve(),
+            signUp: mockError,
+            signInWithPassword: mockError,
+            signInWithOtp: mockError
+        }
     };
 }
 
