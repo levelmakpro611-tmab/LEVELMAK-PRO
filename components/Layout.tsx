@@ -66,7 +66,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const [userRating, setUserRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallGuideOpen, setIsInstallGuideOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // PWA Detection
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+  const showInstallButton = (deferredPrompt || (isIOS && !isStandalone));
 
   // Listen for PWA install prompt
   React.useEffect(() => {
@@ -80,12 +86,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      console.log('User accepted the PWA install');
-      setDeferredPrompt(null);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted the PWA install');
+        setDeferredPrompt(null);
+      }
+    } else if (isIOS) {
+      setIsInstallGuideOpen(true);
     }
   };
 
@@ -175,7 +184,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           />
         </div>
         <div className="flex items-center gap-1">
-          {deferredPrompt && (
+          {showInstallButton && (
             <button
               onClick={handleInstallClick}
               className="p-3 text-blue-500 dark:text-blue-400 relative active:scale-95 transition-all bg-blue-500/10 dark:bg-blue-400/10 rounded-full hover:bg-blue-500/20 shadow-glow-blue animate-pulse"
@@ -310,7 +319,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
 
           <div className="flex items-center gap-10">
-            {deferredPrompt && (
+            {showInstallButton && (
               <button
                 onClick={handleInstallClick}
                 className="flex items-center gap-3 px-6 py-3 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white rounded-2xl font-black transition-all border border-blue-600/20 group/install shadow-glow-blue animate-pulse"
@@ -928,6 +937,60 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           }
         }}
       />
+
+      {/* iOS Install Guide Modal */}
+      <AnimatePresence>
+        {isInstallGuideOpen && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsInstallGuideOpen(false)}
+              className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl text-center space-y-6"
+            >
+              <div className="w-20 h-20 bg-blue-500/20 rounded-3xl flex items-center justify-center mx-auto mb-2 text-blue-400 ring-4 ring-blue-500/10">
+                <Download size={40} />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-white">Installer sur iPhone</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Ajoute LEVELMAK à ton écran d'accueil pour une expérience optimale et un accès rapide.
+                </p>
+              </div>
+
+              <div className="space-y-4 text-left bg-white/5 p-6 rounded-3xl border border-white/5">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold shrink-0">1</div>
+                  <p className="text-sm text-slate-200">Clique sur le bouton <strong>Partager</strong> en bas de Safari.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold shrink-0">2</div>
+                  <p className="text-sm text-slate-200">Fais défiler et appuie sur <strong>Sur l'écran d'accueil</strong>.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold shrink-0">3</div>
+                  <p className="text-sm text-slate-200">Clique sur <strong>Ajouter</strong> en haut à droite.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsInstallGuideOpen(false)}
+                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-500 shadow-glow-blue transition-all"
+              >
+                C'est compris !
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
