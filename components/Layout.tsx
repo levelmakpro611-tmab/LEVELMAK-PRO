@@ -33,7 +33,8 @@ import {
   AlertCircle,
   ChevronRight,
   CheckCircle2,
-  Download
+  Download,
+  FlaskRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
@@ -150,9 +151,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'dashboard', label: t('nav.dashboard'), shortLabel: 'Home', icon: LayoutDashboard },
     { id: 'quiz', label: t('nav.quiz'), shortLabel: 'Quiz', icon: BrainCircuit },
     { id: 'summary', label: t('nav.summary'), shortLabel: 'Résumé', icon: Sparkles },
-    { id: 'library', label: t('nav.library'), shortLabel: 'Biblio', icon: BookOpen },
+    // { id: 'library', label: t('nav.library'), shortLabel: 'Biblio', icon: BookOpen }, // Temporarily hidden
     { id: 'writing', label: t('nav.writing'), shortLabel: 'Atelier', icon: PenTool },
     { id: 'flashcards', label: t('nav.flashcards'), shortLabel: 'Flash', icon: Layers },
+    { id: 'ailab', label: 'Laboratoire IA', shortLabel: 'Lab IA', icon: FlaskRound },
     { id: 'ranking', label: t('nav.ranking'), shortLabel: 'Rank', icon: Trophy },
     { id: 'shop', label: t('nav.shop'), shortLabel: 'Shop', icon: ShoppingBag },
     { id: 'planner', label: t('nav.planner'), shortLabel: 'Planif', icon: Calendar, hideOnMobile: true },
@@ -370,78 +372,81 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </div>
 
-        {/* Mobile Bottom Navigation (WhatsApp Style) */}
-        {/* Mobile Bottom Navigation (Floating Glassmorphism Style) */}
         {activeTab !== 'social' && (
-          <nav className="md:hidden fixed bottom-6 left-4 right-4 z-50 h-16 bg-background/80 dark:bg-[#0F172A]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl shadow-lg dark:shadow-none flex items-center justify-between px-2">
+          <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 h-[72px] bg-background dark:bg-[#0F172A] border-t border-black/5 dark:border-white/10 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] dark:shadow-none transition-all duration-500">
+            {[
+              { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
+              { id: 'flashcards', icon: Layers, label: 'Flash' },
+              { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+              { id: 'writing', icon: PenTool, label: 'Atelier' },
+              { id: 'summary', icon: Sparkles, label: 'Résumé' }
+            ].map(item => {
+              const isActive = activeTab === item.id;
+              const isDashboard = item.id === 'dashboard';
+              const shouldPop = isDashboard; // Always pop for Dashboard
+              const Icon = item.icon;
+              
+              return (
+                <div key={item.id} className="relative flex flex-col items-center flex-1 h-[72px] justify-center">
+                  <button
+                    onClick={() => {
+                        HapticFeedback.selection();
+                        setActiveTab(item.id);
+                    }}
+                    className="relative flex flex-col items-center justify-center z-10 w-full h-full"
+                  >
+                    {/* Floating Bubble for Dashboard OR Standard Icon for Others */}
+                    <motion.div 
+                        initial={false}
+                        animate={{
+                            y: shouldPop ? -28 : 2,
+                            scale: shouldPop ? 1.2 : (isActive ? 1.1 : 1),
+                        }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                        className={`
+                            flex items-center justify-center rounded-full transition-colors duration-300
+                            ${shouldPop 
+                                ? 'w-14 h-14 shadow-lg shadow-blue-500/30 dark:shadow-[0_8px_25px_rgba(59,130,246,0.5)] border-4 border-background dark:border-[#0F172A] bg-gradient-to-br from-blue-500 to-purple-600 text-white' 
+                                : 'w-10 h-10 bg-transparent'
+                            }
+                            ${isActive && !isDashboard ? 'text-blue-500 dark:text-blue-400' : (isActive ? '' : 'text-slate-500 dark:text-slate-400')}
+                        `}
+                    >
+                        <Icon 
+                            size={isActive && !isDashboard ? 26 : 24} 
+                            fill={isActive && (item.id === 'dashboard' || item.id === 'summary') ? 'currentColor' : 'none'}
+                            strokeWidth={isActive ? 2.5 : 2} 
+                            className="transition-colors duration-300"
+                        />
+                    </motion.div>
+                    
+                    {/* The Label */}
+                    <motion.span 
+                      initial={false}
+                      animate={{
+                          y: shouldPop ? 18 : 24,
+                          opacity: isActive || shouldPop ? 1 : 0.6,
+                      }}
+                      className={`
+                        absolute font-bold text-[10px] whitespace-nowrap
+                        ${isActive ? 'text-blue-500 dark:text-blue-400' : 'text-slate-500'}
+                      `}
+                    >
+                      {item.label}
+                    </motion.span>
+                  </button>
 
-            {/* Left Group */}
-            <div className="flex gap-1 w-[35%] justify-around">
-              <button
-                onClick={() => {
-                  HapticFeedback.selection();
-                  setActiveTab('quiz');
-                }}
-                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'quiz' ? 'text-blue-400' : 'text-slate-500'}`}
-              >
-                <BrainCircuit size={24} strokeWidth={activeTab === 'quiz' ? 2.5 : 2} />
-                <span className="text-[10px] font-bold">Quiz</span>
-              </button>
-              <button
-                onClick={() => {
-                  HapticFeedback.selection();
-                  setActiveTab('flashcards');
-                }}
-                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'flashcards' ? 'text-blue-400' : 'text-slate-500'}`}
-              >
-                <Layers size={24} strokeWidth={activeTab === 'flashcards' ? 2.5 : 2} />
-                <span className="text-[10px] font-bold">Flash</span>
-              </button>
-            </div>
-
-            {/* Centered Floating Home Button */}
-            <div className="relative -top-6">
-              <button
-                onClick={() => {
-                  HapticFeedback.success();
-                  setActiveTab('dashboard');
-                }}
-                className={`
-                  w-16 h-16 rounded-full flex items-center justify-center shadow-lg dark:shadow-[0_8px_25px_rgba(59,130,246,0.6)] border-4 border-background dark:border-[#0F172A] relative z-10 transition-transform active:scale-95
-                  ${activeTab === 'dashboard'
-                    ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white'
-                    : 'bg-surface dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-surface dark:border-slate-700'}
-                `}
-              >
-                <LayoutDashboard size={32} fill={activeTab === 'dashboard' ? "currentColor" : "none"} />
-              </button>
-              {/* Glow effect behind */}
-              <div className={`absolute inset-0 rounded-full blur-xl -z-10 ${activeTab === 'dashboard' ? 'bg-blue-500/30 dark:bg-blue-500/50' : 'bg-transparent'}`}></div>
-            </div>
-
-            {/* Right Group */}
-            <div className="flex gap-1 w-[35%] justify-around">
-              <button
-                onClick={() => {
-                  HapticFeedback.selection();
-                  setActiveTab('summary');
-                }}
-                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'summary' ? 'text-blue-400' : 'text-slate-500'}`}
-              >
-                <Sparkles size={24} strokeWidth={activeTab === 'summary' ? 2.5 : 2} />
-                <span className="text-[10px] font-bold">Résumé</span>
-              </button>
-              <button
-                onClick={() => {
-                  HapticFeedback.selection();
-                  setActiveTab('library');
-                }}
-                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'library' ? 'text-blue-400' : 'text-slate-500'}`}
-              >
-                <BookOpen size={24} strokeWidth={activeTab === 'library' ? 2.5 : 1.5} />
-                <span className="text-[10px] font-bold">Biblio</span>
-              </button>
-            </div>
+                  {/* Behind Glow Effect for Dashboard ONLY */}
+                  {shouldPop && (
+                    <motion.div 
+                        layoutId="nav-glow"
+                        animate={{ opacity: isActive ? 1 : 0.5 }}
+                        className="absolute top-0 w-16 h-16 rounded-full blur-xl bg-blue-500/20 dark:bg-blue-500/30 -z-10 pointer-events-none -translate-y-4"
+                    />
+                  )}
+                </div>
+              );
+            })}
           </nav>
         )}
         {/* Profile Modal */}

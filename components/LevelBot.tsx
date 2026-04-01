@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { MessageCircle, X, Send, Sparkles, Loader2, Minimize2, Camera, Image as ImageIcon, History, Plus, Trash2, ChevronLeft } from 'lucide-react';
 import { openrouterService } from '../services/openrouter';
+import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
 import { translations } from '../utils/translations';
 
@@ -145,8 +146,34 @@ const LevelBot: React.FC = () => {
       if (!navigator.onLine) {
         response = "🚫 Je suis hors ligne. Connecte-toi à internet pour continuer.";
       } else {
-        // Send history to OpenRouter
-        response = await openrouterService.coachChat(userMsg, messages, "", currentImage || undefined);
+        let finalUserMsg = userMsg;
+        let imageToSubmit = currentImage;
+
+        // OCR Integration
+        if (currentImage) {
+          try {
+            const langMap: any = { 'fr': 'fra+eng', 'en': 'eng', 'ar': 'ara' };
+            const ocrLang = langMap[settings.language] || 'fra+eng';
+            const extractedText = await ocrService.extractText(currentImage, ocrLang);
+            
+            if (extractedText && extractedText.trim().length > 10) {
+              finalUserMsg = userMsg 
+                ? `${userMsg}\n\n=== TEXTE EXTRAIT DE LA PHOTO ===\n${extractedText}\n================================`
+                : `Voici le texte extrait de ma photo :\n\n${extractedText}`;
+              
+              // According to user preference: "Pas besoin que l'IA reçoive la photo directement"
+              // We could potentially set imageToSubmit to undefined here to save resources,
+              // but we keep it as fallback/context if the AI model supports it.
+              // However, to strictly follow the user request:
+              imageToSubmit = null; 
+            }
+          } catch (ocrErr) {
+            console.warn("OCR Error, falling back to direct vision:", ocrErr);
+          }
+        }
+
+        // Send to OpenRouter (with extracted text instead of image if OCR succeeded)
+        response = await openrouterService.coachChat(finalUserMsg, messages, "", imageToSubmit || undefined);
       }
 
       saveCoachMessage(activeSessionId, {

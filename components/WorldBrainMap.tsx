@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HapticFeedback } from '../services/nativeAdapters';
 import { HandMetal, Globe, EyeOff, Eye, Send, Heart, Flame, Sparkles, Swords, X, Palette, Target } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
-import { HapticFeedback } from '../services/nativeAdapters';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -64,6 +64,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
 
   const defaultCenter: [number, number] = myLocation ? [myLocation.lat, myLocation.lng] : [48.8566, 2.3522];
 
+  // Set up geolocation independently
   useEffect(() => {
     if (navigator.geolocation && isLocationShared) {
       navigator.geolocation.getCurrentPosition(
@@ -75,7 +76,10 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
         (error) => console.warn("Geolocation denied or error:", error)
       );
     }
+  }, [isLocationShared, updateLocation]);
 
+  // Set up channel and subscriptions
+  useEffect(() => {
     const channel = supabase.channel('global-presence', {
         config: { presence: { key: sessionKey } }
     });
@@ -85,7 +89,6 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const users: ActiveUser[] = [];
-        const sessionIds = new Set<string>();
         
         for (const key in state) {
             const presences = state[key] as unknown as ActiveUser[];
@@ -124,28 +127,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
               addNotification('info', 'Défi décliné', `${payload.payload.request.guest.name} n'est pas disponible pour le duel.`);
           }
       })
-      .subscribe(async (status) => {
-    // WorldBrainMap now handles presence sync listener,
-    // but the track is now handled in updateLocation (store) 
-    // to ensure it happens when position changes even if map is not open (if needed).
-    // However, for consistency, we let WorldBrainMap track its own presence when open.
-    const trackPresence = async () => {
-        if (myLocation && isLocationShared && user) {
-            await channel.track({
-                user_id: user.id,
-                name: user.name,
-                lat: myLocation.lat,
-                lng: myLocation.lng,
-                avatar: user.avatar?.image || user.avatar?.baseColor,
-                timestamp: Date.now()
-            });
-        }
-    };
-
-    if (status === 'SUBSCRIBED') {
-        trackPresence();
-    }
-      });
+      .subscribe();
 
     // Fetch all public profiles
     const fetchProfiles = async () => {
@@ -173,9 +155,43 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [myLocation?.lat, myLocation?.lng, isLocationShared, user?.id]);
+  }, [sessionKey, user?.id, addNotification]);
+
+  // Track presence whenever location, channel, or sharing status changes
+  useEffect(() => {
+      const trackPresence = async () => {
+          if (channelRef && isLocationShared && user) {
+              try {
+                  await channelRef.track({
+                      user_id: user.id,
+                      name: user.name,
+                      lat: myLocation?.lat || null,
+                      lng: myLocation?.lng || null,
+                      avatar: user.avatar?.image || user.avatar?.baseColor,
+                      timestamp: Date.now()
+                  });
+              } catch (e) {
+                  console.error("Track presence error:", e);
+              }
+          } else if (channelRef && !isLocationShared) {
+              try {
+                  await channelRef.untrack();
+              } catch (e) {
+                  console.error("Untrack presence error:", e);
+              }
+          }
+      };
+      
+      // Attempt tracking slightly after initialization to ensure connection is ready
+      const timer = setTimeout(() => {
+          trackPresence();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+  }, [channelRef, myLocation?.lat, myLocation?.lng, isLocationShared, user]);
 
   const toggleLocationShare = () => {
+    HapticFeedback.selection();
     const newState = !isLocationShared;
     setIsLocationShared(newState);
     if (myLocation) {
@@ -452,6 +468,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
           
           {/* Active Users Markers */}
           {displayedUsers.map(u => {
+            if (u.lat == null || u.lng == null) return null;
             const isOnline = activeUsers.some(au => au.user_id === u.user_id);
             return (
               <Marker key={u.user_id} position={[u.lat, u.lng]} icon={isOnline ? StudentIcon : new L.DivIcon({
@@ -467,16 +484,22 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
                       
                       <div className="space-y-2 mb-3">
                           <button 
-                              onClick={() => sendDuelInvite(u, 'quiz')}
-                              className={`w-full font-black text-[10px] py-2 rounded-lg flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105 ${isOnline ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                              onClick={() => {
+                                  HapticFeedback.action();
+                                  sendDuelInvite(u, 'quiz');
+                              }}
+                              className={`w-full font-black text-[10px] py-2 rounded-lg flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105 active:scale-95 ${isOnline ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
                               disabled={!isOnline}
                           >
                               <Swords size={12} /> {isOnline ? (customBattleMode ? 'INVITER AU DUEL ⚔️' : 'DUEL QUIZ ⚔️') : 'HORS-LIGNE'}
                           </button>
                           {!customBattleMode && isOnline && (
                               <button 
-                                  onClick={() => sendDuelInvite(u, 'doodle')}
-                                  className="w-full bg-gradient-to-r from-pink-600 to-rose-600 text-white font-black text-[10px] py-2 rounded-lg flex items-center justify-center gap-2 hover:from-pink-500 hover:to-rose-500 shadow-lg transition-transform hover:scale-105"
+                                  onClick={() => {
+                                      HapticFeedback.action();
+                                      sendDuelInvite(u, 'doodle');
+                                  }}
+                                  className="w-full bg-gradient-to-r from-pink-600 to-rose-600 text-white font-black text-[10px] py-2 rounded-lg flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105 active:scale-95"
                               >
                                   <Palette size={12} /> BATAILLE PIXEL 🎨
                               </button>
@@ -485,13 +508,13 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
                       
                       {isOnline && (
                         <div className="flex justify-center gap-2 border-t border-white/10 pt-3">
-                            <button onClick={() => sendReaction(u, '🙌')} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition tooltip tooltip-top" data-tip="High-Five">
+                            <button onClick={() => { HapticFeedback.selection(); sendReaction(u, '🙌'); }} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 active:scale-90 transition tooltip tooltip-top" data-tip="High-Five">
                                 <HandMetal size={14} className="text-blue-400" />
                             </button>
-                            <button onClick={() => sendReaction(u, '❤️')} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition tooltip tooltip-top" data-tip="Soutien">
+                            <button onClick={() => { HapticFeedback.selection(); sendReaction(u, '❤️'); }} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 active:scale-90 transition tooltip tooltip-top" data-tip="Soutien">
                                 <Heart size={14} className="text-red-400" />
                             </button>
-                            <button onClick={() => sendReaction(u, '🔥')} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition tooltip tooltip-top" data-tip="Force">
+                            <button onClick={() => { HapticFeedback.selection(); sendReaction(u, '🔥'); }} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 active:scale-90 transition tooltip tooltip-top" data-tip="Force">
                                 <Flame size={14} className="text-orange-400" />
                             </button>
                         </div>

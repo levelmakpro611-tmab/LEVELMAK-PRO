@@ -651,57 +651,58 @@ const CreativeWriting: React.FC = () => {
                     </motion.div>
                 )}
 
-                {/* View Story Modal */}
-                <AnimatePresence>
-                    {viewingStory && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
+            </AnimatePresence>
+
+            {/* View Story Modal */}
+            <AnimatePresence>
+                {viewingStory && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setViewingStory(null)}
+                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-4xl bg-slate-900 border border-white/10 rounded-[3rem] p-12 max-h-[80vh] overflow-y-auto custom-scrollbar shadow-2xl"
+                        >
+                            <button
                                 onClick={() => setViewingStory(null)}
-                                className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
-                            />
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="relative w-full max-w-4xl bg-slate-900 border border-white/10 rounded-[3rem] p-12 max-h-[80vh] overflow-y-auto custom-scrollbar shadow-2xl"
+                                className="absolute top-8 right-8 p-3 bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors"
                             >
-                                <button
-                                    onClick={() => setViewingStory(null)}
-                                    className="absolute top-8 right-8 p-3 bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                                <div className="space-y-8">
-                                    <div className="space-y-4">
-                                        <span className="px-4 py-1.5 bg-secondary/20 text-secondary-light text-[10px] font-black uppercase tracking-widest rounded-full border border-secondary/20">{t(`creativeWriting.categories.${viewingStory.category as any}`)}</span>
-                                        <h2 className="text-5xl font-display font-black text-slate-900 dark:text-white leading-none transition-colors">{viewingStory.title}</h2>
-                                        <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest transition-colors">
-                                            <span>{t('creativeWriting.list.by')} {viewingStory.authorName}</span>
-                                            <span>•</span>
-                                            <span>{new Date(viewingStory.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                                        </div>
-                                    </div>
-                                    <p className="text-xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium transition-colors">
-                                        {viewingStory.content}
-                                    </p>
-                                    <div className="pt-8 border-t border-white/5 flex justify-end">
-                                        <button
-                                            onClick={() => { handleEdit(viewingStory); setViewingStory(null); }}
-                                            className="px-10 py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow hover:scale-[1.05] active:scale-95 transition-all"
-                                        >
-                                            {t('creativeWriting.list.modified')}
-                                        </button>
+                                <X size={20} />
+                            </button>
+                            <div className="space-y-8">
+                                <div className="space-y-4">
+                                    <span className="px-4 py-1.5 bg-secondary/20 text-secondary-light text-[10px] font-black uppercase tracking-widest rounded-full border border-secondary/20">{t(`creativeWriting.categories.${viewingStory.category as any}`)}</span>
+                                    <h2 className="text-5xl font-display font-black text-slate-900 dark:text-white leading-none transition-colors">{viewingStory.title}</h2>
+                                    <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest transition-colors">
+                                        <span>{t('creativeWriting.list.by')} {viewingStory.authorName}</span>
+                                        <span>•</span>
+                                        <span>{new Date(viewingStory.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                                     </div>
                                 </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
+                                <p className="text-xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium transition-colors">
+                                    {viewingStory.content}
+                                </p>
+                                <div className="pt-8 border-t border-white/5 flex justify-end">
+                                    <button
+                                        onClick={() => { handleEdit(viewingStory); setViewingStory(null); }}
+                                        className="px-10 py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow hover:scale-[1.05] active:scale-95 transition-all"
+                                    >
+                                        {t('creativeWriting.list.modified')}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 };
 

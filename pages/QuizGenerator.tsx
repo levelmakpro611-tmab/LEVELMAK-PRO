@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { openrouterService } from '../services/openrouter';
+import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
 import { SUBJECTS } from '../constants';
 import { Quiz } from '../types';
@@ -150,7 +151,22 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
             reader.onload = () => resolve(reader.result as string || '');
             reader.readAsDataURL(f.file as File);
           });
-          sources.push({ type: f.type, data: base64 });
+
+          // OCR-first approach for Quiz Generator
+          if (f.type === 'image') {
+            setStatus(`${t('quiz.generator.status.process')} (OCR) ${f.file.name}...`);
+            try {
+              const langMap: any = { 'fr': 'fra+eng', 'en': 'eng', 'ar': 'ara' };
+              const ocrLang = langMap[settings.language] || 'fra+eng';
+              const text = await ocrService.extractText(base64, ocrLang);
+              sources.push({ type: 'text', data: `[TEXTE EXTRAIT DE L'IMAGE ${f.file.name}]:\n${text}` });
+            } catch (e) {
+              console.warn("Fallback vision direct suite à l'échec de l'OCR:", e);
+              sources.push({ type: f.type, data: base64 });
+            }
+          } else {
+            sources.push({ type: f.type, data: base64 });
+          }
         }
       }
 

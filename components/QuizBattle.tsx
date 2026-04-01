@@ -308,7 +308,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
             }
             return (
               <button key={idx} disabled={showResult} onClick={() => submitAnswer(idx)}
-                className={`w-full p-3.5 md:p-4 rounded-xl md:rounded-2xl border-2 font-bold text-sm text-left transition-all flex items-center justify-between ${btnStyle}`}>
+                className={`w-full p-3.5 md:p-4 rounded-xl md:rounded-2xl border-2 font-bold text-sm text-left transition-all flex items-center justify-between active:scale-[0.98] ${btnStyle}`}>
                 <span>{option}</span>
                 {showResult && idx === question.correctAnswer && <CheckCircle className="text-white shrink-0" size={18} />}
                 {showResult && idx === localSelected && idx !== question.correctAnswer && <XCircle className="text-white shrink-0" size={18} />}

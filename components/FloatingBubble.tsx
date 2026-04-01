@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
+import { HapticFeedback } from '../services/nativeAdapters';
 
 interface FloatingBubbleProps {
   progress: number; // 0 to 30
@@ -35,7 +36,10 @@ export const FloatingBubble: React.FC<FloatingBubbleProps> = ({ progress, onClic
           className="fixed bottom-24 right-6 z-[130] md:bottom-8 md:right-8"
         >
           <button
-            onClick={onClick}
+            onClick={() => {
+                HapticFeedback.selection();
+                onClick();
+            }}
             className={`
               relative w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center
               shadow-[0_0_30px_rgba(59,130,246,0.3)] backdrop-blur-md border border-white/20

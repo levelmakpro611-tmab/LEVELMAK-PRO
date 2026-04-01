@@ -110,9 +110,9 @@ export const openrouterService = {
       console.log(`🚀 Quiz Multimodal: Envoi au modèle ${model}`);
       text = await callOpenRouter(messages, model, true);
     } catch (e: any) {
-      if (e.status === 429 && hasImages) {
-        console.warn("⚠️ 429 sur Gemma, fallback sur Mistral Vision...");
-        text = await callOpenRouter(messages, "mistralai/mistral-small-3.1-24b-instruct:free", true);
+      if (e.status === 429) {
+        console.warn("⚠️ 429 sur Gemma, fallback sur Google Flash 2.0...");
+        text = await callOpenRouter(messages, "google/gemini-2.0-flash-001:free", true);
       } else {
         throw e;
       }
@@ -319,8 +319,8 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
       responseText = await callOpenRouter(messages, model, true);
     } catch (e: any) {
       if (e.status === 429 && hasImages) {
-        console.warn("⚠️ 429 sur modèle Plan vision, fallback Mistral...");
-        responseText = await callOpenRouter(messages, "mistralai/mistral-small-3.1-24b-instruct:free", true);
+        console.warn("⚠️ 429 sur modèle Plan vision, fallback sur Google Flash 2.0...");
+        responseText = await callOpenRouter(messages, "google/gemini-2.0-flash-001:free", true);
       } else {
          throw e;
       }
@@ -499,5 +499,43 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
       }));
     }
     throw new Error("Format de quiz battle invalide");
+  },
+
+  async feynmanChat(message: string, history: { role: 'user' | 'assistant'; content: string }[], topic: string, lang: string = 'fr') {
+    const systemPrompt = `Tu es Léo, un élève curieux de 10 ans. Tu discutes avec ton "professeur" (l'utilisateur).
+Ton but est de comprendre le sujet suivant : "${topic}".
+REGLER CRUCIALES :
+1. Tu es naïf mais intelligent.
+2. Si le prof utilise des mots compliqués (jargon), demande-lui de t'expliquer comme si tu étais petit.
+3. Pose une seule question à la fois, courte et directe.
+4. Si l'explication est vraiment claire et imagée (avec des analogies), dis "Génial ! J'ai enfin compris !" et résume ce que tu as retenu en une phrase.
+5. Sinon, continue de poser des questions de curiosité ("Pourquoi ?", "Comment ça marche ?").
+Langue: ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...history,
+      { role: "user", content: message }
+    ];
+
+    return await callOpenRouter(messages, DEFAULT_MODEL);
+  },
+
+  async historyChat(message: string, history: { role: 'user' | 'assistant'; content: string }[], character: string, era: string, lang: string = 'fr') {
+    const systemPrompt = `Tu es ${character}. Ton époque est ${era}.
+Tu discutes avec un "voyageur du temps" (l'utilisateur).
+REGLER CRUCIALES :
+1. Adopte strictement le ton, le vocabulaire et les opinions de ${character}.
+2. Tu ne connais rien de ce qui s'est passé après ta mort ou ton époque, sauf si le voyageur t'en parle.
+3. Sois immersif et passionnant.
+4. Réponds en ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}.`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...history,
+      { role: "user", content: message }
+    ];
+
+    return await callOpenRouter(messages, DEFAULT_MODEL);
   }
 };

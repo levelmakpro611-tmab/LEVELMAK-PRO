@@ -16,7 +16,15 @@ export const isWeb = () => Capacitor.getPlatform() === 'web';
  * Haptic Feedback Helpers
  */
 export const hapticImpact = async (style: ImpactStyle = ImpactStyle.Medium) => {
-    if (!isNativePlatform()) return;
+    if (!isNativePlatform()) {
+        // Web fallback
+        if (typeof window !== 'undefined' && navigator.vibrate) {
+            if (style === ImpactStyle.Light) navigator.vibrate(15);
+            else if (style === ImpactStyle.Heavy) navigator.vibrate(40);
+            else navigator.vibrate(25);
+        }
+        return;
+    }
     try {
         await Haptics.impact({ style });
     } catch (e) {
@@ -25,7 +33,15 @@ export const hapticImpact = async (style: ImpactStyle = ImpactStyle.Medium) => {
 };
 
 export const hapticNotification = async (type: NotificationType = NotificationType.Success) => {
-    if (!isNativePlatform()) return;
+    if (!isNativePlatform()) {
+        // Web fallback
+        if (typeof window !== 'undefined' && navigator.vibrate) {
+            if (type === NotificationType.Success) navigator.vibrate([20, 30, 20]);
+            else if (type === NotificationType.Error) navigator.vibrate([40, 40, 40]);
+            else navigator.vibrate([20, 20, 20]);
+        }
+        return;
+    }
     try {
         await Haptics.notification({ type });
     } catch (e) {
@@ -34,7 +50,12 @@ export const hapticNotification = async (type: NotificationType = NotificationTy
 };
 
 export const hapticVibrate = async (duration: number = 100) => {
-    if (!isNativePlatform()) return;
+    if (!isNativePlatform()) {
+        if (typeof window !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(duration);
+        }
+        return;
+    }
     try {
         await Haptics.vibrate({ duration });
     } catch (e) {

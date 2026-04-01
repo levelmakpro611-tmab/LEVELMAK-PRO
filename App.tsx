@@ -22,6 +22,7 @@ import OnboardingWizard from './components/OnboardingWizard';
 import LevelBot from './components/LevelBot';
 import AdminDashboard from './pages/AdminDashboard';
 import BookReader from './components/BookReader';
+import { AILab } from './components/AILab';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
 import { Loader2 } from 'lucide-react';
 import { openrouterService } from './services/openrouter';
@@ -200,6 +201,8 @@ const AppContent: React.FC = () => {
             }}
           />
         );
+      case 'ailab':
+        return <AILab />;
       case 'ranking':
         return <Ranking />;
       case 'analytics':

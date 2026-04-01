@@ -65,7 +65,7 @@ const Auth: React.FC = () => {
       if (mode === 'register') {
         console.log('Tentative d\'inscription transition...');
         if (registerStep === 1) {
-          if (!name.trim() || !phone.trim() || !email.trim()) {
+          if (!name.trim() || !email.trim()) {
             throw new Error('Veuillez remplir tous les champs d\'identité.');
           }
           setRegisterStep(2);
@@ -82,30 +82,22 @@ const Auth: React.FC = () => {
           throw new Error('⚠️ SÉCURITÉ : Ton mot de passe est trop court (min. 6 caractères).');
         }
 
-        await registerWithPhone({
-          name: name.trim(),
-          phone: phone.trim(),
-          email: email.trim(),
+        await registerWithEmail(
+          name.trim(),
+          email.trim(),
           password,
           gender,
           ageRange
-        });
+        );
         console.log('Inscription réussie !');
       } else if (mode === 'login') {
         console.log('Tentative de connexion...');
-        if (!phone.trim() || !password.trim()) {
-          throw new Error('Veuillez entrer votre numéro et mot de passe.');
+        if (!email.trim() || !password.trim()) {
+          throw new Error('Veuillez entrer votre e-mail et mot de passe.');
         }
 
-        // Normal user login - Admin role will be handled by the database
-        const identifier = phone.trim();
-        if (identifier.includes('@')) {
-          console.log('Login with email:', identifier);
-          await loginWithEmail(identifier, password);
-        } else {
-          console.log('Login with phone:', identifier);
-          await loginWithPhone(identifier, password);
-        }
+        const identifier = email.trim();
+        await loginWithEmail(identifier, password);
         console.log('Login success');
       }
     } catch (err: any) {
@@ -154,8 +146,7 @@ const Auth: React.FC = () => {
 
     try {
       if (recoveryStep === 1) {
-        if (!name.trim()) throw new Error('Veuillez entrer votre nom.');
-        if (!phone.trim() && !email.trim()) throw new Error('Veuillez entrer votre numéro ou e-mail.');
+        if (!name.trim()) throw new Error('Veuillez entrer votre pseudo ou e-mail.');
         // Simplified identity check for the Elite Experience
         // In a Production environment, this would be a secure backend validation.
         setRecoveryStep(2);
@@ -268,20 +259,6 @@ const Auth: React.FC = () => {
                             placeholder="Ex: mouctar1234"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <Phone size={12} className="text-orange-500" />
-                            Numéro de téléphone
-                          </label>
-                          <input
-                            type="tel"
-                            required
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700"
-                            placeholder="Ex: 610000000"
-                          />
-                        </div>
                       </>
                     ) : (
                       <div className="space-y-2">
@@ -378,21 +355,6 @@ const Auth: React.FC = () => {
                             placeholder="Ex: mail@ecole.com"
                           />
                         </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <Phone size={12} className="text-blue-500" />
-                            Numéro de Mobile
-                          </label>
-                          <input
-                            type="tel"
-                            required
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                            placeholder="Ex: 610000000"
-                          />
-                        </div>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -472,16 +434,16 @@ const Auth: React.FC = () => {
                   >
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                        <Phone size={12} className="text-purple-500" />
-                        Numéro de Mobile
+                        <Mail size={12} className="text-purple-500" />
+                        E-mail Personnel
                       </label>
                       <input
-                        type="tel"
+                        type="email"
                         required
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700"
-                        placeholder="Ex: 610000000"
+                        placeholder="Ex: mail@ecole.com"
                       />
                     </div>
                     <div className="space-y-2">

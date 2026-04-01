@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
-import { User, SchoolLevel, Quiz, Story, Mission, Book, Flashcard, FlashcardDeck, Activity, StudyPlan, StudyTask, UserAnalytics, GardenPlant, CoachMessage, CoachSession, League } from '../types';
+import { User, SchoolLevel, Quiz, Story, Mission, Book, Flashcard, FlashcardDeck, Activity, StudyPlan, StudyTask, UserAnalytics, GardenPlant, CoachMessage, CoachSession, League, AILabSession } from '../types';
 import { AppNotification, notificationService } from '../services/notificationService';
 import { audioService } from '../services/audio';
 import { openrouterService } from '../services/openrouter';
@@ -45,7 +45,7 @@ interface AppState {
   login: (name: string) => void;
   registerWithPhone: (params: { name: string, phone: string, email: string, password: string, gender: User['gender'], ageRange: User['ageRange'] }) => Promise<void>;
   loginWithPhone: (phone: string, password: string) => Promise<void>;
-  registerWithEmail: (name: string, email: string, password: string) => Promise<void>;
+  registerWithEmail: (name: string, email: string, password: string, gender?: User['gender'], ageRange?: User['ageRange']) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
@@ -103,6 +103,9 @@ interface AppState {
   saveCoachMessage: (sessionId: string, message: CoachMessage) => void;
   createCoachSession: (firstMessage?: string) => string;
   deleteCoachSession: (sessionId: string) => void;
+  aiLabHistory: AILabSession[];
+  saveAILabSession: (session: AILabSession) => void;
+  deleteAILabSession: (sessionId: string) => void;
   xpPercentage: number;
 }
 
@@ -145,6 +148,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [showBubbleWrap, setShowBubbleWrap] = useState(false);
   const [lastActivityTimestamp, setLastActivityTimestamp] = useState(Date.now());
   const [coachSessions, setCoachSessions] = useState<CoachSession[]>([]);
+  const [aiLabHistory, setAiLabHistory] = useState<AILabSession[]>([]);
   const locationUpdateTimer = useRef<NodeJS.Timeout | null>(null);
 
   // ========== HELPER FUNCTIONS ==========
@@ -162,9 +166,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             badges: updatedUser.badges,
             streak: updatedUser.streak,
             inventory: updatedUser.inventory,
-            avatar_config: updatedUser.avatar, // Store avatar and location info in avatar_config JSONB
-            coach_sessions: updatedUser.coachSessions,
-            last_active: new Date().toISOString()
+            avatar_config: updatedUser.avatar // Store avatar and location info in avatar_config JSONB
           })
           .eq('id', updatedUser.id);
       } catch (error) {
@@ -223,6 +225,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Consolidated initialization effect
   useEffect(() => {
+    // Clear stale OAuth fragments from the URL to prevent Supabase from using expired tokens (Fixing 400/403 errors on reload)
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        console.log("Cleared stale OAuth fragment from URL.");
+    }
+
     const initializeApp = async () => {
       try {
         // 1. Load User from localStorage
@@ -257,6 +265,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
               setUser(loadedUser);
               if (loadedUser.coachSessions) setCoachSessions(loadedUser.coachSessions);
+              if (loadedUser.aiLabHistory) setAiLabHistory(loadedUser.aiLabHistory);
               localStorage.setItem('levelmak_user', JSON.stringify(loadedUser));
             }
           } catch (error) {
@@ -480,7 +489,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         };
 
         // Update user profile
-        await supabase
+        const { error: syncError } = await supabase
           .from('profiles')
           .update({
             xp: user.xp,
@@ -490,11 +499,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             badges: user.badges,
             streak: user.streak,
             inventory: user.inventory,
-            avatar_config: user.avatar, // Store avatar and location info in avatar_config JSONB
-            coach_sessions: user.coachSessions,
-            last_active: syncData.last_sync
+            avatar_config: user.avatar // Store avatar and location info in avatar_config JSONB
           })
           .eq('id', user.id);
+          
+        if (syncError) {
+            console.error("Supabase sync Error Details:", syncError);
+            throw syncError;
+        }
 
         localStorage.setItem('levelmak_user', JSON.stringify(user));
         console.log("Progress saved to Supabase ☁️");
@@ -609,11 +621,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  const registerWithEmail = useCallback(async (name: string, email: string, password: string) => {
+  const registerWithEmail = useCallback(async (name: string, email: string, password: string, gender?: User['gender'], ageRange?: User['ageRange']) => {
     try {
       setLoading(true);
       const { signUpWithEmail } = await import('../services/authService');
-      const newUser = await signUpWithEmail(email, password, name);
+      const newUser = await signUpWithEmail(email, password, name, gender, ageRange);
       if (newUser) {
         setUser(newUser);
         localStorage.setItem('levelmak_user', JSON.stringify(newUser));
@@ -814,6 +826,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return updated;
       });
       return newSessions;
+    });
+  }, []);
+
+  const saveAILabSession = useCallback((session: AILabSession) => {
+    setAiLabHistory(prev => {
+      const existingIdx = prev.findIndex(s => s.id === session.id);
+      let newHistory;
+      if (existingIdx >= 0) {
+        newHistory = [...prev];
+        newHistory[existingIdx] = session;
+      } else {
+        newHistory = [session, ...prev];
+      }
+      
+      setUser(userPrev => {
+        if (!userPrev) return null;
+        const updated = { ...userPrev, aiLabHistory: newHistory };
+        localStorage.setItem('levelmak_user', JSON.stringify(updated));
+        return updated;
+      });
+      return newHistory;
+    });
+  }, []);
+
+  const deleteAILabSession = useCallback((sessionId: string) => {
+    setAiLabHistory(prev => {
+      const newHistory = prev.filter(s => s.id !== sessionId);
+      setUser(userPrev => {
+        if (!userPrev) return null;
+        const updated = { ...userPrev, aiLabHistory: newHistory };
+        localStorage.setItem('levelmak_user', JSON.stringify(updated));
+        return updated;
+      });
+      return newHistory;
     });
   }, []);
 
@@ -1897,7 +1943,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     coachSessions,
     saveCoachMessage,
     createCoachSession,
-    deleteCoachSession
+    deleteCoachSession,
+    aiLabHistory,
+    saveAILabSession,
+    deleteAILabSession
   }), [
     user, quizzes, stories, missions, flashcards, decks, books, studyPlan, loading,
     login, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, logout, addXp, saveQuiz, saveStory, deleteStory, saveBook,
@@ -1931,7 +1980,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     coachSessions,
     saveCoachMessage,
     createCoachSession,
-    deleteCoachSession
+    deleteCoachSession,
+    aiLabHistory,
+    saveAILabSession,
+    deleteAILabSession
   ]);
 
   return (

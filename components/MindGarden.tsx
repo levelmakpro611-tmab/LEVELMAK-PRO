@@ -82,7 +82,7 @@ export const MindGarden: React.FC = () => {
                             addNotification('info', 'Pas d\'eau !', 'Achète des bidons d\'eau dans la boutique.');
                         }
                     }}
-                    className={`p-2 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-colors ${waterCans > 0 ? 'bg-blue-500 text-white hover:bg-blue-400' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                    className={`p-2 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-all active:scale-90 ${waterCans > 0 ? 'bg-blue-500 text-white hover:bg-blue-400' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
                 >
                     <Droplets size={12} /> {waterCans}
                 </button>
@@ -96,7 +96,7 @@ export const MindGarden: React.FC = () => {
                             addNotification('info', 'Pas d\'engrais !', 'L\'engrais magique est dispo en boutique.');
                         }
                     }}
-                    className={`p-2 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-colors ${fertilizers > 0 ? 'bg-emerald-500 text-white hover:bg-emerald-400' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                    className={`p-2 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-all active:scale-90 ${fertilizers > 0 ? 'bg-emerald-500 text-white hover:bg-emerald-400' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
                 >
                     <Sparkles size={12} /> {fertilizers}
                 </button>

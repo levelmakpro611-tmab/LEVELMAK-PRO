@@ -158,13 +158,13 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 // ======================================================
 // Sign up with Email and Password
 // ======================================================
-export const signUpWithEmail = async (email: string, password: string, name: string): Promise<User | null> => {
+export const signUpWithEmail = async (email: string, password: string, name: string, gender?: string, ageRange?: string): Promise<User | null> => {
     try {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                data: { name, real_email: email }
+                data: { name, real_email: email, gender, age_range: ageRange }
             }
         });
 
@@ -215,7 +215,10 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 export const signInWithGoogle = async (): Promise<User | null> => {
     try {
         const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google'
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin
+            }
         });
 
         if (error) throw error;

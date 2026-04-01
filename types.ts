@@ -80,6 +80,15 @@ export interface CoachSession {
   lastUpdated: string;
 }
 
+export interface AILabSession {
+  id: string;
+  type: 'feynman' | 'history';
+  topic: string;
+  characterId?: string;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  timestamp: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -130,6 +139,7 @@ export interface User {
   };
   league?: League;
   coachSessions?: CoachSession[];
+  aiLabHistory?: AILabSession[];
 }
 
 
