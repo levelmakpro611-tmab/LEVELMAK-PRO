@@ -407,9 +407,16 @@ const LevelBot: React.FC = () => {
                   <button
                     type="submit"
                     disabled={(!input.trim() && !selectedImage) || isTyping}
-                    className="absolute right-1.5 top-1.5 bottom-1.5 w-9 md:w-11 bg-primary text-white rounded-lg md:rounded-xl flex items-center justify-center hover:bg-primary-dark disabled:bg-slate-800 disabled:text-slate-600 transition-all shadow-lg active:scale-95 group-hover:scale-105"
+                    className={`
+                      absolute right-1.5 top-1.5 bottom-1.5 
+                      w-10 md:w-12 flex items-center justify-center 
+                      rounded-xl md:rounded-xl shadow-lg border transition-all active:scale-95 group-hover:scale-105
+                      ${(input.trim() || selectedImage) && !isTyping
+                        ? 'bg-gradient-to-br from-primary to-secondary text-white border-primary/20 shadow-glow'
+                        : 'bg-slate-800 text-slate-500 border-white/5 cursor-not-allowed opacity-50'}
+                    `}
                   >
-                    <Send size={16} className={((input.trim() || selectedImage) && !isTyping) ? "animate-pulse" : ""} />
+                    {isTyping ? <Loader2 size={16} className="animate-spin" /> : <Send size={18} className={((input.trim() || selectedImage) && !isTyping) ? "animate-pulse" : ""} />}
                   </button>
                 </div>
               </form>

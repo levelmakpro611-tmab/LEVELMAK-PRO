@@ -14,7 +14,8 @@ import {
   Trash2,
   MessageSquare,
   Plus,
-  RefreshCw
+  RefreshCw,
+  Send
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
@@ -129,10 +130,28 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
             ))}
             {loading && <div className="flex justify-start"><div className="bg-white/5 p-4 rounded-3xl rounded-tl-none border border-white/5 flex gap-1"><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-blue-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-500 rounded-full" /></div></div>}
           </div>
-          <div className="p-4 md:p-6 border-t border-white/5 bg-slate-900/80">
-            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-3">
-              <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Écris ton explication ici..." className="flex-1 p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-blue-500/50 transition-all font-medium" />
-              <button type="submit" disabled={!input.trim() || loading} className="p-4 bg-blue-500 text-white rounded-2xl shadow-glow-blue disabled:opacity-50 disabled:grayscale transition-all active:scale-90"><ChevronRight size={24} /></button>
+          <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl">
+            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 md:gap-3 items-center">
+              <input 
+                type="text" 
+                value={input} 
+                onChange={(e) => setInput(e.target.value)} 
+                placeholder="Écris ton explication ici..." 
+                className="flex-1 p-3 md:p-5 bg-white/5 border border-white/10 rounded-2xl md:rounded-[1.5rem] text-white text-sm md:text-base outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all font-medium shadow-inner" 
+              />
+              <button 
+                type="submit" 
+                disabled={!input.trim() || loading} 
+                className={`
+                  h-12 w-12 md:h-14 md:w-14 flex items-center justify-center shrink-0
+                  rounded-2xl md:rounded-[1.2rem] transition-all active:scale-90
+                  ${input.trim() && !loading 
+                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-glow-blue' 
+                    : 'bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed opacity-40'}
+                `}
+              >
+                {loading ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} className="md:w-6 md:h-6" />}
+              </button>
             </form>
           </div>
         </div>
@@ -326,10 +345,28 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
             ))}
             {loading && <div className="flex justify-start"><div className="bg-white/5 p-4 rounded-3xl rounded-tl-none border border-white/5 flex gap-1"><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-purple-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-purple-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-purple-500 rounded-full" /></div></div>}
           </div>
-          <div className="p-4 md:p-6 border-t border-white/5 bg-slate-900/80">
-            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-3">
-              <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder={`Parler à ${selectedChar.name}...`} className="flex-1 p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-purple-500/50 transition-all font-medium" />
-              <button type="submit" disabled={!input.trim() || loading} className="p-4 bg-purple-600 text-white rounded-2xl shadow-glow-purple disabled:opacity-50 disabled:grayscale transition-all active:scale-90"><ChevronRight size={24} /></button>
+          <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl">
+            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 md:gap-3 items-center">
+              <input 
+                type="text" 
+                value={input} 
+                onChange={(e) => setInput(e.target.value)} 
+                placeholder={`Parler à ${selectedChar.name}...`} 
+                className="flex-1 p-3 md:p-5 bg-white/5 border border-white/10 rounded-2xl md:rounded-[1.5rem] text-white text-sm md:text-base outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-medium shadow-inner" 
+              />
+              <button 
+                type="submit" 
+                disabled={!input.trim() || loading} 
+                className={`
+                  h-12 w-12 md:h-14 md:w-14 flex items-center justify-center shrink-0
+                  rounded-2xl md:rounded-[1.2rem] transition-all active:scale-90
+                  ${input.trim() && !loading 
+                    ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-glow-purple' 
+                    : 'bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed opacity-40'}
+                `}
+              >
+                {loading ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} className="md:w-6 md:h-6" />}
+              </button>
             </form>
           </div>
         </div>
