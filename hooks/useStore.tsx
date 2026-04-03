@@ -82,7 +82,6 @@ interface AppState {
   rollDice: () => { result: number, reward: { type: 'item' | 'joker' | 'surprise' | 'super', value: any } };
   changePassword: (oldPw: string, newPw: string) => Promise<void>;
   updateSRSMetadata: (id: string, type: 'flashcard' | 'quiz', rating: 1 | 2 | 3 | 4 | 5) => void;
-  completeOnboarding: () => Promise<void>;
   notifications: AppNotification[];
   addNotification: (type: AppNotification['type'], title: string, message: string) => void;
   markNotificationAsRead: (id: string) => void;
@@ -1540,25 +1539,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  const completeOnboarding = useCallback(async () => {
-    if (!user) return;
-    const updatedUser = { ...user, onboardingCompleted: true };
-    setUser(updatedUser);
-    localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
 
-    // Immediate Supabase sync
-    if (user.id && !user.id.includes('anon')) {
-      try {
-        await supabase
-          .from('profiles')
-          .update({ onboarding_completed: true })
-          .eq('id', user.id);
-        console.log("Onboarding status synced to Supabase");
-      } catch (e) {
-        console.error("Failed to sync onboarding status", e);
-      }
-    }
-  }, [user]);
 
   const plantInGarden = useCallback((type: 'flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus') => {
     setUser(prev => {
@@ -1925,7 +1906,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isOnline,
     t,
     dir,
-    completeOnboarding,
     grantBadge,
     trackTime,
     incrementBooksRead,
@@ -1967,7 +1947,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isOnline,
     t,
     dir,
-    completeOnboarding,
     downloadCourse,
     offlinePacks,
     plantInGarden,

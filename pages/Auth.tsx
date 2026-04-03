@@ -9,7 +9,7 @@ import { logUserActivity } from '../services/activityService';
 import { biometricService } from '../services/biometricService';
 
 const Auth: React.FC = () => {
-  const { registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, loading: storeLoading } = useStore();
+  const { t, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, loading: storeLoading } = useStore();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('register');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -186,11 +186,11 @@ const Auth: React.FC = () => {
             <div className="space-y-1">
               <h1 className="text-2xl md:text-3xl font-display font-black text-white leading-tight tracking-tighter">
                 {mode === 'register' ? (
-                  <>Rejoins <span className="text-blue-400 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]">l'Élite</span></>
+                  <>{t('auth.joinElite').split(' ')[0]} <span className="text-blue-400 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]">{t('auth.joinElite').split(' ')[1]}</span></>
                 ) : mode === 'login' ? (
-                  <>Le retour du <span className="text-purple-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">Champion</span></>
+                  <>{t('auth.championReturn').split(' ').slice(0, 2).join(' ')} <span className="text-purple-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">{t('auth.championReturn').split(' ').slice(2).join(' ')}</span></>
                 ) : (
-                  <>Récupère <span className="text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">ton Trône</span></>
+                  <>{t('auth.claimThrone').split(' ').slice(0, 1).join(' ')} <span className="text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">{t('auth.claimThrone').split(' ').slice(1).join(' ')}</span></>
                 )}
               </h1>
             </div>
@@ -210,13 +210,13 @@ const Auth: React.FC = () => {
                   onClick={() => { setMode('register'); resetForm(); }}
                   className={`flex-1 py-2 px-3 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${mode === 'register' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
                 >
-                  Inscription
+                  {t('auth.register')}
                 </button>
                 <button
                   onClick={() => { setMode('login'); resetForm(); }}
                   className={`flex-1 py-2 px-3 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${mode === 'login' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
                 >
-                  Connexion
+                  {t('auth.login')}
                 </button>
               </div>
             </div>
@@ -229,8 +229,8 @@ const Auth: React.FC = () => {
               <div className="text-center space-y-2">
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
                   {recoveryStep === 1
-                    ? "Vérification d'Identité"
-                    : "Accès Autorisé"}
+                    ? t('auth.identityVerif')
+                    : t('auth.accessAuthorized')}
                 </p>
               </div>
 
@@ -248,7 +248,7 @@ const Auth: React.FC = () => {
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
                             <UserIcon size={12} className="text-orange-500" />
-                            Pseudo ou Email
+                            {t('auth.pseudoOrEmail')}
                           </label>
                           <input
                             type="text"
@@ -256,7 +256,7 @@ const Auth: React.FC = () => {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700"
-                            placeholder="Ex: mouctar1234"
+                            placeholder={t('auth.placeholderPseudo')}
                           />
                         </div>
                       </>
@@ -264,7 +264,7 @@ const Auth: React.FC = () => {
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
                           <Lock size={12} className="text-orange-500" />
-                          Nouveau Mot de Passe (Min. 6)
+                          {t('auth.newPassword')}
                         </label>
                         <div className="relative group">
                           <input
@@ -291,17 +291,17 @@ const Auth: React.FC = () => {
                 {resetSuccess ? (
                   <div className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-[2rem] text-orange-500 text-center space-y-3">
                     <Sparkles className="mx-auto" size={32} />
-                    <p className="text-xs font-black uppercase tracking-widest text-white">Demande validée !</p>
-                    <p className="text-[10px] font-medium opacity-80">TMAB GROUP met à jour ton accès Élite...</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-white">{t('auth.requestValidated')}</p>
+                    <p className="text-[10px] font-medium opacity-80">{t('auth.updatingAccess')}</p>
                   </div>
                 ) : (
                   <button
                     type="submit"
                     disabled={isLoading}
                     className="w-full py-5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-glow transition-all active:scale-[0.98] hover:shadow-orange-500/20"
-                  >
-                    {isLoading ? "Vérification..." : recoveryStep === 1 ? "Vérifier Identité" : "Changer l'accès"}
-                  </button>
+                    >
+                      {isLoading ? t('auth.verifying') : recoveryStep === 1 ? t('auth.verifyIdentity') : t('auth.changeAccess')}
+                    </button>
                 )}
 
                 <button
@@ -309,7 +309,7 @@ const Auth: React.FC = () => {
                   onClick={() => { setMode('login'); resetForm(); }}
                   className="w-full text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all py-2"
                 >
-                  Retour à la connexion
+                  {t('auth.backToLogin')}
                 </button>
               </form>
             </div>
@@ -329,7 +329,7 @@ const Auth: React.FC = () => {
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
                             <UserIcon size={12} className="text-blue-500" />
-                            Ton Pseudo
+                            {t('auth.pseudo')}
                           </label>
                           <input
                             type="text"
@@ -337,14 +337,14 @@ const Auth: React.FC = () => {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                            placeholder="Ex: mouctar1234"
+                            placeholder={t('auth.placeholderPseudo')}
                           />
                         </div>
 
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
                             <Mail size={12} className="text-blue-500" />
-                            E-mail Personnel
+                            {t('auth.email')}
                           </label>
                           <input
                             type="email"
@@ -352,7 +352,7 @@ const Auth: React.FC = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                            placeholder="Ex: mail@ecole.com"
+                            placeholder={t('auth.placeholderEmail')}
                           />
                         </div>
                       </div>
@@ -360,7 +360,7 @@ const Auth: React.FC = () => {
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Genre</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.gender')}</label>
                             <div className="flex gap-2">
                               {(['HOMME', 'FEMME'] as const).map((g) => (
                                 <button
@@ -376,15 +376,15 @@ const Auth: React.FC = () => {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Tranche d'Âge</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.ageRange')}</label>
                             <select
                               value={ageRange}
                               onChange={(e) => setAgeRange(e.target.value as any)}
                               className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[11px] outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
                             >
-                              <option value="15-18" className="bg-slate-900">15-18 ans</option>
-                              <option value="19-23" className="bg-slate-900">19-23 ans</option>
-                              <option value="24+" className="bg-slate-900">24+ ans</option>
+                              <option value="15-18" className="bg-slate-900">{t('auth.age1518')}</option>
+                              <option value="19-23" className="bg-slate-900">{t('auth.age1923')}</option>
+                              <option value="24+" className="bg-slate-900">{t('auth.age24plus')}</option>
                             </select>
                           </div>
                         </div>
@@ -392,7 +392,7 @@ const Auth: React.FC = () => {
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
                             <Lock size={12} className="text-blue-500" />
-                            Mot de Passe (Min. 6)
+                            {t('auth.password')}
                           </label>
                           <div className="relative group">
                             <input
@@ -418,7 +418,7 @@ const Auth: React.FC = () => {
                             {acceptedPolicies && <Sparkles size={10} className="text-white" />}
                           </div>
                           <p className="text-[10px] text-slate-300 font-bold leading-relaxed selection:bg-transparent">
-                            J'accepte les politiques de confidentialité de LEVELMAK
+                            {t('auth.acceptPolicy')}
                           </p>
                         </div>
                       </div>
@@ -435,7 +435,7 @@ const Auth: React.FC = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
                         <Mail size={12} className="text-purple-500" />
-                        E-mail Personnel
+                        {t('auth.email')}
                       </label>
                       <input
                         type="email"
@@ -443,16 +443,16 @@ const Auth: React.FC = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700"
-                        placeholder="Ex: mail@ecole.com"
+                        placeholder={t('auth.placeholderEmail')}
                       />
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center px-1">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
                           <Lock size={12} className="text-purple-500" />
-                          Mot de Passe
+                          {t('auth.password')}
                         </label>
-                        <button type="button" onClick={() => setMode('forgot')} className="text-[9px] font-black text-slate-500 hover:text-purple-400 uppercase tracking-widest transition-colors">Perdu ?</button>
+                        <button type="button" onClick={() => setMode('forgot')} className="text-[9px] font-black text-slate-500 hover:text-purple-400 uppercase tracking-widest transition-colors">{t('auth.forgot')}</button>
                       </div>
                       <div className="relative group">
                         <input
@@ -484,7 +484,7 @@ const Auth: React.FC = () => {
                 >
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <Sparkles size={16} />
-                    <span>SYSTÈME : ERREUR</span>
+                    <span>{t('auth.errorSystem')}</span>
                   </div>
                   {error}
                 </motion.div>
@@ -508,10 +508,10 @@ const Auth: React.FC = () => {
                       {mode === 'register' ? (registerStep === 1 ? <ArrowRight size={20} /> : <Rocket size={20} className="animate-bounce" />) : <ArrowRight size={20} />}
                       <span>
                         {mode === 'login'
-                          ? 'Accéder au Dashboard'
+                          ? t('auth.accessDashboard')
                           : registerStep === 1
-                            ? 'Continuer'
-                            : 'Propulser mon Savoir'
+                            ? t('auth.continue')
+                            : t('auth.propelKnowledge')
                         }
                       </span>
                     </>
@@ -524,13 +524,13 @@ const Auth: React.FC = () => {
                     onClick={() => setRegisterStep(1)}
                     className="w-full text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all"
                   >
-                    Retour à l'étape précédente
+                    {t('auth.backToPrev')}
                   </button>
                 )}
 
                 <div className="relative py-2">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-                  <div className="relative flex justify-center text-[10px]"><span className="px-3 bg-[#060915] text-slate-600 font-bold uppercase tracking-widest leading-none">Ou via</span></div>
+                  <div className="relative flex justify-center text-[10px]"><span className="px-3 bg-[#060915] text-slate-600 font-bold uppercase tracking-widest leading-none">{t('auth.orVia')}</span></div>
                 </div>
 
                 {mode === 'login' && biometricAvailable && (
@@ -541,7 +541,7 @@ const Auth: React.FC = () => {
                     className="w-full py-4 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-2xl font-black text-[10px] text-purple-400 uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all"
                   >
                     <Fingerprint size={16} />
-                    Connexion Biométrique
+                    {t('auth.biometricAuth')}
                   </button>
                 )}
 
@@ -552,7 +552,7 @@ const Auth: React.FC = () => {
                   className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl font-black text-[10px] text-white uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all"
                 >
                   <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 grayscale group-hover:grayscale-0" />
-                  Authentification Google
+                  {t('auth.googleAuth')}
                 </button>
               </div>
             </form>
@@ -567,7 +567,7 @@ const Auth: React.FC = () => {
         </div>
 
         <p className="text-center text-slate-600 text-xs mt-8 font-medium">
-          Protection des données conforme • Accès sécurisé SSL
+          {t('auth.legal')}
         </p>
       </div >
     </div >

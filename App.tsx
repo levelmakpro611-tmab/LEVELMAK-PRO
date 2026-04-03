@@ -18,7 +18,6 @@ import Ranking from './pages/Ranking';
 import Analytics from './pages/Analytics';
 import AISummary from './pages/AISummary';
 import Library from './pages/Library';
-import OnboardingWizard from './components/OnboardingWizard';
 import LevelBot from './components/LevelBot';
 import AdminDashboard from './pages/AdminDashboard';
 import BookReader from './components/BookReader';
@@ -217,16 +216,6 @@ const AppContent: React.FC = () => {
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
       <AnimatePresence mode="wait">
-        {user && !user.onboardingCompleted && activeTab === 'dashboard' && (
-          <motion.div
-            key="onboarding"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <OnboardingWizard />
-          </motion.div>
-        )}
       </AnimatePresence>
 
       <AnimatePresence mode="wait">

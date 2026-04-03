@@ -903,7 +903,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                     onClick={() => setIsInfoOpen(false)}
                     className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-glow hover:scale-[1.01] active:scale-[0.99] transition-all"
                   >
-                    J'ai compris, c'est parti !
+                    {t('layout.infoGotIt')}
                   </button>
                 </div>
               </motion.div>
