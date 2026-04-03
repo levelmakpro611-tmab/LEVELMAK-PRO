@@ -142,25 +142,25 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const handleSaveName = () => {
     if (newName.trim()) {
       updateProfile(newName.trim());
-      addActivity('profile', t('settings.success'), `Tu as changé ton nom en "${newName.trim()}"`);
+      addActivity('profile', t('settings.success'), `${t('settings.nameChange')}"${newName.trim()}"`);
       setIsEditingName(false);
     }
   };
 
   const navItems = [
-    { id: 'dashboard', label: t('nav.dashboard'), shortLabel: 'Home', icon: LayoutDashboard },
-    { id: 'quiz', label: t('nav.quiz'), shortLabel: 'Quiz', icon: BrainCircuit },
-    { id: 'summary', label: t('nav.summary'), shortLabel: 'Résumé', icon: Sparkles },
-    // { id: 'library', label: t('nav.library'), shortLabel: 'Biblio', icon: BookOpen }, // Temporarily hidden
-    { id: 'writing', label: t('nav.writing'), shortLabel: 'Atelier', icon: PenTool },
-    { id: 'flashcards', label: t('nav.flashcards'), shortLabel: 'Flash', icon: Layers },
-    { id: 'ailab', label: 'Laboratoire IA', shortLabel: 'Lab IA', icon: FlaskRound },
-    { id: 'ranking', label: t('nav.ranking'), shortLabel: 'Rank', icon: Trophy },
-    { id: 'shop', label: t('nav.shop'), shortLabel: 'Shop', icon: ShoppingBag },
-    { id: 'planner', label: t('nav.planner'), shortLabel: 'Planif', icon: Calendar, hideOnMobile: true },
-    { id: 'social', label: t('nav.social'), shortLabel: 'Social', icon: Layers, hideOnMobile: true },
-    { id: 'feedback', label: 'Commentaire', shortLabel: 'Avis', icon: MessageSquare, onClick: () => setIsFeedbackOpen(true) },
-    { id: 'rating', label: 'Note App', shortLabel: 'Note', icon: Star, onClick: () => setIsRatingOpen(true) },
+    { id: 'dashboard', label: t('nav.dashboard'), shortLabel: t('nav.short.dashboard'), icon: LayoutDashboard },
+    { id: 'quiz', label: t('nav.quiz'), shortLabel: t('nav.short.quiz'), icon: BrainCircuit },
+    { id: 'summary', label: t('nav.summary'), shortLabel: t('nav.short.summary'), icon: Sparkles },
+    // { id: 'library', label: t('nav.library'), shortLabel: t('nav.short.library'), icon: BookOpen }, // Temporarily hidden
+    { id: 'writing', label: t('nav.writing'), shortLabel: t('nav.short.writing'), icon: PenTool },
+    { id: 'flashcards', label: t('nav.flashcards'), shortLabel: t('nav.short.flashcards'), icon: Layers },
+    { id: 'ailab', label: t('nav.ailab'), shortLabel: t('nav.ailabShort'), icon: FlaskRound },
+    { id: 'ranking', label: t('nav.ranking'), shortLabel: t('nav.short.ranking'), icon: Trophy },
+    { id: 'shop', label: t('nav.shop'), shortLabel: t('nav.short.shop'), icon: ShoppingBag },
+    { id: 'planner', label: t('nav.planner'), shortLabel: t('nav.short.planner'), icon: Calendar, hideOnMobile: true },
+    { id: 'social', label: t('nav.social'), shortLabel: t('nav.short.social'), icon: Layers, hideOnMobile: true },
+    { id: 'feedback', label: t('nav.feedback'), shortLabel: t('nav.short.feedback'), icon: MessageSquare, onClick: () => setIsFeedbackOpen(true) },
+    { id: 'rating', label: t('nav.rating'), shortLabel: t('nav.short.rating'), icon: Star, onClick: () => setIsRatingOpen(true) },
   ];
 
   if (!user) return <>{children}</>;
@@ -190,7 +190,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             <button
               onClick={handleInstallClick}
               className="p-3 text-blue-500 dark:text-blue-400 relative active:scale-95 transition-all bg-blue-500/10 dark:bg-blue-400/10 rounded-full hover:bg-blue-500/20 shadow-glow-blue animate-pulse"
-              aria-label="Installer l'application"
+              aria-label={t('layout.installAppAria')}
             >
               <Download size={24} />
             </button>
@@ -201,7 +201,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               setIsNotifOpen(true);
             }}
             className="p-3 text-slate-600 dark:text-slate-300 relative active:scale-95 transition-all bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-            aria-label="Notifications"
+            aria-label={t('settings.notifications')}
           >
             <Bell size={24} />
             {notifications.filter(n => !n.read).length > 0 && (
@@ -216,7 +216,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               setIsSidebarOpen(!isSidebarOpen);
             }}
             className="p-3 ml-1 text-slate-600 dark:text-slate-300 active:scale-90 transition-transform bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-            aria-label="Menu"
+            aria-label={t('common.menu')}
           >
             {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -234,7 +234,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               <div className="absolute -inset-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-orange-500/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <img src="/logo.png" alt="LEVELMAK" className="w-56 h-auto object-contain relative z-10" />
             </div>
-            <span className="text-[12px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent mt-2">Elite Portal</span>
+            <span className="text-[12px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent mt-2">{t('layout.elitePortal')}</span>
           </div>
 
           <nav className="flex-1 space-y-1.5 overflow-y-auto custom-scrollbar pr-1">

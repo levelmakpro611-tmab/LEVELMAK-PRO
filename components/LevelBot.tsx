@@ -134,7 +134,7 @@ const LevelBot: React.FC = () => {
     saveCoachMessage(activeSessionId, {
       id: `msg_${Date.now()}`,
       role: 'user',
-      text: userMsg || "Regarde cette image.",
+      text: userMsg || t.placeholder,
       image: currentImage || undefined,
       timestamp: new Date().toISOString()
     });
@@ -144,7 +144,7 @@ const LevelBot: React.FC = () => {
     try {
       let response: string = "";
       if (!navigator.onLine) {
-        response = "🚫 Je suis hors ligne. Connecte-toi à internet pour continuer.";
+        response = t.offline;
       } else {
         let finalUserMsg = userMsg;
         let imageToSubmit = currentImage;
@@ -159,7 +159,7 @@ const LevelBot: React.FC = () => {
             if (extractedText && extractedText.trim().length > 10) {
               finalUserMsg = userMsg 
                 ? `${userMsg}\n\n=== TEXTE EXTRAIT DE LA PHOTO ===\n${extractedText}\n================================`
-                : `Voici le texte extrait de ma photo :\n\n${extractedText}`;
+                : `${t.extractedTextPrefix}\n\n${extractedText}`;
               
               // According to user preference: "Pas besoin que l'IA reçoive la photo directement"
               // We could potentially set imageToSubmit to undefined here to save resources,
@@ -179,13 +179,13 @@ const LevelBot: React.FC = () => {
       saveCoachMessage(activeSessionId, {
         id: `msg_${Date.now() + 1}`,
         role: 'bot',
-        text: response || "Oups, j'ai eu un petit bug. Recommence ?",
+        text: response || t.error,
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {
       console.error("Erreur OpenRouter:", error);
-      let errorMsg = "Désolé, je n'arrive pas à me connecter au savoir universel pour l'instant. 😔";
-      if (error.status === 429) errorMsg = "Oups ! Quota dépassé. Réessaie dans un instant ! ⏳";
+      let errorMsg = t.genericError;
+      if (error.status === 429) errorMsg = t.quotaError;
       
       saveCoachMessage(activeSessionId, {
         id: `msg_${Date.now() + 1}`,
@@ -248,11 +248,11 @@ const LevelBot: React.FC = () => {
           </button>
           <div>
             <h4 className="font-display font-black text-base md:text-lg tracking-tight">
-              {view === 'chat' ? 'Elite Coach' : t.sessions}
+              {view === 'chat' ? t.title : t.sessions}
             </h4>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-success rounded-full animate-pulse"></span>
-              <span className="text-[10px] text-white/60 font-black uppercase tracking-[0.2em]">IA Pédagogique</span>
+              <span className="text-[10px] text-white/60 font-black uppercase tracking-[0.2em]">{t.subtitle}</span>
             </div>
           </div>
         </div>
@@ -308,7 +308,7 @@ const LevelBot: React.FC = () => {
               {messages.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-4 opacity-30 text-center px-8">
                   <Sparkles size={40} className="text-accent animate-float" />
-                  <p className="text-sm font-bold">Pose ta première question pour commencer ta leçon d'élite avec ton coach personnalisé.</p>
+                  <p className="text-sm font-bold">{t.firstQuestion}</p>
                 </div>
               )}
               {messages.map((msg, i) => (
@@ -344,7 +344,7 @@ const LevelBot: React.FC = () => {
                       <span className="w-1.5 h-1.5 bg-primary-light rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
                       <span className="w-1.5 h-1.5 bg-primary-light rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                     </div>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Réflexion...</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.typing}</span>
                   </div>
                 </div>
               )}
@@ -378,7 +378,7 @@ const LevelBot: React.FC = () => {
                       }
                     }}
                     className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-blue-500/30"
-                    title="Prendre une photo (Snap & Solve)"
+                    title={t.snapSolve}
                   >
                     <Camera size={20} className="md:w-5 md:h-5" />
                   </button>
@@ -391,7 +391,7 @@ const LevelBot: React.FC = () => {
                       }
                     }}
                     className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-white/5"
-                    title="Parcourir la galerie"
+                    title={t.gallery}
                   >
                     <ImageIcon size={20} className="md:w-5 md:h-5" />
                   </button>
@@ -401,7 +401,7 @@ const LevelBot: React.FC = () => {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Écris ton défi ici..."
+                    placeholder={t.placeholder}
                     className="w-full h-full bg-white/5 border border-white/10 outline-none rounded-xl md:rounded-2xl px-4 text-sm font-bold text-white placeholder:text-slate-500 focus:bg-white/10 transition-all shadow-inner pr-12 md:pr-14"
                   />
                   <button

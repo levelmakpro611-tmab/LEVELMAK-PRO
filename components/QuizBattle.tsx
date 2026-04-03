@@ -14,7 +14,7 @@ interface QuizBattleProps {
 }
 
 export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, onClose }) => {
-  const { user, resolveBattle, addLevelCoins } = useStore();
+  const { user, resolveBattle, addLevelCoins, t } = useStore();
   const [battle, setBattle] = useState<BattleState>(initialState);
   const [channel, setChannel] = useState<any>(null);
   const [localSelected, setLocalSelected] = useState<number | null>(null);
@@ -174,11 +174,11 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
           <Sparkles size={64} className="text-primary" />
         </motion.div>
         <Loader2 className="text-slate-500 animate-spin" size={32} />
-        <p className="text-white font-black uppercase tracking-widest text-lg">L'IA prépare le duel...</p>
-        <p className="text-slate-400 text-sm font-medium">10 questions originales en cours de génération</p>
+        <p className="text-white font-black uppercase tracking-widest text-lg">{t('quiz.battle.preparing')}</p>
+        <p className="text-slate-400 text-sm font-medium">{t('quiz.battle.questionsGen')}</p>
         <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-full">
           <Coins size={16} className="text-amber-500" />
-          <span className="text-amber-400 font-black text-sm">Mise : 10 LevelCoins</span>
+          <span className="text-amber-400 font-black text-sm">{t('quiz.battle.betLabel', { amount: 10 })}</span>
         </div>
       </div>
     );
@@ -192,9 +192,9 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
 
     let rewardText = '';
     if (hasBet) {
-      rewardText = isWinner ? `+${battle.betAmount * 2} LevelCoins` : isDraw ? `Remboursement de ${battle.betAmount} LevelCoins` : `-${battle.betAmount} LevelCoins`;
+      rewardText = isWinner ? `+${battle.betAmount * 2} LevelCoins` : isDraw ? `${t('common.refund')} ${battle.betAmount} LevelCoins` : `-${battle.betAmount} LevelCoins`;
     } else {
-      rewardText = isWinner ? '+10 LevelCoins • +50 XP' : isDraw ? 'Match Nul — +20 XP' : '-10 LevelCoins • +20 XP';
+      rewardText = isWinner ? `+10 LevelCoins • +50 XP` : isDraw ? `${t('quiz.battle.draw')} — +20 XP` : `-10 LevelCoins • +20 XP`;
     }
 
     return (
@@ -203,7 +203,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
           <Trophy size={100} className={`mb-6 ${isWinner ? 'text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.5)]' : isDraw ? 'text-slate-400' : 'text-slate-600'}`} />
         </motion.div>
         <motion.h2 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-4xl font-black text-white mb-2 uppercase tracking-widest text-center">
-          {isDraw ? 'Match Nul !' : isWinner ? '🏆 Victoire Épique !' : 'Défaite Honorable'}
+          {isDraw ? t('quiz.battle.draw') : isWinner ? t('quiz.battle.victory') : t('quiz.battle.defeat')}
         </motion.h2>
 
         {/* Coin Result */}
@@ -233,7 +233,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
         </div>
 
         <button onClick={onClose} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform shadow-2xl">
-          Retourner sur la Carte
+          {t('quiz.battle.backToMap')}
         </button>
       </div>
     );
@@ -252,7 +252,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
       {battle.type === 'custom_quiz' && battle.betAmount && (
         <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full">
           <Coins size={12} className="text-amber-500" />
-          <span className="text-amber-400 font-black text-[9px] uppercase tracking-widest">Mise : {battle.betAmount * 2} Coins</span>
+          <span className="text-amber-400 font-black text-[9px] uppercase tracking-widest">{t('quiz.battle.betLabel', { amount: battle.betAmount * 2 })}</span>
         </div>
       )}
 
@@ -320,7 +320,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
         {showResult && question.explanation && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="mt-4 bg-blue-500/10 text-blue-400 p-3 rounded-xl text-xs font-medium border border-blue-500/20">
-            <p className="font-bold mb-1">Explication :</p>
+            <p className="font-bold mb-1">{t('quiz.battle.explanation')}</p>
             {question.explanation}
           </motion.div>
         )}

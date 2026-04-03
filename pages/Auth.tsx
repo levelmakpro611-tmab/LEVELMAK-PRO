@@ -66,20 +66,20 @@ const Auth: React.FC = () => {
         console.log('Tentative d\'inscription transition...');
         if (registerStep === 1) {
           if (!name.trim() || !email.trim()) {
-            throw new Error('Veuillez remplir tous les champs d\'identité.');
+            throw new Error(t('auth.authRequired'));
           }
           setRegisterStep(2);
           return;
         }
 
         if (!password.trim()) {
-          throw new Error('Veuillez définir un mot de passe.');
+          throw new Error(t('auth.pwRequired'));
         }
         if (!acceptedPolicies) {
-          throw new Error('Tu dois accepter les politiques de LEVELMAK pour continuer.');
+          throw new Error(t('auth.acceptRequired'));
         }
         if (password.length < 6) {
-          throw new Error('⚠️ SÉCURITÉ : Ton mot de passe est trop court (min. 6 caractères).');
+          throw new Error(t('auth.pwShort'));
         }
 
         await registerWithEmail(
@@ -93,7 +93,7 @@ const Auth: React.FC = () => {
       } else if (mode === 'login') {
         console.log('Tentative de connexion...');
         if (!email.trim() || !password.trim()) {
-          throw new Error('Veuillez entrer votre e-mail et mot de passe.');
+          throw new Error(t('auth.emailPwRequired'));
         }
 
         const identifier = email.trim();
@@ -102,7 +102,7 @@ const Auth: React.FC = () => {
       }
     } catch (err: any) {
       console.error('SUBMISSION ERROR:', err);
-      setError(err.message || 'Une erreur inconnue est survenue.');
+      setError(err.message || t('auth.errorUnknown'));
     } finally {
       console.log('--- FIN SUBMISSION ---');
       setLocalLoading(false);
@@ -114,7 +114,7 @@ const Auth: React.FC = () => {
     try {
       await loginWithGoogle();
     } catch (err: any) {
-      setError(err.message || 'La connexion avec Google a échoué.');
+      setError(err.message || t('auth.googleFailed'));
     }
   };
 
@@ -130,10 +130,10 @@ const Auth: React.FC = () => {
            await loginWithPhone(creds.identifier, creds.password);
          }
       } else {
-         setError('Échec de la biométrie ou identifiants manquants.');
+         setError(t('auth.biometricFailed'));
       }
     } catch (err: any) {
-      setError(err.message || 'La connexion biométrique a échoué.');
+      setError(err.message || t('auth.biometricError'));
     } finally {
       setLocalLoading(false);
     }
@@ -146,12 +146,12 @@ const Auth: React.FC = () => {
 
     try {
       if (recoveryStep === 1) {
-        if (!name.trim()) throw new Error('Veuillez entrer votre pseudo ou e-mail.');
+        if (!name.trim()) throw new Error(t('auth.identityRequired'));
         // Simplified identity check for the Elite Experience
         // In a Production environment, this would be a secure backend validation.
         setRecoveryStep(2);
       } else {
-        if (password.length < 6) throw new Error('Le nouveau mot de passe doit faire au moins 6 caractères.');
+        if (password.length < 6) throw new Error(t('auth.pwLength'));
         setResetSuccess(true);
         setTimeout(() => {
           setMode('login');
@@ -159,7 +159,7 @@ const Auth: React.FC = () => {
         }, 3000);
       }
     } catch (err: any) {
-      setError(err.message || 'La vérification a échoué. Ton pseudo ou numéro est peut-être incorrect.');
+      setError(err.message || t('auth.recoveryFailed'));
     } finally {
       setLocalLoading(false);
     }

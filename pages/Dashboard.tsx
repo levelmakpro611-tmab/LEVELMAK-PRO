@@ -422,7 +422,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 ))
               ) : (
                 <div className="col-span-full p-8 text-center glass rounded-3xl border border-white/10">
-                  <p className="text-slate-400 font-bold">Aucun mot disponible pour le moment.</p>
+                  <p className="text-slate-400 font-bold">{t('dashboard.vocab.empty')}</p>
                 </div>
               )}
             </div>
@@ -642,15 +642,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                             </div>
                             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
                               <Zap className="mx-auto mb-2 text-green-500" size={32} />
-                              <p className="text-white font-bold text-sm">{t('dashboard.dice.joker')}</p>
+                              <p className="text-white font-bold text-sm">{t('dashboard.dice.jokerItem')}</p>
                             </div>
                             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
                               <Sparkles className="mx-auto mb-2 text-amber-500" size={32} />
-                              <p className="text-white font-bold text-sm">+200 XP</p>
+                              <p className="text-white font-bold text-sm">+200 {t('dashboard.dice.xp')}</p>
                             </div>
                             <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
                               <Award className="mx-auto mb-2 text-orange-500" size={32} />
-                              <p className="text-white font-bold text-sm">+100 Coins</p>
+                              <p className="text-white font-bold text-sm">+100 {t('dashboard.dice.coins')}</p>
                             </div>
                           </div>
                         </div>

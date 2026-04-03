@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
+import { audioService } from '../services/audio';
 import { openrouterService } from '../services/openrouter';
 import { AILabSession } from '../types';
 
@@ -30,12 +31,13 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(initialSession?.id || `fey_${Date.now()}`);
-  const { saveAILabSession } = useStore();
+  const { saveAILabSession, t, settings } = useStore();
+  const lang = settings.language;
 
   const handleStart = () => {
     if (topic.trim()) {
       setIsStarted(true);
-      const firstMsg = { role: 'assistant' as const, content: `Salut ! J'ai entendu dire que tu es un expert sur "${topic}". Moi c'est Léo, j'ai 10 ans et je ne connais rien à ce sujet. Tu peux m'expliquer comme si j'étais ton petit frère ?` };
+      const firstMsg = { role: 'assistant' as const, content: t('ailab.feynmanWelcome', { topic }) };
       const newMessages = [firstMsg];
       setMessages(newMessages);
       
@@ -79,7 +81,7 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
       HapticFeedback.success();
     } catch (error) {
       console.error(error);
-      const errorMsg = { role: 'assistant' as const, content: "Oups, j'ai eu un petit bug dans mon cerveau de robot... Tu peux répéter ?" };
+      const errorMsg = { role: 'assistant' as const, content: t('ailab.leoError') };
       setMessages([...newMessagesPostUser, errorMsg]);
     } finally {
       setLoading(false);
@@ -90,11 +92,11 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
     <div className="flex flex-col h-[calc(100vh-120px)] p-4 md:p-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <button onClick={onBack} className="p-3 bg-white/5 rounded-2xl text-slate-400 hover:text-white transition-all flex items-center gap-2 active:scale-95">
-          <ArrowLeft size={20} /> <span className="hidden md:inline">Retour</span>
+          <ArrowLeft size={20} /> <span className="hidden md:inline">{t('common.back')}</span>
         </button>
         <div className="text-center">
-          <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter">Deviens le Prof</h2>
-          <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Le Défi de Léo</p>
+          <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter">{t('ailab.feynmanTitle')}</h2>
+          <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{t('ailab.feynmanSubtitle')}</p>
         </div>
         <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
           <BrainCircuit size={24} />
@@ -110,12 +112,12 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
             </div>
           </div>
           <div className="text-center space-y-3 max-w-sm">
-            <h3 className="text-xl md:text-2xl font-bold text-white">Quel sujet caches-tu ?</h3>
-            <p className="text-slate-500 text-sm">Dis à Léo ce que tu vas lui apprendre aujourd'hui. Sois simple, il n'a que 10 ans !</p>
+            <h3 className="text-xl md:text-2xl font-bold text-white">{t('ailab.topicLabel')}</h3>
+            <p className="text-slate-500 text-sm">{t('ailab.topicDesc')}</p>
           </div>
           <div className="w-full max-w-md space-y-4">
-            <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex: La gravité, Pythagore, La Photosynthèse..." className="w-full p-5 bg-white/5 border-2 border-white/10 rounded-[1.5rem] text-white font-bold focus:border-blue-500 transition-all outline-none text-center" />
-            <button onClick={handleStart} disabled={!topic.trim()} className="w-full p-5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:grayscale text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-glow-blue transition-all active:scale-95">C'est parti !</button>
+            <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t('ailab.topicPlaceholder')} className="w-full p-5 bg-white/5 border-2 border-white/10 rounded-[1.5rem] text-white font-bold focus:border-blue-500 transition-all outline-none text-center" />
+            <button onClick={handleStart} disabled={!topic.trim()} className="w-full p-5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:grayscale text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-glow-blue transition-all active:scale-95">{t('ailab.startBtn')}</button>
           </div>
         </motion.div>
       ) : (
@@ -136,7 +138,7 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
                 type="text" 
                 value={input} 
                 onChange={(e) => setInput(e.target.value)} 
-                placeholder="Écris ton explication ici..." 
+                placeholder={t('ailab.inputPlaceholder')} 
                 className="flex-1 p-3 md:p-5 bg-white/5 border border-white/10 rounded-2xl md:rounded-[1.5rem] text-white text-sm md:text-base outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all font-medium shadow-inner" 
               />
               <button 
@@ -161,52 +163,65 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
 };
 
 // --- Sub-component: TimeMachine ---
-const HISTORICAL_FIGURES = [
-  { id: 'napoleon', name: 'Napoléon Bonaparte', dates: '1769 - 1821', era: '19ème siècle', role: 'Empereur & Stratège', image: '/portraits/napoleon.png', bio: 'Expert en stratégie militaire et code civil.' },
-  { id: 'curie', name: 'Marie Curie', dates: '1867 - 1934', era: 'Début 20ème', role: 'Physicienne & Chimiste', image: '/portraits/curie.png', bio: 'Pionnière de la radioactivité, double Prix Nobel.' },
-  { id: 'socrate', name: 'Socrate', dates: '470 av. J.-C. - 399 av. J.-C.', era: 'Grèce Antique', role: 'Philosophe', image: '/portraits/socrate.png', bio: 'Père de la maïeutique et de la pensée critique.' },
-  { id: 'einstein', name: 'Albert Einstein', dates: '1879 - 1955', era: '20ème siècle', role: 'Physicien Théoricien', image: '/portraits/einstein.png', bio: 'Auteur de la théorie de la relativité.' },
-  { id: 'davinci', name: 'Léonard de Vinci', dates: '1452 - 1519', era: 'Renaissance', role: 'Artiste & Inventeur', image: '/portraits/davinci.png', bio: 'Génie universel, peintre de la Joconde.' },
-  { id: 'hugo', name: 'Victor Hugo', dates: '1802 - 1885', era: '19ème siècle', role: 'Écrivain & Poète', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Victor_Hugo_by_Etienne_Carjat_1876_-_full.jpg/800px-Victor_Hugo_by_Etienne_Carjat_1876_-_full.jpg', bio: 'Auteur des Misérables et figure politique.' },
-  { id: 'cleopatre', name: 'Cléopâtre', dates: '69 av. J.-C. - 30 av. J.-C.', era: 'Égypte Antique', role: "Reine d'Égypte", image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Cleopatra_VII_Altes_Museum_Berlin.jpg/800px-Cleopatra_VII_Altes_Museum_Berlin.jpg', bio: 'Dernière reine d\'Égypte, diplomate de génie.' },
-  { id: 'mandela', name: 'Nelson Mandela', dates: '1918 - 2013', era: '20ème siècle', role: 'Homme d\'État', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Nelson_Mandela_1994.jpg/800px-Nelson_Mandela_1994.jpg', bio: 'Symbole de la lutte contre l\'apartheid.' },
-  { id: 'veil', name: 'Simone Veil', dates: '1927 - 2017', era: '20ème siècle', role: 'Femme Politique', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Simone_Veil_Pr%C3%A9sidente_du_Parlement_europ%C3%A9en.jpg/800px-Simone_Veil_Pr%C3%A9sidente_du_Parlement_europ%C3%A9en.jpg', bio: 'Icône des droits des femmes et de l\'Europe.' },
-  { id: 'pasteur', name: 'Louis Pasteur', dates: '1822 - 1895', era: '19ème siècle', role: 'Biologiste', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Albert_Edelfelt_-_Louis_Pasteur_-_1885.jpg/800px-Albert_Edelfelt_-_Louis_Pasteur_-_1885.jpg', bio: 'Inventeur du vaccin contre la rage.' },
-  { id: 'moliere', name: 'Molière', dates: '1622 - 1673', era: '17ème siècle', role: 'Dramaturge', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Moliere_par_Mignard_2.jpg/800px-Moliere_par_Mignard_2.jpg', bio: 'Maître de la comédie et de la langue française.' },
-  { id: 'aristote', name: 'Aristote', dates: '384 av. J.-C. - 322 av. J.-C.', era: 'Grèce Antique', role: 'Philosophe', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Aristotle_Altemps_Inv8575.jpg/800px-Aristotle_Altemps_Inv8575.jpg', bio: 'Élève de Platon, fondateur du Lycée.' },
-  { id: 'degaulle', name: 'Charles de Gaulle', dates: '1890 - 1970', era: '20ème siècle', role: 'Chef de la France libre', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Charles_de_Gaulle-1961.jpg/800px-Charles_de_Gaulle-1961.jpg', bio: 'Général et président de la République française.' },
-  { id: 'jeannedarc', name: 'Jeanne d\'Arc', dates: '1412 - 1431', era: 'Moyen Âge', role: 'Héroïne de France', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Joan_of_arc_miniature_graded.jpg/800px-Joan_of_arc_miniature_graded.jpg', bio: 'Sainte et chef de guerre française.' },
-  { id: 'newton', name: 'Isaac Newton', dates: '1643 - 1727', era: '17ème siècle', role: 'Physicien', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/GodfreyKneller-IsaacNewton-1689.jpg/800px-GodfreyKneller-IsaacNewton-1689.jpg', bio: 'Découvreur de la loi de la gravitation.' },
-  { id: 'rosaparks', name: 'Rosa Parks', dates: '1913 - 2005', era: '20ème siècle', role: 'Militante', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Rosa_Parks_1955.jpg/800px-Rosa_Parks_1955.jpg', bio: 'Figure de proue des droits civiques.' },
-  { id: 'galilee', name: 'Galilée', dates: '1564 - 1642', era: 'Renaissance', role: 'Astronome', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg/800px-Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg', bio: 'Pionnier de l\'astronomie moderne.' },
-  { id: 'mlk', name: 'Martin Luther King Jr.', dates: '1929 - 1968', era: '20ème siècle', role: 'Pasteur & Militant', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Martin_Luther_King%2C_Jr..jpg/800px-Martin_Luther_King%2C_Jr..jpg', bio: 'Leader du mouvement des droits civiques.' },
-  { id: 'claude_bernard', name: 'Claude Bernard', dates: '1813 - 1878', era: '19ème siècle', role: 'Physiologiste', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Claude_Bernard_1870.jpg/800px-Claude_Bernard_1870.jpg', bio: 'Père de la médecine expérimentale.' },
-  { id: 'mozart', name: 'Wolfgang Mozart', dates: '1756 - 1791', era: '18ème siècle', role: 'Compositeur', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Wolfgang-amadeus-mozart_1.jpg/800px-Wolfgang-amadeus-mozart_1.jpg', bio: 'Génie absolu de la musique classique.' },
-];
+const FIGURE_IMAGES: Record<string, string> = {
+  napoleon: '/portraits/napoleon.png',
+  curie: '/portraits/curie.png',
+  socrate: '/portraits/socrate.png',
+  einstein: '/portraits/einstein.png',
+  davinci: '/portraits/davinci.png',
+  hugo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Victor_Hugo_by_Etienne_Carjat_1876_-_full.jpg/800px-Victor_Hugo_by_Etienne_Carjat_1876_-_full.jpg',
+  cleopatre: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Cleopatra_VII_Altes_Museum_Berlin.jpg/800px-Cleopatra_VII_Altes_Museum_Berlin.jpg',
+  mandela: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Nelson_Mandela_1994.jpg/800px-Nelson_Mandela_1994.jpg',
+  veil: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Simone_Veil_Pr%C3%A9sidente_du_Parlement_europ%C3%A9en.jpg/800px-Simone_Veil_Pr%C3%A9sidente_du_Parlement_europ%C3%A9en.jpg',
+  pasteur: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Albert_Edelfelt_-_Louis_Pasteur_-_1885.jpg/800px-Albert_Edelfelt_-_Louis_Pasteur_-_1885.jpg',
+  moliere: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Moliere_par_Mignard_2.jpg/800px-Moliere_par_Mignard_2.jpg',
+  aristote: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Aristotle_Altemps_Inv8575.jpg/800px-Aristotle_Altemps_Inv8575.jpg',
+  degaulle: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Charles_de_Gaulle-1961.jpg/800px-Charles_de_Gaulle-1961.jpg',
+  jeannedarc: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Joan_of_arc_miniature_graded.jpg/800px-Joan_of_arc_miniature_graded.jpg',
+  newton: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/GodfreyKneller-IsaacNewton-1689.jpg/800px-GodfreyKneller-IsaacNewton-1689.jpg',
+  rosaparks: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Rosa_Parks_1955.jpg/800px-Rosa_Parks_1955.jpg',
+  galilee: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg/800px-Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg',
+  mlk: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Martin_Luther_King%2C_Jr..jpg/800px-Martin_Luther_King%2C_Jr..jpg',
+  claude_bernard: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Claude_Bernard_1870.jpg/800px-Claude_Bernard_1870.jpg',
+  mozart: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Wolfgang-amadeus-mozart_1.jpg/800px-Wolfgang-amadeus-mozart_1.jpg'
+};
 
 const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSession?: AILabSession }) => {
-  const [selectedChar, setSelectedChar] = useState<typeof HISTORICAL_FIGURES[0] | null>(
-    initialSession ? HISTORICAL_FIGURES.find(f => f.name === initialSession.topic) || null : null
+  const { saveAILabSession, t } = useStore();
+  
+  const historicalFigures = React.useMemo(() => {
+    const figures = t('historicalFigures') as any;
+    if (typeof figures !== 'object') return [];
+    
+    return Object.keys(FIGURE_IMAGES).map(id => ({
+      id,
+      image: FIGURE_IMAGES[id],
+      ...(figures[id] || {})
+    }));
+  }, [t]);
+
+  const [selectedChar, setSelectedChar] = useState<any | null>(
+    initialSession ? historicalFigures.find(f => f.name === initialSession.topic) || null : null
   );
   const [isTraveling, setIsTraveling] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>(initialSession?.messages || []);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(initialSession?.id || `tm_${Date.now()}`);
-  const { saveAILabSession } = useStore();
 
   useEffect(() => {
     console.log("AILab Rendering Version 2.5 - Ultra High Contrast Loaded");
   }, []);
 
-  const handleSelect = (char: typeof HISTORICAL_FIGURES[0]) => {
+  const handleSelect = (char: any) => {
     HapticFeedback.success();
+    audioService.playTimeTravel();
     setSelectedChar(char);
     setIsTraveling(true);
     
     setTimeout(() => {
       setIsTraveling(false);
-      const firstMsg = { role: 'assistant' as const, content: `Bonjour, voyageur du temps. Je suis ${char.name}. Que me vaut l'honneur de ta visite en ce ${char.era} ?` };
+      const firstMsg = { role: 'assistant' as const, content: t('ailab.tmWelcome', { name: char.name, era: char.era }) };
       const newMessages = [firstMsg];
       setMessages(newMessages);
       
@@ -259,7 +274,7 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
     return (
       <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden">
         <motion.div animate={{ rotate: [0, 360, 720, 1080], scale: [1, 1.5, 0.5, 2, 0], filter: ["blur(0px)", "blur(10px)", "blur(20px)", "blur(0px)"] }} transition={{ duration: 2, ease: "easeInOut" }} className="w-[150vw] h-[150vw] bg-gradient-to-tr from-blue-600 via-purple-600 to-transparent rounded-full flex items-center justify-center"><div className="w-1/2 h-1/2 bg-black rounded-full blur-3xl" /></motion.div>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }} transition={{ duration: 2 }} className="absolute inset-0 flex flex-col items-center justify-center text-center space-y-4"><Hourglass size={64} className="text-white animate-spin" /><h2 className="text-3xl font-black text-white italic tracking-tighter uppercase">Voyage en cours...</h2></motion.div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }} transition={{ duration: 2 }} className="absolute inset-0 flex flex-col items-center justify-center text-center space-y-4"><Hourglass size={64} className="text-white animate-spin" /><h2 className="text-3xl font-black text-white italic tracking-tighter uppercase">{t('ailab.traveling')}</h2></motion.div>
       </div>
     );
   }
@@ -271,11 +286,11 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
 
       <div className="flex items-center justify-between mb-8">
         <button onClick={selectedChar && !initialSession ? () => { setSelectedChar(null); setMessages([]); } : onBack} className="p-3 bg-white/5 rounded-2xl text-slate-400 hover:text-white transition-all flex items-center gap-2 active:scale-95">
-          <ArrowLeft size={20} /> <span className="hidden md:inline">Retour</span>
+          <ArrowLeft size={20} /> <span className="hidden md:inline">{t('common.back')}</span>
         </button>
         <div className="text-center">
-          <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">Galerie des Immortels</h2>
-          <p className="text-[10px] text-purple-400 font-bold uppercase tracking-widest leading-loose">{selectedChar ? `${selectedChar.name} • ${selectedChar.era}` : 'Choisis ton mentor historique'}</p>
+          <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">{t('ailab.timeMachineTitle')}</h2>
+          <p className="text-[10px] text-purple-400 font-bold uppercase tracking-widest leading-loose">{selectedChar ? `${selectedChar.name} • ${selectedChar.era}` : t('ailab.timeMachineSubtitle')}</p>
         </div>
         <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500">
           <History size={24} />
@@ -284,7 +299,7 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
 
       {!selectedChar ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 overflow-y-auto pr-4 custom-scrollbar pb-20">
-          {HISTORICAL_FIGURES.map((char) => (
+          {historicalFigures.map((char: any) => (
             <motion.div 
               key={char.id} 
               whileHover={{ scale: 1.05, y: -10 }} 
@@ -351,7 +366,7 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
                 type="text" 
                 value={input} 
                 onChange={(e) => setInput(e.target.value)} 
-                placeholder={`Parler à ${selectedChar.name}...`} 
+                placeholder={t('ailab.inputPlaceholder')} 
                 className="flex-1 p-3 md:p-5 bg-white/5 border border-white/10 rounded-2xl md:rounded-[1.5rem] text-white text-sm md:text-base outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-medium shadow-inner" 
               />
               <button 
@@ -379,7 +394,7 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
 export const AILab: React.FC = () => {
   const [activeView, setActiveView] = useState<'hub' | 'feynman' | 'timemachine' | 'history'>('hub');
   const [selectedSession, setSelectedSession] = useState<AILabSession | undefined>(undefined);
-  const { aiLabHistory, deleteAILabSession } = useStore();
+  const { aiLabHistory, deleteAILabSession, t } = useStore();
 
   const handleSelect = (view: 'feynman' | 'timemachine' | 'history') => {
     HapticFeedback.success();
@@ -408,10 +423,10 @@ export const AILab: React.FC = () => {
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-500">
                   <FlaskRound size={24} />
-                  <span className="font-black uppercase tracking-[0.2em] text-xs">Laboratoire IA Experimental</span>
+                  <span className="font-black uppercase tracking-[0.2em] text-xs">{t('ailab.experimental')}</span>
                 </div>
                 <h1 className="text-5xl md:text-7xl font-display font-black text-slate-900 dark:text-white tracking-tighter transition-colors">
-                  Pousser les limites de <span className="text-primary italic">ton esprit.</span>
+                  {t('ailab.title')} <span className="text-primary italic">{t('ailab.titleAccent')}</span>
                 </h1>
               </div>
               <button 
@@ -421,7 +436,7 @@ export const AILab: React.FC = () => {
                 <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
                   <History size={20} />
                 </div>
-                Historique des Conversations
+                {t('ailab.recentSessions')}
               </button>
             </div>
 
@@ -431,9 +446,9 @@ export const AILab: React.FC = () => {
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity"><GraduationCap size={150} /></div>
                 <div className="relative z-10 space-y-6">
                   <div className="w-16 h-16 rounded-3xl bg-blue-500 flex items-center justify-center text-white shadow-glow-blue"><BrainCircuit size={32} /></div>
-                  <div className="space-y-2"><h3 className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tighter">Deviens le Prof</h3><p className="text-blue-200/60 font-bold uppercase tracking-widest text-xs">Le Défi de Léo</p></div>
-                  <p className="text-slate-400 text-sm md:text-lg leading-relaxed font-medium">Explique un concept complexe à Léo, notre apprenti IA. S'il te comprend sans jargon, c'est gagné.</p>
-                  <div className="flex items-center gap-2 text-blue-400 font-black uppercase tracking-widest text-[10px]">Lancer l'expérience <ChevronRight size={14} /></div>
+                  <div className="space-y-2"><h3 className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tighter">{t('ailab.feynmanTitle')}</h3><p className="text-blue-200/60 font-bold uppercase tracking-widest text-xs">{t('ailab.feynmanSubtitle')}</p></div>
+                  <p className="text-slate-400 text-sm md:text-lg leading-relaxed font-medium">{t('ailab.feynmanDesc')}</p>
+                  <div className="flex items-center gap-2 text-blue-400 font-black uppercase tracking-widest text-[10px]">{t('ailab.startChallenge')} <ChevronRight size={14} /></div>
                 </div>
               </motion.div>
 
@@ -442,9 +457,9 @@ export const AILab: React.FC = () => {
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity"><Hourglass size={150} /></div>
                 <div className="relative z-10 space-y-6">
                   <div className="w-16 h-16 rounded-3xl bg-purple-500 flex items-center justify-center text-white shadow-glow-purple"><History size={32} /></div>
-                  <div className="space-y-2"><h3 className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tighter">Machine temporelle</h3><p className="text-purple-200/60 font-bold uppercase tracking-widest text-xs">Portail Temporel</p></div>
-                  <p className="text-slate-400 text-sm md:text-lg leading-relaxed font-medium">Plonge dans une discussion immersive avec les plus grands génies et auteurs de l'histoire.</p>
-                  <div className="flex items-center gap-2 text-purple-400 font-black uppercase tracking-widest text-[10px]">Lancer l'expérience <ChevronRight size={14} /></div>
+                  <div className="space-y-2"><h3 className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tighter">{t('ailab.timeMachineTitle')}</h3><p className="text-purple-200/60 font-bold uppercase tracking-widest text-xs">{t('ailab.timeMachineSubtitle')}</p></div>
+                  <p className="text-slate-400 text-sm md:text-lg leading-relaxed font-medium">{t('ailab.timeMachineDesc')}</p>
+                  <div className="flex items-center gap-2 text-purple-400 font-black uppercase tracking-widest text-[10px]">{t('ailab.startChallenge')} <ChevronRight size={14} /></div>
                 </div>
               </motion.div>
             </div>
@@ -453,7 +468,7 @@ export const AILab: React.FC = () => {
             {aiLabHistory.length > 0 && (
               <div className="space-y-6">
                 <h4 className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                  <Sparkles size={16} /> Reprendre une discussion récente
+                  <Sparkles size={16} /> {t('ailab.historyBtn')}
                 </h4>
                 <div className="flex gap-4 overflow-x-auto pb-4 pr-10 snap-x custom-scrollbar">
                   {aiLabHistory.slice(0, 5).map((session) => (
@@ -472,7 +487,7 @@ export const AILab: React.FC = () => {
                       </div>
                       <h5 className="text-white font-bold truncate mb-2">{session.topic}</h5>
                       <p className="text-slate-500 text-xs line-clamp-2 mb-4">
-                        {session.messages[session.messages.length - 1]?.content || "Aucun message"}
+                        {session.messages[session.messages.length - 1]?.content || t('ailab.noMessages')}
                       </p>
                       <button 
                         onClick={(e) => handleDeleteSession(e, session.id)}
@@ -492,9 +507,9 @@ export const AILab: React.FC = () => {
           <motion.div key="history" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-6 md:p-12 max-w-4xl mx-auto space-y-8">
             <div className="flex items-center justify-between">
               <button onClick={() => setActiveView('hub')} className="p-3 bg-white/5 rounded-2xl text-slate-400 hover:text-white transition-all flex items-center gap-2 active:scale-95">
-                <ArrowLeft size={20} /> Retour au Lab
+                <ArrowLeft size={20} /> {t('common.back')}
               </button>
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Historique IA</h2>
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter">{t('ailab.recentSessions')}</h2>
             </div>
 
             <div className="space-y-4">
@@ -503,8 +518,8 @@ export const AILab: React.FC = () => {
                   <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto text-slate-600">
                     <MessageSquare size={40} />
                   </div>
-                  <p className="text-slate-500 font-medium">Pas encore de conversations enregistrées.</p>
-                  <button onClick={() => setActiveView('hub')} className="px-6 py-3 bg-primary text-white rounded-full font-bold">Lancer un défi</button>
+                  <p className="text-slate-500 font-medium">{t('ailab.noHistory')}</p>
+                  <button onClick={() => setActiveView('hub')} className="px-6 py-3 bg-primary text-white rounded-full font-bold">{t('ailab.startChallenge')}</button>
                 </div>
               ) : (
                 aiLabHistory.map((session) => (

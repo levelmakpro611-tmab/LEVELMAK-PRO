@@ -2,6 +2,11 @@
 class AudioService {
     private audioContext: AudioContext | null = null;
     private enabled: boolean = true;
+    private soundSettings = {
+        quiz: true,
+        timeMachine: true,
+        notifications: true
+    };
     private volume: number = 0.5;
 
     constructor() {
@@ -9,7 +14,13 @@ class AudioService {
             const stored = localStorage.getItem('levelmak_settings');
             if (stored) {
                 try {
-                    this.enabled = JSON.parse(stored).soundEnabled ?? true;
+                    const settings = JSON.parse(stored);
+                    this.enabled = settings.soundEnabled ?? true;
+                    this.soundSettings = settings.soundSettings || {
+                        quiz: true,
+                        timeMachine: true,
+                        notifications: true
+                    };
                 } catch (e) { }
             }
 
@@ -36,27 +47,50 @@ class AudioService {
         this.enabled = enabled;
     }
 
+    setSoundSettings(settings: any) {
+        this.soundSettings = { ...this.soundSettings, ...settings };
+    }
+
     playNotification() {
-        if (!this.enabled) return;
+        if (!this.enabled || !this.soundSettings.notifications) return;
         this.playTone(800, 'sine', 0.1, 0.5);
         setTimeout(() => this.playTone(1200, 'sine', 0.05, 0.5), 100);
     }
 
-    playSuccess() {
-        if (!this.enabled) return;
+    playTimeTravel() {
+        if (!this.enabled || !this.soundSettings.timeMachine) return;
+        // Rising frequency sweep for time travel feel
+        const ctx = this.audioContext || new (window.AudioContext || (window as any).webkitAudioContext)();
+        this.audioContext = ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(100, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 2);
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.5);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 2);
+    }
+
+    playSuccess(category: 'quiz' | 'timeMachine' | 'notifications' = 'quiz') {
+        if (!this.enabled || (category && !this.soundSettings[category])) return;
         // Major triad arpeggio (C Major: C, E, G)
         this.playTone(523.25, 'triangle', 0.1, 0.3); // C5
         setTimeout(() => this.playTone(659.25, 'triangle', 0.1, 0.3), 100); // E5
         setTimeout(() => this.playTone(783.99, 'triangle', 0.2, 0.3), 200); // G5
     }
 
-    playError() {
-        if (!this.enabled) return;
+    playError(category: 'quiz' | 'timeMachine' | 'notifications' = 'quiz') {
+        if (!this.enabled || (category && !this.soundSettings[category])) return;
         this.playTone(150, 'sawtooth', 0.3, 0.5);
     }
 
-    playMessage() {
-        if (!this.enabled) return;
+    playMessage(category: 'quiz' | 'timeMachine' | 'notifications' = 'notifications') {
+        if (!this.enabled || (category && !this.soundSettings[category])) return;
         this.playTone(400, 'sine', 0.05, 0.2);
     }
 

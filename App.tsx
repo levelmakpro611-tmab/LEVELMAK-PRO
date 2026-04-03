@@ -28,7 +28,7 @@ import { openrouterService } from './services/openrouter';
 import { initializeNativeFeatures } from './services/nativeAdapters';
 
 const AppContent: React.FC = () => {
-  const { user, loading, settings } = useStore();
+  const { user, loading, settings, t } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
   const [currentDeck, setCurrentDeck] = useState<{ deck: FlashcardDeck, cards: Flashcard[] } | null>(null);
@@ -86,7 +86,7 @@ const AppContent: React.FC = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 text-primary animate-spin" />
-              <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Chargement de ton univers</p>
+              <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">{t('auth.loadingUniverse')}</p>
             </div>
             <div className="w-48 h-1 bg-white/5 rounded-full mx-auto overflow-hidden">
               <div className="h-full bg-gradient-to-r from-primary to-secondary animate-progress shadow-glow"></div>
@@ -176,7 +176,7 @@ const AppContent: React.FC = () => {
                 setCurrentQuiz(quiz);
                 setActiveTab('quiz');
               } catch (error) {
-                alert("Impossible de générer le quiz.");
+                alert(t('common.quizError'));
               }
             }}
             onGenerateFlashcards={async (content, title) => {
@@ -195,7 +195,7 @@ const AppContent: React.FC = () => {
                 });
                 setActiveTab('flashcards');
               } catch (error) {
-                alert("Impossible de générer les flashcards.");
+                alert(t('common.flashcardError'));
               }
             }}
           />

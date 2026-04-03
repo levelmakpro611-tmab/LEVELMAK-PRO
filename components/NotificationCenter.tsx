@@ -23,17 +23,7 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
-    const { notifications, markNotificationAsRead, clearNotifications, settings, updateSettings } = useStore();
-    const isFrench = settings.language === 'fr';
-
-    const t = {
-        title: isFrench ? 'Notifications' : 'Notifications',
-        empty: isFrench ? 'Pas de nouvelles notifications' : 'No new notifications',
-        clearAll: isFrench ? 'Tout effacer' : 'Clear all',
-        markRead: isFrench ? 'Marquer comme lu' : 'Mark as read',
-        soundsOn: isFrench ? 'Désactiver le son' : 'Mute notifications',
-        soundsOff: isFrench ? 'Activer le son' : 'Unmute notifications',
-    };
+    const { notifications, markNotificationAsRead, clearNotifications, settings, updateSettings, t } = useStore();
 
     const getIcon = (type: AppNotification['type']) => {
         switch (type) {
@@ -45,6 +35,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
             default: return <Bell size={18} />;
         }
     };
+
+    const soundEnabled = settings.soundEnabled && settings.soundSettings.notifications;
 
     return (
         <AnimatePresence>
@@ -73,27 +65,29 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                                     <Bell size={20} />
                                 </div>
-                                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t.title}</h2>
+                                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t('notifications.title')}</h2>
                             </div>
                             <div className="flex items-center gap-2">
                                 {notifications.length > 0 && (
                                     <button
                                         onClick={clearNotifications}
                                         className="p-2 hover:bg-red-500/10 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
-                                        title={t.clearAll}
+                                        title={t('notifications.clearAll')}
                                     >
                                         <Trash2 size={18} />
                                     </button>
                                 )}
                                 <button
-                                    onClick={() => updateSettings({ soundEnabled: !settings.soundEnabled })}
-                                    className={`p-2 rounded-lg transition-all ${settings.soundEnabled
+                                    onClick={() => updateSettings({ 
+                                        soundSettings: { ...settings.soundSettings, notifications: !settings.soundSettings.notifications } 
+                                    })}
+                                    className={`p-2 rounded-lg transition-all ${soundEnabled
                                         ? 'text-blue-500 hover:bg-blue-500/10'
                                         : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
                                         }`}
-                                    title={settings.soundEnabled ? t.soundsOn : t.soundsOff}
+                                    title={soundEnabled ? t('notifications.soundsOn') : t('notifications.soundsOff')}
                                 >
-                                    {settings.soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                                    {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
                                 </button>
                                 <button
                                     onClick={onClose}
@@ -128,35 +122,35 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                                 <div className="flex items-start justify-between gap-2 mb-1">
                                                     <h4 className={`text-sm font-bold truncate ${notif.read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-white'
                                                         }`}>
-                                                        {notif.title}
-                                                    </h4>
-                                                    {!notif.read && (
-                                                        <button
-                                                            onClick={() => markNotificationAsRead(notif.id)}
-                                                            className="p-1 text-primary hover:bg-primary/10 rounded-md transition-colors"
-                                                            title={t.markRead}
-                                                        >
-                                                            <Check size={14} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                                    {notif.message}
-                                                </p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
-                                                    <Clock size={10} /> {new Date(notif.timestamp).toLocaleTimeString(isFrench ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
-                                                </p>
+                                                     {notif.title}
+                                                 </h4>
+                                                 {!notif.read && (
+                                                     <button
+                                                         onClick={() => markNotificationAsRead(notif.id)}
+                                                         className="p-1 text-primary hover:bg-primary/10 rounded-md transition-colors"
+                                                         title={t('notifications.markRead')}
+                                                     >
+                                                         <Check size={14} />
+                                                     </button>
+                                                 )}
+                                             </div>
+                                             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                 {notif.message}
+                                             </p>
+                                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
+                                                 <Clock size={10} /> {new Date(notif.timestamp).toLocaleTimeString(settings.language === 'fr' ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                                             </p>
                                             </div>
                                         </div>
                                     </motion.div>
                                 ))
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
-                                    <div className="w-16 h-16 rounded-[2rem] bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-slate-700">
-                                        <Bell size={24} />
-                                    </div>
-                                    <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">{t.empty}</p>
-                                </div>
+                                     <div className="w-16 h-16 rounded-[2rem] bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-slate-700">
+                                         <Bell size={24} />
+                                     </div>
+                                     <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">{t('notifications.empty')}</p>
+                                 </div>
                             )}
                         </div>
                     </motion.div>

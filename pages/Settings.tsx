@@ -64,7 +64,7 @@ const Settings: React.FC = () => {
 
     const handlePasswordChange = async () => {
         if (oldPassword.length < 6 || newPassword.length < 6) {
-            setPasswordError("Min. 6 caractères requis.");
+            setPasswordError(t('settings.minChar'));
             return;
         }
         setPasswordLoading(true);
@@ -72,7 +72,7 @@ const Settings: React.FC = () => {
         setPasswordSuccess('');
         try {
             await changePassword(oldPassword, newPassword);
-            setPasswordSuccess("Mot de passe mis à jour !");
+            setPasswordSuccess(t('settings.pwUpdated'));
             setOldPassword('');
             setNewPassword('');
         } catch (err: any) {
@@ -161,8 +161,8 @@ const Settings: React.FC = () => {
                                             </div>
                                         </div>
                                         <div>
-                                            <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white transition-colors">{t.photoTitle}</h3>
-                                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Visite la boutique pour changer d'avatar !</p>
+                                            <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white transition-colors">{t('settings.photoTitle')}</h3>
+                                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">{t('settings.changePhotoDesc')}</p>
                                         </div>
                                     </div>
 
@@ -245,33 +245,60 @@ const Settings: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            <div
-                                                onClick={toggleSound}
-                                                className="bg-white/5 p-6 rounded-3xl border border-white/5 flex items-center gap-4 group hover:bg-white/10 transition-all cursor-pointer"
-                                            >
-                                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-300 group-hover:text-secondary transition-colors">
-                                                    <Volume2 size={20} className="md:w-6 md:h-6" />
+                                            <div className="bg-white/5 p-6 rounded-3xl border border-white/5 space-y-6 group hover:bg-white/8 transition-all col-span-1 md:col-span-2">
+                                                <div 
+                                                    onClick={toggleSound}
+                                                    className="flex items-center gap-4 cursor-pointer"
+                                                >
+                                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-300 group-hover:text-secondary transition-colors">
+                                                        <Volume2 size={20} className="md:w-6 md:h-6" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.appSounds')}</h4>
+                                                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
+                                                            {settings.soundEnabled ? t('settings.soundsOn') : t('settings.soundsOff')}
+                                                        </p>
+                                                    </div>
+                                                    <div className={`w-8 md:w-10 h-4 md:h-5 rounded-full relative transition-colors ${settings.soundEnabled ? 'bg-success/40' : 'bg-slate-700'}`}>
+                                                        <div className={`absolute top-0.5 w-3 h-3 md:w-4 md:h-4 bg-white rounded-full transition-all ${settings.soundEnabled ? 'right-0.5' : 'left-0.5'}`}></div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.appSounds')}</h4>
-                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
-                                                        {settings.soundEnabled ? t('settings.soundsOn') : t('settings.soundsOff')}
-                                                    </p>
-                                                </div>
-                                                <div className={`w-8 md:w-10 h-4 md:h-5 rounded-full relative transition-colors ${settings.soundEnabled ? 'bg-success/40' : 'bg-slate-700'}`}>
-                                                    <div className={`absolute top-0.5 w-3 h-3 md:w-4 md:h-4 bg-white rounded-full transition-all ${settings.soundEnabled ? 'right-0.5' : 'left-0.5'}`}></div>
-                                                </div>
-                                                {settings.soundEnabled && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            audioService.playNotification();
-                                                        }}
-                                                        className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider transition-all"
-                                                    >
-                                                        Test
-                                                    </button>
-                                                )}
+
+                                                <AnimatePresence>
+                                                    {settings.soundEnabled && (
+                                                        <motion.div 
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="space-y-3 pt-4 border-t border-white/5 overflow-hidden"
+                                                        >
+                                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{t('settings.soundSettings.title')}</p>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                                {[
+                                                                    { id: 'quiz', label: t('settings.soundSettings.quiz') },
+                                                                    { id: 'timeMachine', label: t('settings.soundSettings.timeMachine') },
+                                                                    { id: 'notifications', label: t('settings.soundSettings.notifications') }
+                                                                ].map((sub) => (
+                                                                    <div 
+                                                                        key={sub.id}
+                                                                        onClick={() => updateSettings({
+                                                                            soundSettings: {
+                                                                                ...settings.soundSettings,
+                                                                                [sub.id]: !settings.soundSettings[sub.id as keyof typeof settings.soundSettings]
+                                                                            }
+                                                                        })}
+                                                                        className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${settings.soundSettings[sub.id as keyof typeof settings.soundSettings] ? 'bg-secondary/10 border-secondary/30 text-secondary' : 'bg-black/20 border-white/5 text-slate-500'}`}
+                                                                    >
+                                                                        <span className="text-[10px] font-bold uppercase tracking-tight">{sub.label}</span>
+                                                                        <div className={`w-6 h-3 rounded-full relative ${settings.soundSettings[sub.id as keyof typeof settings.soundSettings] ? 'bg-secondary/40' : 'bg-slate-700'}`}>
+                                                                            <div className={`absolute top-0.5 w-2 h-2 bg-white rounded-full transition-all ${settings.soundSettings[sub.id as keyof typeof settings.soundSettings] ? 'right-0.5' : 'left-0.5'}`}></div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
 
                                             <div
@@ -288,7 +315,7 @@ const Settings: React.FC = () => {
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-2 bg-black/20 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border border-white/5 font-black text-[8px] md:text-[10px] text-white tracking-widest uppercase">
-                                                    Changer
+                                                    {t('settings.change')}
                                                 </div>
                                             </div>
 
@@ -402,7 +429,7 @@ const Settings: React.FC = () => {
                                                         value={newPassword}
                                                         onChange={(e) => setNewPassword(e.target.value)}
                                                         className="w-full bg-black/5 dark:bg-slate-900 border border-black/5 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-success/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
-                                                        placeholder="Nouveau code d'accès"
+                                                        placeholder={t('settings.newPwPlaceholder')}
                                                     />
                                                 </div>
                                             </div>
@@ -439,7 +466,7 @@ const Settings: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className="text-[8px] md:text-[9px] font-black text-success uppercase tracking-widest bg-success/10 px-2 md:px-3 py-1 md:py-1.5 rounded-full border border-success/20 animate-pulse">
-                                            Actif
+                                            {t('settings.active')}
                                         </div>
                                     </div>
 
@@ -469,8 +496,8 @@ const Settings: React.FC = () => {
                                                 <Fingerprint size={20} className="md:w-6 md:h-6" />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-slate-900 dark:text-white text-xs transition-colors">Connexion Biométrique</h4>
-                                                <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-tight">Utiliser FaceID / TouchID pour te connecter.</p>
+                                                <h4 className="font-bold text-slate-900 dark:text-white text-xs transition-colors">{t('settings.biometricTitle')}</h4>
+                                                <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-tight">{t('settings.biometricDesc')}</p>
                                             </div>
                                         </div>
                                         <div className={`w-10 h-6 md:w-12 md:h-7 rounded-full relative border transition-colors ${biometricEnabled ? 'bg-blue-500/20 border-blue-500/30' : 'bg-slate-700/50 border-white/10'}`}>

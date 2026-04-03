@@ -1,5 +1,6 @@
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import confetti from 'canvas-confetti';
+import { audioService } from './audio';
 
 /**
  * Service pour fournir des retours sensoriels (Tactile & Visuel)
@@ -64,61 +65,39 @@ export const feedbackService = {
   },
 
   /**
-   * Joue un son Premium (Web Audio API pour garantir le fonctionnement sans fichier externe)
+   * Joue un son Premium (Utilise audioService pour centraliser le contrôle)
    */
-  playAudio: (type: 'success' | 'error') => {
+  playAudio: (type: 'success' | 'error', category: 'quiz' | 'timeMachine' | 'notifications' = 'quiz') => {
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
       if (type === 'success') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.2);
+        audioService.playSuccess(category);
       } else {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(300, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.3);
+        audioService.playError(category);
       }
     } catch (e) {
-      // Ignore si le navigateur bloque l'audio non sollicité
+      // Ignoré
     }
   },
 
   /**
    * Action complète sur Quiz Answer (Haptique + Audio)
    */
-  answerFeedback: function(isCorrect: boolean) {
+  answerFeedback: function(isCorrect: boolean, category: 'quiz' | 'timeMachine' | 'notifications' = 'quiz') {
     if (isCorrect) {
       this.hapticSuccess();
-      this.playAudio('success');
+      this.playAudio('success', category);
     } else {
       this.hapticError();
-      this.playAudio('error');
+      this.playAudio('error', category);
     }
   },
 
   /**
    * Déclenche un succès complet (Vibration + Confettis + Audio)
    */
-  fullSuccess: function() {
+  fullSuccess: function(category: 'quiz' | 'timeMachine' | 'notifications' = 'quiz') {
     this.hapticSuccess();
-    this.playAudio('success');
+    this.playAudio('success', category);
     this.celebrate();
   }
 };

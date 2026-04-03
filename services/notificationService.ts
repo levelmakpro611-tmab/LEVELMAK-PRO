@@ -48,11 +48,7 @@ class NotificationService {
             });
         }
 
-        // Always play a subtle sound if possible
-        try {
-            const audio = new Audio('/sounds/notification.mp3');
-            audio.play().catch(() => { });
-        } catch (e) { }
+        // Sound is handled by usage of audioService.playNotification() in useStore.addNotification
     }
 
     public createLocalNotification(type: NotificationType, title: string, message: string): AppNotification {

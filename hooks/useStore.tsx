@@ -21,17 +21,22 @@ interface AppState {
   decks: FlashcardDeck[];
   books: Book[];
   studyPlan: StudyPlan | null;
-  settings: {
-    theme: 'light' | 'dark';
-    fontSize: 'xs' | 'sm' | 'base' | 'lg' | 'xl';
-    soundEnabled: boolean;
-    language: 'fr' | 'en' | 'ar';
-    notifications: {
-      missions: boolean;
-      quiz: boolean;
-      community: boolean;
+    settings: {
+      theme: 'light' | 'dark';
+      fontSize: 'xs' | 'sm' | 'base' | 'lg' | 'xl';
+      soundEnabled: boolean;
+      soundSettings: {
+        quiz: boolean;
+        timeMachine: boolean;
+        notifications: boolean;
+      };
+      language: 'fr' | 'en' | 'ar';
+      notifications: {
+        missions: boolean;
+        quiz: boolean;
+        community: boolean;
+      };
     };
-  };
   dailyVocab: {
     words: { word: string; explanation: string; usage: string }[];
     loading: boolean;
@@ -127,6 +132,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     theme: 'dark',
     fontSize: 'base',
     soundEnabled: true,
+    soundSettings: {
+      quiz: true,
+      timeMachine: true,
+      notifications: true
+    },
     language: 'fr',
     notifications: {
       missions: true,
@@ -949,11 +959,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const updateSettings = useCallback((newSettings: Partial<AppState['settings']>) => {
     setSettings(prev => {
-      const updated = { ...prev, ...newSettings };
+      const updated = { 
+        ...prev, 
+        ...newSettings,
+        soundSettings: newSettings.soundSettings 
+          ? { ...prev.soundSettings, ...newSettings.soundSettings } 
+          : prev.soundSettings,
+        notifications: newSettings.notifications 
+          ? { ...prev.notifications, ...newSettings.notifications } 
+          : prev.notifications
+      };
       localStorage.setItem('levelmak_settings', JSON.stringify(updated));
 
       if (newSettings.soundEnabled !== undefined) {
         audioService.setEnabled(newSettings.soundEnabled);
+      }
+      if (newSettings.soundSettings !== undefined) {
+        audioService.setSoundSettings(newSettings.soundSettings);
       }
 
       return updated;
@@ -1419,8 +1441,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const newNotif = notificationService.createLocalNotification(type, title, message);
     setNotifications(prev => [newNotif, ...prev]);
     notificationService.send(title, { body: message });
-    audioService.playNotification();
-  }, []);
+    
+    // Check global sound toggle and specific notification sound toggle
+    if (settings.soundEnabled && settings.soundSettings.notifications) {
+      audioService.playNotification();
+    }
+  }, [settings.soundEnabled, settings.soundSettings.notifications]);
 
   const handleError = useCallback((error: any, context: string) => {
     console.error(`Error in ${context}:`, error);
