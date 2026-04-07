@@ -1165,6 +1165,7 @@ export const translations: Record<string, any> = {
             "ailab": "AI Lab",
             "ailabShort": "AI Lab",
             "atlas": "Geo Atlas",
+            "activeVisual": "Active Visual",
             "feedback": "Feedback",
             "rating": "App Rating",
             "short": {
@@ -1179,6 +1180,7 @@ export const translations: Record<string, any> = {
                 "planner": "Planner",
                 "social": "Social",
                 "atlas": "Atlas",
+                "activeVisual": "Visual",
                 "feedback": "Feedback",
                 "rating": "Rating"
             }
@@ -2221,6 +2223,7 @@ export const translations: Record<string, any> = {
             "ailab": "مختبر الذكاء الاصطناعي",
             "ailabShort": "مختبر الذكاء الاصطناعي",
             "atlas": "الأطلس الجغرافي",
+            "activeVisual": "البصري النشط",
             "feedback": "الآراء",
             "rating": "تقييم التطبيق",
             "short": {
@@ -2232,6 +2235,7 @@ export const translations: Record<string, any> = {
                 "flashcards": "بطاقات",
                 "ranking": "ترتيب",
                 "atlas": "أطلس",
+                "activeVisual": "بصري",
                 "shop": "متجر",
                 "planner": "تخطيط",
                 "social": "مجتمع",
