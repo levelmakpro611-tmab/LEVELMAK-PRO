@@ -100,6 +100,7 @@ export const translations: Record<string, any> = {
             "ailab": "Laboratoire IA",
             "ailabShort": "Lab IA",
             "atlas": "Atlas Géo",
+            "activeVisual": "Active Visuel",
             "feedback": "Commentaire",
             "rating": "Note App",
             "short": {
@@ -111,6 +112,7 @@ export const translations: Record<string, any> = {
                 "flashcards": "Flash",
                 "ranking": "Rank",
                 "atlas": "Atlas",
+                "activeVisual": "Visuel",
                 "shop": "Shop",
                 "planner": "Planif",
                 "social": "Social",
@@ -146,6 +148,18 @@ export const translations: Record<string, any> = {
                 "resourceType": "Ressource",
                 "massif": "Massif",
                 "didYouKnow": "Le saviez-vous ?"
+            },
+            "ailab": {
+                "visualLabs": "Laboratoires Visuels",
+                "visualLabsDesc": "Expériences 3D interactives pour visualiser la science.",
+                "chemistryTitle": "Labo Chimie",
+                "chemistrySubtitle": "Titrage & Précipitation",
+                "electricityTitle": "Électricité",
+                "electricitySubtitle": "Circuits & Induction",
+                "mechanicsTitle": "Mécanique",
+                "mechanicsSubtitle": "Chute Libre & Forces",
+                "opticsTitle": "Optique",
+                "opticsSubtitle": "Réfraction & Lasers"
             },
             "all": "Tout",
             "searchPlaceholder": "Rechercher un fleuve, un mont...",

@@ -161,7 +161,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'shop', label: t('nav.shop'), shortLabel: t('nav.short.shop'), icon: ShoppingBag },
     { id: 'planner', label: t('nav.planner'), shortLabel: t('nav.short.planner'), icon: Calendar, hideOnMobile: true },
     { id: 'atlas', label: t('nav.atlas'), shortLabel: t('nav.short.atlas'), icon: Globe },
-    { id: 'active_visual', label: 'Active Visuel', shortLabel: 'Visuel', icon: Zap },
+    { id: 'active_visual', label: t('nav.activeVisual'), shortLabel: t('nav.short.activeVisual'), icon: Zap },
     { id: 'social', label: t('nav.social'), shortLabel: t('nav.short.social'), icon: Layers, hideOnMobile: true },
     { id: 'feedback', label: t('nav.feedback'), shortLabel: t('nav.short.feedback'), icon: MessageSquare, onClick: () => setIsFeedbackOpen(true) },
     { id: 'rating', label: t('nav.rating'), shortLabel: t('nav.short.rating'), icon: Star, onClick: () => setIsRatingOpen(true) },

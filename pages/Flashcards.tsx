@@ -15,12 +15,15 @@ import {
     Calendar,
     Layers,
     Download,
-    CheckCircle2
+    CheckCircle2,
+    ShieldCheck
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { openrouterService } from '../services/openrouter';
 import { FlashcardDeck, Flashcard } from '../types';
 import { logUserActivity } from '../services/activityService';
+import { useFlashcardStore } from '../services/flashcardStore';
+import { FlashcardMode } from './FlashcardMode';
 
 interface FlashcardsProps {
     onStartSession: (deck: FlashcardDeck, cards: Flashcard[]) => void;
@@ -28,9 +31,17 @@ interface FlashcardsProps {
 
 const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
     const { user, decks, flashcards, saveFlashcardDeck, deleteFlashcardDeck, addActivity, downloadCourse, offlinePacks, t, settings } = useStore();
+    const { cards: srsCards, getCardsToReview } = useFlashcardStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatorInput, setGeneratorInput] = useState('');
+    const [showSrsMode, setShowSrsMode] = useState(false);
+
+    if (showSrsMode) {
+        return <FlashcardMode onClose={() => setShowSrsMode(false)} />;
+    }
+
+    const reviewCount = getCardsToReview().length;
 
     const handleGenerateDeck = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -163,6 +174,54 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Special SRS Deck for Quiz Errors */}
+                    {srsCards.length > 0 && (
+                        <motion.div
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="group cursor-pointer"
+                            onClick={() => setShowSrsMode(true)}
+                        >
+                            <div className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-purple-500/30 shadow-xl hover:border-purple-500/50 transition-all relative overflow-hidden h-full flex flex-col bg-purple-500/5">
+                                <div className="absolute top-0 right-0 p-4 md:p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Brain size={60} md:size={80} className="text-purple-500" />
+                                </div>
+
+                                <div className="space-y-4 md:space-y-6 relative z-10">
+                                    <div className="flex justify-between items-start">
+                                        <div className="px-2.5 py-1 bg-purple-500/20 rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest text-purple-400">
+                                            Mémorisation Auto
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {reviewCount > 0 && (
+                                                <div className="px-2 py-0.5 bg-orange-500 text-white rounded-full text-[8px] font-black animate-pulse">
+                                                    {reviewCount} À RÉVISER
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-1.5 md:mb-2 leading-tight group-hover:text-purple-400 transition-colors">Révision des Erreurs</h4>
+                                        <p className="text-[10px] md:text-xs text-slate-500 font-medium leading-relaxed">
+                                            Toutes les questions ratées lors de vos quiz sont sauvegardées ici pour une mémorisation par répétition espacée.
+                                        </p>
+                                    </div>
+
+                                    <div className="pt-4 md:pt-6 border-t border-purple-500/10 mt-auto flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-1">
+                                            {reviewCount > 0 ? "Continuer la mémorisation" : "Consulter mes cartes"} <ChevronRight size={12} md:size={14} />
+                                        </span>
+                                        <div className="w-8 h-8 rounded-full bg-purple-500/10 text-purple-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                            <ShieldCheck size={16} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
                     <AnimatePresence>
                         {filteredDecks.map((deck) => (
                             <motion.div

@@ -15,7 +15,9 @@ import {
   MessageSquare,
   Plus,
   RefreshCw,
-  Send
+  Send,
+  Activity,
+  Layers
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
@@ -465,6 +467,44 @@ export const AILab: React.FC = () => {
                   <div className="flex items-center gap-2 text-purple-400 font-black uppercase tracking-widest text-[10px]">{t('ailab.startChallenge')} <ChevronRight size={14} /></div>
                 </div>
               </motion.div>
+            </div>
+
+            {/* Visual Labs Section */}
+            <div className="space-y-8 pt-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter">{t('ailab.visualLabs')}</h3>
+                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">{t('ailab.visualLabsDesc')}</p>
+                </div>
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('nav_change', { detail: 'active_visual' }))}
+                  className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold hover:bg-white/10 transition-all text-sm"
+                >
+                  {t('common.viewAll')}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  { id: 'chemistry', title: t('ailab.chemistryTitle'), sub: t('ailab.chemistrySubtitle'), icon: FlaskRound, color: 'bg-emerald-500' },
+                  { id: 'electricity', title: t('ailab.electricityTitle'), sub: t('ailab.electricitySubtitle'), icon: Zap, color: 'bg-amber-500' },
+                  { id: 'mechanics', title: t('ailab.mechanicsTitle'), sub: t('ailab.mechanicsSubtitle'), icon: Activity, color: 'bg-blue-500' },
+                  { id: 'optics', title: t('ailab.opticsTitle'), sub: t('ailab.opticsSubtitle'), icon: Layers, color: 'bg-fuchsia-500' }
+                ].map((lab) => (
+                  <motion.div 
+                    key={lab.id}
+                    whileHover={{ y: -8, scale: 1.02 }}
+                    onClick={() => window.dispatchEvent(new CustomEvent('nav_change', { detail: 'active_visual' }))}
+                    className="relative group cursor-pointer overflow-hidden rounded-3xl bg-white/5 border border-white/10 p-6 transition-all hover:bg-white/10"
+                  >
+                    <div className={`w-12 h-12 rounded-2xl ${lab.color} flex items-center justify-center text-white mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
+                      <lab.icon size={24} />
+                    </div>
+                    <h4 className="text-white font-black uppercase tracking-tight mb-1">{lab.title}</h4>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{lab.sub}</p>
+                  </motion.div>
+                ))}
+              </div>
             </div>
 
             {/* Recent Sessions Quick Access */}
