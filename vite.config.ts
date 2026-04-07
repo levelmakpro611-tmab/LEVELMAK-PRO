@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt', // Change to prompt to force a reload message if possible
         injectRegister: 'script',
         includeAssets: ['logo.png', 'tmab_logo.png'],
         devOptions: {
@@ -23,14 +23,14 @@ export default defineConfig(({ mode }) => {
           navigateFallback: 'index.html',
         },
         manifest: {
-          name: 'LEVELMAK PRO',
-          short_name: 'LEVELMAK',
+          name: 'LEVELMAK PRO V1.9', // Changed name to bust cache
+          short_name: 'LMAK 1.9',       // Changed short_name
           description: 'Ton compagnon IA pour une réussite scolaire sans limites.',
           theme_color: '#0f172a',
           background_color: '#0f172a',
           display: 'standalone',
           start_url: '/',
-          id: '/',
+          id: '/v1.9', // Changed ID to bust cache
           icons: [
             {
               src: 'logo.png',
@@ -47,7 +47,8 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          cleanupOutdatedCaches: true, // Force cleanup of old versions
+          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // Increased size limit
           globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
           runtimeCaching: [
             {

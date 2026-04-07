@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppProvider, useStore } from './hooks/useStore';
 import Auth from './pages/Auth';
-import Layout from './components/Layout';
+import AppShell from './components/AppShell';
 import Dashboard from './pages/Dashboard';
 import QuizGenerator from './pages/QuizGenerator';
 import QuizPlayer from './pages/QuizPlayer';
@@ -117,21 +117,21 @@ const AppContent: React.FC = () => {
 
   if (currentQuiz) {
     return (
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <AppShell activeTab={activeTab} setActiveTab={setActiveTab}>
         <QuizPlayer quiz={currentQuiz} onClose={() => setCurrentQuiz(null)} />
-      </Layout>
+      </AppShell>
     );
   }
 
   if (currentDeck) {
     return (
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <AppShell activeTab={activeTab} setActiveTab={setActiveTab}>
         <FlashcardPlayer
           deck={currentDeck.deck}
           cards={currentDeck.cards}
           onClose={() => setCurrentDeck(null)}
         />
-      </Layout>
+      </AppShell>
     );
   }
 
@@ -232,7 +232,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <AppShell activeTab={activeTab} setActiveTab={setActiveTab}>
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
@@ -261,7 +261,7 @@ const AppContent: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </Layout>
+    </AppShell>
   );
 };
 
