@@ -151,6 +151,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
 
   const navItems = [
     { id: 'dashboard', label: t('nav.dashboard'), shortLabel: t('nav.short.dashboard'), icon: LayoutDashboard },
+    { id: 'atlas', label: t('nav.atlas'), shortLabel: t('nav.short.atlas'), icon: Globe },
+    { id: 'active_visual', label: t('nav.activeVisual'), shortLabel: t('nav.short.activeVisual'), icon: Zap },
     { id: 'quiz', label: t('nav.quiz'), shortLabel: t('nav.short.quiz'), icon: BrainCircuit },
     { id: 'summary', label: t('nav.summary'), shortLabel: t('nav.short.summary'), icon: Sparkles },
     // { id: 'library', label: t('nav.library'), shortLabel: t('nav.short.library'), icon: BookOpen }, // Temporarily hidden
@@ -160,8 +162,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'ranking', label: t('nav.ranking'), shortLabel: t('nav.short.ranking'), icon: Trophy },
     { id: 'shop', label: t('nav.shop'), shortLabel: t('nav.short.shop'), icon: ShoppingBag },
     { id: 'planner', label: t('nav.planner'), shortLabel: t('nav.short.planner'), icon: Calendar, hideOnMobile: true },
-    { id: 'atlas', label: t('nav.atlas'), shortLabel: t('nav.short.atlas'), icon: Globe },
-    { id: 'active_visual', label: t('nav.activeVisual'), shortLabel: t('nav.short.activeVisual'), icon: Zap },
     { id: 'social', label: t('nav.social'), shortLabel: t('nav.short.social'), icon: Layers, hideOnMobile: true },
     { id: 'feedback', label: t('nav.feedback'), shortLabel: t('nav.short.feedback'), icon: MessageSquare, onClick: () => setIsFeedbackOpen(true) },
     { id: 'rating', label: t('nav.rating'), shortLabel: t('nav.short.rating'), icon: Star, onClick: () => setIsRatingOpen(true) },
@@ -303,6 +303,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               <LogOut size={20} />
               <span className="tracking-wide">{t('auth.logout')}</span>
             </button>
+
+            <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-1 px-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">v0.1.9 Stable Build</span>
+              </div>
+              <span className="text-[8px] text-slate-500 font-bold ml-4">Deployment: 2026-04-07 14:30</span>
+            </div>
           </div>
         </div>
       </aside>
