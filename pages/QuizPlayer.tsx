@@ -19,12 +19,13 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logUserActivity } from '../services/activityService';
-import { Quiz } from '../types';
+import { Quiz, QuizQuestion } from '../types';
 import { useStore } from '../hooks/useStore';
 import { feedbackService } from '../services/feedbackService';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { WorldBrainMap } from '../components/WorldBrainMap';
+import { useFlashcardStore } from '../services/flashcardStore';
 
 interface QuizPlayerProps {
   quiz: Quiz;
@@ -32,9 +33,10 @@ interface QuizPlayerProps {
 }
 
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
-  const { user, addXp, addActivity, trackTime, usePotion, betLevelCoins, addLevelCoins, updateSRSMetadata, plantInGarden, t } = useStore();
+  const { user, addXp, addActivity, trackTime, usePotion, betLevelCoins, addLevelCoins, updateSRSMetadata, plantInGarden, saveQuiz, t } = useStore();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
   const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
@@ -47,6 +49,9 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     betTarget: number;
     betWon: boolean | null;
   } | null>(null);
+
+  const [wrongQuestions, setWrongQuestions] = useState<QuizQuestion[]>([]);
+  const { addFromErrors } = useFlashcardStore();
 
   const [shieldActive, setShieldActive] = useState(false);
   const [showOracle, setShowOracle] = useState(true);
@@ -108,6 +113,11 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         setEncouragement(t('quiz.player.feedback.shield'));
         return;
       }
+      setWrongQuestions(prev => {
+        // Prevent storing the same question twice if they retry
+        if (prev.find(q => q.id === currentQuestion.id)) return prev;
+        return [...prev, currentQuestion];
+      });
       setEncouragement(t('quiz.player.feedback.fail'));
       feedbackService.answerFeedback(false);
     }
@@ -277,6 +287,11 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
     if (user) {
       logUserActivity(user.id, user.name, 'quiz', `Completed Quiz: ${quiz.title}`, { score: score, total: quiz.questions.length, xpGained: xpGained, timeSpent: timeSpent });
+    }
+
+    if (wrongQuestions.length > 0) {
+      addFromErrors(wrongQuestions, quiz.title || 'Quiz sans titre', quiz.subject || 'Général');
+      addActivity('flashcard', 'Nouvelles Flashcards ! 🗂️', `${wrongQuestions.length} cartes de révision ont été générées automatiquement de tes erreurs.`);
     }
 
     setResultsData({
@@ -525,12 +540,38 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
             <Repeat size={16} className="md:w-[18px] md:h-[18px]" /> {t('quiz.player.results.retryBtn')}
           </button>
 
+          {wrongQuestions.length > 0 && (
+             <button
+              onClick={() => {
+                 onClose();
+                 // Logic to navigate to Flashcard mode will be in parent or layout
+              }}
+              className="flex-1 py-5 md:py-6 bg-purple-600 text-white rounded-xl md:rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-[11px] shadow-glow flex items-center justify-center gap-2 md:gap-3 hover:scale-[1.03] transition-all"
+            >
+              <Repeat size={16} className="md:w-[18px] md:h-[18px]" /> Réviser Erreurs ({wrongQuestions.length})
+            </button>
+          )}
+
+          {!isSaved && (
+            <button
+              onClick={() => {
+                saveQuiz(quiz);
+                setIsSaved(true);
+                addActivity('quiz', 'Quiz Enregistré', `Le quiz "${quiz.title}" a été ajouté à ta bibliothèque.`);
+              }}
+              className="flex-1 py-5 md:py-6 bg-orange-600 text-white rounded-xl md:rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-[11px] shadow-glow flex items-center justify-center gap-2 md:gap-3 hover:scale-[1.03] transition-all"
+            >
+              <Zap size={16} className="md:w-[18px] md:h-[18px]" /> Sauvegarder
+            </button>
+          )}
+
           <button
             onClick={handleExportPDF}
             className="flex-1 py-6 bg-accent/10 hover:bg-accent/20 text-accent rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] border border-accent/20 transition-all flex items-center justify-center gap-3"
           >
             <Download size={18} /> {t('common.exportPDF')}
           </button>
+
 
           <button
             onClick={onClose}

@@ -22,7 +22,9 @@ import {
   CheckCircle2,
   Wifi,
   WifiOff,
-  Download
+  Download,
+  Layers,
+  Play
 } from 'lucide-react';
 import {
   LineChart,
@@ -37,6 +39,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
+import { useFlashcardStore } from '../services/flashcardStore';
 import { openrouterService } from '../services/openrouter';
 import { XP_PER_LEVEL, AVATAR_LEVELS, LEAGUES, getLeagueFromXp, getXpForNextLevel } from '../constants';
 import { MindGarden } from '../components/MindGarden';
@@ -83,6 +86,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     !user.lastDiceRoll || user.lastDiceRoll !== today,
     [user.lastDiceRoll, today]
   );
+  
+  const { getCardsToReview } = useFlashcardStore();
+  const [localCardsToReview, setLocalCardsToReview] = React.useState(getCardsToReview());
+
+  React.useEffect(() => {
+    // Refresh quand on revient sur le dashboard
+    setLocalCardsToReview(getCardsToReview());
+  }, [getCardsToReview]);
 
   const dueQuizzes = React.useMemo(() =>
     quizzes.filter(q => q.nextReviewDate && new Date(q.nextReviewDate) <= new Date()),
@@ -311,18 +322,38 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </div>
 
           {/* Spaced Repetition (SRS) Section */}
-          {(dueQuizzes.length > 0 || dueDecks.length > 0) && (
+          {(dueQuizzes.length > 0 || dueDecks.length > 0 || localCardsToReview.length > 0) && (
             <section className="animate-fade-in space-y-6">
               <div className="flex items-center justify-between px-2">
                 <h3 className="text-xl md:text-2xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
                   <BrainCircuit className="text-primary animate-pulse" /> {t('dashboard.srs.title') || 'À Réviser'}
                 </h3>
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-                  {dueQuizzes.length + dueDecks.length} {t('dashboard.srs.items') || 'éléments dus'}
+                  {dueQuizzes.length + dueDecks.length + (localCardsToReview.length > 0 ? 1 : 0)} {t('dashboard.srs.items') || 'éléments dus'}
                 </span>
               </div>
-
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {localCardsToReview.length > 0 && (
+                   <div className="glass p-5 rounded-3xl border border-purple-500/30 bg-purple-500/10 group hover:border-purple-500 transition-all flex items-center justify-between shadow-glow-purple">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400 border border-purple-500/30">
+                        <Layers size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-purple-400">Erreurs passées</p>
+                        <h4 className="font-bold text-white text-lg leading-tight">Flashcards</h4>
+                        <p className="text-[10px] text-purple-300 font-bold mt-1">{localCardsToReview.length} en attente</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onNavigate('flashcard_mode')}
+                      className="p-3 bg-purple-600 text-white rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:scale-110 active:scale-95 transition-all"
+                    >
+                      <Play size={20} className="ml-0.5" />
+                    </button>
+                  </div>
+                )}
                 {dueQuizzes.map(quiz => (
                   <div key={quiz.id} className="glass p-5 rounded-3xl border border-primary/20 bg-primary/5 group hover:border-primary transition-all flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -468,7 +499,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </section>
 
           {/* World Brain Map */}
-          <WorldBrainMap />
+          <WorldBrainMap onNavigate={onNavigate} />
 
           {/* Collaborative Doodle */}
           <CollaborativeDoodle />

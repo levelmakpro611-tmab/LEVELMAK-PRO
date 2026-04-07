@@ -14,14 +14,18 @@ import StudyPlanner from './pages/StudyPlanner';
 import Settings from './pages/Settings';
 import Flashcards from './pages/Flashcards';
 import FlashcardPlayer from './pages/FlashcardPlayer';
+import { FlashcardMode } from './pages/FlashcardMode';
 import Ranking from './pages/Ranking';
 import Analytics from './pages/Analytics';
 import AISummary from './pages/AISummary';
 import Library from './pages/Library';
 import LevelBot from './components/LevelBot';
+import AtlasLibrary from './components/AtlasLibrary';
 import AdminDashboard from './pages/AdminDashboard';
 import BookReader from './components/BookReader';
 import { AILab } from './components/AILab';
+import { WorldBrainMap } from './components/WorldBrainMap';
+import { ActiveVisual } from './pages/ActiveVisual';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
 import { Loader2 } from 'lucide-react';
 import { openrouterService } from './services/openrouter';
@@ -208,6 +212,19 @@ const AppContent: React.FC = () => {
         return <Analytics />;
       case 'settings':
         return <Settings />;
+      case 'atlas':
+        return <AtlasLibrary onNavigate={setActiveTab} />;
+      case 'map':
+        return (
+          <WorldBrainMap 
+            onCloseMap={() => setActiveTab('atlas')} 
+            onNavigate={setActiveTab} 
+          />
+        );
+      case 'flashcard_mode':
+        return <FlashcardMode onClose={() => setActiveTab('dashboard')} />;
+      case 'active_visual':
+        return <ActiveVisual />;
       default:
         return <Dashboard onNavigate={setActiveTab} />;
     }
@@ -215,9 +232,6 @@ const AppContent: React.FC = () => {
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      <AnimatePresence mode="wait">
-      </AnimatePresence>
-
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}

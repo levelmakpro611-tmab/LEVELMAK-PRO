@@ -221,7 +221,10 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
     
     setTimeout(() => {
       setIsTraveling(false);
-      const firstMsg = { role: 'assistant' as const, content: t('ailab.tmWelcome', { name: char.name, era: char.era }) };
+      const firstMsg = { 
+        role: 'assistant' as const, 
+        content: t('ailab.tmWelcome', { name: char.name, role: char.role, era: char.era }) 
+      };
       const newMessages = [firstMsg];
       setMessages(newMessages);
       

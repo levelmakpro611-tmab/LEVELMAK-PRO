@@ -39,7 +39,14 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
         if (profile) {
             // Check if profile is already up to date with auth email if it's missing
             if (!profile.email && supabaseUser.email) {
-                await supabase.from('profiles').update({ email: supabaseUser.email }).eq('id', supabaseUser.id);
+                await supabase.from('profiles').update({ 
+                    email: supabaseUser.email,
+                    last_active: new Date().toISOString()
+                }).eq('id', supabaseUser.id);
+            } else {
+                await supabase.from('profiles').update({ 
+                    last_active: new Date().toISOString()
+                }).eq('id', supabaseUser.id);
             }
 
             const appUser: User = {
@@ -133,7 +140,8 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
                 stats: newUser.stats,
                 streak: newUser.streak,
                 onboarding_completed: newUser.onboardingCompleted,
-                status: 'active'
+                status: 'active',
+                last_active: new Date().toISOString()
             });
 
         if (insertError) {
@@ -285,7 +293,8 @@ export const signUpWithPhone = async (params: {
             const normalizedPhone = phone.replace(/\D/g, '');
             await supabase.from('profiles').update({
                 auth_email: authEmail,
-                phone_number: normalizedPhone
+                phone_number: normalizedPhone,
+                last_active: new Date().toISOString()
             }).eq('id', data.user.id);
             console.log('Saved auth_email and phone to profile:', authEmail, normalizedPhone);
         } catch (updateErr) {
@@ -396,7 +405,8 @@ export const signInWithPhone = async (phone: string, password: string): Promise<
                 try {
                     await supabase.from('profiles').update({ 
                         auth_email: usedEmail,
-                        phone_number: normalizedDigits 
+                        phone_number: normalizedDigits,
+                        last_active: new Date().toISOString()
                     }).eq('id', finalResult.data.user.id);
                 } catch (_) {}
             })();

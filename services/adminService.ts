@@ -110,14 +110,29 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
 
     try {
         // 1. Total and Active Users (Efficient counts)
-        const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        const { count: totalUsers, error: tError } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        console.log('--- ADMIN DIAGNOSTIC ---');
+        console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+        console.log('Total Users Count:', totalUsers);
+        if (tError) console.error('Error fetching totalUsers:', tError);
         
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const { count: activeUsers } = await supabase
+        const { count: activeUsers, error: aError } = await supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true })
-            .gt('last_active', sevenDaysAgo.toISOString());
+            .or(`last_active.gt."${sevenDaysAgo.toISOString()}",created_at.gt."${sevenDaysAgo.toISOString()}"`);
+        console.log('Active Users Count:', activeUsers);
+        if (aError) console.error('Error fetching activeUsers:', aError);
+
+        const { data: summaryData, error: summaryError } = await supabase
+            .from('profiles')
+            .select('total_xp, stats, created_at')
+            .limit(2000);
+        
+        console.log('Summary Data Length:', summaryData?.length || 0);
+        if (summaryError) console.error('Error fetching summaryData:', summaryError);
+        console.log('------------------------');
 
         // 2. New Users Today (Query instead of filtering in JS)
         const startOfToday = new Date();
@@ -134,10 +149,7 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
         
         // Let's assume for now we only need totals. 
         // If we want real engagement stats for ALL users, we should use a Postgres View or RPC.
-        const { data: summaryData } = await supabase
-            .from('profiles')
-            .select('total_xp, stats, created_at')
-            .limit(2000); // Guard against massive tables
+        // (summaryData was already fetched above for the diagnostic)
 
         if (!summaryData) throw new Error("Could not fetch user summary for stats");
 
@@ -150,18 +162,18 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             totalUsers: totalUsers || 0,
             activeUsers: activeUsers || 0,
             newUsersToday: newUsersToday || 0,
-            newUsersWeek: 0, // Simplified for performance
-            newUsersMonth: 0,
-            newUsersYear: 0,
-            quizzesGenerated,
-            quizzesToday: 0,
-            flashcardsCreated: 0,
-            flashcardsToday: 0,
-            storiesWritten,
-            storiesToday: 0,
-            booksRead,
-            booksToday: 0,
-            totalLearningHours,
+            newUsersWeek: summaryData.filter(u => isInPeriod(u.created_at, 7)).length,
+            newUsersMonth: summaryData.filter(u => isInPeriod(u.created_at, 30)).length,
+            newUsersYear: summaryData.filter(u => isInPeriod(u.created_at, 365)).length,
+            quizzesGenerated: quizzesGenerated || 0,
+            quizzesToday: summaryData.reduce((sum, u) => sum + (isToday(u.stats?.lastQuizDate) ? 1 : 0), 0),
+            flashcardsCreated: summaryData.reduce((sum, u) => sum + (u.stats?.flashcardsCreated || 0), 0),
+            flashcardsToday: summaryData.reduce((sum, u) => sum + (isToday(u.stats?.lastFlashcardDate) ? 1 : 0), 0),
+            storiesWritten: storiesWritten || 0,
+            storiesToday: summaryData.reduce((sum, u) => sum + (isToday(u.stats?.lastStoryDate) ? 1 : 0), 0),
+            booksRead: booksRead || 0,
+            booksToday: summaryData.reduce((sum, u) => sum + (isToday(u.stats?.lastBookDate) ? 1 : 0), 0),
+            totalLearningHours: totalLearningHours || 0,
             averageEngagementRate: (totalUsers || 0) > 0 ? Number((((activeUsers || 0) / (totalUsers || 1)) * 100).toFixed(1)) : 0
         };
 
@@ -719,7 +731,10 @@ function isInPeriod(dateString: string, days: number): boolean {
 
 export const getDemographicStats = async () => {
     try {
-        const { data: users, error } = await supabase.from('profiles').select('*');
+        // Optimized: only select essential columns for demographic stats
+        const { data: users, error } = await supabase
+            .from('profiles')
+            .select('gender, age_range');
         if (error) throw error;
 
         const stats = {

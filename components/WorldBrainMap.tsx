@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HapticFeedback } from '../services/nativeAdapters';
-import { HandMetal, Globe, EyeOff, Eye, Send, Heart, Flame, Sparkles, Swords, X, Palette, Target } from 'lucide-react';
+import { HandMetal, Globe, EyeOff, Eye, Send, Heart, Flame, Sparkles, Swords, X, Palette, Target, Menu } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { supabase } from '../services/supabase';
 import { BattleRequest, BattleState, BattlePlayer, QuizQuestion, BattleType, ActiveUser } from '../types';
 import { QuizBattle } from './QuizBattle';
 import { CollaborativeDoodle } from './CollaborativeDoodle';
+import { ATLAS_DATA, GeoFeature } from '../utils/geoAtlasData';
+import { Map as MapIcon, Waves, HardHat, Mountain, Thermometer } from 'lucide-react';
 
 // Fix Leaflet default icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -27,23 +29,117 @@ const StudentIcon = new L.DivIcon({
   iconAnchor: [10, 10]
 });
 
-const SAMPLE_QUESTIONS: QuizQuestion[] = [
-    { id: 'q1', text: 'Combien font 7 x 8 ?', options: ['54', '56', '64', '58'], correctAnswer: 1, explanation: '7 x 8 = 56.' },
-    { id: 'q2', text: 'Quelle est la capitale de l\'Australie ?', options: ['Sydney', 'Melbourne', 'Canberra', 'Brisbane'], correctAnswer: 2, explanation: 'Contrairement aux idées reçues, Canberra est la capitale.' },
-    { id: 'q3', text: 'Qui a écrit Les Misérables ?', options: ['Baudelaire', 'Molière', 'Victor Hugo', 'Zola'], correctAnswer: 2, explanation: 'Victor Hugo a publié Les Misérables en 1862.' },
-    { id: 'q4', text: 'Quelle est la formule chimique de l\'eau ?', options: ['CO2', 'NaCl', 'H2O', 'O2'], correctAnswer: 2, explanation: 'H2O = 2 atomes d\'Hydrogène, 1 d\'Oxygène.' },
-    { id: 'q5', text: 'Dans quel organe trouve-t-on le myocarde ?', options: ['Le foie', 'Le coeur', 'Les poumons', 'Le cerveau'], correctAnswer: 1, explanation: 'Le myocarde est le muscle du coeur.' }
-];
+// Atlas Icons
+const RiverIcon = new L.DivIcon({
+  className: 'atlas-river-marker',
+  html: `<div style="background-color: #00B4FF; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 12px rgba(0, 180, 255, 0.8);"></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
+});
+
+const ResourceIcon = new L.DivIcon({
+  className: 'atlas-resource-marker',
+  html: `<div style="background-color: #EAB308; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px rgba(234,179,8,0.6);"></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9]
+});
+
+const ReliefIcon = new L.DivIcon({
+  className: 'atlas-relief-marker',
+  html: `<div style="background-color: #F97316; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px rgba(249,115,22,0.6);"></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9]
+});
 
 interface WorldBrainMapProps {
     customBattleMode?: 'custom_quiz';
     customBattleData?: any;
     customBetAmount?: number;
     onCloseMap?: () => void;
+    onNavigate?: (tab: string) => void;
 }
 
-export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, customBattleData, customBetAmount, onCloseMap }) => {
-  const { user, addNotification, updateLocation } = useStore();
+export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, customBattleData, customBetAmount, onCloseMap, onNavigate }) => {
+  const { t, user, addNotification, updateLocation, mapFocusFeatureId, setMapFocusFeatureId, setAtlasFocusFeatureId } = useStore();
+
+  
+  // Helper to render professional Atlas Popups
+  const renderAtlasPopup = (feature: GeoFeature) => (
+    <div className="p-1 min-w-[180px] font-sans">
+      <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-2">
+        {feature.type === 'river' && <Waves size={14} className="text-blue-400" />}
+        {feature.type === 'resource' && <HardHat size={14} className="text-yellow-400" />}
+        {feature.type === 'relief' && <Mountain size={14} className="text-orange-400" />}
+        {feature.type === 'climate' && <Thermometer size={14} className="text-emerald-400" />}
+        <p className="font-black text-[9px] uppercase tracking-widest text-orange-500">
+          {t(`atlas.${feature.type}`)}
+        </p>
+      </div>
+      
+      <p className="font-bold text-slate-950 text-base leading-tight mb-1">
+        {t(`atlas.lessons.${feature.id}.title`)}
+      </p>
+      <p className="text-[10px] text-slate-700 mb-3 leading-relaxed line-clamp-3">
+        {t(`atlas.lessons.${feature.id}.content`)}
+      </p>
+
+      
+      <div className="space-y-1 pt-1">
+          {feature.details?.altitude && (
+            <div className="flex justify-between items-center text-[10px] bg-slate-50 p-1.5 rounded-lg mb-1 border border-slate-100">
+                <span className="text-orange-500 font-bold uppercase text-[8px] tracking-wider">Altitude</span> 
+                <span className="font-black text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded">{feature.details.altitude}</span>
+            </div>
+          )}
+          {feature.details?.length && (
+            <div className="flex justify-between items-center text-[10px] bg-slate-50 p-1.5 rounded-lg mb-1 border border-slate-100">
+                <span className="text-orange-500 font-bold uppercase text-[8px] tracking-wider">Longueur</span> 
+                <span className="font-black text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">{feature.details.length}</span>
+            </div>
+          )}
+          {feature.details?.rainfall && (
+            <div className="flex justify-between items-center text-[10px] bg-slate-50 p-1.5 rounded-lg mb-1 border border-slate-100">
+                <span className="text-orange-500 font-bold uppercase text-[8px] tracking-wider">Pluviométrie</span> 
+                <span className="font-black text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">{feature.details.rainfall}</span>
+            </div>
+          )}
+          {feature.details?.mainResource && (
+            <div className="flex justify-between items-center text-[10px] bg-slate-50 p-1.5 rounded-lg mb-1 border border-slate-100">
+                <span className="text-orange-500 font-bold uppercase text-[8px] tracking-wider">Gisement</span> 
+                <span className="font-black text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded">{feature.details.mainResource}</span>
+            </div>
+          )}
+          {feature.details?.source && (
+            <div className="text-[9px] mt-2">
+                <span className="block uppercase font-black text-slate-400 text-[8px] mb-0.5 tracking-tighter">Source</span>
+                <span className="text-slate-800 italic font-medium">{feature.details.source}</span>
+            </div>
+          )}
+          {feature.details?.region && (
+            <div className="text-[9px] mt-2 border-t border-slate-100 pt-2">
+                <span className="block uppercase font-black text-slate-400 text-[8px] mb-0.5 tracking-tighter">Localisation</span>
+                <span className="text-slate-800 font-bold">{feature.details.region}</span>
+            </div>
+          )}
+      </div>
+
+      <button
+         onClick={() => {
+            HapticFeedback.selection();
+            setAtlasFocusFeatureId(feature.id);
+            if (onNavigate) {
+                onNavigate('atlas');
+            }
+         }}
+         className="w-full mt-3 py-2 text-[10px] font-black uppercase text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+      >
+         {t('atlas.viewDetails')}
+      </button>
+    </div>
+  );
+  const [activeAtlasCategory, setActiveAtlasCategory] = useState<'none' | 'river' | 'resource' | 'relief' | 'climate'>('none');
+  const [isAtlasMenuOpen, setIsAtlasMenuOpen] = useState(false);
+  const [focusedFeatureId, setFocusedFeatureId] = useState<string | null>(null);
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
   const [allProfiles, setAllProfiles] = useState<ActiveUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,8 +156,8 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
   const [map, setMap] = useState<L.Map | null>(null);
   const [activeBattle, setActiveBattle] = useState<{ state: BattleState, questions: QuizQuestion[], isHost: boolean } | null>(null);
   const [channelRef, setChannelRef] = useState<any>(null);
+  
   const sessionKey = useMemo(() => `${user?.id || 'anon'}_${Math.random().toString(36).substring(2, 9)}`, [user?.id]);
-
   const defaultCenter: [number, number] = myLocation ? [myLocation.lat, myLocation.lng] : [48.8566, 2.3522];
 
   // Set up geolocation independently
@@ -77,6 +173,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
       );
     }
   }, [isLocationShared, updateLocation]);
+
 
   // Set up channel and subscriptions
   useEffect(() => {
@@ -164,6 +261,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
               try {
                   await channelRef.track({
                       user_id: user.id,
+                      session_id: sessionKey,
                       name: user.name,
                       lat: myLocation?.lat || null,
                       lng: myLocation?.lng || null,
@@ -190,6 +288,41 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
       return () => clearTimeout(timer);
   }, [channelRef, myLocation?.lat, myLocation?.lng, isLocationShared, user]);
 
+  // Handle Atlas Focus from Library (Enhanced)
+  useEffect(() => {
+    if (map && mapFocusFeatureId) {
+      const feature = ATLAS_DATA.find(f => f.id === mapFocusFeatureId);
+      if (feature) {
+        // Set the correct category first
+        setActiveAtlasCategory(feature.type);
+        
+        // Find center coordinates
+        let focusCoords: [number, number];
+        if (Array.isArray(feature.coords[0])) {
+            const coords = feature.coords as [number, number][];
+            focusCoords = coords[Math.floor(coords.length / 2)];
+        } else {
+            focusCoords = feature.coords as [number, number];
+        }
+
+        // Fly to location
+        setTimeout(() => {
+            map.flyTo(focusCoords, 11, {
+                animate: true,
+                duration: 2
+            });
+            
+            // Set focused ID to open popup
+            setFocusedFeatureId(feature.id);
+            HapticFeedback.success();
+            
+            // Clear the focus ID so it can be re-triggered
+            setMapFocusFeatureId(null);
+        }, 300);
+      }
+    }
+  }, [map, mapFocusFeatureId, setMapFocusFeatureId, setActiveAtlasCategory]);
+
   const toggleLocationShare = () => {
     HapticFeedback.selection();
     const newState = !isLocationShared;
@@ -200,6 +333,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
         else if (user) {
             channelRef?.track({
                 user_id: user.id,
+                session_id: sessionKey,
                 name: user.name,
                 lat: myLocation.lat,
                 lng: myLocation.lng,
@@ -227,7 +361,9 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
       HapticFeedback.success();
       
       const battleType = customBattleMode || type;
-      const questions = customBattleMode === 'custom_quiz' ? customBattleData.questions : (type === 'quiz' ? SAMPLE_QUESTIONS : []);
+      const questions = customBattleMode === 'custom_quiz' 
+        ? customBattleData.questions 
+        : (type === 'quiz' ? t('atlas.sampleQuestions', { returnObjects: true }) : []);
       
       const newRequest: BattleRequest = {
           id: `${battleType}_${Date.now()}`,
@@ -246,7 +382,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
           event: 'battle_invite',
           payload: { request: newRequest }
       });
-      addNotification('success', 'Défi lancé !', `En attente de la réponse de ${otherUser.name}...`);
+      addNotification('success', t('common.success'), t('atlas.duelSent', { name: otherUser.name }));
   };
 
   const respondToInvite = (accept: boolean) => {
@@ -291,29 +427,56 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
 
   // Merge active users and all profiles
   const displayedUsers = useMemo(() => {
-    // Start with all offline profiles
-    const usersMap = new Map<string, ActiveUser>();
-    allProfiles.forEach(u => usersMap.set(u.user_id, u));
-    
-    // Override with active users (they have precise real-time lat/lng)
-    activeUsers.forEach(u => usersMap.set(u.user_id, u));
-    
-    const combined = Array.from(usersMap.values());
+    const query = searchQuery.toLowerCase();
+
+    // If Atlas is active, return ONLY Atlas data (Exclusive mode)
+    if (activeAtlasCategory !== 'none') {
+        const atlasResults = ATLAS_DATA.filter(f => {
+            const title = t(`atlas.lessons.${f.id}.title`) || '';
+            return f.type === activeAtlasCategory && 
+            (title.toLowerCase().includes(query) || f.country.toLowerCase().includes(query) || query === 'guinée');
+        });
+        return atlasResults.map(f => ({
+            user_id: f.id,
+            name: t(`atlas.lessons.${f.id}.title`),
+            lat: Array.isArray(f.coords[0]) ? (f.coords[0] as [number, number])[0] : (f.coords as [number, number])[0],
+            lng: Array.isArray(f.coords[0]) ? (f.coords[0] as [number, number])[1] : (f.coords as [number, number])[1],
+            avatar: '',
+            timestamp: 0,
+            isAtlas: true
+        })) as any[];
+    }
+
+    // Default student search (Globe mode)
+    // We combine all profiles and active users, but handle multi-session
+    const combined: ActiveUser[] = [];
+    const seenSessions = new Set<string>();
+
+    // Add active users (potentially multiple sessions per user)
+    activeUsers.forEach(u => {
+        combined.push(u);
+        seenSessions.add(u.user_id);
+    });
+
+    // Add offline profiles only if they aren't already active
+    allProfiles.forEach(p => {
+        if (!seenSessions.has(p.user_id)) {
+            combined.push(p);
+        }
+    });
     
     if (!searchQuery.trim()) return combined;
-    
-    const query = searchQuery.toLowerCase();
     return combined.filter(u => u.name.toLowerCase().includes(query));
-  }, [activeUsers, allProfiles, searchQuery]);
+  }, [activeUsers, allProfiles, searchQuery, activeAtlasCategory, t]);
 
-  // Unique active students (by user_id)
-  const uniqueActiveCount = useMemo(() => {
-    const ids = new Set(activeUsers.map(u => u.user_id));
-    if (isLocationShared) ids.add(user?.id || 'anon');
-    return ids.size;
-  }, [activeUsers, isLocationShared, user?.id]);
+  // Count all unique sessions/devices active
+  const totalActiveSessions = useMemo(() => {
+    const sessions = new Set(activeUsers.map(u => (u as any).session_id || u.user_id));
+    if (isLocationShared) sessions.add(sessionKey);
+    return sessions.size;
+  }, [activeUsers, isLocationShared, sessionKey]);
 
-  const totalConnected = uniqueActiveCount;
+  const totalConnected = totalActiveSessions;
   const totalOnMap = displayedUsers.length + (isLocationShared ? 1 : 0);
 
   if (activeBattle) {
@@ -359,25 +522,108 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
                   
                   <div className="flex gap-4">
                       <button onClick={() => respondToInvite(false)} className="flex-1 py-3 rounded-xl font-bold bg-slate-800 text-slate-400 hover:bg-slate-700 transition">
-                          Refuser
+                          {t('common.cancel')}
                       </button>
                       <button onClick={() => respondToInvite(true)} className="flex-1 py-3 rounded-xl font-bold bg-blue-500 text-white hover:bg-blue-400 transition shadow-[0_0_20px_rgba(59,130,246,0.4)]">
-                          Accepter
+                          {t('common.accept')}
                       </button>
                   </div>
               </div>
           </div>
       )}
 
+      {/* Atlas Category & Student Selector */}
+      <div className="absolute top-32 left-8 z-[500] flex flex-col gap-3">
+        {/* Globe / Students Button (Always Visible) */}
+        <button
+          onClick={() => {
+            setActiveAtlasCategory('none');
+            setIsAtlasMenuOpen(false);
+            HapticFeedback.selection();
+            map?.setView(defaultCenter, 4);
+          }}
+          className={`group relative flex items-center justify-center w-12 h-12 rounded-2xl border transition-all duration-300 ${
+            activeAtlasCategory === 'none' 
+              ? 'bg-blue-600 border-white/30 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] scale-110 z-10' 
+              : 'bg-slate-900/80 backdrop-blur-md border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+          }`}
+          title="Vue Élèves"
+        >
+          <Globe size={20} />
+          <div className="absolute left-full ml-4 px-3 py-1 bg-slate-900 border border-white/10 rounded-lg text-white text-[10px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[600]">
+            Vue Étudiants
+          </div>
+        </button>
+
+        {/* Atlas Menu Toggle (Hamburger) */}
+        <button
+          onClick={() => {
+            setIsAtlasMenuOpen(!isAtlasMenuOpen);
+            HapticFeedback.selection();
+          }}
+          className={`group relative flex items-center justify-center w-12 h-12 rounded-2xl border transition-all duration-300 ${
+            isAtlasMenuOpen || activeAtlasCategory !== 'none'
+              ? 'bg-orange-600 border-white/30 text-white shadow-[0_0_20px_rgba(249,115,22,0.3)]' 
+              : 'bg-slate-900/80 backdrop-blur-md border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+          }`}
+          title="Menu Atlas"
+        >
+          <Menu size={20} className={`${isAtlasMenuOpen ? 'rotate-90' : 'rotate-0'} transition-transform duration-300`} />
+          <div className="absolute left-full ml-4 px-3 py-1 bg-slate-900 border border-white/10 rounded-lg text-white text-[10px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[600]">
+            Atlas Géographique
+          </div>
+        </button>
+
+        {/* Expandable Atlas Categories */}
+        <AnimatePresence>
+          {isAtlasMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex flex-col gap-3 mt-2"
+            >
+              {[
+                { id: 'river', icon: <Waves size={20} />, label: t('atlas.hydro'), color: 'bg-blue-600' },
+                { id: 'resource', icon: <HardHat size={20} />, label: t('atlas.resource'), color: 'bg-yellow-600' },
+                { id: 'relief', icon: <Mountain size={20} />, label: t('atlas.relief'), color: 'bg-orange-600' },
+                { id: 'climate', icon: <Thermometer size={20} />, label: t('atlas.climate'), color: 'bg-emerald-600' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                      setActiveAtlasCategory(cat.id as any);
+                      HapticFeedback.selection();
+                      // Zoom sur la Guinée pour centrer l'Atlas
+                      map?.flyTo([10.5, -11], 7, { animate: true, duration: 1.5 });
+                  }}
+                  className={`group relative flex items-center justify-center w-12 h-12 rounded-2xl border transition-all duration-300 ${
+                    activeAtlasCategory === cat.id 
+                      ? `${cat.color} border-white/30 text-white shadow-[0_0_20px_rgba(255,255,255,0.1)] scale-110 z-10` 
+                      : 'bg-slate-900/60 backdrop-blur-md border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                  }`}
+                  title={cat.label}
+                >
+                  {cat.icon}
+                  <div className="absolute left-full ml-4 px-3 py-1 bg-slate-900 border border-white/10 rounded-lg text-white text-[10px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[600]">
+                    {cat.label}
+                  </div>
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 relative z-10 gap-4">
         <div>
           <h2 className="text-3xl font-black text-white flex items-center gap-3">
             <Globe className="text-blue-400" size={28} />
-            Cerveaux en Action
+            {t('atlas.title')}
           </h2>
           <p className="text-slate-400 font-medium mt-1">
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-2" />
-            {totalConnected} {totalConnected > 1 ? 'élèves connectés' : 'élève connecté'}.
+            {t(totalConnected > 1 ? 'atlas.onlineStudents' : 'atlas.onlineStudent', { count: totalConnected })}
           </p>
         </div>
         
@@ -390,7 +636,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
             }`}
         >
             {isLocationShared ? <Eye size={16} /> : <EyeOff size={16} />}
-            {isLocationShared ? 'Position Publique' : 'Mode Fantôme'}
+            {isLocationShared ? t('atlas.publicPos') : t('atlas.ghostMode')}
         </button>
       </div>
 
@@ -404,7 +650,7 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
                   type="text" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher un camarade sur la carte..."
+                  placeholder={t('atlas.searchMap')}
                   className="w-full bg-slate-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] py-4 pl-14 pr-6 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium"
               />
               {searchQuery && (
@@ -418,7 +664,9 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
           </div>
           {searchQuery && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-300 z-[50]">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Résultats sur la carte</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+                    {activeAtlasCategory !== 'none' ? 'Résultats de l\'Atlas' : 'Résultats sur la carte'}
+                  </p>
                   {displayedUsers.length > 0 ? (
                       <div className="space-y-2 max-h-[200px] overflow-y-auto no-scrollbar">
                           {displayedUsers.map(u => (
@@ -426,17 +674,17 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
                                   key={u.user_id}
                                   onClick={() => {
                                       if (map) {
-                                          map.flyTo([u.lat, u.lng], 16, { duration: 1.5 });
+                                          map.flyTo([u.lat, u.lng], 12, { duration: 1.5 });
                                           setSearchQuery('');
                                       }
                                   }}
                                   className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-blue-500/20 border border-transparent hover:border-blue-500/30 transition-all group"
                               >
                                   <div className="flex items-center gap-3">
-                                      <div className={`w-2 h-2 rounded-full ${activeUsers.some(au => au.user_id === u.user_id) ? 'bg-green-500 animate-pulse' : 'bg-slate-500'}`} />
+                                      <div className={`w-2 h-2 rounded-full ${(u as any).isAtlas ? 'bg-blue-400' : (activeUsers.some(au => au.user_id === u.user_id) ? 'bg-green-500 animate-pulse' : 'bg-slate-500')}`} />
                                       <span className="text-sm font-bold text-white group-hover:text-blue-400">{u.name}</span>
                                   </div>
-                                  <Send size={14} className="text-slate-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                                  <MapIcon size={14} className="text-slate-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
                               </button>
                           ))}
                       </div>
@@ -449,9 +697,9 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
                           >
                               <EyeOff size={28} className="text-slate-500" />
                           </motion.div>
-                          <p className="text-white font-bold mb-1">Aucun élève trouvé</p>
+                          <p className="text-white font-bold mb-1">{t('atlas.noStudentFound')}</p>
                           <p className="text-slate-500 text-xs font-medium max-w-[200px] mx-auto text-balance">
-                              Personne ne correspond à "{searchQuery}". Essaie un autre nom ou vérifie l'orthographe.
+                              {t('atlas.noStudentDesc', { query: searchQuery })}
                           </p>
                       </div>
                   )}
@@ -466,12 +714,74 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
           
+          {/* Atlas Layer - Features */}
+          {activeAtlasCategory !== 'none' && ATLAS_DATA.filter(f => f.type === activeAtlasCategory).map(feature => (
+            <React.Fragment key={feature.id}>
+              {feature.type === 'river' ? (
+                <>
+                  {Array.isArray(feature.coords[0]) && (
+                    <Polyline 
+                      positions={feature.coords as [number, number][]} 
+                      pathOptions={{ 
+                        color: '#00B4FF', 
+                        weight: 6, 
+                        opacity: 0.9, 
+                        lineJoin: 'round',
+                        lineCap: 'round',
+                        dashArray: '1, 10' // Tiret pour l'eau / mouvement
+                      }}
+                    >
+                      <Popup>{renderAtlasPopup(feature)}</Popup>
+                    </Polyline>
+                  )}
+                  {/* Ajouter un marqueur à la source du fleuve pour interaction facile */}
+                  <Marker 
+                    position={Array.isArray(feature.coords[0]) ? (feature.coords[0] as [number, number]) : (feature.coords as [number, number])} 
+                    icon={RiverIcon}
+                  >
+                    <Popup>{renderAtlasPopup(feature)}</Popup>
+                  </Marker>
+                </>
+              ) : feature.type === 'climate' ? (
+                <Circle
+                  center={feature.coords as [number, number]}
+                  radius={120000}
+                  pathOptions={{ 
+                    color: '#10B981', 
+                    fillColor: '#10B981', 
+                    fillOpacity: 0.15,
+                    weight: 2
+                  }}
+                >
+                  <Popup>{renderAtlasPopup(feature)}</Popup>
+                </Circle>
+              ) : (
+                <Marker 
+                  position={feature.coords as [number, number]} 
+                  icon={feature.type === 'resource' ? ResourceIcon : ReliefIcon}
+                >
+                  <Popup>{renderAtlasPopup(feature)}</Popup>
+                </Marker>
+              )}
+            </React.Fragment>
+          ))}
+          
           {/* Active Users Markers */}
-          {displayedUsers.map(u => {
+          {activeAtlasCategory === 'none' && displayedUsers.map((u, idx) => {
             if (u.lat == null || u.lng == null) return null;
             const isOnline = activeUsers.some(au => au.user_id === u.user_id);
+            
+            // Add a tiny jitter if multiple users/sessions overlap
+            // Using a deterministic-looking random based on session/id to avoid jumpy movement
+            const jitter = 0.0001; 
+            const displayLat = u.lat + (Math.sin(idx * 123.45) * jitter);
+            const displayLng = u.lng + (Math.cos(idx * 543.21) * jitter);
+
             return (
-              <Marker key={u.user_id} position={[u.lat, u.lng]} icon={isOnline ? StudentIcon : new L.DivIcon({
+              <Marker 
+                key={(u as any).session_id || `${u.user_id}-${idx}`} 
+                position={[displayLat, displayLng]} 
+                icon={isOnline ? StudentIcon : new L.DivIcon({
                 className: 'custom-student-marker-offline',
                 html: `<div style="background-color: #64748b; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
                 iconSize: [18, 18],
@@ -533,9 +843,34 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
                 iconSize: [20, 20],
                 iconAnchor: [10, 10]
               })}>
-                  <Popup>C'est toi !</Popup>
+                  <Popup>{t('atlas.itIsYou')}</Popup>
               </Marker>
           )}
+
+          {/* Focused Feature Popup (auto-opened) */}
+          {focusedFeatureId && (() => {
+              const feature = ATLAS_DATA.find(f => f.id === focusedFeatureId);
+              if (!feature) return null;
+              
+              let focusCoords: [number, number];
+              if (Array.isArray(feature.coords[0])) {
+                  const coords = feature.coords as [number, number][];
+                  focusCoords = coords[Math.floor(coords.length / 2)];
+              } else {
+                  focusCoords = feature.coords as [number, number];
+              }
+              
+              return (
+                <Popup 
+                  position={focusCoords} 
+                  eventHandlers={{
+                    remove: () => setFocusedFeatureId(null)
+                  }}
+                >
+                  {renderAtlasPopup(feature)}
+                </Popup>
+              );
+          })()}
         </MapContainer>
 
         {/* Recenter Button */}

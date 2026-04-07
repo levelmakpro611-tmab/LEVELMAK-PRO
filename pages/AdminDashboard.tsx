@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
+import Skeleton from '../components/Skeleton';
 import {
     getGlobalStats,
     getUserAnalytics,
@@ -146,12 +147,20 @@ const AdminDashboard: React.FC = () => {
                     if (statsResult.status === 'fulfilled') setStats(statsResult.value);
                     if (demogResult.status === 'fulfilled') setDemographicStats(demogResult.value);
                     break;
+                case 'monitor':
+                case 'retention':
+                case 'gamification':
+                case 'security':
+                    // Add a small delay for demo/visual consistency if needed, 
+                    // but usually we just wait for the component to be ready via Suspense
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    break;
             }
         } catch (error) {
             console.error(`Error loading ${tab} data:`, error);
         } finally {
             setLoadingStates(prev => ({ ...prev, [tab]: false }));
-            setLoading(false);
+            setLoading(false); // No longer blocks the whole UI, but keeps compatibility
         }
     };
 
@@ -191,19 +200,8 @@ const AdminDashboard: React.FC = () => {
         localStorage.setItem('admin_seen_ids', JSON.stringify(newSeen));
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center transition-colors">
-                <div className="text-center space-y-4">
-                    <div className="relative">
-                        <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
-                        <Shield className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" size={32} />
-                    </div>
-                    <p className="text-slate-500 dark:text-slate-400 font-bold text-lg transition-colors">Chargement du contrôle central...</p>
-                </div>
-            </div>
-        );
-    }
+    // Initial loading is now handled inside the content area with skeletons
+    // to allow the sidebar and header to be interactive immediately.
 
     const navItems = [
         { id: 'overview' as Tab, icon: Home, label: "Vue d'ensemble", badge: null },
@@ -470,21 +468,37 @@ const AdminDashboard: React.FC = () => {
                 {/* Content Area */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
                     <React.Suspense fallback={
-                        <div className="flex items-center justify-center p-20">
-                            <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                        <div className="space-y-4 animate-pulse p-4">
+                            <div className="h-32 bg-black/5 dark:bg-white/5 rounded-2xl"></div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-black/5 dark:bg-white/5 rounded-xl"></div>)}
+                            </div>
+                            <div className="h-48 bg-black/5 dark:bg-white/5 rounded-2xl"></div>
                         </div>
                     }>
                         {loadingStates[activeTab] ? (
-                            <div className="space-y-4 animate-pulse">
-                                <div className="h-32 bg-black/5 dark:bg-white/5 rounded-2xl"></div>
+                            <div className="space-y-6">
+                                <Skeleton className="h-32 w-full" />
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-black/5 dark:bg-white/5 rounded-xl"></div>)}
+                                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 w-full" />)}
                                 </div>
-                                <div className="h-48 bg-black/5 dark:bg-white/5 rounded-2xl"></div>
+                                <Skeleton className="h-64 w-full" />
                             </div>
                         ) : (
                             <>
-                                {activeTab === 'overview' && stats && <OverviewTab stats={stats} users={users} comments={comments} averageRatings={averageRatings} />}
+                                {activeTab === 'overview' && (
+                                    stats ? (
+                                        <OverviewTab stats={stats} users={users} comments={comments} averageRatings={averageRatings} />
+                                    ) : (
+                                        <div className="space-y-6">
+                                            <Skeleton className="h-32 w-full" />
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 w-full" />)}
+                                            </div>
+                                            <Skeleton className="h-64 w-full" />
+                                        </div>
+                                    )
+                                )}
                                 {activeTab === 'stats' && (
                                     <div className="space-y-6">
                                         <StatisticsPanel stats={stats} period={period} onPeriodChange={setPeriod} />

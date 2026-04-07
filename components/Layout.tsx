@@ -34,7 +34,9 @@ import {
   ChevronRight,
   CheckCircle2,
   Download,
-  FlaskRound
+  FlaskRound,
+  Globe,
+  Map as MapIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
@@ -158,6 +160,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'ranking', label: t('nav.ranking'), shortLabel: t('nav.short.ranking'), icon: Trophy },
     { id: 'shop', label: t('nav.shop'), shortLabel: t('nav.short.shop'), icon: ShoppingBag },
     { id: 'planner', label: t('nav.planner'), shortLabel: t('nav.short.planner'), icon: Calendar, hideOnMobile: true },
+    { id: 'atlas', label: t('nav.atlas'), shortLabel: t('nav.short.atlas'), icon: Globe },
+    { id: 'active_visual', label: 'Active Visuel', shortLabel: 'Visuel', icon: Zap },
     { id: 'social', label: t('nav.social'), shortLabel: t('nav.short.social'), icon: Layers, hideOnMobile: true },
     { id: 'feedback', label: t('nav.feedback'), shortLabel: t('nav.short.feedback'), icon: MessageSquare, onClick: () => setIsFeedbackOpen(true) },
     { id: 'rating', label: t('nav.rating'), shortLabel: t('nav.short.rating'), icon: Star, onClick: () => setIsRatingOpen(true) },

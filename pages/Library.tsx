@@ -37,7 +37,7 @@ interface LibraryProps {
 }
 
 const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashcardsGenerated, onReadBook }) => {
-    const { user, books, saveBook, deleteBook, incrementBooksRead, addActivity, downloadCourse, offlinePacks, t, settings } = useStore();
+    const { user, books, quizzes, deleteQuiz, saveBook, deleteBook, incrementBooksRead, addActivity, downloadCourse, offlinePacks, t, settings } = useStore();
 
     // Library Search State
     const [searchQuery, setSearchQuery] = useState('');
@@ -599,6 +599,54 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white hover:bg-green-700 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
                                         >
                                             <Download size={12} /> {t('library.downloadKeep')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Mes Quizz Section */}
+            {quizzes && quizzes.length > 0 && (
+                <div className="space-y-8 animate-slide-up">
+                    <h3 className="text-xl md:text-2xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                        <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg md:rounded-xl flex items-center justify-center border border-orange-500/20">
+                            <Zap size={18} />
+                        </div>
+                        Mes Quizz Sauvegardés ({quizzes.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {quizzes.map((quiz) => (
+                            <div key={quiz.id} className="glass p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-xl hover:border-orange-500/30 transition-all group relative overflow-hidden flex flex-col">
+                                <div className="absolute top-4 right-4 z-10">
+                                    <span className="px-2.5 py-1 bg-orange-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest">
+                                        {quiz.subject}
+                                    </span>
+                                </div>
+
+                                <div className="relative z-10 space-y-4 flex-1 flex flex-col">
+                                    <div className="flex-1">
+                                        <h4 className="font-display font-bold text-slate-900 dark:text-white text-base mb-1 line-clamp-2 leading-tight group-hover:text-orange-500 transition-colors">{quiz.title}</h4>
+                                        <p className="text-[10px] text-slate-400 font-bold">{quiz.questions.length} Questions</p>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+                                        <button
+                                            onClick={() => onQuizGenerated(quiz)}
+                                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-orange-600 text-white hover:bg-orange-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-glow"
+                                        >
+                                            <Zap size={14} /> Lancer
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm('Supprimer ce quiz ?')) deleteQuiz(quiz.id);
+                                            }}
+                                            className="w-12 h-12 flex items-center justify-center bg-white/5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all border border-white/5"
+                                        >
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </div>

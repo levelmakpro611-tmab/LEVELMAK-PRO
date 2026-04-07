@@ -158,13 +158,9 @@ const LevelBot: React.FC = () => {
             
             if (extractedText && extractedText.trim().length > 10) {
               finalUserMsg = userMsg 
-                ? `${userMsg}\n\n=== TEXTE EXTRAIT DE LA PHOTO ===\n${extractedText}\n================================`
+                ? `${userMsg}\n\n${t.ocrSeparator}\n${extractedText}\n================================`
                 : `${t.extractedTextPrefix}\n\n${extractedText}`;
               
-              // According to user preference: "Pas besoin que l'IA reçoive la photo directement"
-              // We could potentially set imageToSubmit to undefined here to save resources,
-              // but we keep it as fallback/context if the AI model supports it.
-              // However, to strictly follow the user request:
               imageToSubmit = null; 
             }
           } catch (ocrErr) {
@@ -353,11 +349,38 @@ const LevelBot: React.FC = () => {
             {/* Input Area */}
             <div className="p-4 md:p-6 bg-slate-950 border-t border-white/10 shrink-0 pb-[calc(env(safe-area-inset-bottom,0.5rem)+1rem)] md:pb-6">
               {selectedImage && (
-                <div className="mb-3 relative inline-block animate-fade-in">
-                  <img src={selectedImage} alt="Preview" className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-xl border border-white/20 shadow-lg" />
-                  <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center border border-white/20 hover:bg-slate-700 shadow-xl transition-colors">
-                    <X size={12} />
-                  </button>
+                <div className="mb-3 animate-fade-in">
+                  <div className="relative inline-block mb-2">
+                    <img src={selectedImage} alt="Preview" className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-xl border border-white/20 shadow-lg" />
+                    <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center border border-white/20 hover:bg-slate-700 shadow-xl transition-colors">
+                      <X size={12} />
+                    </button>
+                  </div>
+                  
+                  {/* Assistant Littéraire : Quick Prompts */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                     <button
+                       type="button"
+                       onClick={() => setInput("Fais l'analyse littéraire complète de ce texte (thèmes, ton, registre).")}
+                       className="px-3 py-1.5 bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg text-xs font-bold hover:bg-purple-500/20 transition-all"
+                     >
+                       🎭 Analyse Littéraire
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => setInput("Relève et explique toutes les figures de style présentes dans ce texte.")}
+                       className="px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold hover:bg-blue-500/20 transition-all"
+                     >
+                       ✒️ Figures de Style
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => setInput("Fais un résumé détaillé de ce texte scanné.")}
+                       className="px-3 py-1.5 bg-green-500/10 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold hover:bg-green-500/20 transition-all"
+                     >
+                       📝 Résumé
+                     </button>
+                  </div>
                 </div>
               )}
               <form onSubmit={handleSend} className="relative flex items-center gap-2 md:gap-3 group">

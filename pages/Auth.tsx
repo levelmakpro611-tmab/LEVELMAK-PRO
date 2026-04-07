@@ -438,7 +438,7 @@ const Auth: React.FC = () => {
                         {t('auth.email')}
                       </label>
                       <input
-                        type="email"
+                        type="text"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}

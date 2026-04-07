@@ -11,6 +11,7 @@ import { offlineService } from '../services/offlineService';
 import { Network } from '@capacitor/network';
 import { OfflinePack } from '../types';
 import { HapticFeedback } from '../services/nativeAdapters';
+import { isAdminCredentials } from '../services/adminService';
 
 interface AppState {
   user: User | null;
@@ -94,7 +95,7 @@ interface AppState {
   isOnline: boolean;
   downloadCourse: (courseId: string) => Promise<void>;
   offlinePacks: string[]; // List of offline course IDs
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string>) => any;
   dir: 'ltr' | 'rtl';
   plantInGarden: (type: 'flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus') => void;
   waterGarden: (plantId?: string, itemType?: 'water_can' | 'fertilizer') => boolean;
@@ -110,7 +111,10 @@ interface AppState {
   aiLabHistory: AILabSession[];
   saveAILabSession: (session: AILabSession) => void;
   deleteAILabSession: (sessionId: string) => void;
+  deleteQuiz: (id: string) => void;
   xpPercentage: number;
+  mapFocusFeatureId: string | null;
+  setMapFocusFeatureId: (id: string | null) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -156,9 +160,58 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [continuousStudyTime, setContinuousStudyTime] = useState(0);
   const [showBubbleWrap, setShowBubbleWrap] = useState(false);
   const [lastActivityTimestamp, setLastActivityTimestamp] = useState(Date.now());
+  const [mapFocusFeatureId, setMapFocusFeatureId] = useState<string | null>(null);
+  const [atlasFocusFeatureId, setAtlasFocusFeatureId] = useState<string | null>(null);
   const [coachSessions, setCoachSessions] = useState<CoachSession[]>([]);
   const [aiLabHistory, setAiLabHistory] = useState<AILabSession[]>([]);
   const locationUpdateTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // Translation Helper
+  const t = useCallback((path: string, params?: Record<string, string>): string => {
+    const keys = path.split('.');
+    let current: any = translations[settings.language as Language] || translations.fr;
+
+    for (const key of keys) {
+      if (current[key] === undefined) {
+        // Fallback to French if translation is missing
+        current = translations.fr;
+        for (const k of keys) {
+          if (current[k] === undefined) return path;
+          current = current[k];
+        }
+        break;
+      }
+      current = current[key];
+    }
+    
+    // If it's not a string (e.g., an object for nested translations), return it as is
+    if (typeof current !== 'string') return current;
+
+    // Handle string interpolation {name}, {role}, etc.
+    let result = current;
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        result = result.split(`{${key}}`).join(value);
+      });
+    }
+    return result;
+  }, [settings.language]);
+
+  const dir = settings.language === 'ar' ? 'rtl' : 'ltr';
+
+  // Apply direction and font size to body
+  useEffect(() => {
+    document.documentElement.dir = dir;
+    document.documentElement.lang = settings.language;
+
+    // Apply font size
+    const fontSizes = ['font-size-xs', 'font-size-sm', 'font-size-base', 'font-size-lg', 'font-size-xl'];
+    document.documentElement.classList.remove(...fontSizes);
+    if (settings.fontSize) {
+      document.documentElement.classList.add(`font-size-${settings.fontSize}`);
+    }
+  }, [dir, settings.language, settings.fontSize]);
+
 
   // ========== HELPER FUNCTIONS ==========
 
@@ -527,6 +580,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => clearTimeout(timer);
   }, [user]);
 
+  // ACTIVITY HEARTBEAT (Update last_active every 10 min while active)
+  useEffect(() => {
+    if (!user || user.id === 'guest' || user.id.includes('anon')) return;
+
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        console.log('💓 Heartbeat: Updating last_active...');
+        await supabase.from('profiles').update({
+          last_active: new Date().toISOString()
+        }).eq('id', user.id);
+      } catch (error) {
+        console.warn('Heartbeat update failed:', error);
+      }
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => clearInterval(heartbeatInterval);
+  }, [user?.id]);
+
   // Supabase cleanup or additional initialization
   useEffect(() => {
     const storedUser = localStorage.getItem('levelmak_user');
@@ -650,6 +721,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const loginWithEmail = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
+
+      // Special Admin Interception
+      if (isAdminCredentials(email, password)) {
+        console.log('Admin credentials detected. Authenticating with Supabase...');
+        const { data, error: adminAuthError } = await supabase.auth.signInWithPassword({
+          email: '611@levelmak.app',
+          password
+        });
+
+        if (adminAuthError) {
+          console.error('Admin Supabase Auth failed:', adminAuthError);
+          // Fallback to local admin if Supabase account doesn't exist yet, 
+          // but warn that RLS will block data.
+        }
+
+        const adminUser: User = {
+          id: data.user?.id || '00000000-0000-0000-0000-000000000611',
+          name: 'Administrateur Principal',
+          username: 'levelmak611',
+          email: 'levelmak611',
+          level: SchoolLevel.UNIVERSITY,
+          xp: 0,
+          totalXp: 0,
+          rank: 1,
+          stats: { quizzesCompleted: 0, hoursLearned: 0, booksRead: 0, storiesWritten: 0, flashcardsStudied: 0 },
+          badges: [],
+          levelCoins: 0,
+          inventory: [],
+          favorites: [],
+          friends: [],
+          avatar: { baseColor: '#6366f1', accessory: 'none', aura: 'none', currentLevel: 1 },
+          streak: { current: 1 }
+        };
+        setUser(adminUser);
+        localStorage.setItem('levelmak_user', JSON.stringify(adminUser));
+        return;
+      }
+
       const { signInWithEmail } = await import('../services/authService');
       const loggedUser = await signInWithEmail(email, password);
       if (loggedUser) {
@@ -802,12 +911,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   }, []);
 
-  const createCoachSession = useCallback((firstMessage?: string) => {
+  const createCoachSession = useCallback(() => {
     const newId = `session_${Date.now()}`;
+    
+    const initialMsg: CoachMessage = {
+      id: `msg_${Date.now()}`,
+      role: 'bot',
+      text: t('levelBot.firstQuestion'),
+      timestamp: new Date().toISOString()
+    };
+
     const newSession: CoachSession = {
       id: newId,
-      title: firstMessage ? (firstMessage.substring(0, 30) + (firstMessage.length > 30 ? '...' : '')) : "Nouvelle Discussion",
-      messages: [],
+      title: t('levelBot.newChat'),
+      messages: [initialMsg],
       lastUpdated: new Date().toISOString()
     };
 
@@ -823,7 +940,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
 
     return newId;
-  }, []);
+  }, [t]);
 
   const deleteCoachSession = useCallback((sessionId: string) => {
     setCoachSessions(prev => {
@@ -918,6 +1035,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const saveQuiz = useCallback((quiz: Quiz) => {
     setQuizzes(prev => {
+      const exists = prev.some(q => q.id === quiz.id);
+      if (exists) return prev;
+
       const newQuizzes = [quiz, ...prev];
       localStorage.setItem('levelmak_quizzes', JSON.stringify(newQuizzes));
 
@@ -936,6 +1056,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     addXp(10); // Petit bonus pour la génération, la vraie récompense vient du jeu
   }, [user, addXp]);
+
+  const deleteQuiz = useCallback((id: string) => {
+    setQuizzes(prev => {
+      const newQuizzes = prev.filter(q => q.id !== id);
+      localStorage.setItem('levelmak_quizzes', JSON.stringify(newQuizzes));
+      if (user) {
+        setUser({ ...user, quizzes: newQuizzes });
+      }
+      return newQuizzes;
+    });
+  }, [user]);
 
   const updateProfile = useCallback((name: string, phoneNumber?: string, updates?: Partial<User>) => {
     setUser(prev => {
@@ -1839,40 +1970,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, [syncOfflineData]);
 
-  // Translation Helper
-  const t = useCallback((path: string): string => {
-    const keys = path.split('.');
-    let current: any = translations[settings.language as Language] || translations.fr;
 
-    for (const key of keys) {
-      if (current[key] === undefined) {
-        // Fallback to French if translation is missing
-        current = translations.fr;
-        for (const k of keys) {
-          if (current[k] === undefined) return path;
-          current = current[k];
-        }
-        return current as string;
-      };
-      current = current[key];
-    }
-    return current as string;
-  }, [settings.language]);
-
-  const dir = settings.language === 'ar' ? 'rtl' : 'ltr';
-
-  // Apply direction and font size to body
-  useEffect(() => {
-    document.documentElement.dir = dir;
-    document.documentElement.lang = settings.language;
-
-    // Apply font size
-    const fontSizes = ['font-size-xs', 'font-size-sm', 'font-size-base', 'font-size-lg', 'font-size-xl'];
-    document.documentElement.classList.remove(...fontSizes);
-    if (settings.fontSize) {
-      document.documentElement.classList.add(`font-size-${settings.fontSize}`);
-    }
-  }, [dir, settings.language, settings.fontSize]);
 
   const resolveBattle = useCallback((winnerId: string, isDraw: boolean = false) => {
     setUser(prev => {
@@ -1952,7 +2050,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     deleteCoachSession,
     aiLabHistory,
     saveAILabSession,
-    deleteAILabSession
+    deleteAILabSession,
+    mapFocusFeatureId,
+    setMapFocusFeatureId,
+    atlasFocusFeatureId,
+    setAtlasFocusFeatureId,
+    deleteQuiz
   }), [
     user, quizzes, stories, missions, flashcards, decks, books, studyPlan, loading,
     login, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, logout, addXp, saveQuiz, saveStory, deleteStory, saveBook,
@@ -1988,7 +2091,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     deleteCoachSession,
     aiLabHistory,
     saveAILabSession,
-    deleteAILabSession
+    deleteAILabSession,
+    mapFocusFeatureId,
+    setMapFocusFeatureId,
+    atlasFocusFeatureId,
+    setAtlasFocusFeatureId,
+    deleteQuiz
   ]);
 
   return (
