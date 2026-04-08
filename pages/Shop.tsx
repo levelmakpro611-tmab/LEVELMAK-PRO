@@ -22,7 +22,7 @@ import { getAllShopItems } from '../services/adminService';
 
 const Shop: React.FC = () => {
     const { user, purchaseItem, equipItem, purchasePotion, usePotion, t } = useStore();
-    const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'theme' | 'potion'>('all');
+    const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'potion'>('all');
     const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
     const [items, setItems] = useState<ShopItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -518,23 +518,7 @@ const Shop: React.FC = () => {
             category: 'badge',
             color: '#8B5CF6'
         },
-        // Themes
-        {
-            id: 'theme_gold',
-            name: 'Thème Or Royal',
-            description: 'Une interface luxueuse pour ton dashboard.',
-            price: 500,
-            category: 'theme',
-            color: '#D4AF37'
-        },
-        {
-            id: 'theme_neon',
-            name: 'Thème Néon Cyber',
-            description: 'Un look futuriste et dynamique.',
-            price: 400,
-            category: 'theme',
-            color: '#10B981'
-        },
+
     ];
 
     const filteredItems = activeTab === 'all'
@@ -614,7 +598,7 @@ const Shop: React.FC = () => {
                     { id: 'all', icon: Gem },
                     { id: 'avatar', icon: UserCircle },
                     { id: 'badge', icon: BadgeCheck },
-                    { id: 'theme', icon: Palette },
+
                     { id: 'potion', icon: FlaskConical },
                 ].map(tab => (
                     <button

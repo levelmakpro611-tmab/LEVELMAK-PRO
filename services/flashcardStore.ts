@@ -39,7 +39,7 @@ export const useFlashcardStore = create<FlashcardStore>()(
             subject,
             sourceQuizTitle: quizTitle,
             createdAt: Date.now(),
-            nextReviewDate: Date.now(), // Prêt à être révisé immédiatement ou demain
+            nextReviewDate: Date.now() + 7 * 24 * 60 * 60 * 1000, // Décalé d'une semaine comme demandé par l'utilisateur
             easeFactor: 2.5,
             repetitions: 0,
           }));
@@ -64,26 +64,26 @@ export const useFlashcardStore = create<FlashcardStore>()(
       },
 
       reviewCard: (id, performanceRating) => {
-        // Basé sur l'algorithme SuperMemo-2
+        // Basé sur l'algorithme SuperMemo-2, avec une base de 7 jours minimum
         set((state) => {
           const newCards = state.cards.map(card => {
             if (card.id !== id) return card;
 
             let { easeFactor, repetitions } = card;
-            let interval = 1; // in days
+            let interval = 7; // base interval in days (une semaine)
 
             if (performanceRating >= 3) {
               // Correct response
-              if (repetitions === 0) interval = 1;
-              else if (repetitions === 1) interval = 6;
-              else interval = Math.round(card.repetitions * easeFactor);
+              if (repetitions === 0) interval = 7; // Renvoyer dans 1 semaine
+              else if (repetitions === 1) interval = 14; // Renvoyer dans 2 semaines
+              else interval = Math.round(card.repetitions * easeFactor * 7); // Espacement progressif très long
 
               repetitions += 1;
               easeFactor = easeFactor + (0.1 - (5 - performanceRating) * (0.08 + (5 - performanceRating) * 0.02));
             } else {
               // Incorrect response
               repetitions = 0;
-              interval = 1;
+              interval = 7; // On maintient un minimum d'une semaine pour ne pas spammer
               easeFactor = Math.max(1.3, easeFactor - 0.2);
             }
 

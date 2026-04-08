@@ -166,6 +166,33 @@
         .dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2) !important;
         }
+
+        /* Leaflet Premium Labels */
+        .premium-label {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        .premium-label::before {
+            display: none !important;
+        }
+
+        /* Shrink Leaflet Popups */
+        .leaflet-popup-content-wrapper {
+            padding: 0 !important;
+            border-radius: 12px !important;
+        }
+
+        .leaflet-popup-content {
+            margin: 6px !important;
+            width: auto !important;
+        }
+
+        .leaflet-popup-close-button {
+            padding: 4px !important;
+            color: #94a3b8 !important;
+        }
     </style>
 </head>
 

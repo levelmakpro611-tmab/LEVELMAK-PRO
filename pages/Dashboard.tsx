@@ -54,11 +54,6 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { user, missions, quizzes, flashcards, decks, dailyVocab, dailyMotivation, rollDice, isOnline, t, settings } = useStore();
   const [showHistory, setShowHistory] = React.useState(false);
-  const [showDiceModal, setShowDiceModal] = React.useState(false);
-  const [isRolling, setIsRolling] = React.useState(false);
-  const [diceResult, setDiceResult] = React.useState<number | null>(null);
-  const [reward, setReward] = React.useState<any>(null);
-  const [surprise, setSurprise] = React.useState<any>(null);
 
   if (!user) return null;
 
@@ -82,10 +77,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }, [user.xp, user.avatar.currentLevel]);
 
   const today = React.useMemo(() => new Date().toISOString().split('T')[0], []);
-  const canRollDice = React.useMemo(() =>
-    !user.lastDiceRoll || user.lastDiceRoll !== today,
-    [user.lastDiceRoll, today]
-  );
   
   const { getCardsToReview } = useFlashcardStore();
   const [localCardsToReview, setLocalCardsToReview] = React.useState(getCardsToReview());
@@ -110,32 +101,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return decks.filter(d => deckIds.has(d.id));
   }, [dueFlashcards, decks]);
 
-  const handleDiceRoll = async () => {
-    try {
-      setIsRolling(true);
-      setDiceResult(null);
-      setReward(null);
-      setSurprise(null);
 
-      // Delay for animation
-      await new Promise(r => setTimeout(r, 1500));
-
-      const result = rollDice();
-      setDiceResult(result.result);
-      setReward(result.reward);
-
-      // If surprise, fetch from Gemini
-      if (result.reward.type === 'surprise') {
-        const surpriseData = await openrouterService.getDiceSurprise(settings.language);
-        setSurprise(surpriseData);
-      }
-    } catch (error: any) {
-      alert(error.message);
-      setShowDiceModal(false);
-    } finally {
-      setIsRolling(false);
-    }
-  };
 
   const formatTime = React.useCallback((hours: number) => {
     if (!hours || hours === 0) return `0 ${t('dashboard.time.min')}`;
@@ -281,29 +247,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </section>
 
-          {/* Lucky Dice Widget */}
-          {canRollDice && (
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="relative group overflow-hidden rounded-[2rem] md:rounded-[2.5rem] bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-red-500/10 border-2 border-amber-500/30 p-6 md:p-8 cursor-pointer hover:scale-[1.02] transition-all"
-              onClick={() => setShowDiceModal(true)}
-            >
-              <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(251,191,36,0.1)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer" />
-              <div className="flex items-center gap-4 md:gap-6 relative z-10">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 animate-bounce">
-                  <Dices size={32} className="md:w-12 md:h-12" />
-                </div>
-                <div className="space-y-2 flex-1">
-                  <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">🎲 {t('dashboard.dice.chance')}</p>
-                  <h4 className="text-xl md:text-3xl font-display font-black text-slate-900 dark:text-white leading-tight">
-                    {t('dashboard.dice.title')}
-                  </h4>
-                  <p className="text-[10px] md:text-sm text-slate-600 dark:text-slate-400 font-bold">{t('dashboard.dice.subtitle')}</p>
-                </div>
-              </div>
-            </motion.div>
-          )}
+
 
           {/* AI Spirit Card */}
           <div className="relative group overflow-hidden rounded-[2rem] md:rounded-[2.5rem] bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 border border-white/5 p-6 md:p-8">
@@ -559,141 +503,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
       </div >
 
-      {/* Dice Modal */}
-      <AnimatePresence>
-        {
-          showDiceModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl"
-              onClick={() => !isRolling && setShowDiceModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                className="relative bg-slate-900 border-2 border-amber-500/30 rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 max-w-lg w-full shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  onClick={() => setShowDiceModal(false)}
-                  className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-red-500/20 text-white hover:text-red-500 rounded-xl transition-all"
-                >
-                  <X size={24} />
-                </button>
 
-                <div className="text-center space-y-8">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl md:text-4xl font-display font-black text-white">🎲 {t('dashboard.dice.modalTitle')}</h2>
-                    <p className="text-slate-400 font-bold text-xs md:text-sm">{t('dashboard.dice.modalSubtitle')}</p>
-                  </div>
-                  
-
-                  {/* Dice Animation */}
-                  {!diceResult && (
-                    <div className="py-12">
-                      {!isRolling ? (
-                        <button
-                          onClick={handleDiceRoll}
-                          className="w-32 h-32 md:w-40 md:h-40 mx-auto bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] flex items-center justify-center text-white shadow-glow hover:scale-110 transition-all"
-                        >
-                          <Dices size={64} className="md:w-20 md:h-20" />
-                        </button>
-                      ) : (
-                        <motion.div
-                          animate={{ rotateX: [0, 360], rotateY: [0, 360], rotateZ: [0, 360] }}
-                          transition={{ duration: 1.5, repeat: 0 }}
-                          className="w-24 h-24 md:w-32 md:h-32 mx-auto bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl md:rounded-[2.5rem] flex items-center justify-center text-white shadow-glow"
-                        >
-                          <Dices size={48} className="md:w-16 md:h-16" />
-                        </motion.div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Result Display */}
-                  {diceResult && reward && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="space-y-6"
-                    >
-                      <div className="text-8xl md:text-9xl font-black text-amber-500">{diceResult}</div>
-
-                      {reward.type === 'item' && (
-                        <div className="space-y-4">
-                          <div className="w-24 h-24 md:w-32 md:h-32 mx-auto bg-purple-500/20 rounded-3xl flex items-center justify-center border-2 border-purple-500/40">
-                            <Gift size={48} className="md:w-16 md:h-16 text-purple-500" />
-                          </div>
-                          <h3 className="text-2xl md:text-3xl font-black text-white">🎁 {t('dashboard.dice.itemWon')}</h3>
-                          <p className="text-slate-400 font-bold">{t('dashboard.dice.checkInventory')}</p>
-                        </div>
-                      )}
-
-                      {reward.type === 'joker' && (
-                        <div className="space-y-4">
-                          <div className="w-24 h-24 md:w-32 md:h-32 mx-auto bg-green-500/20 rounded-3xl flex items-center justify-center border-2 border-green-500/40">
-                            <Zap size={48} className="md:w-16 md:h-16 text-green-500" />
-                          </div>
-                          <h3 className="text-2xl md:text-3xl font-black text-white">🃏 {t('dashboard.dice.jokerWon')}</h3>
-                          <p className="text-slate-400 font-bold">{t('dashboard.dice.jokerMsg')}</p>
-                        </div>
-                      )}
-
-                      {reward.type === 'surprise' && surprise && (
-                        <div className="space-y-4">
-                          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto bg-blue-500/20 rounded-2xl flex items-center justify-center border-2 border-blue-500/40">
-                            <Lightbulb size={32} className="md:w-10 md:h-10 text-blue-500" />
-                          </div>
-                          <h3 className="text-xl md:text-2xl font-black text-white">{surprise.title}</h3>
-                          <div className="bg-white/5 rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/10 max-h-[40vh] overflow-y-auto custom-scrollbar">
-                            <p className="text-xs md:text-sm text-white leading-relaxed font-medium">{surprise.content}</p>
-                          </div>
-                          <p className="text-slate-500 text-[10px] md:text-xs font-bold">— {surprise.author}</p>
-                        </div>
-                      )}
-
-                      {reward.type === 'surprise' && !surprise && (
-                        <div className="flex items-center justify-center gap-3">
-                          <Loader2 size={24} className="animate-spin text-blue-500" />
-                          <p className="text-white font-bold">{t('dashboard.dice.coachPreparing')}</p>
-                        </div>
-                      )}
-
-                      {reward.type === 'super' && (
-                        <div className="space-y-4">
-                          <div className="text-6xl">🎊</div>
-                          <h3 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-red-500">{t('dashboard.dice.jackpot')}</h3>
-                          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-                            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
-                              <Gift className="mx-auto mb-2 text-purple-500" size={32} />
-                              <p className="text-white font-bold text-sm">{t('dashboard.dice.accessory')}</p>
-                            </div>
-                            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-                              <Zap className="mx-auto mb-2 text-green-500" size={32} />
-                              <p className="text-white font-bold text-sm">{t('dashboard.dice.jokerItem')}</p>
-                            </div>
-                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
-                              <Sparkles className="mx-auto mb-2 text-amber-500" size={32} />
-                              <p className="text-white font-bold text-sm">+200 {t('dashboard.dice.xp')}</p>
-                            </div>
-                            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
-                              <Award className="mx-auto mb-2 text-orange-500" size={32} />
-                              <p className="text-white font-bold text-sm">+100 {t('dashboard.dice.coins')}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )
-        }
-      </AnimatePresence >
 
       {/* Footer Attribution */}
       < div className="pt-8 pb-12 flex flex-col items-center justify-center opacity-40 group hover:opacity-100 transition-opacity duration-500" >

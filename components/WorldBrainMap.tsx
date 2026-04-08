@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HapticFeedback } from '../services/nativeAdapters';
 import { HandMetal, Globe, EyeOff, Eye, Send, Heart, Flame, Sparkles, Swords, X, Palette, Target, Menu } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { supabase } from '../services/supabase';
@@ -65,75 +65,40 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
   
   // Helper to render professional Atlas Popups
   const renderAtlasPopup = (feature: GeoFeature) => (
-    <div className="p-1 min-w-[180px] font-sans">
-      <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-2">
-        {feature.type === 'river' && <Waves size={14} className="text-blue-400" />}
-        {feature.type === 'resource' && <HardHat size={14} className="text-yellow-400" />}
-        {feature.type === 'relief' && <Mountain size={14} className="text-orange-400" />}
-        {feature.type === 'climate' && <Thermometer size={14} className="text-emerald-400" />}
-        <p className="font-black text-[9px] uppercase tracking-widest text-orange-500">
+    <div className="p-0 min-w-[100px] font-sans">
+      <div className="flex items-center gap-1.5 mb-1 border-b border-slate-50 pb-1">
+        <div className={`p-0.5 rounded-md ${
+          feature.type === 'river' ? 'bg-blue-50 text-blue-500' : 
+          feature.type === 'resource' ? 'bg-yellow-50 text-yellow-500' : 
+          feature.type === 'relief' ? 'bg-orange-50 text-orange-500' : 
+          'bg-emerald-50 text-emerald-500'
+        }`}>
+          {feature.type === 'river' && <Waves size={10} />}
+          {feature.type === 'resource' && <HardHat size={10} />}
+          {feature.type === 'relief' && <Mountain size={10} />}
+          {feature.type === 'climate' && <Thermometer size={10} />}
+        </div>
+        <p className="font-black text-[7px] uppercase tracking-tighter text-slate-300">
           {t(`atlas.${feature.type}`)}
         </p>
       </div>
       
-      <p className="font-bold text-slate-950 text-base leading-tight mb-1">
+      <p className="font-extrabold text-slate-900 text-[11px] leading-tight my-1.5 px-0.5">
         {t(`atlas.lessons.${feature.id}.title`)}
       </p>
-      <p className="text-[10px] text-slate-700 mb-3 leading-relaxed line-clamp-3">
-        {t(`atlas.lessons.${feature.id}.content`)}
-      </p>
-
-      
-      <div className="space-y-1 pt-1">
-          {feature.details?.altitude && (
-            <div className="flex justify-between items-center text-[10px] bg-slate-50 p-1.5 rounded-lg mb-1 border border-slate-100">
-                <span className="text-orange-500 font-bold uppercase text-[8px] tracking-wider">Altitude</span> 
-                <span className="font-black text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded">{feature.details.altitude}</span>
-            </div>
-          )}
-          {feature.details?.length && (
-            <div className="flex justify-between items-center text-[10px] bg-slate-50 p-1.5 rounded-lg mb-1 border border-slate-100">
-                <span className="text-orange-500 font-bold uppercase text-[8px] tracking-wider">Longueur</span> 
-                <span className="font-black text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">{feature.details.length}</span>
-            </div>
-          )}
-          {feature.details?.rainfall && (
-            <div className="flex justify-between items-center text-[10px] bg-slate-50 p-1.5 rounded-lg mb-1 border border-slate-100">
-                <span className="text-orange-500 font-bold uppercase text-[8px] tracking-wider">Pluviométrie</span> 
-                <span className="font-black text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">{feature.details.rainfall}</span>
-            </div>
-          )}
-          {feature.details?.mainResource && (
-            <div className="flex justify-between items-center text-[10px] bg-slate-50 p-1.5 rounded-lg mb-1 border border-slate-100">
-                <span className="text-orange-500 font-bold uppercase text-[8px] tracking-wider">Gisement</span> 
-                <span className="font-black text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded">{feature.details.mainResource}</span>
-            </div>
-          )}
-          {feature.details?.source && (
-            <div className="text-[9px] mt-2">
-                <span className="block uppercase font-black text-slate-400 text-[8px] mb-0.5 tracking-tighter">Source</span>
-                <span className="text-slate-800 italic font-medium">{feature.details.source}</span>
-            </div>
-          )}
-          {feature.details?.region && (
-            <div className="text-[9px] mt-2 border-t border-slate-100 pt-2">
-                <span className="block uppercase font-black text-slate-400 text-[8px] mb-0.5 tracking-tighter">Localisation</span>
-                <span className="text-slate-800 font-bold">{feature.details.region}</span>
-            </div>
-          )}
-      </div>
 
       <button
-         onClick={() => {
+         onClick={(e) => {
+            e.stopPropagation();
             HapticFeedback.selection();
             setAtlasFocusFeatureId(feature.id);
             if (onNavigate) {
                 onNavigate('atlas');
             }
          }}
-         className="w-full mt-3 py-2 text-[10px] font-black uppercase text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+         className="w-full py-1.5 text-[8px] font-black uppercase text-white bg-blue-600 rounded-lg hover:bg-blue-500 active:scale-95 transition-all shadow-sm"
       >
-         {t('atlas.viewDetails')}
+         {t('atlas.readLesson')}
       </button>
     </div>
   );
@@ -715,56 +680,148 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
           />
           
           {/* Atlas Layer - Features */}
-          {activeAtlasCategory !== 'none' && ATLAS_DATA.filter(f => f.type === activeAtlasCategory).map(feature => (
-            <React.Fragment key={feature.id}>
-              {feature.type === 'river' ? (
-                <>
-                  {Array.isArray(feature.coords[0]) && (
-                    <Polyline 
-                      positions={feature.coords as [number, number][]} 
-                      pathOptions={{ 
-                        color: '#00B4FF', 
-                        weight: 6, 
-                        opacity: 0.9, 
-                        lineJoin: 'round',
-                        lineCap: 'round',
-                        dashArray: '1, 10' // Tiret pour l'eau / mouvement
+          {activeAtlasCategory !== 'none' && ATLAS_DATA.filter(f => f.type === activeAtlasCategory).map(feature => {
+            const isSelected = focusedFeatureId === feature.id;
+            const featureTitle = t(`atlas.lessons.${feature.id}.title`);
+            
+            return (
+              <React.Fragment key={feature.id}>
+                {feature.type === 'river' ? (
+                  <>
+                    {Array.isArray(feature.coords[0]) && (
+                      <>
+                        {/* Glow effect for selected path */}
+                        {isSelected && (
+                          <Polyline 
+                            positions={feature.coords as [number, number][]} 
+                            pathOptions={{ 
+                              color: '#3B82F6', 
+                              weight: 16, 
+                              opacity: 0.2, 
+                              lineJoin: 'round',
+                              lineCap: 'round',
+                            }}
+                          />
+                        )}
+                        <Polyline 
+                          positions={feature.coords as [number, number][]} 
+                          eventHandlers={{
+                            click: () => {
+                              setFocusedFeatureId(feature.id);
+                              HapticFeedback.selection();
+                            }
+                          }}
+                          pathOptions={{ 
+                            color: isSelected ? '#2563EB' : '#00B4FF', 
+                            weight: isSelected ? 8 : 4, 
+                            opacity: isSelected ? 1 : 0.7, 
+                            lineJoin: 'round',
+                            lineCap: 'round',
+                            dashArray: isSelected ? undefined : '1, 10'
+                          }}
+                        >
+                          <Popup>{renderAtlasPopup(feature)}</Popup>
+                          {isSelected && (
+                            <Tooltip permanent direction="top" className="premium-label" offset={[0, -5]}>
+                              <div className="animate-in fade-in zoom-in duration-300">
+                                <span className="font-black text-[9px] uppercase tracking-widest text-blue-600 px-3 py-1.5 bg-white/95 backdrop-blur-md rounded-full shadow-[0_10px_25px_-5px_rgba(59,130,246,0.5)] border border-blue-100 flex items-center gap-1.5 whitespace-nowrap">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                                  {featureTitle}
+                                </span>
+                              </div>
+                            </Tooltip>
+                          )}
+                        </Polyline>
+                        
+                        {/* Mouth Marker (End of river) */}
+                        {isSelected && (
+                          <Marker 
+                            position={(feature.coords as [number, number][])[feature.coords.length - 1]} 
+                            icon={new L.DivIcon({
+                              className: 'river-mouth-marker',
+                              html: `<div class="relative flex items-center justify-center">
+                                       <div class="absolute w-6 h-6 bg-blue-500/30 rounded-full animate-ping"></div>
+                                       <div class="w-3 h-3 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>
+                                     </div>`,
+                              iconSize: [20, 20],
+                              iconAnchor: [10, 10]
+                            })}
+                          >
+                            <Tooltip direction="right">Embouchure</Tooltip>
+                          </Marker>
+                        )}
+                      </>
+                    )}
+                    <Marker 
+                      position={Array.isArray(feature.coords[0]) ? (feature.coords[0] as [number, number]) : (feature.coords as [number, number])} 
+                      icon={RiverIcon}
+                      eventHandlers={{
+                        click: () => {
+                          setFocusedFeatureId(feature.id);
+                          HapticFeedback.selection();
+                        }
                       }}
                     >
                       <Popup>{renderAtlasPopup(feature)}</Popup>
-                    </Polyline>
-                  )}
-                  {/* Ajouter un marqueur à la source du fleuve pour interaction facile */}
-                  <Marker 
-                    position={Array.isArray(feature.coords[0]) ? (feature.coords[0] as [number, number]) : (feature.coords as [number, number])} 
-                    icon={RiverIcon}
+                      {isSelected && !Array.isArray(feature.coords[0]) && (
+                        <Tooltip permanent direction="top" className="premium-label" offset={[0, -10]}>
+                           <span className="font-black text-[10px] uppercase tracking-wider text-blue-600 px-2 py-1 bg-white rounded-lg shadow-xl border border-blue-100 flex items-center gap-1">
+                              <Waves size={10} /> {featureTitle}
+                            </span>
+                        </Tooltip>
+                      )}
+                    </Marker>
+                  </>
+                ) : feature.type === 'climate' ? (
+                  <Circle
+                    center={feature.coords as [number, number]}
+                    radius={isSelected ? 150000 : 120000}
+                    eventHandlers={{
+                      click: () => {
+                        setFocusedFeatureId(feature.id);
+                        HapticFeedback.selection();
+                      }
+                    }}
+                    pathOptions={{ 
+                      color: isSelected ? '#059669' : '#10B981', 
+                      fillColor: isSelected ? '#059669' : '#10B981', 
+                      fillOpacity: isSelected ? 0.3 : 0.15,
+                      weight: isSelected ? 4 : 2
+                    }}
                   >
                     <Popup>{renderAtlasPopup(feature)}</Popup>
+                    {isSelected && (
+                       <Tooltip permanent direction="top" className="premium-label">
+                          <span className="font-black text-[10px] uppercase tracking-wider text-emerald-600 px-2 py-1 bg-white rounded-lg shadow-xl border border-emerald-100 flex items-center gap-1">
+                            <Thermometer size={10} /> {featureTitle}
+                          </span>
+                       </Tooltip>
+                    )}
+                  </Circle>
+                ) : (
+                  <Marker 
+                    position={feature.coords as [number, number]} 
+                    icon={feature.type === 'resource' ? ResourceIcon : ReliefIcon}
+                    eventHandlers={{
+                      click: () => {
+                        setFocusedFeatureId(feature.id);
+                        HapticFeedback.selection();
+                      }
+                    }}
+                  >
+                    <Popup>{renderAtlasPopup(feature)}</Popup>
+                    {isSelected && (
+                       <Tooltip permanent direction="top" className="premium-label" offset={[0, -20]}>
+                          <span className={`font-black text-[10px] uppercase tracking-wider px-2 py-1 bg-white rounded-lg shadow-xl border flex items-center gap-1 ${feature.type === 'resource' ? 'text-yellow-600 border-yellow-100' : 'text-orange-600 border-orange-100'}`}>
+                            {feature.type === 'resource' ? <HardHat size={10} /> : <Mountain size={10} />} {featureTitle}
+                          </span>
+                       </Tooltip>
+                    )}
                   </Marker>
-                </>
-              ) : feature.type === 'climate' ? (
-                <Circle
-                  center={feature.coords as [number, number]}
-                  radius={120000}
-                  pathOptions={{ 
-                    color: '#10B981', 
-                    fillColor: '#10B981', 
-                    fillOpacity: 0.15,
-                    weight: 2
-                  }}
-                >
-                  <Popup>{renderAtlasPopup(feature)}</Popup>
-                </Circle>
-              ) : (
-                <Marker 
-                  position={feature.coords as [number, number]} 
-                  icon={feature.type === 'resource' ? ResourceIcon : ReliefIcon}
-                >
-                  <Popup>{renderAtlasPopup(feature)}</Popup>
-                </Marker>
-              )}
-            </React.Fragment>
-          ))}
+                )}
+              </React.Fragment>
+            );
+          })}
           
           {/* Active Users Markers */}
           {activeAtlasCategory === 'none' && displayedUsers.map((u, idx) => {

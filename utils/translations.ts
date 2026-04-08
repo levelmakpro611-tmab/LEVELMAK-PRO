@@ -85,6 +85,9 @@ export const translations: Record<string, any> = {
             "biometricPrompt": "Veuillez entrer votre mot de passe pour autoriser TouchID/FaceID:",
             "loadingUniverse": "Chargement de ton univers"
         },
+        "profile": {
+            "title": "Mon Profil"
+        },
         "nav": {
             "dashboard": "Tableau de bord",
             "quiz": "Quiz IA",
@@ -417,17 +420,6 @@ export const translations: Record<string, any> = {
             "infoRule2": "Intégrité : Gagnez vos XP sans tricher pour réellement progresser.",
             "infoRule3": "Confidentialité : Vos données sont protégées par TMAB GROUP.",
             "infoQualityTitle": "Engagement Qualité TMAB GROUP",
-            "infoQualityDesc": "Nous nous engageons à lutter pour que LEVELMAK reste l'outil le plus accessible, puissant et innovant pour la jeunesse africaine et mondiale. L'avenir appartient à ceux qui apprennent.",
-            "infoGotIt": "J'ai compris, c'est parti !",
-            "bubblePatience": "Patience... 🧘‍♂️",
-            "bubblePatienceDesc": "Encore {min} minutes de travail pour débloquer le Lâcher-Prise.",
-            "installIosTitle": "Installer sur iPhone",
-            "installIosDesc": "Ajoute LEVELMAK à ton écran d'accueil pour une expérience optimale et un accès rapide.",
-            "installIosStep1": "Clique sur le bouton **Partager** en bas de Safari.",
-            "installIosStep2": "Fais défiler et appuie sur **Sur l'écran d'accueil**.",
-            "installIosStep3": "Clique sur **Ajouter** en haut à droite.",
-            "installIosGotIt": "C'est compris !",
-            "installApp": "Installer l'App",
             "installAppAria": "Installer l'application",
             "installBtn": "Installer l'App",
             "elitePortal": "Portail des Elites",
@@ -441,7 +433,54 @@ export const translations: Record<string, any> = {
             "ratingDesc": "Comment évaluez-vous votre expérience sur LEVELMAK ?",
             "ratingSubmit": "Valider ma note",
             "infoTitle": "L'Espace Elite LEVELMAK",
-            "importantInfo": "Guide Complet de ton Ascension"
+            "importantInfo": "Guide Complet de ton Ascension",
+            "helpSupport": "Aide & Assistance",
+            "helpSubtitle": "Centre d'Aide Elite"
+        },
+        "help": {
+            "title": "Centre d'Aide & Support",
+            "subtitle": "Tout savoir sur ton univers LEVELMAK",
+            "categories": {
+                "account": "Compte & Accès",
+                "ai": "Intelligence Artificielle",
+                "tools": "Outils d'Étude",
+                "discovery": "Découverte & Science",
+                "progression": "Mon Ascension",
+                "settings": "Mes Paramètres"
+            },
+            "topics": {
+                "createAccount": "Comment créer un compte ?",
+                "createAccountDesc": "Pour rejoindre LEVELMAK et débloquer tout votre potentiel, vous avez besoin d'un compte Elite. Que ce soit via Google ou avec un email, l'inscription est rapide.\n\nUne fois connecté, toutes vos progressions, badges, et statistiques sont sauvegardées de manière sécurisée dans le Cloud. En cas de déconnexion, vous pourrez tout récupérer intact.",
+                "login": "Connexion",
+                "loginDesc": "La connexion vous permet d'accéder à votre Tableau de bord personnalisé. Assurez-vous de garder vos identifiants à l'abri.\n\nLe système de Biomtétrie (FaceID/TouchID) vous permet de revenir plus vite pour ne pas perdre l'élan de vos révisions.",
+                "quizIA": "Quiz IA",
+                "quizIADesc": "Le Quiz IA est votre entraîneur personnel. Au lieu de vous donner des quiz génériques, notre intelligence artificielle analyse votre niveau, vos chapitres et vos lacunes pour concevoir un QCM sur mesure en temps réel.\n\n<b>Comment ça marche ?</b> Choisissez votre niveau, indiquez un sujet précis (ex: Les Pharaons, Les équations différentielles) et générez. Chaque mauvaise réponse est expliquée pour vous faire grandir.",
+                "summaryIA": "Résumé IA",
+                "summaryIADesc": "Fini la corvée des fiches de révision manuscrites interminables. Le Résumé IA extrait la substantifique moelle de vos cours pour vous offrir l'essentiel.\n\n<b>Comment l'utiliser :</b> Allez dans la section Résumé, copiez-collez votre long PDF ou votre texte, et lancez l'outil. Choisissez entre un résumé classique, sous forme de tirets, ou même expliqué \"comme à un enfant de 10 ans\". Idéal avant un contrôle.",
+                "levelBot": "Elite Coach (LevelBot)",
+                "levelBotDesc": "Ton coach personnel 24h/24. Pose des questions, envoie une photo d'un exercice pour une explication étape par étape.",
+                "writing": "Atelier d'Écriture",
+                "writingDesc": "Améliore ton style rédactionnel. L'IA analyse tes textes et propose des corrections captivantes.",
+                "flashcards": "Flashcards",
+                "flashcardsDesc": "Les Flashcards utilisent la répétition espacée, l'une des techniques d'apprentissage les plus puissantes au monde validées par les neurosciences.\n\n<b>Fonctionnement :</b> L'application génère des cartes recto-verso (Question/Réponse). Vous auto-évaluez votre difficulté à vous souvenir (\"Facile\", \"Moyen\", \"Difficile\"). Si c'est difficile, la carte reviendra plus souvent. Si c'est facile, elle vous laissera tranquille. Pratiquez 10 minutes par jour pour des résultats faramineux.",
+                "ailab": "Laboratoire IA",
+                "ailabDesc": "Simule des expériences de SVT et Chimie de manière interactive et sécurisée.",
+                "atlas": "Atlas Géo",
+                "atlasDesc": "L'Atlas Géographique n'est pas qu'une simple carte. C'est une encyclopédie interactive immersive de la Guinée et du monde. Plongez au cœur des fleuves, des ressources et du relief.\n\n<b>Exploration :</b> Cliquez sur une zone de la carte interactive pour découvrir son histoire, ses données climatologiques, et des leçons complètes avec options de rendu visuel.",
+                "ranking": "Classement Elite",
+                "rankingDesc": "Le Classement Global permet de stimuler une compétition saine entre les champions. Vous démarrez tout en bas en accumulant de l'XP.\n\n<b>Objectif :</b> Chaque Quiz complété, chaque flashcard maîtrisée boostent vos XP. Gravissez les échelons de \"Novice\" à \"Légende Elite\". Défiez vos camarades et gagnez des Badges Rares qui s'afficheront sur votre Profil.",
+                "shop": "Boutique Elite",
+                "shopDesc": "Échange tes LevelCoins gagnés en étudiant contre des avatars épiques et des bonus.",
+                "settings": "Personnalisation",
+                "settingsDesc": "L'interface de LEVELMAK s'adapte à vous, et non l'inverse. Ajustez chaque détail pour optimiser votre concentration.\n\n<b>Fonctionnalités :</b> Modifier le thème sombre/clair pour protéger vos yeux. Régler la taille du texte si vous lisez de longs résumés. Le paramétrage sonore vous permet d'activer ou désactiver les BGM (musiques d'ambiance) selon que vous souhaitiez du silence lors de vos travaux intensifs.",
+                "planner": "Planificateur Stratégique",
+                "plannerDesc": "Le Planificateur (Planif IA) est l'outil ultime pour organiser vos journées de révision sans stress. Dites à l'IA la date de votre examen et vos objectifs de la semaine, et elle calculera les temps d'étude parfaits.\n\n<b>Mode d'emploi :</b> Rendez-vous sur Planif IA, renseignez les heures où vous êtes disponible, et la machine segmentera votre charge de travail avec la méthode Pomodoro intégrée (25 min de travail, 5 min de pause) pour une productivité décuplée.",
+                "activeVisual": "Science & Visuel Actif",
+                "activeVisualDesc": "L'Apprentissage Actif et Visuel transforme la science théorique en expérience palpable. Marre d'imaginer ? Visualisez et interagissez.\n\n<b>Action :</b> Entrez dans le Labo Chimique ou Électrique. Ajustez les pipettes virtuelles, branchez les circuits et observez les réactions (précipitation, redox) de vos propres yeux. C'est le TP ultime, sans danger pour vos sourcils.",
+                "missions": "Missions & Récompenses",
+                "missionsDesc": "Les missions quotidiennes sont renouvelées chaque jour. Elles vous imposent de sortir de votre zone de confort (ex: Réussir 2 Quiz avec 100%, Utiliser l'Atelier d'Écriture).\n\n<b>Récompenses :</b> Compléter des missions rapporte des LevelCoins, utilisables dans la Boutique pour personnaliser votre avatar et déverrouiller du contenu premium caché.",
+                "mySettings": "Mes Paramètres"
+            }
         },
         "dashboard": {
             "online": "En ligne",
@@ -1150,6 +1189,9 @@ export const translations: Record<string, any> = {
             "biometricPrompt": "Please enter your password to authorize TouchID/FaceID:",
             "loadingUniverse": "Loading your universe"
         },
+        "profile": {
+            "title": "My Profile"
+        },
         "nav": {
             "dashboard": "Dashboard",
             "quiz": "AI Quiz",
@@ -1536,6 +1578,51 @@ export const translations: Record<string, any> = {
                     "keyFacts": ["Copper resists HCl but not HNO₃", "NO₂ = toxic brown gas", "Cu²⁺ = characteristic blue color", "Dangerous lab reaction"],
                     "didYouKnow": "Nitrogen dioxide (NO2) is a major atmospheric pollutant from car exhausts."
                 }
+            }
+        },
+        "help": {
+            "title": "Help & Support Center",
+            "subtitle": "Everything you need to know about your LEVELMAK universe",
+            "categories": {
+                "account": "Account & Access",
+                "ai": "Artificial Intelligence",
+                "tools": "Study Tools",
+                "discovery": "Discovery & Science",
+                "progression": "My Ascension",
+                "settings": "My Settings"
+            },
+            "topics": {
+                "createAccount": "How to create an account?",
+                "createAccountDesc": "To join LEVELMAK and unlock your full potential, you need an Elite account. Whether via Google or email, registration is quick.\n\nOnce logged in, all your progress, badges, and statistics are securely saved in the Cloud. If you log out, you can recover everything intact.",
+                "login": "Login",
+                "loginDesc": "Login allows you to access your personalized Dashboard. Make sure to keep your credentials safe.\n\nThe Biometric system (FaceID/TouchID) allows you to return faster so you don't lose the momentum of your revisions.",
+                "quizIA": "AI Quiz",
+                "quizIADesc": "The AI Quiz is your personal trainer. Instead of giving you generic quizzes, our artificial intelligence analyzes your level, chapters, and gaps to design a custom multiple-choice test in real time.\n\n<b>How it works?</b> Choose your level, indicate a specific subject (e.g., Pharaohs, Differential Equations) and generate. Every wrong answer is explained to help you grow.",
+                "summaryIA": "AI Summary",
+                "summaryIADesc": "No more endless handwritten revision cards. The AI Summary extracts the core essence of your courses to give you the essentials.\n\n<b>How to use it:</b> Go to the Summary section, copy-paste your long PDF or text, and launch the tool. Choose between a classic summary, bullet points, or even explained \"like I'm 10 years old\". Ideal before an exam.",
+                "levelBot": "Elite Coach (LevelBot)",
+                "levelBotDesc": "Your personal coach 24/7. Ask questions, send a picture of an exercise for a step-by-step explanation.",
+                "writing": "Writing Lab",
+                "writingDesc": "Improve your writing style. AI analyzes your texts and proposes captivating corrections.",
+                "flashcards": "Flashcards",
+                "flashcardsDesc": "Flashcards use spaced repetition, one of the most powerful learning techniques in the world validated by neuroscience.\n\n<b>How it works:</b> The application generates double-sided cards (Question/Answer). You self-assess how hard it was to remember (\"Easy\", \"Medium\", \"Hard\"). If it's hard, the card will appear more often. If easy, it leaves you alone. Practice 10 minutes a day for staggering results.",
+                "ailab": "AI Lab",
+                "ailabDesc": "Simulate biology and chemistry experiments in an interactive and secure way.",
+                "atlas": "Geographic Atlas",
+                "atlasDesc": "The Geographic Atlas is not just a simple map. It's an immersive interactive encyclopedia of Guinea and the world. Dive into the heart of rivers, resources, and relief.\n\n<b>Exploration:</b> Click on an area of the interactive map to discover its history, climatological data, and full lessons with visual rendering options.",
+                "ranking": "Elite Ranking",
+                "rankingDesc": "The Global Ranking stimulates healthy competition among champions. You start at the bottom, accumulating XP.\n\n<b>Goal:</b> Every completed Quiz, every mastered flashcard boosts your XP. Climb the ranks from \"Novice\" to \"Elite Legend\". Challenge your peers and earn Rare Badges displayed on your Profile.",
+                "shop": "Elite Shop",
+                "shopDesc": "Exchange your LevelCoins earned by studying for epic avatars and bonuses.",
+                "settings": "Personalization",
+                "settingsDesc": "The LEVELMAK interface adapts to you, not the other way around. Adjust every detail to optimize your focus.\n\n<b>Features:</b> Change the dark/light theme to protect your eyes. Adjust the text size if you read long summaries. Sound settings let you enable or disable BGM (background music) depending on whether you want silence during intensive work.",
+                "planner": "Strategic Planner",
+                "plannerDesc": "The Planner (AI Planner) is the ultimate tool to organize your revision days without stress. Tell the AI your exam date and your weekly goals, and it will calculate the perfect study times.\n\n<b>How to use:</b> Go to AI Planner, enter your available hours, and the machine will segment your workload using the built-in Pomodoro method (25 mins work, 5 mins break) for unbridled productivity.",
+                "activeVisual": "Active Visual Science",
+                "activeVisualDesc": "Active and Visual Learning transforms theoretical science into a tangible experience. Tired of imagining? Visualize and interact.\n\n<b>Action:</b> Enter the Chemical or Electrical Lab. Adjust virtual pipettes, connect circuits, and observe reactions (precipitation, redox) with your own eyes. It's the ultimate practical work, safe for your eyebrows.",
+                "missions": "Missions & Rewards",
+                "missionsDesc": "Daily missions are refreshed every day. They push you out of your comfort zone (e.g., Get 100% on 2 Quizzes, Use the Writing Lab).\n\n<b>Rewards:</b> Completing missions earns you LevelCoins, usable in the Shop to customize your avatar and unlock hidden premium content.",
+                "mySettings": "My Settings"
             }
         },
         "settings": {
@@ -2208,6 +2295,9 @@ export const translations: Record<string, any> = {
             "biometricPrompt": "يرجى إدخال كلمة المرور الخاصة بك لتنشيط TouchID/FaceID:",
             "loadingUniverse": "جاري تحميل عالمك الخاص"
         },
+        "profile": {
+            "title": "ملفي الشخصي"
+        },
         "nav": {
             "dashboard": "لوحة القيادة",
             "quiz": "اختبار الذكاء الاصطناعي",
@@ -2545,6 +2635,51 @@ export const translations: Record<string, any> = {
             "ratingSubmit": "تأكيد تقييمي",
             "infoTitle": "مساحة النخبة في LEVELMAK",
             "importantInfo": "الدليل الكامل لصعودك"
+        },
+        "help": {
+            "title": "مركز المساعدة والدعم",
+            "subtitle": "كل ما تحتاج لمعرفته عن عالم LEVELMAK الخاص بك",
+            "categories": {
+                "account": "الحساب والوصول",
+                "ai": "الذكاء الاصطناعي",
+                "tools": "أدوات الدراسة",
+                "discovery": "الاكتشاف والعلوم",
+                "progression": "تقدمي",
+                "settings": "إعداداتي"
+            },
+            "topics": {
+                "createAccount": "كيفية إنشاء حساب؟",
+                "createAccountDesc": "للانضمام إلى LEVELMAK وإطلاق إمكاناتك الكاملة، تحتاج إلى حساب النخبة. سواء عبر جوجل أو البريد الإلكتروني، التسجيل سريع.\n\nبمجرد تسجيل الدخول، يتم حفظ جميع تقدمك وشاراتك وإحصائياتك بأمان في السحابة. في حالة تسجيل الخروج، ستتمكن من استعادة كل شيء سليمًا.",
+                "login": "تسجيل الدخول",
+                "loginDesc": "يتيح لك تسجيل الدخول الوصول إلى لوحة القيادة المخصصة الخاصة بك. تأكد من الحفاظ على أمان بيانات الاعتماد الخاصة بك.\n\nيسمح لك النظام البيومتري (FaceID/TouchID) بالعودة بشكل أسرع حتى لا تفقد زخم مراجعاتك.",
+                "quizIA": "اختبار الذكاء الاصطناعي",
+                "quizIADesc": "اختبار الذكاء الاصطناعي هو مدربك الشخصي. بدلاً من إعطائك اختبارات عامة، يحلل ذكاؤنا الاصطناعي مستواك وفصولك وثغراتك لتصميم اختبار متعدد الخيارات مخصص في الوقت الفعلي.\n\n<b>كيف يعمل؟</b> اختر مستواك، وحدد موضوعًا دقيقًا (مثل: الفراعنة، المعادلات التفاضلية) وقم بالتوليد. يتم شرح كل إجابة خاطئة لمساعدتك على النمو.",
+                "summaryIA": "ملخص الذكاء الاصطناعي",
+                "summaryIADesc": "لا مزيد من عناء بطاقات المراجعة المكتوبة بخط اليد التي لا تنتهي. يستخرج ملخص الذكاء الاصطناعي الجوهر الأساسي لدروسك ليقدم لك الأساسيات.\n\n<b>كيفية استخدامه:</b> انتقل إلى قسم الملخص، انسخ والصق ملف PDF الطويل أو النص، وقم بتشغيل الأداة. اختر بين ملخص كلاسيكي، أو على شكل نقاط، أو حتى مشروح \"كما لو كان لطفل في العاشرة\". مثالي قبل الامتحان.",
+                "levelBot": "مدرب النخبة (LevelBot)",
+                "levelBotDesc": "مدربك الشخصي 24/7. اطرح أسئلة، أرسل صورة تمرين للحصول على شرح خطوة بخطوة.",
+                "writing": "ورشة الكتابة",
+                "writingDesc": "حسّن أسلوبك في الكتابة. يحلل الذكاء الاصطناعي نصوصك ويقترح تصحيحات جذابة.",
+                "flashcards": "البطاقات التعليمية",
+                "flashcardsDesc": "تستخدم البطاقات التعليمية التكرار المتباعد، وهي إحدى أقوى تقنيات التعلم في العالم والتي أثبتتها علوم الأعصاب.\n\n<b>آلية العمل:</b> يولد التطبيق بطاقات ذات وجهين (سؤال/جواب). ستقوم بتقييم ذاتي لصعوبة التذكر (\"سهل\"، \"متوسط\"، \"صعب\"). إذا كان صعبًا، ستظهر البطاقة في كثير من الأحيان. إذا كان سهلاً، فستتركك وشأنك. تدرب لمدة 10 دقائق يوميًا للحصول على نتائج مذهلة.",
+                "ailab": "مختبر الذكاء الاصطناعي",
+                "ailabDesc": "قم بمحاكاة تجارب علم الأحياء والكيمياء بطريقة تفاعلية وآمنة.",
+                "atlas": "الأطلس الجغرافي",
+                "atlasDesc": "الأطلس الجغرافي ليس مجرد خريطة بسيطة. إنها موسوعة تفاعلية غامرة لغينيا والعالم. انغمس في قلب الأنهار والموارد والتضاريس.\n\n<b>الاستكشاف:</b> انقر على منطقة في الخريطة التفاعلية لاكتشاف تاريخها والبيانات المناخية ودروس كاملة مع خيارات العرض المرئي.",
+                "ranking": "ترتيب النخبة",
+                "rankingDesc": "الترتيب العالمي يحفز المنافسة الصحية بين الأبطال. تبدأ من الأسفل وتراكم نقاط الخبرة.\n\n<b>الهدف:</b> كل اختبار مكتمل، كل بطاقة تعليمية متقنة تعزز نقاط الخبرة الخاصة بك. ارتق في الرتب من \"مبتدئ\" إلى \"أسطورة النخبة\". تحد زملاءك واكسب شارات نادرة تظهر على ملفك الشخصي.",
+                "shop": "متجر النخبة",
+                "shopDesc": "استبدل عملات المستوى (LevelCoins) التي كسبتها بالدراسة مقابل صور رمزية ومكافآت أسطورية.",
+                "settings": "التخصيص",
+                "settingsDesc": "واجهة LEVELMAK تتكيف معك، وليس العكس. اضبط كل التفاصيل لتحسين تركيزك.\n\n<b>الميزات:</b> قم بتغيير السمة المظلمة/الفاتحة لحماية عينيك. اضبط حجم النص إذا كنت تقرأ ملخصات طويلة. تتيح لك إعدادات الصوت تمكين أو تعطيل موسيقى الخلفية (BGM) بناءً على ما إذا كنت تريد الصمت أثناء العمل المكثف.",
+                "planner": "مخطط استراتيجي",
+                "plannerDesc": "المخطط (مخطط الذكاء الاصطناعي) هو الأداة المثلى لتنظيم أيام المراجعة الخاصة بك دون ضغوط. أخبر الذكاء الاصطناعي بتاريخ امتحانك وأهدافك الأسبوعية، وسيحسب أوقات الدراسة المثالية.\n\n<b>طريقة الاستخدام:</b> انتقل إلى مخطط الذكاء الاصطناعي، أدخل الساعات المتاحة لك، وستقوم الآلة بتقسيم عبء العمل الخاص بك باستخدام طريقة بومودورو المدمجة (25 دقيقة عمل، 5 دقائق راحة) لإنتاجية مضاعفة.",
+                "activeVisual": "العلوم المرئية النشطة",
+                "activeVisualDesc": "التعلم النشط والمرئي يحول العلوم النظرية إلى تجربة ملموسة. هل سئمت من التخيل؟ تصور وتفاعل.\n\n<b>الإجراء:</b> ادخل إلى المختبر الكيميائي أو الكهربائي. اضبط الماصات الافتراضية، وقم بتوصيل الدوائر واشهد التفاعلات (الترسيب، الأكسدة والاختزال) بأم عينيك. إنها التجربة العملية الفائقة، آمنة لحاجبيك.",
+                "missions": "المهمات والمكافآت",
+                "missionsDesc": "المهمات اليومية تتجدد كل يوم. تفرض عليك الخروج من منطقة الراحة الخاصة بك (مثل: اجتياز اختبارين بنسبة 100٪، استخدام ورشة الكتابة).\n\n<b>المكافآت:</b> إكمال المهمات يمنحك عملات المستويات (LevelCoins)، والتي يمكن استخدامها في المتجر لتخصيص صورتك الرمزية وفتح محتوى متميز مخفي.",
+                "mySettings": "إعداداتي"
+            }
         },
         "dashboard": {
             "online": "متصل",
