@@ -1,11 +1,16 @@
 /**
- * Service pour l'IA via OpenRouter (Alternative gratuite à Gemini)
- * Modèle par défaut : stepfun/step-3.5-flash:free
+ * Service pour l'IA via OpenRouter
+ * Modèle par défaut : nvidia/nemotron-3-super-120b-a12b:free
  */
 
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || "";
-const DEFAULT_MODEL = "stepfun/step-3.5-flash:free";
-const MULTIMODAL_MODEL = "openrouter/free"; // Routage automatique vers le meilleur modèle gratuit (évite les 429)
+// Modèle texte premium gratuit — Nemotron 3 Super 120B (NVIDIA, vérifié disponible avril 2026)
+const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
+// Modèle vision gratuit — Gemma 3 27B (supporte les images)
+const VISION_MODEL = "google/gemma-3-27b-it:free";
+// Fallback universel : routage automatique OpenRouter (toujours disponible)
+const FALLBACK_MODEL = "openrouter/free";
+const MULTIMODAL_MODEL = "openrouter/free"; // Routage automatique pour OCR
 
 const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -55,8 +60,8 @@ export const openrouterService = {
    */
   async generateMultimodalQuiz(sources: { type: 'text' | 'image' | 'pdf' | 'word', data: string }[], subject: string, difficulty: string = 'Intermédiaire', lang: string = 'fr') {
     const hasImages = sources.some(s => s.type === 'image' || s.type === 'pdf');
-    // On force un modèle de haute qualité (Gemini 2.5 Flash Premium) pour la structuration JSON complexe
-    const model = hasImages ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+    // Modèle gratuit haute qualité — Llama 3.3 70B (texte) / Gemma 3 27B (vision)
+    const model = hasImages ? VISION_MODEL : DEFAULT_MODEL;
 
     const messages = [
       {
@@ -140,7 +145,7 @@ export const openrouterService = {
 
   async coachChat(message: string, history: { role: 'user' | 'bot'; text: string }[], userContext: string, base64Image?: string) {
     const hasImage = !!base64Image;
-    const model = hasImage ? "google/gemma-3-27b-it:free" : DEFAULT_MODEL;
+    const model = hasImage ? VISION_MODEL : DEFAULT_MODEL;
 
     const systemPrompt = `Tu es le "Elite Coach" de Levelmak Pro, un enseignant et mentor pédagogique exceptionnel, bienveillant mais exigeant.
 Ton but est d'aider l'élève à progresser, à comprendre ses leçons et à rester motivé.
@@ -181,9 +186,10 @@ DIRECTIVES SPÉCIFIQUES (Tu as reçu une image de l'élève) :
       console.log(`🚀 CoachIA: Envoi requête au modèle ${model}`);
       return await callOpenRouter(messages, model);
     } catch (e: any) {
-      if (e.status === 429 && hasImage) {
-        console.warn("⚠️ 429 sur Gemma Coach, fallback Mistral...");
-        return await callOpenRouter(messages, "mistralai/mistral-small-3.1-24b-instruct:free");
+      if (e.status === 429) {
+        const fallback = FALLBACK_MODEL;
+        console.warn(`⚠️ 429 sur ${model}, fallback sur ${fallback}...`);
+        return await callOpenRouter(messages, fallback);
       }
       throw e;
     }
@@ -258,7 +264,7 @@ DIRECTIVES SPÉCIFIQUES (Tu as reçu une image de l'élève) :
 
   async generatePlanMultimodal(examDate: string, subjects: string[], sources: { type: 'text' | 'image' | 'pdf' | 'word', data: string }[], lang: string = 'fr') {
     const hasImages = sources.some(s => s.type === 'image' || s.type === 'pdf');
-    const model = hasImages ? "google/gemma-3-27b-it:free" : DEFAULT_MODEL;
+    const model = hasImages ? VISION_MODEL : DEFAULT_MODEL;
 
     const prompt = `Génère un plan d'étude réaliste et structuré pour un étudiant préparant ses examens le ${examDate}.
 Les matières à réviser sont : ${subjects.join(', ')}.
@@ -360,11 +366,11 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
 
     let text = "";
     try {
-      // Modèle Premium OFFICIEL Gemini 2.5 Flash
-      text = await callOpenRouter(messages, "google/gemini-2.5-flash", false);
+      // Modèle haute qualité pour flashcards — Llama 3.3 70B
+      text = await callOpenRouter(messages, DEFAULT_MODEL, false);
     } catch (e: any) {
       if (e.status === 429) {
-        text = await callOpenRouter(messages, "google/gemini-2.5-pro", false);
+        text = await callOpenRouter(messages, "google/gemma-3-27b-it:free", false);
       } else {
         throw e;
       }
@@ -426,7 +432,7 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
 
   async summarizeMultimodal(sources: { type: 'text' | 'image' | 'pdf' | 'word', data: string }[], subject: string = 'Inconnu', lang: string = 'fr') {
     const hasImages = sources.some(s => s.type === 'image' || s.type === 'pdf');
-    const model = hasImages ? "google/gemma-3-27b-it:free" : DEFAULT_MODEL;
+    const model = hasImages ? VISION_MODEL : DEFAULT_MODEL;
 
     const messages = [
       {
@@ -572,7 +578,7 @@ REGLER CRUCIALES :
 
   async solveScientificProblem(problem: string, context?: string, base64Image?: string, lang: string = 'fr') {
     const hasImage = !!base64Image;
-    const model = hasImage ? "google/gemma-3-27b-it:free" : DEFAULT_MODEL;
+    const model = hasImage ? VISION_MODEL : DEFAULT_MODEL;
 
     const systemPrompt = `Tu es "Elite Scientist", un professeur expert en Mathématiques, Physique et Chimie.
 Ton rôle est de résoudre le problème fourni avec une rigueur absolue et une pédagogie exceptionnelle.
@@ -611,7 +617,7 @@ RÈGLES :
   },
 
   async verifyScientificSolution(problemContext: string, studentSolutionBase64: string, lang: string = 'fr') {
-    const model = "google/gemma-3-27b-it:free"; // Vision requise
+    const model = VISION_MODEL; // Vision requise
 
     const systemPrompt = `Tu es "Elite Corrector". Tu dois analyser la photo de la solution manuscrite d'un élève et la comparer au problème posé.
 OBJECTIF : Dire si c'est juste, identifier les erreurs et donner des conseils.
