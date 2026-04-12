@@ -27,10 +27,13 @@ import BookReader from './components/BookReader';
 import { AILab } from './components/AILab';
 import { WorldBrainMap } from './components/WorldBrainMap';
 import { ActiveVisual } from './pages/ActiveVisual';
+import AudioLab from './pages/AudioLab';
+
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
 import { Loader2 } from 'lucide-react';
 import { openrouterService } from './services/openrouter';
 import { initializeNativeFeatures } from './services/nativeAdapters';
+import { App as CapacitorApp } from '@capacitor/app';
 
 const AppContent: React.FC = () => {
   const { user, loading, settings, t } = useStore();
@@ -67,6 +70,27 @@ const AppContent: React.FC = () => {
     window.addEventListener('nav_change', handleNav);
     return () => window.removeEventListener('nav_change', handleNav);
   }, []);
+
+  // Gestion du bouton retour physique (Android)
+  useEffect(() => {
+    const listener = CapacitorApp.addListener('backButton', () => {
+      if (currentBook) {
+        setCurrentBook(null);
+      } else if (currentQuiz) {
+        setCurrentQuiz(null);
+      } else if (currentDeck) {
+        setCurrentDeck(null);
+      } else if (activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      listener.then(sub => sub.remove());
+    };
+  }, [currentBook, currentQuiz, currentDeck, activeTab]);
 
   if (currentBook) {
     return (
@@ -226,6 +250,18 @@ const AppContent: React.FC = () => {
         return <FlashcardMode onClose={() => setActiveTab('dashboard')} />;
       case 'active_visual':
         return <ActiveVisual />;
+      case 'audio_lab':
+        return <AudioLab 
+          onQuizGenerated={(quiz) => {
+            setCurrentQuiz(quiz);
+            setActiveTab('quiz');
+          }}
+          onFlashcardsGenerated={(deck, cards) => {
+            setCurrentDeck({ deck, cards });
+            setActiveTab('flashcards');
+          }}
+        />;
+
       default:
         return <Dashboard onNavigate={setActiveTab} />;
     }

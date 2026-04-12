@@ -104,6 +104,7 @@ export const translations: Record<string, any> = {
             "ailabShort": "Lab IA",
             "atlas": "Atlas Géo",
             "activeVisual": "Active Visuel",
+            "aiCalculator": "Calculatrice IA",
             "feedback": "Commentaire",
             "rating": "Note App",
             "short": {
@@ -116,6 +117,7 @@ export const translations: Record<string, any> = {
                 "ranking": "Rank",
                 "atlas": "Atlas",
                 "activeVisual": "Visuel",
+                "aiCalculator": "Calc IA",
                 "shop": "Shop",
                 "planner": "Planif",
                 "social": "Social",
@@ -123,6 +125,49 @@ export const translations: Record<string, any> = {
                 "rating": "Note"
             }
         },
+        "aiCalculator": {
+            "title": "Elite Professeur IA",
+            "subtitle": "Spécialiste Maths, Physique & Chimie",
+            "modes": {
+                "keyboard": "Calculs",
+                "solver": "Résolution IA",
+                "verifier": "Vérif-IA",
+                "chemistry": "Labo Chimie",
+                "formulas": "Formules"
+            },
+            "solver": {
+                "title": "Résolveur Scientifique",
+                "placeholder": "Pose ta question ou décris ton problème (ex: résous 2x+5=15)",
+                "solveBtn": "Lancer l'Analyse IA",
+                "processing": "L'Elite Scientist analyse le problème...",
+                "results": {
+                    "solution": "Résultat Final",
+                    "steps": "Étapes de Résolution",
+                    "pedagogy": "Le Pourquoi & Le Comment",
+                    "formulas": "Formules Associées"
+                }
+            },
+            "verifier": {
+                "title": "Correcteur de Solutions",
+                "desc": "Prends en photo ta solution manuscrite pour obtenir une correction détaillée.",
+                "verifyBtn": "Lancer la Correction",
+                "verifying": "L'Elite Corrector vérifie ton travail...",
+                "feedback": "Critique du Professeur",
+                "correct": "C'est parfaitement juste ! Beau travail, champion. 🎉",
+                "incorrect": "Il y a quelques erreurs dans ton raisonnement. 🧐",
+                "errors": "Erreurs Détectées",
+                "suggestions": "Conseils pour t'améliorer"
+            },
+            "chemistry": {
+                "title": "Laboratoire de Chimie",
+                "equationPlaceholder": "Entre une équation (ex: H2 + O2 -> H2O)",
+                "balanceBtn": "Équilibrer l'équation",
+                "balanced": "Résultat de l'Équilibrage",
+                "molarMass": "Masse Molaire",
+                "concentration": "Calcul de Concentration"
+            }
+        },
+
         "atlas": {
             "title": "Atlas Géographique",
             "subtitle": "Encyclopédie de la Guinée",
@@ -1208,6 +1253,7 @@ export const translations: Record<string, any> = {
             "ailabShort": "AI Lab",
             "atlas": "Geo Atlas",
             "activeVisual": "Active Visual",
+            "aiCalculator": "AI Calculator",
             "feedback": "Feedback",
             "rating": "App Rating",
             "short": {
@@ -1223,10 +1269,55 @@ export const translations: Record<string, any> = {
                 "social": "Social",
                 "atlas": "Atlas",
                 "activeVisual": "Visual",
+                "aiCalculator": "AI Calc",
                 "feedback": "Feedback",
                 "rating": "Rating"
             }
         },
+        "aiCalculator": {
+            "title": "Elite AI Professor",
+            "subtitle": "Math, Physics & Chemistry Specialist",
+            "modes": {
+                "keyboard": "Calculations",
+                "solver": "AI Solving",
+                "verifier": "AI-Verify",
+                "chemistry": "Chemistry",
+                "formulas": "Formulas"
+            },
+            "solver": {
+                "title": "Scientific Solver",
+                "placeholder": "Ask your question or describe your problem (ex: solve 2x+5=15)",
+                "solveBtn": "Start AI Analysis",
+                "processing": "The Elite Scientist is analyzing the problem...",
+                "results": {
+                    "solution": "Final Result",
+                    "steps": "Solving Steps",
+                    "pedagogy": "The Why & The How",
+                    "formulas": "Related Formulas"
+                }
+            },
+            "verifier": {
+                "title": "Solution Corrector",
+                "desc": "Take a photo of your handwritten solution for a detailed correction.",
+                "verifyBtn": "Start Correction",
+                "verifying": "The Elite Corrector is checking your work...",
+                "feedback": "Professor's Critique",
+                "correct": "That's perfectly correct! Great job, champion. 🎉",
+                "incorrect": "There are some errors in your reasoning. 🧐",
+                "errors": "Detected Errors",
+                "suggestions": "Self-Improvement Tips"
+            },
+            "chemistry": {
+                "title": "Chemistry Laboratory",
+                "equationPlaceholder": "Enter an equation (ex: H2 + O2 -> H2O)",
+                "balanceBtn": "Balance Equation",
+                "balanced": "Balancing Result",
+                "molarMass": "Molar Mass",
+                "concentration": "Concentration Calculation"
+            }
+        },
+
+
         "atlas": {
             "title": "Geographic Atlas",
             "subtitle": "Encyclopedia of Guinea",

@@ -12,6 +12,7 @@ import { QuizBattle } from './QuizBattle';
 import { CollaborativeDoodle } from './CollaborativeDoodle';
 import { ATLAS_DATA, GeoFeature } from '../utils/geoAtlasData';
 import { Map as MapIcon, Waves, HardHat, Mountain, Thermometer } from 'lucide-react';
+import { Geolocation } from '@capacitor/geolocation';
 
 // Fix Leaflet default icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -125,18 +126,30 @@ export const WorldBrainMap: React.FC<WorldBrainMapProps> = ({ customBattleMode, 
   const sessionKey = useMemo(() => `${user?.id || 'anon'}_${Math.random().toString(36).substring(2, 9)}`, [user?.id]);
   const defaultCenter: [number, number] = myLocation ? [myLocation.lat, myLocation.lng] : [48.8566, 2.3522];
 
-  // Set up geolocation independently
+  // Set up geolocation independently (Native support)
   useEffect(() => {
-    if (navigator.geolocation && isLocationShared) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setMyLocation({ lat: latitude, lng: longitude });
-          updateLocation(latitude, longitude, isLocationShared); // Internal update handles presence & DB
-        },
-        (error) => console.warn("Geolocation denied or error:", error)
-      );
-    }
+    const fetchLocation = async () => {
+      try {
+        if (!isLocationShared) return;
+        
+        // On demande officiellement l'accès aux sondes GPS natives
+        const permission = await Geolocation.requestPermissions();
+        if (permission.location !== 'granted' && permission.location !== 'prompt') {
+            console.warn("Permission de géolocalisation native refusée.");
+            return;
+        }
+
+        // Acquisition haute précision avec le capteur GPS
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        const { latitude, longitude } = position.coords;
+        setMyLocation({ lat: latitude, lng: longitude });
+        updateLocation(latitude, longitude, isLocationShared); // Gère Firebase & Presence
+      } catch (error) {
+        console.warn("Erreur Géolocalisation Native :", error);
+      }
+    };
+
+    fetchLocation();
   }, [isLocationShared, updateLocation]);
 
 

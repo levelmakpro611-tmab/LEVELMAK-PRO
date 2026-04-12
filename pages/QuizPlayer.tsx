@@ -24,6 +24,7 @@ import { useStore } from '../hooks/useStore';
 import { feedbackService } from '../services/feedbackService';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { WorldBrainMap } from '../components/WorldBrainMap';
 import { useFlashcardStore } from '../services/flashcardStore';
 
@@ -94,9 +95,10 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
   const currentQuestion = quiz.questions[currentIdx];
 
-  const handleOptionClick = (idx: number) => {
+  const handleOptionClick = async (idx: number) => {
     if (isAnswered) return;
 
+    await Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
     setSelectedOption(idx);
     setIsAnswered(true);
 
@@ -212,7 +214,8 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     setShieldActive(true);
   };
 
-  const nextQuestion = () => {
+  const nextQuestion = async () => {
+    await Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
     if (currentIdx < quiz.questions.length - 1) {
       setCurrentIdx(prev => prev + 1);
       setSelectedOption(null);

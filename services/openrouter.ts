@@ -55,8 +55,8 @@ export const openrouterService = {
    */
   async generateMultimodalQuiz(sources: { type: 'text' | 'image' | 'pdf' | 'word', data: string }[], subject: string, difficulty: string = 'Intermédiaire', lang: string = 'fr') {
     const hasImages = sources.some(s => s.type === 'image' || s.type === 'pdf');
-    // On force un modèle vision s'il y a des images.
-    const model = hasImages ? "google/gemma-3-27b-it:free" : DEFAULT_MODEL;
+    // On force un modèle de haute qualité (Gemini 2.5 Flash Premium) pour la structuration JSON complexe
+    const model = hasImages ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
 
     const messages = [
       {
@@ -112,13 +112,21 @@ export const openrouterService = {
     } catch (e: any) {
       if (e.status === 429) {
         console.warn("⚠️ 429 sur Gemma, fallback sur Google Flash 2.0...");
-        text = await callOpenRouter(messages, "google/gemini-2.0-flash-001:free", true);
+        text = await callOpenRouter(messages, "google/gemma-3-27b-it:free", true);
       } else {
         throw e;
       }
     }
 
-    const data = JSON.parse(text);
+    let data: any;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      data = JSON.parse(jsonStr);
+    } catch (err) {
+      console.error("Erreur de formatage Quiz:", err, "Texte brut:", text);
+      throw new Error("L'IA n'a pas réussi à structurer le Quiz correctement.");
+    }
 
     if (data.questions) {
       data.questions = data.questions.map((q: any, idx: number) => ({
@@ -244,8 +252,8 @@ DIRECTIVES SPÉCIFIQUES (Tu as reçu une image de l'élève) :
     return this.generatePlanMultimodal(examDate, subjects, base64Images.map(img => ({ type: 'image', data: img })));
   },
 
-  async generateText(prompt: string) {
-    return await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL);
+  async generateText(prompt: string, model: string = DEFAULT_MODEL) {
+    return await callOpenRouter([{ role: "user", content: prompt }], model);
   },
 
   async generatePlanMultimodal(examDate: string, subjects: string[], sources: { type: 'text' | 'image' | 'pdf' | 'word', data: string }[], lang: string = 'fr') {
@@ -320,7 +328,7 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
     } catch (e: any) {
       if (e.status === 429 && hasImages) {
         console.warn("⚠️ 429 sur modèle Plan vision, fallback sur Google Flash 2.0...");
-        responseText = await callOpenRouter(messages, "google/gemini-2.0-flash-001:free", true);
+        responseText = await callOpenRouter(messages, "google/gemma-3-27b-it:free", true);
       } else {
          throw e;
       }
@@ -342,24 +350,47 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
     const messages = [
       {
         role: "system",
-        content: "Expert en mémorisation. Crée des flashcards au format JSON { 'cards': [ { 'front', 'back' } ] }."
+        content: "Expert en mémorisation d'élite. Tu dois ABSOLUMENT répondre par un objet JSON pur: { \"cards\": [ { \"front\": \"Question\", \"back\": \"Réponse detaillee\" } ] }."
       },
       {
         role: "user",
-        content: `Contenu : "${content || subject}". Langue: ${lang}.`
+        content: `Conçois un deck de flashcards complet basé STRICTEMENT sur ce cours.\nSujet: ${subject}\nLangue: ${lang}\n\nCours: "${content}"`
       }
     ];
 
-    const text = await callOpenRouter(messages, DEFAULT_MODEL, true);
-    const data = JSON.parse(text);
+    let text = "";
+    try {
+      // Modèle Premium OFFICIEL Gemini 2.5 Flash
+      text = await callOpenRouter(messages, "google/gemini-2.5-flash", false);
+    } catch (e: any) {
+      if (e.status === 429) {
+        text = await callOpenRouter(messages, "google/gemini-2.5-pro", false);
+      } else {
+        throw e;
+      }
+    }
 
-    return data.cards.map((card: any, idx: number) => ({
-      ...card,
-      id: `fc_${Date.now()}_${idx}`,
-      interval: 0,
-      easeFactor: 2.5,
-      repetitions: 0
-    }));
+    try {
+      // Extraction robuste du JSON
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      const data = JSON.parse(jsonStr);
+
+      if (!data.cards || !Array.isArray(data.cards)) {
+        throw new Error("Structure JSON invalide: 'cards' manquant.");
+      }
+
+      return data.cards.map((card: any, idx: number) => ({
+        ...card,
+        id: `fc_${Date.now()}_${idx}`,
+        interval: 0,
+        easeFactor: 2.5,
+        repetitions: 0
+      }));
+    } catch (error: any) {
+       console.error("Erreur de formatage Flashcards:", error, "Texte brut:", text);
+       throw new Error(`Erreur de formatage: ${error.message || "Impossible de lire la réponse de l'IA"}`);
+    }
   },
 
   async getDailyVocabulary(seenWords: string[] = [], lang: string = 'fr') {
@@ -537,5 +568,84 @@ REGLER CRUCIALES :
     ];
 
     return await callOpenRouter(messages, DEFAULT_MODEL);
+  },
+
+  async solveScientificProblem(problem: string, context?: string, base64Image?: string, lang: string = 'fr') {
+    const hasImage = !!base64Image;
+    const model = hasImage ? "google/gemma-3-27b-it:free" : DEFAULT_MODEL;
+
+    const systemPrompt = `Tu es "Elite Scientist", un professeur expert en Mathématiques, Physique et Chimie.
+Ton rôle est de résoudre le problème fourni avec une rigueur absolue et une pédagogie exceptionnelle.
+STRUCTURE DE TA RÉPONSE (JSON REQUIS) :
+{
+  "solution": "Texte court de la solution finale",
+  "steps": ["Étape 1...", "Étape 2..."],
+  "pedagogy": "Explication du 'Pourquoi' et du 'Comment' pour aider l'élève à comprendre le concept.",
+  "formulas": ["Formule 1", "Formule 2"],
+  "subject": "Maths | Physique | Chimie"
+}
+RÈGLES :
+1. Utilise le format LaTeX pour les formules mathématiques (ex: $x^2$, $\\frac{a}{b}$).
+2. Sois précis et encourageant.
+3. Langue : ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}.`;
+
+    const userContent: any[] = [{ type: "text", text: `Problème : ${problem}\nContexte additionnel : ${context || 'Aucun'}` }];
+    if (base64Image) {
+      const imgData = base64Image.includes(',') ? base64Image : `data:image/jpeg;base64,${base64Image}`;
+      userContent.push({ type: "image_url", image_url: { url: imgData } });
+    }
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userContent }
+    ];
+
+    const response = await callOpenRouter(messages, model, true);
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      return JSON.parse(jsonMatch ? jsonMatch[0] : response);
+    } catch (e) {
+      console.error("Erreur parsing solution scientifique:", e);
+      throw new Error("Impossible d'analyser la solution générée.");
+    }
+  },
+
+  async verifyScientificSolution(problemContext: string, studentSolutionBase64: string, lang: string = 'fr') {
+    const model = "google/gemma-3-27b-it:free"; // Vision requise
+
+    const systemPrompt = `Tu es "Elite Corrector". Tu dois analyser la photo de la solution manuscrite d'un élève et la comparer au problème posé.
+OBJECTIF : Dire si c'est juste, identifier les erreurs et donner des conseils.
+STRUCTURE DE TA RÉPONSE (JSON REQUIS) :
+{
+  "isCorrect": boolean,
+  "score": 0-100,
+  "feedback": "Commentaire global sur le travail",
+  "errors": ["Description de l'erreur 1", "Erreur 2..."],
+  "suggestions": ["Conseil pour s'améliorer..."],
+  "ocrTranscript": "Transcription du texte détecté sur la photo"
+}
+RÈGLES :
+1. Sois bienveillant mais très précis sur les erreurs de calcul ou de raisonnement.
+2. Si le texte est illisible, mentionne-le dans le feedback.
+3. Langue : ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}.`;
+
+    const imgData = studentSolutionBase64.includes(',') ? studentSolutionBase64 : `data:image/jpeg;base64,${studentSolutionBase64}`;
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: [
+        { type: "text", text: `Contexte du problème / Énoncé : ${problemContext}` },
+        { type: "image_url", image_url: { url: imgData } }
+      ]}
+    ];
+
+    const response = await callOpenRouter(messages, model, true);
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      return JSON.parse(jsonMatch ? jsonMatch[0] : response);
+    } catch (e) {
+      console.error("Erreur parsing vérification scientifique:", e);
+      throw new Error("Erreur lors de l'analyse de ta photo.");
+    }
   }
 };
+
