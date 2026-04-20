@@ -28,6 +28,9 @@ import { AILab } from './components/AILab';
 import { WorldBrainMap } from './components/WorldBrainMap';
 import { ActiveVisual } from './pages/ActiveVisual';
 import AudioLab from './pages/AudioLab';
+import TutorRegistration from './pages/TutorRegistration';
+import TutorHub from './pages/TutorHub';
+import TeacherDashboard from './pages/TeacherDashboard';
 
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
 import { Loader2 } from 'lucide-react';
@@ -139,6 +142,11 @@ const AppContent: React.FC = () => {
     return <AdminDashboard />;
   }
 
+  // Gérer l'espace enseignant séparément
+  if (user.role === 'teacher') {
+      return <TeacherDashboard />;
+  }
+
   if (currentQuiz) {
     return (
       <AppShell activeTab={activeTab} setActiveTab={setActiveTab}>
@@ -236,7 +244,7 @@ const AppContent: React.FC = () => {
       case 'analytics':
         return <Analytics />;
       case 'settings':
-        return <Settings />;
+        return <Settings onNavigate={setActiveTab} />;
       case 'atlas':
         return <AtlasLibrary onNavigate={setActiveTab} />;
       case 'map':
@@ -250,6 +258,10 @@ const AppContent: React.FC = () => {
         return <FlashcardMode onClose={() => setActiveTab('dashboard')} />;
       case 'active_visual':
         return <ActiveVisual />;
+      case 'tutor_registration':
+        return <TutorRegistration onComplete={() => setActiveTab('settings')} />;
+      case 'tutor_hub':
+        return <TutorHub />;
       case 'audio_lab':
         return <AudioLab 
           onQuizGenerated={(quiz) => {

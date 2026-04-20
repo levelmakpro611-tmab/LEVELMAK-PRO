@@ -29,6 +29,15 @@ class CacheService {
     }
 
     /**
+     * Vérifie si le texte est valide (pas juste des guillemets vides, points ou espaces)
+     */
+    private isValidText(text: string | null | undefined): boolean {
+        if (!text) return false;
+        const cleaned = text.trim().replace(/^["'.…]+|["'.…]+$/g, '');
+        return cleaned.length > 2;
+    }
+
+    /**
      * Récupère le vocabulaire quotidien (Global Sync via Supabase)
      */
     async getDailyVocab(generator: () => Promise<any>, lang: string = 'fr'): Promise<any> {
@@ -37,9 +46,13 @@ class CacheService {
 
         // 1. Vérifier le cache local d'abord
         if (this.storage.dailyVocab && this.storage.dailyVocab.dateString === today) {
-            // Note: Simple local storage doesn't handle multiple languages easily here, 
-            // but we'll check the fetched data's language potential later if needed.
-            return this.storage.dailyVocab.data;
+            const cachedData = this.storage.dailyVocab.data;
+            if (cachedData && Array.isArray(cachedData) && cachedData.length > 0 && this.isValidText(cachedData[0]?.word) && this.isValidText(cachedData[0]?.explanation)) {
+                return cachedData;
+            } else {
+                this.storage.dailyVocab = null;
+                localStorage.removeItem(`levelmak_vocab_cache_${lang}`);
+            }
         }
 
         try {
@@ -51,16 +64,25 @@ class CacheService {
                 .single();
 
             if (cloudData && cloudData.date_string === today) {
-                console.log(`☁️ Vocabulaire (${lang}) récupéré de Supabase`);
-                const result = { data: cloudData.data, timestamp: Date.now(), dateString: today };
-                this.storage.dailyVocab = result;
-                localStorage.setItem(`levelmak_vocab_cache_${lang}`, JSON.stringify(result));
-                return cloudData.data;
+                const cloudDataContent = cloudData.data;
+                if (cloudDataContent && Array.isArray(cloudDataContent) && cloudDataContent.length > 0 && this.isValidText(cloudDataContent[0]?.word) && this.isValidText(cloudDataContent[0]?.explanation)) {
+                    console.log(`☁️ Vocabulaire (${lang}) récupéré de Supabase`);
+                    const result = { data: cloudDataContent, timestamp: Date.now(), dateString: today };
+                    this.storage.dailyVocab = result;
+                    localStorage.setItem(`levelmak_vocab_cache_${lang}`, JSON.stringify(result));
+                    return cloudDataContent;
+                }
             }
 
             // 3. Si rien ne correspond, générer
             console.log(`🔄 Génération nouveau vocabulaire (${lang})...`);
             const data = await generator();
+            
+            // Validation stricte du contenu
+            if (!data || !Array.isArray(data) || data.length === 0 || !this.isValidText(data[0]?.word) || !this.isValidText(data[0]?.explanation)) {
+                throw new Error("L'IA a généré un vocabulaire vide ou invalide.");
+            }
+
             const result = { data, timestamp: Date.now(), dateString: today };
 
             // Sauvegarder
@@ -79,7 +101,7 @@ class CacheService {
             return data;
         } catch (error) {
             console.error('❌ Erreur sync vocabulaire:', error);
-            return generator();
+            throw error;
         }
     }
 
@@ -91,7 +113,13 @@ class CacheService {
         const cacheKey = `motivation_${lang}`;
 
         if (this.storage.dailyMotivation && this.storage.dailyMotivation.dateString === today) {
-            return this.storage.dailyMotivation.data;
+            const cachedData = this.storage.dailyMotivation.data;
+            if (cachedData && typeof cachedData === 'object' && this.isValidText(cachedData.quote)) {
+                return cachedData;
+            } else {
+                this.storage.dailyMotivation = null;
+                localStorage.removeItem(`levelmak_motivation_cache_${lang}`);
+            }
         }
 
         try {
@@ -102,15 +130,24 @@ class CacheService {
                 .single();
 
             if (cloudData && cloudData.date_string === today) {
-                console.log(`☁️ Motivation (${lang}) récupérée de Supabase`);
-                const result = { data: cloudData.data, timestamp: Date.now(), dateString: today };
-                this.storage.dailyMotivation = result;
-                localStorage.setItem(`levelmak_motivation_cache_${lang}`, JSON.stringify(result));
-                return cloudData.data;
+                const cloudDataContent = cloudData.data;
+                if (cloudDataContent && typeof cloudDataContent === 'object' && this.isValidText(cloudDataContent.quote)) {
+                    console.log(`☁️ Motivation (${lang}) récupérée de Supabase`);
+                    const result = { data: cloudDataContent, timestamp: Date.now(), dateString: today };
+                    this.storage.dailyMotivation = result;
+                    localStorage.setItem(`levelmak_motivation_cache_${lang}`, JSON.stringify(result));
+                    return cloudDataContent;
+                }
             }
 
             console.log(`🔄 Génération nouvelle motivation (${lang})...`);
             const data = await generator();
+
+            // Validation stricte du contenu
+            if (!data || typeof data !== 'object' || !this.isValidText(data.quote)) {
+                throw new Error("L'IA a généré une motivation vide ou invalide.");
+            }
+
             const result = { data, timestamp: Date.now(), dateString: today };
 
             this.storage.dailyMotivation = result;
@@ -128,7 +165,7 @@ class CacheService {
             return data;
         } catch (error) {
             console.error('❌ Erreur sync motivation:', error);
-            return generator();
+            throw error;
         }
     }
 

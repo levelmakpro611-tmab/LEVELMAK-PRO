@@ -24,7 +24,8 @@ import {
   WifiOff,
   Download,
   Layers,
-  Play
+  Play,
+  GraduationCap
 } from 'lucide-react';
 import {
   LineChart,
@@ -246,6 +247,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
             </div>
           </section>
+
+          {/* AI Spirit Card */}
 
 
 

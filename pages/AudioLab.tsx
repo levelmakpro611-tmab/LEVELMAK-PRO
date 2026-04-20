@@ -103,43 +103,57 @@ const AudioLab: React.FC<AudioLabProps> = ({ onQuizGenerated, onFlashcardsGenera
 
         await Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
         setIsAnalyzing(true);
-        const analysis = await AudioLogic.analyzeLesson(fullText, settings.language);
-        
-        const newNote: AudioNote = {
-            id: `note_${Date.now()}`,
-            date: new Date().toLocaleDateString(),
-            rawText: fullText,
-            title: analysis.title || "Leçon sans titre",
-            cleanNote: analysis.cleanNote || transcript,
-            summary: analysis.summary || "Résumé non disponible",
-            keyNotions: analysis.keyNotions || []
-        };
+        try {
+            const analysis = await AudioLogic.analyzeLesson(fullText, settings.language);
+            
+            const newNote: AudioNote = {
+                id: `note_${Date.now()}`,
+                date: new Date().toLocaleDateString(),
+                rawText: fullText,
+                title: analysis.title || "Leçon sans titre",
+                cleanNote: analysis.cleanNote || transcript,
+                summary: analysis.summary || "Résumé non disponible",
+                keyNotions: analysis.keyNotions || [],
+                aiLesson: analysis.aiLesson || ""
+            };
 
-        const updated = [newNote, ...savedNotes];
-        saveNotesToLocal(updated);
-        setSelectedNote(newNote);
-        setIsAnalyzing(false);
-        addXp(20); // Bonus XP pour la prise de note intelligente
+            const updated = [newNote, ...savedNotes];
+            saveNotesToLocal(updated);
+            setSelectedNote(newNote);
+            addXp(20); 
+        } catch (err: any) {
+            console.error(err);
+            alert("L'analyse a échoué : " + (err.message || "Erreur inconnue"));
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     const handleAnalyze = async (id: string, text: string) => {
         setIsAnalyzing(true);
-        const analysis = await AudioLogic.analyzeLesson(text, settings.language);
-        
-        const updatedNotes = savedNotes.map(n => 
-            n.id === id ? {
-                ...n,
-                title: analysis.title || n.title,
-                cleanNote: analysis.cleanNote || n.cleanNote,
-                summary: analysis.summary || n.summary,
-                keyNotions: analysis.keyNotions || n.keyNotions
-            } : n
-        );
+        try {
+            const analysis = await AudioLogic.analyzeLesson(text, settings.language);
+            
+            const updatedNotes = savedNotes.map(n => 
+                n.id === id ? {
+                    ...n,
+                    title: analysis.title || n.title,
+                    cleanNote: analysis.cleanNote || n.cleanNote,
+                    summary: analysis.summary || n.summary,
+                    keyNotions: analysis.keyNotions || n.keyNotions,
+                    aiLesson: analysis.aiLesson || n.aiLesson
+                } : n
+            );
 
-        saveNotesToLocal(updatedNotes);
-        const updatedNote = updatedNotes.find(n => n.id === id);
-        if (updatedNote) setSelectedNote(updatedNote);
-        setIsAnalyzing(false);
+            saveNotesToLocal(updatedNotes);
+            const updatedNote = updatedNotes.find(n => n.id === id);
+            if (updatedNote) setSelectedNote(updatedNote);
+        } catch (err: any) {
+            console.error(err);
+            alert("Échec de la ré-analyse : " + (err.message || "Erreur de connexion"));
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     const discardRecording = async () => {
@@ -330,33 +344,71 @@ const AudioLab: React.FC<AudioLabProps> = ({ onQuizGenerated, onFlashcardsGenera
                                         </div>
                                     )}
 
-                                    {/* Résumé */}
-                                    <div className="space-y-3">
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">L'essentiel du cours</div>
-                                        <div className="p-5 bg-white/5 border border-white/5 rounded-3xl text-sm md:text-base text-slate-200 leading-relaxed italic border-l-4 border-l-secondary">
-                                            "{selectedNote.summary}"
+                                    {/* Résumé Magistral */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1 h-4 bg-secondary rounded-full"></div>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Résumé Magistral (Essentiel)</div>
+                                        </div>
+                                        <div className="p-6 bg-white/5 border border-white/5 rounded-[2rem] text-sm md:text-base text-slate-200 leading-relaxed font-sans border-l-4 border-l-secondary whitespace-pre-wrap">
+                                            {selectedNote.summary}
                                         </div>
                                     </div>
 
+                                    {/* Leçon du Maître IA */}
+                                    {selectedNote.aiLesson && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="relative p-8 rounded-[2.5rem] bg-gradient-to-br from-secondary/20 via-primary/10 to-transparent border border-secondary/30 shadow-premium overflow-hidden group"
+                                        >
+                                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                                <BrainCircuit size={80} />
+                                            </div>
+                                            <div className="relative z-10 space-y-4">
+                                                <div className="flex items-center gap-3 text-secondary">
+                                                    <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center border border-secondary/30">
+                                                        <Sparkles size={20} />
+                                                    </div>
+                                                    <h3 className="text-lg font-black uppercase tracking-tighter">Perspective du Maître Quantum</h3>
+                                                </div>
+                                                <p className="text-sm text-slate-200 leading-bold italic font-medium">
+                                                    {selectedNote.aiLesson}
+                                                </p>
+                                            </div>
+                                        </motion.div>
+                                    )}
+
                                     {/* Note Propre */}
                                     <div className="space-y-3">
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Note de cours détaillée</div>
-                                        <div className="p-6 bg-black/20 rounded-[2rem] text-sm text-slate-300 leading-loose prose prose-invert font-sans">
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Transcription Élite (Texte Intégral)</div>
+                                        <div className="p-6 bg-black/20 rounded-[2rem] text-xs text-slate-400 leading-loose prose prose-invert font-mono border border-white/5">
                                             {selectedNote.cleanNote}
                                         </div>
                                     </div>
 
                                     {/* Notions Clés */}
                                     <div className="space-y-4">
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Notions Clés Identifiées</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1 h-4 bg-primary rounded-full"></div>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Glossaire des Notions (Notions Clés)</div>
+                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {selectedNote.keyNotions.map((notion, i) => {
-                                                const [name, def] = notion.split(':');
+                                                const parts = notion.split(':');
+                                                const name = parts[0];
+                                                const def = parts.slice(1).join(':'); // Handle cases with multiple colons
                                                 return (
-                                                    <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-1 border-b-2 border-b-primary">
-                                                        <div className="text-xs font-black text-primary uppercase">{name}</div>
-                                                        <div className="text-[11px] text-slate-400 leading-relaxed">{def}</div>
-                                                    </div>
+                                                    <motion.div 
+                                                        key={i} 
+                                                        whileHover={{ y: -5 }}
+                                                        className="p-5 bg-white/5 border border-white/10 rounded-[1.5rem] space-y-2 border-b-4 border-b-primary shadow-premium group hover:bg-white/10 transition-all"
+                                                    >
+                                                        <div className="text-xs font-black text-primary uppercase tracking-wider group-hover:text-secondary transition-colors">{name}</div>
+                                                        <div className="text-[11px] text-slate-400 leading-relaxed font-medium italic">
+                                                            {def || "Définition en cours d'analyse..."}
+                                                        </div>
+                                                    </motion.div>
                                                 );
                                             })}
                                         </div>

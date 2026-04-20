@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2, VolumeX, MoreVertical, Activity, ShieldCheck, Wifi, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { chatService, Call } from '../../services/firebase-chat';
+import { chatService, Call } from '../../services/communityService';
 
 interface CallOverlayProps {
     call: Call;

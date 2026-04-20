@@ -6,9 +6,17 @@ import { updateCommentStatus, deleteComment } from '../../services/adminService'
 interface CommentManagementProps {
     comments: UserComment[];
     onRefresh: () => void;
+    highlightId?: string | null;
 }
 
-const CommentManagement: React.FC<CommentManagementProps> = ({ comments, onRefresh }) => {
+const CommentManagement: React.FC<CommentManagementProps> = ({ comments, onRefresh, highlightId }) => {
+    React.useEffect(() => {
+        if (highlightId) {
+            const el = document.getElementById(`comment-${highlightId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [highlightId]);
+
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
     const [filterCategory, setFilterCategory] = useState<'all' | UserComment['category']>('all');
     const [responseModal, setResponseModal] = useState<UserComment | null>(null);
@@ -120,7 +128,11 @@ const CommentManagement: React.FC<CommentManagementProps> = ({ comments, onRefre
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {filteredComments.map((comment) => (
-                                <tr key={comment.id} className="hover:bg-white/5 transition-colors group">
+                                <tr 
+                                    key={comment.id} 
+                                    id={`comment-${comment.id}`}
+                                    className={`transition-all duration-1000 ${highlightId === comment.id ? 'bg-blue-500/10 dark:bg-blue-400/10 border-l-4 border-blue-500 shadow-inner' : 'hover:bg-white/5 opacity-100'}`}
+                                >
                                     <td className="px-6 py-4">
                                         <div>
                                             <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{comment.userName}</p>

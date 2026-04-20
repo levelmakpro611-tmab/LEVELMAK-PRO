@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, Phone, Search, Plus, X, Camera, MoreVertical, Swords, Zap, Users, Sparkles, TrendingUp, Crown, Shield, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
-import { chatService, Conversation, UserPresence, Call } from '../services/firebase-chat';
+import { chatService, Conversation, UserPresence, Call } from '../services/communityService';
 import DiscussionsView from '../components/community/DiscussionsView';
 import StoriesView from '../components/community/StoriesView';
 import FeedView from '../components/community/FeedView';
@@ -238,71 +238,91 @@ const Community: React.FC<CommunityProps> = ({ onNavigate }) => {
     };
 
     return (
-        <div className="w-full h-screen flex flex-col bg-[#030712] text-slate-200 overflow-hidden">
-            {/* ═══════════ IMMERSIVE HEADER ═══════════ */}
-            <div className="relative overflow-hidden">
-                {/* Animated gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-cyan-500/20 animate-pulse" style={{ animationDuration: '4s' }}></div>
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030712]"></div>
-
-                <div className="relative z-10 pt-6 pb-0 px-5">
-                    {/* Top row */}
-                    <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="relative">
-                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-400 p-[2px] shadow-[0_0_20px_rgba(99,102,241,0.3)]">
-                                    <div className="w-full h-full rounded-[14px] bg-[#030712] flex items-center justify-center overflow-hidden">
+        <div className="w-full h-screen flex flex-col bg-[#020617] text-slate-200 overflow-hidden font-sans">
+            {/* ═══════════ PREMIUM IMMERSIVE HEADER ═══════════ */}
+            <div className="relative pt-8 pb-4 px-6 overflow-hidden">
+                {/* Background effects */}
+                <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+                <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[100px] rounded-full pointer-events-none"></div>
+                
+                <div className="relative z-10 flex flex-col gap-6">
+                    {/* Top Row: User & Title */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <motion.div 
+                                whileHover={{ scale: 1.05 }}
+                                className="relative group cursor-pointer"
+                            >
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 p-[2px] shadow-[0_8px_20px_rgba(37,99,235,0.2)]">
+                                    <div className="w-full h-full rounded-[14px] bg-[#020617] flex items-center justify-center overflow-hidden">
                                         {user?.avatar?.image ? (
                                             <img src={user.avatar.image} alt="" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className="text-white font-black text-sm">{user?.name?.[0] || 'U'}</span>
+                                            <span className="text-white font-black text-base">{user?.name?.[0] || 'U'}</span>
                                         )}
                                     </div>
                                 </div>
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#030712] shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div>
-                            </div>
+                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-[3px] border-[#020617] shadow-[0_0_10px_rgba(16,185,129,0.4)]"></div>
+                            </motion.div>
                             <div>
-                                <h1 className="text-lg font-black text-white tracking-tight leading-none">LEVELMAK</h1>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                    <Crown size={10} className="text-amber-400" />
-                                    <span className="text-[9px] font-black text-amber-400/70 uppercase tracking-[0.2em]">Social Hub</span>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-xl font-black text-white tracking-tight uppercase">Levelmak</h1>
+                                    <div className="px-1.5 py-0.5 rounded-md bg-blue-600/20 border border-blue-500/30 flex items-center gap-1">
+                                        <Shield size={10} className="text-blue-400" />
+                                        <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Social</span>
+                                    </div>
                                 </div>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mt-0.5">Community Hub</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setShowDiscovery(true)} className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90">
-                                <Plus size={18} />
-                            </button>
-                            <button className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90">
-                                <Search size={18} />
-                            </button>
-                            <button className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90">
-                                <MoreVertical size={18} />
-                            </button>
+
+                        <div className="flex items-center gap-2.5">
+                            <motion.button 
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setShowDiscovery(true)}
+                                className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-blue-600/20 hover:border-blue-500/30 transition-all shadow-lg"
+                            >
+                                <Plus size={20} />
+                            </motion.button>
+                            <motion.button 
+                                whileTap={{ scale: 0.9 }}
+                                className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all shadow-lg"
+                            >
+                                <Search size={20} />
+                            </motion.button>
                         </div>
                     </div>
 
-                    {/* ═══════════ GLASSMORPHIC TABS ═══════════ */}
-                    <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-2xl p-1 backdrop-blur-xl">
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 relative py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-300 flex items-center justify-center gap-1.5
-                                    ${activeTab === tab.id
-                                        ? 'text-white bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-white/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
-                                        : 'text-slate-500 hover:text-slate-300'
-                                    }`}
-                            >
-                                <tab.icon size={13} />
-                                {tab.label}
-                                {tab.badge > 0 && (
-                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 rounded-full text-white text-[8px] font-black flex items-center justify-center px-1 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse">
-                                        {tab.badge}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
+                    {/* ═══════════ NAVIGATION PILLS ═══════════ */}
+                    <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.05] rounded-[22px] p-1.5 backdrop-blur-3xl shadow-inner-white">
+                        {tabs.map(tab => {
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex-1 relative py-3 rounded-[18px] text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-2 overflow-hidden
+                                        ${isActive ? 'text-white' : 'text-slate-500 hover:text-slate-400'}`}
+                                >
+                                    {isActive && (
+                                        <motion.div 
+                                            layoutId="tab-bg"
+                                            className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-[0_4px_15px_rgba(37,99,235,0.4)]"
+                                            transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                                        />
+                                    )}
+                                    <tab.icon size={14} className="relative z-10" strokeWidth={isActive ? 3 : 2} />
+                                    <span className="relative z-10 hidden sm:inline">{tab.label}</span>
+                                    
+                                    {tab.badge > 0 && (
+                                        <span className={`relative z-10 min-w-[18px] h-[18px] rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow-lg
+                                            ${isActive ? 'bg-white text-blue-600' : 'bg-red-500 text-white animate-pulse'}`}>
+                                            {tab.badge}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
@@ -312,10 +332,10 @@ const Community: React.FC<CommunityProps> = ({ onNavigate }) => {
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeTab}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.2 }}
+                        initial={{ opacity: 0, scale: 0.98, filter: 'blur(10px)' }}
+                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, scale: 1.02, filter: 'blur(10px)' }}
+                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                         className="h-full"
                     >
                         {renderActiveView()}
@@ -323,121 +343,140 @@ const Community: React.FC<CommunityProps> = ({ onNavigate }) => {
                 </AnimatePresence>
             </div>
 
-            {/* ═══════════ DISCOVERY MODAL ═══════════ */}
+            {/* ═══════════ DISCOVERY MODAL (Nouveau Contact) ═══════════ */}
             <AnimatePresence>
                 {showDiscovery && (
-                    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+                    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setShowDiscovery(false)}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
                         />
                         <motion.div
-                            initial={{ opacity: 0, y: 100 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 100 }}
+                            initial={{ opacity: 0, y: 100, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 100, scale: 0.95 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="relative w-full max-w-md bg-[#0a0f1a] border border-white/10 rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[80vh]"
+                            className="relative w-full max-w-lg bg-[#0f172a] border border-white/10 rounded-t-[2.5rem] sm:rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] flex flex-col max-h-[85vh]"
                         >
-                            {/* Handle bar */}
-                            <div className="flex justify-center py-3">
-                                <div className="w-10 h-1 bg-white/20 rounded-full"></div>
+                            {/* Decorative line */}
+                            <div className="flex justify-center pt-4 pb-2">
+                                <div className="w-12 h-1.5 bg-white/10 rounded-full"></div>
                             </div>
 
-                            <div className="px-6 pb-4 space-y-4">
+                            <div className="px-8 pt-4 pb-6 space-y-6">
                                 <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="text-lg font-black text-white">Nouveau contact</h3>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Trouvez des cerveaux à défier</p>
+                                    <div className="space-y-1">
+                                        <h3 className="text-2xl font-black text-white tracking-tight">Nouveau contact</h3>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Recherche par pseudo ou numéro</p>
+                                        </div>
                                     </div>
-                                    <button onClick={() => setShowDiscovery(false)} className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90">
-                                        <X size={18} />
-                                    </button>
+                                    <motion.button 
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => setShowDiscovery(false)} 
+                                        className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+                                    >
+                                        <X size={22} />
+                                    </motion.button>
                                 </div>
+                                
                                 <div className="relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-focus-within:text-blue-400 transition-colors" />
+                                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 group-focus-within:text-blue-500 transition-colors" />
                                     <input
                                         type="text"
-                                        placeholder="Rechercher un pseudo..."
+                                        placeholder="Pseudo ou 07 45 ..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/30 focus:bg-white/[0.07] transition-all font-bold"
+                                        className="w-full bg-white/[0.03] border border-white/10 rounded-[22px] py-4 pl-14 pr-6 text-base text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.05] transition-all font-bold shadow-inner"
                                         autoFocus
                                     />
                                     {isSearching && (
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <div className="absolute right-5 top-1/2 -translate-y-1/2">
+                                            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-1 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto px-6 pb-10 space-y-2 custom-scrollbar">
                                 {isSearching ? (
-                                    /* Loading skeleton */
-                                    <div className="space-y-3 py-4">
-                                        {Array.from({ length: 5 }).map((_, i) => (
-                                            <div key={i} className="flex items-center gap-3 p-3 animate-pulse">
-                                                <div className="w-12 h-12 rounded-2xl bg-white/[0.06]" />
-                                                <div className="flex-1 space-y-2">
-                                                    <div className="h-3 bg-white/[0.06] rounded-full w-32" />
-                                                    <div className="h-2 bg-white/[0.04] rounded-full w-20" />
+                                    /* Premium Loading Skeleton */
+                                    <div className="space-y-4 px-2">
+                                        {Array.from({ length: 4 }).map((_, i) => (
+                                            <div key={i} className="flex items-center gap-4 p-4 animate-pulse">
+                                                <div className="w-14 h-14 rounded-2xl bg-white/[0.05]" />
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="h-4 bg-white/[0.05] rounded-full w-40" />
+                                                    <div className="h-2.5 bg-white/[0.03] rounded-full w-24" />
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 ) : filteredUsers.length > 0 ? (
-                                    filteredUsers.map(u => (
-                                        <button
-                                            key={u.userId}
-                                            onClick={() => handleCreateChat(u)}
-                                            className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all group border border-transparent hover:border-white/5 active:scale-[0.98]"
-                                        >
-                                            <div className="relative shrink-0">
-                                                <div className={`w-12 h-12 rounded-2xl overflow-hidden ring-2 transition-all ${u.status === 'online' ? 'ring-emerald-500/50 shadow-[0_0_12px_rgba(52,211,153,0.2)]' : 'ring-white/5'}`}>
-                                                    {u.avatar && (u.avatar.startsWith('http') || u.avatar.startsWith('data:')) ? (
-                                                        <img src={u.avatar} className="w-full h-full object-cover" alt="" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center font-black text-white bg-gradient-to-br from-blue-600 to-purple-600 text-lg">
-                                                            {u.name[0]}
-                                                        </div>
+                                    <div className="space-y-1">
+                                        {filteredUsers.map(u => (
+                                            <motion.button
+                                                key={u.userId}
+                                                whileHover={{ x: 4 }}
+                                                onClick={() => handleCreateChat(u)}
+                                                className="w-full flex items-center gap-4 p-4 hover:bg-white/[0.03] rounded-[24px] transition-all group border border-transparent hover:border-white/5 active:scale-[0.98]"
+                                            >
+                                                <div className="relative shrink-0">
+                                                    <div className={`w-14 h-14 rounded-2xl overflow-hidden ring-2 transition-all duration-500 ${u.status === 'online' ? 'ring-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'ring-white/5'}`}>
+                                                        {u.avatar && (u.avatar.startsWith('http') || u.avatar.startsWith('data:')) ? (
+                                                            <img src={u.avatar} className="w-full h-full object-cover" alt="" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center font-black text-white bg-gradient-to-br from-blue-600 to-indigo-600 text-xl">
+                                                                {u.name[0]}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {u.status === 'online' && (
+                                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] border-[#0f172a] bg-emerald-500"></div>
                                                     )}
                                                 </div>
-                                                <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0a0f1a] ${u.status === 'online' ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]' : 'bg-slate-600'}`}></div>
-                                            </div>
-                                            <div className="flex-1 text-left min-w-0">
-                                                <h4 className="font-bold text-white text-sm truncate">{u.name}</h4>
-                                                <p className={`text-[10px] font-bold uppercase tracking-widest ${u.status === 'online' ? 'text-emerald-400' : 'text-slate-500'}`}>
-                                                    {u.status === 'online' ? '● En ligne' : '○ Hors ligne'}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleCreateChat(u); }}
-                                                    className="p-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 active:scale-90 transition-all"
-                                                >
-                                                    <MessageSquare size={14} />
-                                                </button>
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleStartBattle(u); }}
-                                                    className="p-2 rounded-xl bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 active:scale-90 transition-all"
-                                                >
-                                                    <Swords size={14} />
-                                                </button>
-                                            </div>
-                                        </button>
-                                    ))
+                                                <div className="flex-1 text-left min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-black text-white text-[15px] truncate">{u.name}</h4>
+                                                        {u.status === 'online' && <Sparkles size={12} className="text-blue-400" />}
+                                                    </div>
+                                                    <p className={`text-[9px] font-black uppercase tracking-[0.2em] mt-1 ${u.status === 'online' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                                        {u.status === 'online' ? 'Disponible' : 'Hors ligne'}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleCreateChat(u); }}
+                                                        className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white active:scale-90 transition-all flex items-center justify-center"
+                                                    >
+                                                        <MessageSquare size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleStartBattle(u); }}
+                                                        className="w-10 h-10 rounded-2xl bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white active:scale-90 transition-all flex items-center justify-center"
+                                                    >
+                                                        <Swords size={18} />
+                                                    </button>
+                                                </div>
+                                            </motion.button>
+                                        ))}
+                                    </div>
                                 ) : (
-                                    <div className="py-16 text-center space-y-4">
-                                        <div className="w-20 h-20 bg-white/[0.03] rounded-3xl flex items-center justify-center mx-auto border border-white/5">
-                                            <Users size={32} className="text-slate-700" />
+                                    <div className="py-20 text-center space-y-6">
+                                        <div className="relative mx-auto w-24 h-24">
+                                            <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full animate-pulse"></div>
+                                            <div className="relative w-full h-full bg-white/[0.02] rounded-[32px] flex items-center justify-center border border-white/10 shadow-2xl">
+                                                <Users size={36} className="text-slate-700" />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-400">Aucun utilisateur trouvé</p>
-                                            <p className="text-xs text-slate-600 mt-1">
-                                                {searchQuery.trim() ? 'Essayez un autre pseudo' : 'Aucun profil inscrit pour le moment'}
+                                        <div className="space-y-2">
+                                            <p className="text-lg font-black text-white">Aucun résultat</p>
+                                            <p className="text-xs text-slate-500 max-w-[200px] mx-auto leading-relaxed font-bold uppercase tracking-[0.1em]">
+                                                {searchQuery.trim() ? "Nous n'avons trouvé personne avec ces critères" : "Invite tes amis à rejoindre Levelmak !"}
                                             </p>
                                         </div>
                                     </div>

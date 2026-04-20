@@ -83,7 +83,20 @@ export const translations: Record<string, any> = {
             "loginAttempt": "Tentative de connexion...",
             "loginSuccess": "Connexion réussie !",
             "biometricPrompt": "Veuillez entrer votre mot de passe pour autoriser TouchID/FaceID:",
-            "loadingUniverse": "Chargement de ton univers"
+            "loadingUniverse": "Chargement de ton univers",
+            "choosePath": "Choisis ton destin",
+            "student": "Élève Explorateur",
+            "studentDesc": "Accès aux cours, jeux et quiz IA",
+            "teacher": "Maître Enseignant",
+            "teacherDesc": "Partage ton savoir et gère tes élèves",
+            "firstName": "Prénom",
+            "lastName": "Nom de Famille",
+            "phoneOrEmail": "Numéro WhatsApp ou Email",
+            "profilePhoto": "Photo de Profil",
+            "proofDocs": "Dossier / Preuves d'Enseignement",
+            "uploadDoc": "Ajouter un document (Diplôme, CV...)",
+            "pendingAdmin": "Ton compte est en attente de validation par l'administration Levelmak.",
+            "successTeacher": "Inscription Envoyée ! 🚀"
         },
         "profile": {
             "title": "Mon Profil"

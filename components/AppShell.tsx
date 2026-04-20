@@ -59,12 +59,14 @@ import {
   FlaskConical,
   Target,
   Clock,
-  Headphones
+  Headphones,
+  GraduationCap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
 import NotificationCenter from './NotificationCenter';
+import { submitComment, submitRating } from '../services/adminService';
 import OfflineIndicator from './OfflineIndicator';
 import { BubbleWrap } from './BubbleWrap';
 import { FloatingBubble } from './FloatingBubble';
@@ -79,7 +81,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
   const { 
     user, logout, updateProfile, addActivity, trackTime, grantBadge, 
-    notifications, t, showBubbleWrap, setShowBubbleWrap, continuousStudyTime 
+    notifications, addNotification, t, showBubbleWrap, setShowBubbleWrap, continuousStudyTime 
   } = useStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -95,6 +97,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const [isInstallGuideOpen, setIsInstallGuideOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [activeHelpCategory, setActiveHelpCategory] = useState('account');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // PWA Detection
@@ -174,13 +178,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     }
   };
 
-  const navItems = [
+  const navItemsRaw = [
     { id: 'dashboard', label: t('nav.dashboard'), shortLabel: t('nav.short.dashboard'), icon: LayoutDashboard },
     { id: 'quiz', label: t('nav.quiz'), shortLabel: t('nav.short.quiz'), icon: BrainCircuit },
     { id: 'summary', label: t('nav.summary'), shortLabel: t('nav.short.summary'), icon: Sparkles },
     { id: 'writing', label: t('nav.writing'), shortLabel: t('nav.short.writing'), icon: PenTool },
     { id: 'flashcards', label: t('nav.flashcards'), shortLabel: t('nav.short.flashcards'), icon: Layers },
     { id: 'ailab', label: t('nav.ailab'), shortLabel: t('nav.ailabShort'), icon: FlaskRound },
+    { id: 'tutor_hub', label: 'Prof', shortLabel: 'Prof', icon: GraduationCap },
     { id: 'atlas', label: t('nav.atlas'), shortLabel: t('nav.short.atlas'), icon: Globe },
     { id: 'audio_lab', label: 'Audio Lab', shortLabel: 'Audio', icon: Mic },
     { id: 'active_visual', label: t('nav.activeVisual'), shortLabel: t('nav.short.activeVisual'), icon: Zap, hideOnMobile: true },
@@ -191,6 +196,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'feedback', label: t('nav.feedback'), shortLabel: t('nav.short.feedback'), icon: MessageSquare, onClick: () => setIsFeedbackOpen(true) },
     { id: 'rating', label: t('nav.rating'), shortLabel: t('nav.short.rating'), icon: Star, onClick: () => setIsRatingOpen(true) },
   ];
+
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const navItems = isLocal
+    ? navItemsRaw
+    : navItemsRaw.filter(item => !['tutor_hub', 'active_visual', 'planner'].includes(item.id));
 
   if (!user) return <>{children}</>;
 
@@ -397,8 +407,39 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsFeedbackOpen(false)} className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" />
               <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[2rem] p-8 shadow-2xl space-y-6">
                 <h3 className="text-2xl font-black text-white">Vos Commentaires</h3>
-                <textarea value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} placeholder="Suggestions..." className="w-full h-32 bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-blue-500/50 resize-none" />
-                <button onClick={() => setIsFeedbackOpen(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest">Envoyer</button>
+                <textarea value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} placeholder="Suggestions, idées, bugs..." className="w-full h-32 bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-blue-500/50 resize-none" />
+                <button
+                  onClick={async () => {
+                    if (!feedbackText.trim() || isSubmittingFeedback) return;
+                    setIsSubmittingFeedback(true);
+                    try {
+                      await submitComment({
+                        userId: user.id,
+                        userName: user.name,
+                        userPhone: user.phoneNumber,
+                        content: feedbackText.trim(),
+                        category: 'general',
+                        rating: 0
+                      });
+                      setFeedbackText('');
+                      setIsFeedbackOpen(false);
+                      addNotification('success', 'Merci !', 'Votre commentaire a bien été envoyé.');
+                    } catch {
+                      addNotification('error', 'Erreur', 'Impossible d\'envoyer le commentaire. Réessayez.');
+                    } finally {
+                      setIsSubmittingFeedback(false);
+                    }
+                  }}
+                  disabled={!feedbackText.trim() || isSubmittingFeedback}
+                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-500 transition-colors disabled:opacity-50"
+                >
+                  {isSubmittingFeedback ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw className="animate-spin" size={20} />
+                      Envoi...
+                    </div>
+                  ) : 'Envoyer'}
+                </button>
               </motion.div>
             </div>
           )}
@@ -410,12 +451,54 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsRatingOpen(false)} className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" />
               <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-sm bg-slate-900 border border-white/10 rounded-[2rem] p-8 shadow-2xl text-center space-y-6">
                 <h3 className="text-2xl font-black text-white">Notez l'App</h3>
+                <p className="text-slate-400 text-sm">Votre avis compte énormément pour nous !</p>
                 <div className="flex justify-center gap-2">
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <button key={s} onClick={() => setUserRating(s)} className={`p-1 ${userRating >= s ? 'text-yellow-500' : 'text-slate-600'}`}><Star size={36} fill={userRating >= s ? "currentColor" : "none"} /></button>
+                    <button key={s} onClick={() => setUserRating(s)} className={`p-1 transition-transform hover:scale-110 ${userRating >= s ? 'text-yellow-500' : 'text-slate-600'}`}><Star size={36} fill={userRating >= s ? "currentColor" : "none"} /></button>
                   ))}
                 </div>
-                <button onClick={() => setIsRatingOpen(false)} className="w-full py-4 bg-yellow-600 text-white rounded-2xl font-black uppercase tracking-widest">Valider</button>
+                <button
+                  onClick={async () => {
+                    if (userRating === 0 || isSubmittingRating) return;
+                    setIsSubmittingRating(true);
+                    try {
+                      console.log('--- SUBMITTING RATING ---', { userId: user.id, userName: user.name, userRating });
+                      await submitRating({
+                        userId: user.id,
+                        userName: user.name,
+                        overall: userRating,
+                        features: {
+                          quiz: userRating,
+                          coach: userRating,
+                          flashcards: userRating,
+                          library: userRating,
+                          interface: userRating,
+                          offline: userRating
+                        },
+                        comment: '',
+                        timestamp: new Date().toISOString()
+                      });
+                      console.log('--- RATING SUBMITTED SUCCESS ---');
+                      setUserRating(0);
+                      setIsRatingOpen(false);
+                      addNotification('success', 'Merci pour votre aide !', `Vous avez noté LevelMak ${userRating}/5 ⭐`);
+                    } catch (err) {
+                      console.error('--- RATING SUBMITTED ERROR ---', err);
+                      addNotification('error', 'Erreur', 'Impossible d\'enregistrer votre note. Réessayez.');
+                    } finally {
+                      setIsSubmittingRating(false);
+                    }
+                  }}
+                  disabled={userRating === 0 || isSubmittingRating}
+                  className="w-full py-4 bg-yellow-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-yellow-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingRating ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw className="animate-spin" size={20} />
+                      Envoi...
+                    </div>
+                  ) : 'Valider ma note'}
+                </button>
               </motion.div>
             </div>
           )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, Video, X, Check, PhoneOff, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { chatService, Call } from '../services/firebase-chat';
+import { chatService, Call } from '../services/communityService';
 
 interface CallHandlerProps {
     currentUserId: string;

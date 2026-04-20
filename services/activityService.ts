@@ -1,7 +1,6 @@
-import { db } from './firebase';
-import { collection, addDoc, query, orderBy, limit, onSnapshot, where, Timestamp } from 'firebase/firestore';
+import { supabase } from './supabase';
 
-export type ActivityType = 'auth' | 'quiz' | 'library' | 'social' | 'system' | 'creative';
+export type ActivityType = 'auth' | 'quiz' | 'library' | 'social' | 'system' | 'creative' | 'profile' | 'badge' | 'payment';
 
 export interface UserActivity {
     id?: string;
@@ -10,8 +9,7 @@ export interface UserActivity {
     type: ActivityType;
     action: string;
     details?: any;
-    timestamp: string; // ISO string for easy sorting/display
-    createdAt?: Timestamp; // Firestore Timestamp
+    timestamp: string; // ISO string 
     metadata?: {
         device?: string;
         location?: string;
@@ -19,10 +17,10 @@ export interface UserActivity {
     };
 }
 
-const COLLECTION_NAME = 'user_activities';
+const TABLE_NAME = 'user_activities';
 
 /**
- * Logs a user activity to Firestore
+ * Logs a user activity to Supabase
  */
 export const logUserActivity = async (
     userId: string,
@@ -32,23 +30,20 @@ export const logUserActivity = async (
     details: any = {}
 ) => {
     try {
-        const activity: UserActivity = {
-            userId,
-            userName,
+        const { error } = await supabase.from(TABLE_NAME).insert({
+            user_id: userId,
+            user_name: userName,
             type,
             action,
             details,
             timestamp: new Date().toISOString()
-        };
-
-        await addDoc(collection(db, COLLECTION_NAME), {
-            ...activity,
-            createdAt: Timestamp.now()
         });
 
+        if (error) {
+            console.error('Error logging activity to Supabase:', error);
+        }
     } catch (error) {
-        console.error('Error logging activity:', error);
-        // Silent fail to not disrupt user experience
+        console.error('Exception logging activity:', error);
     }
 };
 
@@ -59,32 +54,71 @@ export const subscribeToActivities = (
     callback: (activities: UserActivity[]) => void,
     limitCount: number = 50
 ) => {
-    const q = query(
-        collection(db, COLLECTION_NAME),
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
-    );
+    const fetchInitial = async () => {
+        const { data } = await supabase
+            .from(TABLE_NAME)
+            .select('*')
+            .order('timestamp', { ascending: false })
+            .limit(limitCount);
+        
+        if (data) {
+            callback(data.map(item => ({
+                id: item.id,
+                userId: item.user_id,
+                userName: item.user_name,
+                type: item.type,
+                action: item.action,
+                details: item.details,
+                timestamp: item.timestamp
+            } as UserActivity)));
+        }
+    };
 
-    return onSnapshot(q, (snapshot) => {
-        const activities = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as UserActivity));
-        callback(activities);
-    });
+    fetchInitial();
+
+    const channel = supabase
+        .channel('public:user_activities')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE_NAME }, () => {
+            fetchInitial();
+        })
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
 };
 
 /**
  * Gets recent activities once (non-realtime)
  */
-export const getRecentActivities = async (limitCount: number = 20) => {
-    // Implementation if needed for static views
+export const getRecentActivities = async (limitCount: number = 20): Promise<UserActivity[]> => {
+    try {
+        const { data, error } = await supabase
+            .from(TABLE_NAME)
+            .select('*')
+            .order('timestamp', { ascending: false })
+            .limit(limitCount);
+        
+        if (error) throw error;
+        return (data || []).map(item => ({
+            id: item.id,
+            userId: item.user_id,
+            userName: item.user_name,
+            type: item.type,
+            action: item.action,
+            details: item.details,
+            timestamp: item.timestamp
+        } as UserActivity));
+    } catch (error) {
+        console.error('Error getting recent activities:', error);
+        return [];
+    }
 };
 
 // ========== RETENTION ANALYSIS ==========
 
 export interface RetentionData {
-    period: string; // "Jan 2024"
+    period: string; // "Janvier 2024"
     cohortSize: number;
     days: {
         day1: number; // Percentage
@@ -93,71 +127,68 @@ export interface RetentionData {
     };
 }
 
+/**
+ * Calculates retention stats using Supabase data
+ */
 export const calculateRetentionStats = async (): Promise<RetentionData[]> => {
     try {
-        // 1. Get all users to determine cohorts (Registration Date)
-        const usersSnapshot = await import('firebase/firestore').then(mod => mod.getDocs(mod.collection(db, 'users')));
-        const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        // 1. Get all profiles to determine cohorts
+        const { data: users, error: userError } = await supabase
+            .from('profiles')
+            .select('id, created_at');
+        
+        if (userError || !users) throw userError || new Error('No users found');
 
-        // 2. Get all 'auth' activities for login history
-        // Note: In a real app with millions of logs, this would be done via aggregation queries or BigQuery.
-        // For now, we fetch recent logs or all logs if feasible, but to prevent explosion we might limit or use a different strategy.
-        // optimization: query only 'auth' type.
-        const logsSnapshot = await import('firebase/firestore').then(mod =>
-            mod.getDocs(mod.query(mod.collection(db, COLLECTION_NAME), mod.where('type', '==', 'auth')))
-        );
+        // 2. Get auth activities for login history
+        const { data: logs, error: logError } = await supabase
+            .from(TABLE_NAME)
+            .select('user_id, timestamp')
+            .eq('type', 'auth');
 
-        const logs = logsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                userId: data.userId,
-                timestamp: data.timestamp ? new Date(data.timestamp) : (data.createdAt as Timestamp).toDate()
-            };
-        });
+        if (logError || !logs) throw logError || new Error('No logs found');
+
+        const activityLogs = logs.map(l => ({
+            userId: l.user_id,
+            timestamp: new Date(l.timestamp)
+        }));
 
         // 3. Group users by Cohort (Month of creation)
-        const cohorts: Record<string, string[]> = {}; // "2023-10": [userId1, userId2]
-        const userCohortMap: Record<string, string> = {};
-
+        const cohorts: Record<string, string[]> = {}; 
+        
         users.forEach(user => {
-            const createdAt = user.streak?.lastLogin ? new Date(user.streak.lastLogin) : new Date(); // Fallback if no creation date
-            // Better fallback: user.createdAt if it existed, for now we assume they are recent or use lastLogin as proxy for "active" cohort if data missing
-            // Ideally we need a 'createdAt' field on User. Let's assume we use what we have.
+            const createdAt = new Date(user.created_at);
             const cohortKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
 
             if (!cohorts[cohortKey]) cohorts[cohortKey] = [];
             cohorts[cohortKey].push(user.id);
-            userCohortMap[user.id] = cohortKey;
         });
 
         // 4. Calculate Retention per Cohort
         const results: RetentionData[] = [];
 
         for (const [cohortKey, userIds] of Object.entries(cohorts)) {
-            const cohortDate = new Date(`${cohortKey}-01`);
+            const [year, month] = cohortKey.split('-');
+            const cohortDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+            
             let retainedDay1 = 0;
             let retainedDay7 = 0;
             let retainedDay30 = 0;
 
             userIds.forEach(userId => {
-                const userLogs = logs.filter(l => l.userId === userId);
-                // Check if user has activity >= 1 day after cohort start (simple approximation)
-                // A better retention is: did they come back X days AFTER their SPECIFIC signup date? 
-                // Since we lack precise signup date in this mock, we use the cohort month logic or simplified "active later" logic.
+                const userLogs = activityLogs.filter(l => l.userId === userId);
+                const userProfile = users.find(u => u.id === userId);
+                if (!userProfile) return;
 
-                // Let's refine: Did they have an activity > 24h after their approximate signup?
-                // We'll search for logs.
-                if (userLogs.length > 1) { // At least 2 logs implies returning
-                    const firstLog = userLogs.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())[0];
-                    if (firstLog) {
-                        const hasDay1 = userLogs.some(l => (l.timestamp.getTime() - firstLog.timestamp.getTime()) > 24 * 60 * 60 * 1000);
-                        const hasDay7 = userLogs.some(l => (l.timestamp.getTime() - firstLog.timestamp.getTime()) > 7 * 24 * 60 * 60 * 1000);
-                        const hasDay30 = userLogs.some(l => (l.timestamp.getTime() - firstLog.timestamp.getTime()) > 30 * 24 * 60 * 60 * 1000);
+                const signupDate = new Date(userProfile.created_at);
 
-                        if (hasDay1) retainedDay1++;
-                        if (hasDay7) retainedDay7++;
-                        if (hasDay30) retainedDay30++;
-                    }
+                if (userLogs.length > 0) {
+                    const hasDay1 = userLogs.some(l => (l.timestamp.getTime() - signupDate.getTime()) > 24 * 60 * 60 * 1000);
+                    const hasDay7 = userLogs.some(l => (l.timestamp.getTime() - signupDate.getTime()) > 7 * 24 * 60 * 60 * 1000);
+                    const hasDay30 = userLogs.some(l => (l.timestamp.getTime() - signupDate.getTime()) > 30 * 24 * 60 * 60 * 1000);
+
+                    if (hasDay1) retainedDay1++;
+                    if (hasDay7) retainedDay7++;
+                    if (hasDay30) retainedDay30++;
                 }
             });
 
@@ -165,14 +196,13 @@ export const calculateRetentionStats = async (): Promise<RetentionData[]> => {
                 period: cohortDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
                 cohortSize: userIds.length,
                 days: {
-                    day1: Math.round((retainedDay1 / userIds.length) * 100),
-                    day7: Math.round((retainedDay7 / userIds.length) * 100),
-                    day30: Math.round((retainedDay30 / userIds.length) * 100),
+                    day1: Math.round((retainedDay1 / userIds.length) * 100) || 0,
+                    day7: Math.round((retainedDay7 / userIds.length) * 100) || 0,
+                    day30: Math.round((retainedDay30 / userIds.length) * 100) || 0,
                 }
             });
         }
 
-        // Sort by date desc
         return results.sort((a, b) => b.period.localeCompare(a.period));
 
     } catch (error) {

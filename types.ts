@@ -140,6 +140,7 @@ export interface User {
   league?: League;
   coachSessions?: CoachSession[];
   aiLabHistory?: AILabSession[];
+  role?: 'student' | 'teacher';
 }
 
 
@@ -445,3 +446,42 @@ export interface Report {
   resolvedAt?: string;
 }
 
+export interface Teacher {
+  id: string;
+  userId: string;
+  name: string; // Gardé pour compatibilité mais on privilégiera firstName/lastName
+  firstName?: string;
+  lastName?: string;
+  bio: string;
+  whatsappNumber: string;
+  city: string;
+  neighborhood: string;
+  subjects: string[];
+  schools: string[];
+  type: 'professional' | 'benevolent';
+  status: 'pending' | 'verified' | 'rejected';
+  isAvailable: boolean;
+  avatar?: string;
+  avatarUrl?: string; // Nouveau champ pour la photo de profil pro
+  ratingAvg: number;
+  ratingCount: number;
+  createdAt: string;
+}
+
+export interface Consultation {
+  id: string;
+  teacherId: string;
+  studentId: string;
+  studentName?: string;
+  timestamp: string;
+}
+
+export interface TeacherRating {
+  id: string;
+  teacherId: string;
+  studentId: string;
+  studentName: string;
+  score: number;
+  comment: string;
+  timestamp: string;
+}

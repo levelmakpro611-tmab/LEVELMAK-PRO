@@ -18,8 +18,7 @@ export default defineConfig(({ mode }) => {
         injectRegister: 'script',
         includeAssets: ['logo.png', 'tmab_logo.png'],
         devOptions: {
-          enabled: true,
-          type: 'module',
+          enabled: false,
           navigateFallback: 'index.html',
         },
         manifest: {

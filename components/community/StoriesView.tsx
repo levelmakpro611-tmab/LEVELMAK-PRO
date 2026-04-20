@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Plus, Loader2, X, Zap, Eye, Clock, Edit3, Type, ImagePlus, Palette, Send, ArrowLeft, Sparkles } from 'lucide-react';
+import { Camera, Plus, Loader2, X, Zap, Eye, Clock, Edit3, Type, ImagePlus, Palette, Send, ArrowLeft, Sparkles, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { chatService, LearningStory } from '../../services/firebase-chat';
+import { chatService, LearningStory } from '../../services/communityService';
 import { useStore } from '../../hooks/useStore';
 
 const StoriesView: React.FC = () => {
@@ -25,6 +25,7 @@ const StoriesView: React.FC = () => {
 
     useEffect(() => {
         const unsubscribe = chatService.listenToStories((activeStories) => {
+            console.log('[Stories] Stories updated:', activeStories.length);
             setStories(activeStories);
             setLoading(false);
         });
@@ -45,24 +46,25 @@ const StoriesView: React.FC = () => {
         if (!selectedFile || !user) return;
         setIsUploading(true);
         try {
-            // Determine user avatar - use baseColor if no image
+            console.log('[Stories] Starting photo upload...');
             const userAvatar = user.avatar?.image || user.avatar?.baseColor || '#3B82F6';
-
             const imageUrl = await chatService.uploadStoryImage(selectedFile, user.id);
+            
             await chatService.postStory(
                 user.id,
                 user.name,
                 userAvatar,
                 storyCaption || "",
-                'update', // Changed from 'text' to 'update' for photos
+                'update',
                 imageUrl
             );
+            
             setShowUploadModal(false);
             setUploadPreview(null);
             setSelectedFile(null);
             setStoryCaption('');
         } catch (error: any) {
-            console.error("Upload failed", error);
+            console.error("[Stories] Upload failed:", error);
             alert("Échec de l'envoi : " + (error.message || "Vérifiez votre connexion"));
         } finally {
             setIsUploading(false);
@@ -125,7 +127,6 @@ const StoriesView: React.FC = () => {
         if (currentStoryIndex < userStories.length - 1) {
             setCurrentStoryIndex(prev => prev + 1);
         } else {
-            // Move to next user's stories
             const userIds = Object.keys(groupedStories);
             const currentUserIdx = userIds.indexOf(viewingUser!);
             if (currentUserIdx < userIds.length - 1) {
@@ -147,175 +148,208 @@ const StoriesView: React.FC = () => {
         }
     };
 
-    // WhatsApp segmented ring SVG for story borders
-    const StoryRing = ({ count, size = 56 }: { count: number; size?: number }) => {
-        const radius = size / 2 - 2;
-        const circumference = 2 * Math.PI * radius;
-        const gap = count > 1 ? 4 : 0;
-        const segmentLength = (circumference - gap * count) / count;
-
+    // Premium Gradient Ring SVG
+    const StoryRing = ({ size = 64, active = true }: { size?: number; active?: boolean }) => {
         return (
-            <svg width={size} height={size} className="absolute inset-0 -rotate-90">
-                {Array.from({ length: count }).map((_, i) => (
-                    <circle
-                        key={i}
-                        cx={size / 2}
-                        cy={size / 2}
-                        r={radius}
-                        fill="none"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth="2.5"
-                        strokeDasharray={`${segmentLength} ${circumference - segmentLength}`}
-                        strokeDashoffset={-(i * (segmentLength + gap))}
-                        strokeLinecap="round"
-                    />
-                ))}
-            </svg>
+            <div className="absolute inset-0 flex items-center justify-center p-1">
+                <motion.div
+                    animate={active ? { rotate: 360 } : {}}
+                    transition={active ? { duration: 8, repeat: Infinity, ease: "linear" } : {}}
+                    className="w-full h-full rounded-full border-2 border-transparent bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500"
+                    style={{ 
+                        WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                        WebkitMaskComposite: "xor",
+                        maskComposite: "exclude",
+                        padding: '2px'
+                    }}
+                />
+            </div>
         );
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-[hsl(var(--background))] overflow-hidden">
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-                {/* My Status Section */}
-                <div className="px-4 pt-4 pb-2">
-                    <button
-                        onClick={() => myStories ? (() => { setViewingUser(user!.id); setCurrentStoryIndex(0); })() : (() => { setCreateMode('text'); setShowUploadModal(true); })()}
-                        className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all active:scale-[0.98]"
+        <div className="flex-1 flex flex-col h-full bg-[#020617] overflow-hidden">
+            <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
+                
+                {/* ═══════════ MY STATUS HERO ═══════════ */}
+                <div className="px-6 py-6">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="relative group overflow-hidden rounded-[32px] bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 p-6 shadow-2xl"
                     >
-                        <div className="relative">
-                            <div className={`w-14 h-14 rounded-full overflow-hidden ${myStories ? '' : 'border-2 border-white/10'}`}>
-                                {myStories && <StoryRing count={myStories.stories.length} size={56} />}
-                                <div className="w-full h-full rounded-full overflow-hidden p-[3px]">
-                                    {user?.avatar?.image ? (
-                                        <img src={user.avatar.image} alt="" className="w-full h-full rounded-full object-cover" />
-                                    ) : (
-                                        <div
-                                            className="w-full h-full rounded-full flex items-center justify-center font-bold text-white text-lg"
-                                            style={{ backgroundColor: user?.avatar?.baseColor || 'hsl(var(--primary))' }}
-                                        >
-                                            {user?.name?.[0] || '?'}
+                        <div className="absolute top-0 right-0 p-8 opacity-10 blur-xl">
+                            <Sparkles className="w-24 h-24 text-blue-400" />
+                        </div>
+                        
+                        <div className="flex items-center gap-6 relative z-10">
+                            <button
+                                onClick={() => myStories ? (() => { setViewingUser(user!.id); setCurrentStoryIndex(0); })() : (() => { setCreateMode('text'); setShowUploadModal(true); })()}
+                                className="relative shrink-0"
+                            >
+                                <div className="w-20 h-20 rounded-[28px] overflow-hidden p-1 relative">
+                                    {myStories && <StoryRing size={80} />}
+                                    <div className="w-full h-full rounded-[24px] overflow-hidden bg-slate-900 border-2 border-white/5">
+                                        {user?.avatar?.image ? (
+                                            <img src={user.avatar.image} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div
+                                                className="w-full h-full flex items-center justify-center font-black text-white text-2xl"
+                                                style={{ backgroundColor: user?.avatar?.baseColor || '#2563eb' }}
+                                            >
+                                                {user?.name?.[0] || '?'}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {!myStories && (
+                                        <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-600 rounded-full border-[3px] border-[#0a1229] flex items-center justify-center shadow-lg">
+                                            <Plus size={16} strokeWidth={3} className="text-white" />
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                            {!myStories && (
-                                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-primary rounded-full border-2 border-[hsl(var(--background))] flex items-center justify-center">
-                                    <Plus size={12} strokeWidth={3} className="text-white" />
+                            </button>
+                            
+                            <div className="flex-1">
+                                <h3 className="text-xl font-black text-white tracking-tight">Mon Statut</h3>
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
+                                    {myStories 
+                                        ? `${myStories.stories.length} mise${myStories.stories.length > 1 ? 's' : ''} à jour active${myStories.stories.length > 1 ? 's' : ''}`
+                                        : "Partage ton humeur du jour"}
+                                </p>
+                                
+                                <div className="flex items-center gap-2 mt-4">
+                                    <button 
+                                        onClick={() => { setCreateMode('text'); setShowUploadModal(true); }}
+                                        className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-colors shadow-lg"
+                                    >
+                                        Écrire
+                                    </button>
+                                    <button 
+                                        onClick={() => { setCreateMode('photo'); setShowUploadModal(true); }}
+                                        className="px-4 py-2 rounded-xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white/20 transition-all"
+                                    >
+                                        Photo
+                                    </button>
                                 </div>
-                            )}
-                        </div>
-                        <div className="flex-1 text-left">
-                            <h4 className="text-[15px] font-semibold text-white">Mon Statut</h4>
-                            <p className="text-[12px] text-slate-500">
-                                {myStories
-                                    ? `${myStories.stories.length} statut${myStories.stories.length > 1 ? 's' : ''} • Appuie pour voir`
-                                    : 'Appuie pour ajouter un statut'
-                                }
-                            </p>
-                        </div>
-                        {!myStories && (
-                            <div className="p-2 text-primary">
-                                <Edit3 size={20} />
                             </div>
-                        )}
-                    </button>
+                        </div>
+                    </motion.div>
                 </div>
 
-                {/* Recent Updates */}
-                {otherUsers.length > 0 && (
-                    <div className="px-4">
-                        <p className="text-[12px] font-bold text-slate-500 uppercase tracking-widest px-3 py-3">
-                            Mises à jour récentes
-                        </p>
+                {/* ═══════════ RECENT UPDATES ═══════════ */}
+                <div className="px-6 space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                        <h3 className="text-[12px] font-black text-slate-500 uppercase tracking-[0.3em]">Mises à jour récentes</h3>
+                        <TrendingUp size={14} className="text-slate-800" />
+                    </div>
 
-                        <div className="space-y-0.5">
-                            {otherUsers.map(([userId, data]: any) => (
-                                <button
+                    {otherUsers.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-4">
+                            {otherUsers.map(([userId, data]: any, idx) => (
+                                <motion.button
                                     key={userId}
-                                    onClick={() => {
-                                        setViewingUser(userId);
-                                        setCurrentStoryIndex(0);
-                                    }}
-                                    className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all active:scale-[0.98]"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    onClick={() => { setViewingUser(userId); setCurrentStoryIndex(0); }}
+                                    className="relative aspect-[3/4] rounded-[2.5rem] overflow-hidden group border border-white/5"
                                 >
-                                    <div className="relative w-14 h-14">
-                                        <StoryRing count={data.stories.length} size={56} />
-                                        <div className="w-full h-full rounded-full overflow-hidden p-[3px]">
-                                            {data.user.avatar && (data.user.avatar.startsWith('http') || data.user.avatar.startsWith('data:')) ? (
-                                                <img src={data.user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
-                                            ) : (
-                                                <div
-                                                    className="w-full h-full rounded-full flex items-center justify-center font-bold text-white text-lg"
-                                                    style={{ backgroundColor: (data.user.avatar && data.user.avatar.startsWith('#')) ? data.user.avatar : '#475569' }}
-                                                >
-                                                    {data.user.name?.[0]}
+                                    {/* Background Preview */}
+                                    <div className="absolute inset-0">
+                                        {data.stories[data.stories.length - 1].imageUrl ? (
+                                            <img src={data.stories[data.stories.length - 1].imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+                                        ) : (
+                                            <div 
+                                                className="w-full h-full"
+                                                style={{ backgroundColor: data.stories[data.stories.length - 1].backgroundColor || '#1e293b' }}
+                                            >
+                                                <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                                                    <p className="text-xs font-black text-white/40 uppercase tracking-widest line-clamp-3 italic">
+                                                        {data.stories[data.stories.length - 1].content}
+                                                    </p>
                                                 </div>
-                                            )}
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80"></div>
+                                    </div>
+
+                                    {/* Content Info */}
+                                    <div className="absolute inset-0 p-5 flex flex-col justify-between items-start">
+                                        <div className="relative">
+                                            <div className="w-12 h-12 rounded-2xl overflow-hidden p-0.5 relative z-10 border border-white/20 shadow-xl">
+                                                <StoryRing size={48} />
+                                                <div className="w-full h-full rounded-[14px] overflow-hidden bg-slate-900">
+                                                    {data.user.avatar && (data.user.avatar.startsWith('http') || data.user.avatar.startsWith('data:')) ? (
+                                                        <img src={data.user.avatar} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div
+                                                            className="w-full h-full flex items-center justify-center font-black text-white text-base"
+                                                            style={{ backgroundColor: data.user.avatar?.startsWith('#') ? data.user.avatar : '#475569' }}
+                                                        >
+                                                            {data.user.name?.[0]}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-0.5 text-left">
+                                            <h4 className="font-black text-white text-sm tracking-tight truncate w-full">{data.user.name}</h4>
+                                            <div className="flex items-center gap-1.5 opacity-60">
+                                                <Clock size={10} className="text-white" />
+                                                <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+                                                    {data.stories[data.stories.length - 1].timestamp
+                                                        ? new Date(data.stories[data.stories.length - 1].timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                                                        : 'Récent'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex-1 text-left min-w-0">
-                                        <h4 className="text-[15px] font-semibold text-white truncate">{data.user.name}</h4>
-                                        <div className="flex items-center gap-1 mt-0.5">
-                                            <Clock size={11} className="text-slate-500" />
-                                            <span className="text-[12px] text-slate-500">
-                                                {data.stories[data.stories.length - 1].timestamp
-                                                    ? new Date(data.stories[data.stories.length - 1].timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-                                                    : 'Récent'}
-                                            </span>
+                                    
+                                    {/* Indicator for multiple stories */}
+                                    {data.stories.length > 1 && (
+                                        <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
+                                            <span className="text-[9px] font-black text-white">+{data.stories.length - 1}</span>
                                         </div>
-                                    </div>
-                                </button>
+                                    )}
+                                </motion.button>
                             ))}
                         </div>
-                    </div>
-                )}
-
-                {/* Empty State */}
-                {otherUsers.length === 0 && !myStories && !loading && (
-                    <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center px-8">
-                        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
-                            <Camera size={32} className="text-slate-600" />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="font-bold text-white text-lg">Aucun statut récent</p>
-                            <p className="text-sm text-slate-500 leading-relaxed">
-                                Les mises à jour de statut de tes contacts apparaîtront ici.
-                            </p>
-                        </div>
-                    </div>
-                )}
+                    ) : (
+                        /* Empty State */
+                        !myStories && !loading && (
+                            <div className="py-20 flex flex-col items-center justify-center space-y-6 text-center">
+                                <div className="relative w-24 h-24">
+                                    <div className="absolute inset-0 bg-blue-600/10 blur-2xl rounded-full"></div>
+                                    <div className="relative w-full h-full bg-white/[0.02] border border-white/10 rounded-[32px] flex items-center justify-center">
+                                        <Camera size={32} className="text-slate-800" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2 px-12">
+                                    <p className="text-lg font-black text-white">Silence radio...</p>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+                                        Tes contacts n'ont pas encore publié de statut aujourd'hui.
+                                    </p>
+                                </div>
+                            </div>
+                        )
+                    )}
+                </div>
             </div>
 
-            {/* FAB - Two buttons like Snapchat */}
-            <div className="absolute bottom-28 right-6 flex flex-col gap-3 z-10">
-                <button
-                    onClick={() => { setCreateMode('text'); setShowUploadModal(true); }}
-                    className="w-12 h-12 bg-white/10 backdrop-blur-md text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all border border-white/10"
-                >
-                    <Edit3 size={20} />
-                </button>
-                <button
-                    onClick={() => { setCreateMode('photo'); setShowUploadModal(true); }}
-                    className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-                >
-                    <Camera size={24} />
-                </button>
-            </div>
-
-            {/* Full Story Viewer Overlay */}
+            {/* Viewer Overlay */}
             <AnimatePresence>
                 {viewingUser && groupedStories[viewingUser] && (
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[300] bg-black flex flex-col"
+                        initial={{ opacity: 0, scale: 1.1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="fixed inset-0 z-[500] bg-black flex flex-col"
                     >
-                        {/* Progress Bars */}
-                        <div className="absolute top-3 inset-x-3 z-20 flex gap-1">
+                        {/* Bars */}
+                        <div className="absolute top-4 inset-x-4 z-20 flex gap-1.5 px-2">
                             {groupedStories[viewingUser].stories.map((_: any, idx: number) => (
-                                <div key={idx} className="flex-1 h-[3px] bg-white/20 rounded-full overflow-hidden">
+                                <div key={idx} className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
                                     <motion.div
                                         className="h-full bg-white rounded-full"
                                         initial={{ width: 0 }}
@@ -328,62 +362,56 @@ const StoriesView: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Top Info Bar */}
-                        <div className="absolute top-6 inset-x-4 z-20 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full border-2 border-white/30 overflow-hidden">
-                                    <img
-                                        src={groupedStories[viewingUser].user.avatar}
-                                        className="w-full h-full rounded-full object-cover"
-                                        alt=""
-                                    />
+                        {/* Top Info */}
+                        <div className="absolute top-10 inset-x-6 z-20 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-11 h-11 rounded-2xl border-2 border-white/20 overflow-hidden shadow-2xl">
+                                    <img src={groupedStories[viewingUser].user.avatar} className="w-full h-full object-cover" alt="" />
                                 </div>
                                 <div>
-                                    <h4 className="text-[14px] font-bold text-white leading-tight">
+                                    <h4 className="text-[15px] font-black text-white tracking-tight">
                                         {groupedStories[viewingUser].user.name}
                                     </h4>
-                                    <p className="text-[10px] text-white/50 font-medium">
+                                    <p className="text-[10px] text-white/50 font-black uppercase tracking-widest">
                                         {groupedStories[viewingUser].stories[currentStoryIndex]?.timestamp
                                             ? new Date(groupedStories[viewingUser].stories[currentStoryIndex].timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-                                            : 'Récent'}
+                                            : 'À l\'instant'}
                                     </p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => { setViewingUser(null); setCurrentStoryIndex(0); }}
-                                className="p-2 text-white/80 hover:text-white transition-all"
+                                className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white"
                             >
-                                <X size={24} />
+                                <X size={20} />
                             </button>
                         </div>
 
-                        {/* Story Content */}
+                        {/* Content */}
                         <div className="flex-1 relative flex items-center justify-center">
-                            {/* Tap Zones */}
-                            <div className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer" onClick={handlePrevStory}></div>
-                            <div className="absolute inset-y-0 right-0 w-1/3 z-20 cursor-pointer" onClick={handleNextStory}></div>
+                            <div className="absolute inset-y-0 left-0 w-1/4 z-10 cursor-pointer" onClick={handlePrevStory}></div>
+                            <div className="absolute inset-y-0 right-0 w-1/4 z-10 cursor-pointer" onClick={handleNextStory}></div>
 
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={`${viewingUser}-${currentStoryIndex}`}
-                                    initial={{ opacity: 0, scale: 1.05 }}
+                                    initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="w-full h-full flex items-center justify-center"
+                                    exit={{ opacity: 0 }}
+                                    className="w-full h-full flex items-center justify-center p-4 sm:p-0"
                                 >
                                     {groupedStories[viewingUser].stories[currentStoryIndex]?.imageUrl ? (
                                         <img
                                             src={groupedStories[viewingUser].stories[currentStoryIndex].imageUrl}
-                                            className="w-full h-full object-contain"
+                                            className="w-full h-full object-contain rounded-3xl"
                                             alt="Story"
                                         />
                                     ) : (
                                         <div
-                                            className="w-full h-full flex items-center justify-center p-12 text-center"
+                                            className="w-full h-full flex items-center justify-center p-12 text-center rounded-3xl"
                                             style={{ backgroundColor: groupedStories[viewingUser].stories[currentStoryIndex]?.backgroundColor || '#1e293b' }}
                                         >
-                                            <p className="text-2xl font-black text-white italic leading-tight">
+                                            <p className="text-3xl font-black text-white italic leading-tight drop-shadow-2xl">
                                                 {groupedStories[viewingUser].stories[currentStoryIndex]?.content}
                                             </p>
                                         </div>
@@ -393,19 +421,19 @@ const StoriesView: React.FC = () => {
 
                             {/* Caption */}
                             {groupedStories[viewingUser].stories[currentStoryIndex]?.imageUrl && groupedStories[viewingUser].stories[currentStoryIndex]?.content && (
-                                <div className="absolute bottom-8 inset-x-0 p-6 text-center bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-                                    <p className="text-[15px] font-semibold text-white leading-relaxed drop-shadow-lg">
+                                <div className="absolute bottom-20 inset-x-0 p-8 text-center bg-gradient-to-t from-black/80 to-transparent">
+                                    <p className="text-lg font-black text-white drop-shadow-xl">
                                         {groupedStories[viewingUser].stories[currentStoryIndex].content}
                                     </p>
                                 </div>
                             )}
 
-                            {/* View count for own stories */}
+                            {/* Views */}
                             {viewingUser === user?.id && (
-                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full z-10">
-                                    <Eye size={14} className="text-white/70" />
-                                    <span className="text-[12px] font-bold text-white/70">
-                                        {groupedStories[viewingUser].stories[currentStoryIndex]?.views?.length || 0} vues
+                                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white/10 backdrop-blur-3xl px-6 py-3 rounded-2xl border border-white/10">
+                                    <Eye size={18} className="text-white" />
+                                    <span className="text-sm font-black text-white">
+                                        {groupedStories[viewingUser].stories[currentStoryIndex]?.views?.length || 0} VUES
                                     </span>
                                 </div>
                             )}
@@ -413,6 +441,7 @@ const StoriesView: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
 
             {/* Snapchat-Style Full-Screen Creator */}
             <AnimatePresence>

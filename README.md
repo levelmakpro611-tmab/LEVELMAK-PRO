@@ -1,10 +1,10 @@
 # 🚀 LEVELMAK - Plateforme Éducative avec IA (Vercel)
 
-Une plateforme d'apprentissage interactive propulsée par l'intelligence artificielle, avec authentification Firebase et génération de contenu par Gemini AI.
+Une plateforme d'apprentissage interactive propulsée par l'intelligence artificielle, avec authentification Supabase et génération de contenu par Gemini AI.
 
 ## 🔥 Fonctionnalités
 
-- ✅ **Authentification Firebase** (Email/Password + Google Sign-In)
+- ✅ **Authentification Supabase** (Email/Password + Google Sign-In + Téléphone)
 - 🤖 **Génération de Quiz IA** avec Google Gemini
 - 📚 **Bibliothèque Intelligente** (recherche Google Books)
 - 💬 **Coach IA Personnalisé** pour l'aide aux devoirs
@@ -20,27 +20,23 @@ Une plateforme d'apprentissage interactive propulsée par l'intelligence artific
 npm install
 ```
 
-### 2. Configuration Firebase
+### 2. Configuration Supabase
 
-1. Créez un projet sur [Firebase Console](https://console.firebase.google.com/)
-2. Activez **Authentication** (Email/Password + Google)
-3. Activez **Cloud Firestore**
-4. Copiez votre configuration Firebase dans `services/firebase.ts` (déjà fait)
+1. Créez un projet sur [Supabase](https://supabase.com/)
+2. Activez **Authentication** (Email, Google)
+3. Configurez les tables SQL (`profiles`, `user_activities`, `conversations`, etc.)
+4. Copiez votre configuration Supabase dans `services/supabase.ts`
 
-### 3. Configurer Firestore Rules
+### 3. Configurer Row Level Security (RLS)
 
-Déployez les règles de sécurité Firestore :
+Déployez les politiques de sécurité (RLS) directement depuis le Dashboard Supabase ou via SQL.
 
-```bash
-firebase deploy --only firestore:rules
-```
 
-Ou copiez le contenu de `firestore.rules` dans la console Firebase.
 
 ### 4. API Gemini
 
 1. Obtenez une clé API sur [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Ajoutez-la dans `services/gemini.ts`
+2. Ajoutez-la dans `.env`
 
 ### 5. Lancer l'application
 
@@ -64,22 +60,21 @@ levelmak-pro/
 │   │   ├── QuizGenerator.tsx
 │   │   └── QuizPlayer.tsx
 │   ├── services/         # Services externes
-│   │   ├── firebase.ts   # Configuration Firebase
+│   │   ├── supabase.ts   # Configuration Supabase
 │   │   ├── authService.ts # Authentification
 │   │   └── gemini.ts     # API Gemini
 │   ├── hooks/            # React hooks
 │   │   └── useStore.tsx  # State management
 │   ├── types/            # Types TypeScript
 │   └── App.tsx           # Composant principal
-├── firestore.rules       # Règles de sécurité Firestore
 └── index.html
 ```
 
 ## 🔐 Sécurité
 
-- **Firestore Rules** : Les utilisateurs ne peuvent accéder qu'à leurs propres données
-- **Firebase Auth** : Authentification sécurisée avec tokens JWT
-- **API Keys** : Les clés API sont côté client (normal pour Firebase)
+- **Supabase RLS** : Les utilisateurs ne peuvent accéder qu'à leurs propres données
+- **Supabase Auth** : Authentification sécurisée avec tokens JWT
+- **API Keys** : Les clés API publiques sont côté client
 
 ## 🎨 Design System
 
@@ -115,7 +110,7 @@ MIT License - Créé avec ❤️ pour l'éducation
 
 **Powered by:**
 - ⚛️ React + TypeScript
-- 🔥 Firebase (Auth + Firestore)
+- 🐘 Supabase (PostgreSQL + Auth + Storage)
 - 🤖 Google Gemini AI
 - ⚡ Vite
 - 🎨 Tailwind CSS

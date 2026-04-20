@@ -8,6 +8,7 @@ export interface AudioNote {
     cleanNote: string;
     summary: string;
     keyNotions: string[];
+    aiLesson?: string;
 }
 
 export class AudioLogic {
@@ -113,44 +114,67 @@ export class AudioLogic {
         if (preCleaned.length < 5) return { title: "Note vide", cleanNote: "", summary: "Contenu insuffisant.", keyNotions: [] };
 
         const prompt = `
-            Tu es l'Intelligence Quantum de Levelmak Pro, dotée de la compréhension sémantique de ChatGPT Voice.
-            TA MISSION : Une analyse en deux étapes (Chain of Thought).
+            Tu es le MAÎTRE QUANTUM de Levelmak Pro, l'intelligence pédagogique la plus avancée.
+            TON OBJECTIF : Transformer une transcription brute en un support de cours magistral d'une précision absolue.
             
-            ÉTAPE 1 : NETTOYAGE ABSOLU (Quantum Cleanup)
-            - Extraire chaque mot prononcé avec une précision chirurgicale.
-            - ÉLIMINER RADICALEMENT : bégaiements, répétitions ("bonjour bonjour"), tics de langage ("euh", "bah"), et bruits de fond de la classe.
-            - MIRROR INTENT : Identifie ce que le professeur a voulu dire. Si une phrase est hachée, reconstruis-la logiquement.
+            STRUCTURE DE TA RÉPONSE (Chain of Thought) :
             
-            ÉTAPE 2 : RÉDACTION ÉLITE (Elite Scriptwriting)
-            - Transforme le résultat propre de l'étape 1 en un cours magistral fluide et vivant.
-            - NOMS PROPRES : Orthographe parfaite obligatoire.
-            - STYLE : Élégant, structuré et professionnel.
+            1. NETTOYAGE CHIRURGICAL :
+               - Élimine sans pitié : bégaiements, tics ("euh", "genre"), répétitions inutiles.
+               - Reconstruit les phrases hachées pour qu'elles soient fluides mais fidèles au sens original.
             
-            TEXTE BRUT À TRAITER :
+            2. RÉSUMÉ D'ÉLITE (2 à 3 pages équivalentes) :
+               - Ne fais pas de remplissage. Sois DENSE et STRUCTURÉ.
+               - Utilise des sous-sections claires : # Introduction, # Thèses Principales, # Points Clés, # Conclusion.
+               - Chaque concept doit être expliqué avec clarté.
+            
+            3. GLOSSAIRE DES NOTIONS PRO :
+               - Extrais au moins 5 mots-clés ou concepts techniques.
+               - Fournis pour chacun une DÉFINITION académique précise.
+            
+            4. LA LEÇON DU MAÎTRE (aiLesson) :
+               - Prends de la hauteur. En tant qu'IA, quelle est ton analyse sur ce sujet ?
+               - Ajoute des informations que le professeur a pu omettre ou apporte une perspective nouvelle pour aider l'élève à comprendre l'enjeu global.
+            
+            TEXTE À TRAITER :
             "${preCleaned}"
             
             RÉPONDS UNIQUEMENT AU FORMAT JSON STRICT :
             {
-                "title": "Titre magistral court",
-                "cleanNote": "Le cours complet rédigé avec brio (ZÉRO bruit, ZÉRO répétition)",
-                "summary": "Résumé 'essentiel' stratégique en 2 phrases",
-                "keyNotions": ["Notion: définition précise"]
+                "title": "Titre magistral et captivant",
+                "cleanNote": "Le texte intégral nettoyé et restauré",
+                "summary": "Le grand résumé structuré de 2-3 pages (Introduction, Thèses, Points Clés, Conclusion)",
+                "keyNotions": ["Concept: Définition précise et détaillée", "..."],
+                "aiLesson": "Ta perspective de Maître IA sur le sujet, approfondissements et conseils stratégiques."
             }
         `;
 
         try {
-            // Utilisation du modèle Premium OFFICIEL Gemini 2.5 Flash pour une stabilité à 100%
-            const response = await openrouterService.generateText(prompt, "google/gemini-2.5-flash");
+            // Utilisation du modèle gratuit robuste par défaut
+            const response = await openrouterService.generateText(prompt);
             
-            const match = response.match(/\{[\s\S]*\}/);
-            const jsonStr = match ? match[0] : response;
-            const data = JSON.parse(jsonStr);
+            let data: any = {};
+            try {
+                const match = response.match(/\{[\s\S]*\}/);
+                const jsonStr = match ? match[0] : response;
+                data = JSON.parse(jsonStr);
+            } catch (pErr) {
+                console.warn("Échec parsing JSON principal, tentative d'extraction simple...");
+                data = {
+                    title: response.split('\n')[0].substring(0, 50),
+                    cleanNote: response,
+                    summary: "Note traitée sans formatage JSON strict.",
+                    keyNotions: [],
+                    aiLesson: ""
+                };
+            }
             
             return {
                 title: data.title || "Leçon Quantum",
                 cleanNote: data.cleanNote || preCleaned,
                 summary: data.summary || "Note rédigée avec précision Quantum.",
-                keyNotions: data.keyNotions || []
+                keyNotions: data.keyNotions || [],
+                aiLesson: data.aiLesson || ""
             };
         } catch (error) {
             console.error("Erreur Quantum IA:", error);

@@ -22,20 +22,27 @@ async function callOpenRouter(messages: any[], model: string = DEFAULT_MODEL, js
     throw new Error("Clé API OpenRouter manquante. Veuillez l'ajouter dans le fichier .env (VITE_OPENROUTER_API_KEY).");
   }
 
-  const response = await fetch(BASE_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://levelmak.com", // Optionnel pour OpenRouter
-      "X-Title": "Levelmak Pro",
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      response_format: jsonMode ? { type: "json_object" } : undefined,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 secondes de timeout
+
+  try {
+    const response = await fetch(BASE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://levelmak.com",
+        "X-Title": "Levelmak Pro",
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        response_format: jsonMode ? { type: "json_object" } : undefined,
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
@@ -50,8 +57,16 @@ async function callOpenRouter(messages: any[], model: string = DEFAULT_MODEL, js
     throw err;
   }
 
-  const data = await response.json();
-  return data.choices[0].message.content;
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error("L'IA met trop de temps à répondre. Vérifiez votre connexion ou réessayez avec un texte plus court.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export const openrouterService = {
@@ -400,14 +415,24 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
   },
 
   async getDailyVocabulary(seenWords: string[] = [], lang: string = 'fr') {
-    const prompt = `Génère deux mots de vocabulaire sophistiqués en ${lang}. JSON: { "words": [ { "word", "explanation", "usage" } ] }.`;
+    const excludeList = seenWords.length > 0 ? `NE SOUMETS SURTOUT PAS ces mots : ${seenWords.map(w => w.split(':')[0]).join(', ')}.` : '';
+    const prompt = `Tu dois agir comme un professeur d'élite.
+Génère STRICTEMENT exactement deux NOUVEAUX mots de vocabulaire sophistiqués en ${lang}.
+${excludeList}
+RÈGLE ABSOLUE : Remplace les valeurs par du VRAI texte, n'écris JAMAIS "...".
+JSON REQUIS : { "words": [ { "word": "Mot", "explanation": "Explication claire", "usage": "Phrase d'exemple" } ] }.`;
     const text = await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL, true);
     const data = JSON.parse(text);
     return data.words;
   },
 
   async getDailyMotivation(seenMotivations: string[] = [], lang: string = 'fr') {
-    const prompt = `Génère une phrase de motivation pour un étudiant en ${lang}. JSON: { "quote", "author" }.`;
+    const excludeList = seenMotivations.length > 0 ? `NE SOUMETS SURTOUT PAS ces citations : ${seenMotivations.map(m => `"${m.substring(0, 20)}..."`).join(', ')}.` : '';
+    const prompt = `Tu dois agir comme un grand sage inspirant.
+Génère STRICTEMENT une NOUVELLE phrase de motivation puissante et rare pour un étudiant en ${lang}.
+${excludeList}
+RÈGLE ABSOLUE : Remplace les valeurs par du VRAI texte, n'écris JAMAIS "...".
+JSON REQUIS : { "quote": "La citation inspirante", "author": "Nom de l'Auteur" }.`;
     const text = await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL, true);
     return JSON.parse(text);
   },

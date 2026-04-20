@@ -54,6 +54,15 @@ interface AppState {
   registerWithEmail: (name: string, email: string, password: string, gender?: User['gender'], ageRange?: User['ageRange']) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  registerTeacher: (params: { 
+    firstName: string, 
+    lastName: string, 
+    email: string, 
+    password: string, 
+    phone: string,
+    avatarFile?: File,
+    proofFiles: File[] 
+  }) => Promise<void>;
   logout: () => void;
   addXp: (amount: number) => void;
   saveQuiz: (quiz: Quiz) => void;
@@ -424,12 +433,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               { quote: "L'éducation est l'arme la plus puissante qu'on puisse utiliser pour changer le monde.", author: "Nelson Mandela" },
               { quote: "Le savoir est la seule matière qui s'accroît quand on la partage.", author: "Socrate" },
               { quote: "Vis comme si tu devais mourir demain. Apprends comme si tu devais vivre éternellement.", author: "Gandhi" },
-              { quote: "Soyez le changement que vous voulez voir dans le monde.", author: "Gandhi" }
+              { quote: "Croyez en vos rêves et ils se réaliseront peut-être. Croyez en vous et ils se réaliseront sûrement.", author: "Martin Luther King Jr." },
+              { quote: "Ce n'est pas le vent qui décide de votre destination, c'est l'orientation que vous donnez à votre voile.", author: "Jim Rohn" },
+              { quote: "Il y a plus de courage que de talent dans la plupart des réussites.", author: "Félix Leclerc" },
+              { quote: "Le génie est fait d'un pour cent d'inspiration et de quatre-vingt-dix-neuf pour cent de transpiration.", author: "Thomas Edison" },
+              { quote: "La plus grande gloire n'est pas de ne jamais tomber, mais de se relever à chaque chute.", author: "Confucius" },
+              { quote: "La folie, c'est de faire toujours la même chose et de s'attendre à un résultat différent.", author: "Albert Einstein" }
             ];
 
             const staticVocab = [
               [{ word: "Résilience", explanation: "Capacité à surmonter les épreuves.", usage: "Sa résilience l'a mené au succès." }, { word: "Paradigme", explanation: "Modèle de pensée.", usage: "Un changement de paradigme." }],
-              [{ word: "Altruisme", explanation: "Souci du bien-être d'autrui.", usage: "Son altruisme est exemplaire." }, { word: "Pragmatique", explanation: "Qui privilégie l'action.", usage: "Une approche pragmatique." }]
+              [{ word: "Altruisme", explanation: "Souci du bien-être d'autrui.", usage: "Son altruisme est exemplaire." }, { word: "Pragmatique", explanation: "Qui privilégie l'action.", usage: "Une approche pragmatique." }],
+              [{ word: "Procrastination", explanation: "Tendance à tout remettre au lendemain.", usage: "Sa procrastination lui coûte cher." }, { word: "Empathie", explanation: "Capacité à s'identifier à autrui.", usage: "Il fait preuve de beaucoup d'empathie." }],
+              [{ word: "Éloquence", explanation: "Art de bien parler, de persuader.", usage: "Son éloquence a charmé le public." }, { word: "Stoïcisme", explanation: "Fermeté d'âme face à la douleur.", usage: "Il a affronté l'épreuve avec stoïcisme." }],
+              [{ word: "Paradoxe", explanation: "Opinion contraire au sens commun.", usage: "C'est un véritable paradoxe." }, { word: "Syllogisme", explanation: "Raisonnement logique à trois propositions.", usage: "Il a utilisé un syllogisme pour prouver son point." }],
+              [{ word: "Erudition", explanation: "Savoir approfondi issu de la lecture.", usage: "Son érudition est reconnue de tous." }, { word: "Clivage", explanation: "Séparation ou division forte.", usage: "Il existe un clivage au sein du groupe." }],
+              [{ word: "Dichotomie", explanation: "Division en deux parties opposées.", usage: "La dichotomie entre le bien et le mal." }, { word: "Véhémence", explanation: "Force impétueuse, intensité.", usage: "Il a répondu avec véhémence." }]
             ];
 
             const dayIndex = new Date().getDate() - 1;
@@ -438,16 +457,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
             // IA Background Refresh
             setTimeout(() => {
+              const histVocabStr = localStorage.getItem('levelmak_hist_vocab');
+              const histMotivStr = localStorage.getItem('levelmak_hist_motiv');
+              const histVocab = histVocabStr ? JSON.parse(histVocabStr) : [];
+              const histMotiv = histMotivStr ? JSON.parse(histMotivStr) : [];
+
               cacheService.getDailyVocab(async () => {
-                return await openrouterService.getDailyVocabulary([], settings.language);
+                return await openrouterService.getDailyVocabulary(histVocab, settings.language);
               }, settings.language).then(words => {
-                if (words?.length) setDailyVocab({ words, loading: false });
+                if (words?.length) {
+                    setDailyVocab({ words, loading: false });
+                    words.forEach((w: any) => { if (!histVocab.includes(w.word)) histVocab.push(w.word); });
+                    if (histVocab.length > 60) histVocab.splice(0, histVocab.length - 60); // Keep last 60
+                    localStorage.setItem('levelmak_hist_vocab', JSON.stringify(histVocab));
+                }
               }).catch(() => {});
 
               cacheService.getDailyMotivation(async () => {
-                return await openrouterService.getDailyMotivation([], settings.language);
+                return await openrouterService.getDailyMotivation(histMotiv, settings.language);
               }, settings.language).then(data => {
-                if (data?.quote) setDailyMotivation({ ...data, loading: false });
+                 if (data?.quote) {
+                    setDailyMotivation({ ...data, loading: false });
+                    if (!histMotiv.includes(data.quote)) histMotiv.push(data.quote);
+                    if (histMotiv.length > 60) histMotiv.splice(0, histMotiv.length - 60); // Keep last 60
+                    localStorage.setItem('levelmak_hist_motiv', JSON.stringify(histMotiv));
+                 }
               }).catch(() => {});
             }, 2000);
           } catch (e) {
@@ -701,11 +735,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  const registerWithEmail = useCallback(async (name: string, email: string, password: string, gender?: User['gender'], ageRange?: User['ageRange']) => {
+  const registerWithEmail = useCallback(async (name: string, email: string, password: string, gender?: User['gender'], ageRange?: User['ageRange'], options?: { role?: 'student' | 'teacher' }) => {
     try {
       setLoading(true);
       const { signUpWithEmail } = await import('../services/authService');
       const newUser = await signUpWithEmail(email, password, name, gender, ageRange);
+      if (newUser && options?.role) {
+          // Update role if specified
+          await supabase.from('profiles').update({ role: options.role }).eq('id', newUser.id);
+          newUser.role = options.role;
+      }
       if (newUser) {
         setUser(newUser);
         localStorage.setItem('levelmak_user', JSON.stringify(newUser));
@@ -715,6 +754,60 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       throw error;
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const registerTeacher = useCallback(async (params: { 
+    firstName: string, 
+    lastName: string, 
+    email: string, 
+    password: string, 
+    phone: string,
+    avatarFile?: File,
+    proofFiles: File[] 
+  }) => {
+    const { firstName, lastName, email, password, phone, avatarFile, proofFiles } = params;
+    try {
+        setLoading(true);
+        // 1. Inscription Auth
+        const { signUpWithEmail } = await import('../services/authService');
+        const newUser = await signUpWithEmail(email, password, `${firstName} ${lastName}`);
+        
+        if (!newUser) throw new Error("Erreur lors de la création du compte Auth.");
+
+        // 2. Mettre à jour le profil avec le rôle enseignant
+        await supabase.from('profiles').update({ 
+            role: 'teacher',
+            phone_number: phone 
+        }).eq('id', newUser.id);
+        
+        // 3. Créer la demande d'enseignant
+        const { applyAsTeacher } = await import('../services/tutorService');
+        await applyAsTeacher(
+            newUser.id, 
+            {
+                firstName,
+                lastName,
+                whatsappNumber: phone,
+                bio: '', // Sera rempli plus tard par l'enseignant
+                city: '', // Idem
+                neighborhood: '', 
+                subjects: [],
+                schools: [],
+                type: 'professional'
+            },
+            proofFiles,
+            avatarFile
+        );
+
+        setUser({ ...newUser, role: 'teacher' });
+        localStorage.setItem('levelmak_user', JSON.stringify({ ...newUser, role: 'teacher' }));
+        
+    } catch (error: any) {
+        console.error('Teacher registration failed:', error);
+        throw error;
+    } finally {
+        setLoading(false);
     }
   }, []);
 
@@ -2009,7 +2102,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const contextValue = useMemo(() => ({
     user, quizzes, stories, missions, flashcards, decks, books, studyPlan, loading,
-    login, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, logout, addXp, saveQuiz, saveStory, deleteStory, saveBook,
+    login, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, registerTeacher, logout, addXp, saveQuiz, saveStory, deleteStory, saveBook,
     saveFlashcardDeck, saveFlashcard, deleteFlashcard, deleteFlashcardDeck, completeMission,
     purchaseItem, equipItem, updateProfileImage, updateProfile, deleteBook, updateSettings, addActivity,
     saveStudyPlan, deleteStudyPlan, toggleTaskCompletion,
@@ -2058,7 +2151,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     deleteQuiz
   }), [
     user, quizzes, stories, missions, flashcards, decks, books, studyPlan, loading,
-    login, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, logout, addXp, saveQuiz, saveStory, deleteStory, saveBook,
+    login, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, registerTeacher, logout, addXp, saveQuiz, saveStory, deleteStory, saveBook,
     saveFlashcardDeck, saveFlashcard, deleteFlashcard, deleteFlashcardDeck, completeMission,
     purchaseItem, equipItem, updateProfileImage, updateProfile, deleteBook, updateSettings, addActivity,
     trackTime, grantBadge, incrementBooksRead, incrementFlashcardsStudied, updateSRSMetadata,

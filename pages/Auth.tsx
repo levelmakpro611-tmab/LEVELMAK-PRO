@@ -9,11 +9,15 @@ import { logUserActivity } from '../services/activityService';
 import { biometricService } from '../services/biometricService';
 
 const Auth: React.FC = () => {
-  const { t, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, loading: storeLoading } = useStore();
+  const { t, registerWithPhone, loginWithPhone, registerWithEmail, loginWithEmail, loginWithGoogle, loading: storeLoading, registerTeacher } = useStore();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('register');
   const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
   const [gender, setGender] = useState<UserType['gender']>('HOMME');
   const [ageRange, setAgeRange] = useState<UserType['ageRange']>('15-18');
   const [password, setPassword] = useState('');
@@ -24,7 +28,8 @@ const Auth: React.FC = () => {
   const [showPolicyDetail, setShowPolicyDetail] = useState(false);
   const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
   const [resetSuccess, setResetSuccess] = useState(false);
-  const [registerStep, setRegisterStep] = useState<1 | 2>(1);
+  const [registerStep, setRegisterStep] = useState<0 | 1 | 2>(1);
+  const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
 
@@ -63,32 +68,58 @@ const Auth: React.FC = () => {
 
     try {
       if (mode === 'register') {
-        console.log('Tentative d\'inscription transition...');
-        if (registerStep === 1) {
-          if (!name.trim() || !email.trim()) {
-            throw new Error(t('auth.authRequired'));
-          }
-          setRegisterStep(2);
+        if (registerStep === 0) {
+          setRegisterStep(1);
           return;
         }
 
-        if (!password.trim()) {
-          throw new Error(t('auth.pwRequired'));
-        }
-        if (!acceptedPolicies) {
-          throw new Error(t('auth.acceptRequired'));
-        }
-        if (password.length < 6) {
-          throw new Error(t('auth.pwShort'));
-        }
+        if (role === 'teacher') {
+            // Logic for Teacher
+            if (registerStep === 1) {
+                if (!firstName.trim() || !lastName.trim() || (!email.trim() && !phone.trim())) {
+                    throw new Error("Veuillez remplir votre nom, prénom et contact.");
+                }
+                setRegisterStep(2);
+                return;
+            }
 
-        await registerWithEmail(
-          name.trim(),
-          email.trim(),
-          password,
-          gender,
-          ageRange
-        );
+            if (!password.trim()) throw new Error(t('auth.pwRequired'));
+            if (!acceptedPolicies) throw new Error(t('auth.acceptRequired'));
+            if (password.length < 6) throw new Error(t('auth.pwShort'));
+            
+            await registerTeacher({
+                firstName,
+                lastName,
+                email: email.trim() || `${phone.replace(/\D/g, '')}@levelmak.app`,
+                password,
+                phone: phone.trim(),
+                avatarFile: avatarFile || undefined,
+                proofFiles
+            });
+
+        } else {
+            // Logic for Student
+            if (registerStep === 1) {
+                if (!name.trim() || !email.trim()) {
+                    throw new Error(t('auth.authRequired'));
+                }
+                setRegisterStep(2);
+                return;
+            }
+
+            if (!password.trim()) throw new Error(t('auth.pwRequired'));
+            if (!acceptedPolicies) throw new Error(t('auth.acceptRequired'));
+            if (password.length < 6) throw new Error(t('auth.pwShort'));
+
+            await registerWithEmail(
+                name.trim(),
+                email.trim(),
+                password,
+                gender,
+                ageRange,
+                { role }
+            );
+        }
         console.log('Inscription réussie !');
       } else if (mode === 'login') {
         console.log('Tentative de connexion...');
@@ -324,70 +355,211 @@ const Auth: React.FC = () => {
                     exit={{ opacity: 0, y: -10 }}
                     className="space-y-5"
                   >
-                    {registerStep === 1 ? (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <UserIcon size={12} className="text-blue-500" />
-                            {t('auth.pseudo')}
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                            placeholder={t('auth.placeholderPseudo')}
-                          />
+                    {registerStep === 0 ? (
+                      <div className="space-y-6">
+                        <div className="text-center space-y-2 mb-4">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('auth.choosePath') || 'Choisissez votre destin'}</p>
                         </div>
+                        <div className="grid grid-cols-1 gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setRole('student')}
+                            className={`p-6 rounded-[2rem] border-2 transition-all text-left flex items-center gap-5 group/role ${role === 'student' ? 'bg-blue-600/10 border-blue-500 shadow-glow' : 'bg-white/5 border-white/5 hover:border-white/10'}`}
+                          >
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${role === 'student' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white/5 text-slate-500 group-hover/role:bg-white/10'}`}>
+                              <Rocket size={28} />
+                            </div>
+                            <div>
+                              <h3 className={`text-lg font-black transition-colors ${role === 'student' ? 'text-white' : 'text-slate-400'}`}>{t('auth.student') || 'Élève'}</h3>
+                              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('auth.studentDesc') || 'Accès aux cours et jeux'}</p>
+                            </div>
+                          </button>
 
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <Mail size={12} className="text-blue-500" />
-                            {t('auth.email')}
-                          </label>
-                          <input
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
-                            placeholder={t('auth.placeholderEmail')}
-                          />
+                          <button
+                            type="button"
+                            onClick={() => setRole('teacher')}
+                            className={`p-6 rounded-[2rem] border-2 transition-all text-left flex items-center gap-5 group/role ${role === 'teacher' ? 'bg-purple-600/10 border-purple-500 shadow-glow-purple' : 'bg-white/5 border-white/5 hover:border-white/10'}`}
+                          >
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${role === 'teacher' ? 'bg-purple-500 text-white shadow-lg' : 'bg-white/5 text-slate-500 group-hover/role:bg-white/10'}`}>
+                              <Book size={28} />
+                            </div>
+                            <div>
+                                <h3 className={`text-lg font-black transition-colors ${role === 'teacher' ? 'text-white' : 'text-slate-400'}`}>{t('auth.teacher') || 'Enseignant'}</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('auth.teacherDesc') || 'Partagez votre savoir'}</p>
+                            </div>
+                          </button>
                         </div>
                       </div>
+                      ) : registerStep === 1 ? (
+                        <div className="space-y-4">
+                          {role === 'student' ? (
+                            <>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                                  <UserIcon size={12} className="text-blue-500" />
+                                  {t('auth.pseudo')}
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={name}
+                                  onChange={(e) => setName(e.target.value)}
+                                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                                  placeholder={t('auth.placeholderPseudo')}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                                  <Mail size={12} className="text-blue-500" />
+                                  {t('auth.email')}
+                                </label>
+                                <input
+                                  type="email"
+                                  required
+                                  value={email}
+                                  onChange={(e) => setEmail(e.target.value)}
+                                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                                  placeholder={t('auth.placeholderEmail')}
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.firstName')}</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={firstName}
+                                    onChange={(e) => setFirstName(e.target.value)}
+                                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all"
+                                    placeholder="Ex: Jean"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.lastName')}</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={lastName}
+                                    onChange={(e) => setLastName(e.target.value)}
+                                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all"
+                                    placeholder="Ex: Dupont"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                                  <Phone size={12} className="text-purple-500" />
+                                  {t('auth.phoneOrEmail')}
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={phone || email}
+                                  onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val.includes('@')) {
+                                          setEmail(val);
+                                          setPhone('');
+                                      } else {
+                                          setPhone(val);
+                                          setEmail('');
+                                      }
+                                  }}
+                                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all"
+                                  placeholder="WhatsApp ou Email"
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.gender')}</label>
-                            <div className="flex gap-2">
-                              {(['HOMME', 'FEMME'] as const).map((g) => (
-                                <button
-                                  key={g}
-                                  type="button"
-                                  onClick={() => setGender(g)}
-                                  className={`flex-1 py-4 rounded-xl text-[10px] font-black transition-all border ${gender === g ? 'bg-blue-600 border-blue-500 text-white shadow-glow' : 'bg-white/5 border-white/10 text-slate-500'}`}
-                                >
-                                  {g}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                          {role === 'student' ? (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.gender')}</label>
+                                <div className="flex gap-2">
+                                  {(['HOMME', 'FEMME'] as const).map((g) => (
+                                    <button
+                                      key={g}
+                                      type="button"
+                                      onClick={() => setGender(g)}
+                                      className={`flex-1 py-4 rounded-xl text-[10px] font-black transition-all border ${gender === g ? 'bg-blue-600 border-blue-500 text-white shadow-glow' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                                    >
+                                      {g}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
 
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.ageRange')}</label>
-                            <select
-                              value={ageRange}
-                              onChange={(e) => setAgeRange(e.target.value as any)}
-                              className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[11px] outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
-                            >
-                              <option value="15-18" className="bg-slate-900">{t('auth.age1518')}</option>
-                              <option value="19-23" className="bg-slate-900">{t('auth.age1923')}</option>
-                              <option value="24+" className="bg-slate-900">{t('auth.age24plus')}</option>
-                            </select>
-                          </div>
-                        </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.ageRange')}</label>
+                                <select
+                                  value={ageRange}
+                                  onChange={(e) => setAgeRange(e.target.value as any)}
+                                  className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[11px] outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
+                                >
+                                  <option value="15-18" className="bg-slate-900">{t('auth.age1518')}</option>
+                                  <option value="19-23" className="bg-slate-900">{t('auth.age1923')}</option>
+                                  <option value="24+" className="bg-slate-900">{t('auth.age24plus')}</option>
+                                </select>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                                            <Sparkles size={12} className="text-purple-500" />
+                                            {t('auth.profilePhoto')}
+                                        </label>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*"
+                                            onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
+                                            className="hidden" 
+                                            id="avatar-upload" 
+                                        />
+                                        <label htmlFor="avatar-upload" className="w-full px-4 py-4 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-purple-500/50 transition-all overflow-hidden text-center">
+                                            {avatarFile ? (
+                                                <span className="text-[10px] text-purple-400 font-bold truncate max-w-full px-2">{avatarFile.name}</span>
+                                            ) : (
+                                                <>
+                                                    <UserIcon size={20} className="text-slate-600" />
+                                                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{t('auth.uploadDoc')?.split(' ')[0]}</span>
+                                                </>
+                                            )}
+                                        </label>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                                            <Book size={12} className="text-purple-500" />
+                                            {t('auth.proofDocs')}
+                                        </label>
+                                        <input 
+                                            type="file" 
+                                            multiple
+                                            onChange={(e) => setProofFiles(Array.from(e.target.files || []))}
+                                            className="hidden" 
+                                            id="proof-upload" 
+                                        />
+                                        <label htmlFor="proof-upload" className="w-full px-4 py-4 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-purple-500/50 transition-all text-center">
+                                            {proofFiles.length > 0 ? (
+                                                <span className="text-[10px] text-purple-400 font-bold">{proofFiles.length} fichiers</span>
+                                            ) : (
+                                                <>
+                                                    <Rocket size={20} className="text-slate-600" />
+                                                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Dossier</span>
+                                                </>
+                                            )}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                          )}
 
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
@@ -511,17 +683,19 @@ const Auth: React.FC = () => {
                           ? t('auth.accessDashboard')
                           : registerStep === 1
                             ? t('auth.continue')
-                            : t('auth.propelKnowledge')
+                            : role === 'teacher' 
+                                ? t('auth.successTeacher')
+                                : t('auth.propelKnowledge')
                         }
                       </span>
                     </>
                   )}
                 </button>
 
-                {mode === 'register' && registerStep === 2 && (
+                {mode === 'register' && registerStep > 1 && (
                   <button
                     type="button"
-                    onClick={() => setRegisterStep(1)}
+                    onClick={() => setRegisterStep((registerStep - 1) as any)}
                     className="w-full text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all"
                   >
                     {t('auth.backToPrev')}

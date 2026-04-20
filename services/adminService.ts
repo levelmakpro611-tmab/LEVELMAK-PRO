@@ -12,21 +12,7 @@ import {
     ShopItem,
     AdminUserAnalytics
 } from '../types';
-import { db } from './firebase';
-import {
-    collection,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    doc,
-    Timestamp,
-    query,
-    where,
-    getDocs,
-    orderBy,
-    limit,
-    serverTimestamp
-} from 'firebase/firestore';
+
 
 // ========== CONSTANTS ==========
 const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'levelmak611';
@@ -81,11 +67,20 @@ export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => 
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .select('role, name, phone_number')
+            .select('name, phone_number, email')
             .eq('id', userId)
             .single();
 
-        if (data && data.role === 'admin') {
+        if (error) throw error;
+        
+        const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'levelmak611';
+        const isAdmin = 
+            data.name?.toLowerCase().includes('administrateur principal') ||
+            data.name?.toLowerCase().includes('mouctar') ||
+            data.phone_number === ADMIN_USERNAME ||
+            data.email?.includes(ADMIN_USERNAME);
+
+        if (isAdmin) {
             return 'admin';
         }
         return 'user';
@@ -111,10 +106,6 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
     try {
         // 1. Total and Active Users (Efficient counts)
         const { count: totalUsers, error: tError } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        console.log('--- ADMIN DIAGNOSTIC ---');
-        console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-        console.log('Total Users Count:', totalUsers);
-        if (tError) console.error('Error fetching totalUsers:', tError);
         
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -122,19 +113,34 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             .from('profiles')
             .select('*', { count: 'exact', head: true })
             .or(`last_active.gt."${sevenDaysAgo.toISOString()}",created_at.gt."${sevenDaysAgo.toISOString()}"`);
-        console.log('Active Users Count:', activeUsers);
-        if (aError) console.error('Error fetching activeUsers:', aError);
+
+        // Fallback or Diagnostic for RLS: if count is 0 but we have a session, try a manual fetch
+        let statsFallbackCount = 0;
+        if ((totalUsers === 0 || totalUsers === null) && !tError) {
+             console.log('--- ADMIN RLS CHECK ---');
+             const { data: testRows, error: testError } = await supabase.from('profiles').select('id').limit(100);
+             if (testRows && testRows.length > 0) {
+                 console.warn(`ADMIN ALERT: count:exact returned 0, but select found ${testRows.length} rows. Using fallback count.`);
+                 statsFallbackCount = testRows.length;
+             } else if (testError) {
+                 console.error('ADMIN RLS ERROR during test fetch:', testError);
+             }
+        }
 
         const { data: summaryData, error: summaryError } = await supabase
             .from('profiles')
-            .select('total_xp, stats, created_at')
+            .select('total_xp, stats, created_at, last_active')
             .limit(2000);
         
-        console.log('Summary Data Length:', summaryData?.length || 0);
-        if (summaryError) console.error('Error fetching summaryData:', summaryError);
-        console.log('------------------------');
+        // Detailed Diagnostic Logs
+        if (tError || aError || summaryError) {
+            console.error('--- Supabase Stats Diagnostic ---');
+            if (tError) console.error('Total Users Error:', tError);
+            if (aError) console.error('Active Users Error:', aError);
+            if (summaryError) console.error('Summary Data Error:', summaryError);
+        }
 
-        // 2. New Users Today (Query instead of filtering in JS)
+        // 2. New Users Today
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
         const { count: newUsersToday } = await supabase
@@ -142,46 +148,60 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             .select('*', { count: 'exact', head: true })
             .gt('created_at', startOfToday.toISOString());
 
-        // 3. For more complex historical stats, we still need some data, 
-        // but let's limit it drastically or use specific fields.
-        // We'll fetch only the necessary columns for the last 1000 users or similar,
-        // or just accept some totals are guestimates based on aggregated counts.
-        
-        // Let's assume for now we only need totals. 
-        // If we want real engagement stats for ALL users, we should use a Postgres View or RPC.
-        // (summaryData was already fetched above for the diagnostic)
+        // Use empty array if data fetch failed or returned nothing
+        const data = summaryData || [];
 
-        if (!summaryData) throw new Error("Could not fetch user summary for stats");
+        const quizzesGenerated = data.reduce((sum, u) => sum + (u.stats?.quizzesCompleted || 0), 0);
+        const storiesWritten = data.reduce((sum, u) => sum + (u.stats?.storiesWritten || 0), 0);
+        const booksRead = data.reduce((sum, u) => sum + (u.stats?.booksRead || 0), 0);
+        const totalLearningHours = data.reduce((sum, u) => sum + (u.stats?.hoursLearned || 0), 0);
 
-        const quizzesGenerated = summaryData.reduce((sum, u) => sum + (u.stats?.quizzesCompleted || 0), 0);
-        const storiesWritten = summaryData.reduce((sum, u) => sum + (u.stats?.storiesWritten || 0), 0);
-        const booksRead = summaryData.reduce((sum, u) => sum + (u.stats?.booksRead || 0), 0);
-        const totalLearningHours = summaryData.reduce((sum, u) => sum + (u.stats?.hoursLearned || 0), 0);
+        const totalUsersClean = totalUsers || statsFallbackCount || 0;
+        const activeUsersClean = activeUsers || (statsFallbackCount > 0 ? statsFallbackCount : 0);
 
         const stats: AdminStats = {
-            totalUsers: totalUsers || 0,
-            activeUsers: activeUsers || 0,
+            totalUsers: totalUsersClean,
+            activeUsers: activeUsersClean,
             newUsersToday: newUsersToday || 0,
-            newUsersWeek: summaryData.filter(u => isInPeriod(u.created_at, 7)).length,
-            newUsersMonth: summaryData.filter(u => isInPeriod(u.created_at, 30)).length,
-            newUsersYear: summaryData.filter(u => isInPeriod(u.created_at, 365)).length,
+            newUsersWeek: data.filter(u => isInPeriod(u.created_at, 7)).length,
+            newUsersMonth: data.filter(u => isInPeriod(u.created_at, 30)).length,
+            newUsersYear: data.filter(u => isInPeriod(u.created_at, 365)).length,
             quizzesGenerated: quizzesGenerated || 0,
-            quizzesToday: summaryData.reduce((sum, u) => sum + (isToday(u.stats?.lastQuizDate) ? 1 : 0), 0),
-            flashcardsCreated: summaryData.reduce((sum, u) => sum + (u.stats?.flashcardsCreated || 0), 0),
-            flashcardsToday: summaryData.reduce((sum, u) => sum + (isToday(u.stats?.lastFlashcardDate) ? 1 : 0), 0),
+            quizzesToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastQuizDate) ? 1 : 0), 0),
+            flashcardsCreated: data.reduce((sum, u) => sum + (u.stats?.flashcardsCreated || 0), 0),
+            flashcardsToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastFlashcardDate) ? 1 : 0), 0),
             storiesWritten: storiesWritten || 0,
-            storiesToday: summaryData.reduce((sum, u) => sum + (isToday(u.stats?.lastStoryDate) ? 1 : 0), 0),
+            storiesToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastStoryDate) ? 1 : 0), 0),
             booksRead: booksRead || 0,
-            booksToday: summaryData.reduce((sum, u) => sum + (isToday(u.stats?.lastBookDate) ? 1 : 0), 0),
+            booksToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastBookDate) ? 1 : 0), 0),
             totalLearningHours: totalLearningHours || 0,
-            averageEngagementRate: (totalUsers || 0) > 0 ? Number((((activeUsers || 0) / (totalUsers || 1)) * 100).toFixed(1)) : 0
+            averageEngagementRate: totalUsersClean > 0 ? Number(((activeUsersClean / totalUsersClean) * 100).toFixed(1)) : 0
         };
 
+        console.log(`--- [ADMIN STATS] Success --- Users: ${stats.totalUsers}, Active: ${stats.activeUsers}`);
         cachedStats = { data: stats, timestamp: now.getTime() };
         return stats;
     } catch (error) {
-        console.error('Error getting global stats:', error);
-        throw error;
+        console.error('CRITICAL: Error getting global stats:', error);
+        // Return blank stats instead of throwing to prevent Admin UI from breaking
+        return {
+            totalUsers: 0,
+            activeUsers: 0,
+            newUsersToday: 0,
+            newUsersWeek: 0,
+            newUsersMonth: 0,
+            newUsersYear: 0,
+            quizzesGenerated: 0,
+            quizzesToday: 0,
+            flashcardsCreated: 0,
+            flashcardsToday: 0,
+            storiesWritten: 0,
+            storiesToday: 0,
+            booksRead: 0,
+            booksToday: 0,
+            totalLearningHours: 0,
+            averageEngagementRate: 0
+        };
     }
 }
 ;
@@ -192,7 +212,7 @@ export const getUserAnalytics = async (limitCount: number = 50): Promise<AdminUs
     try {
         const { data: users, error } = await supabase
             .from('profiles')
-            .select('id, name, email, phone_number, age_range, gender, status, level, total_xp, stats, created_at, education, is_employed, last_active')
+            .select('id, name, email, phone_number, age_range, gender, status, level, total_xp, stats, created_at, last_active')
             .limit(limitCount);
 
         if (error) throw error;
@@ -366,8 +386,11 @@ export const getAverageRatings = async (existingRatings?: PlatformRating[]): Pro
             offline: sum(ratings, 'offline') / count
         };
 
-        const overall = ratings.reduce((s, r) => s + r.overall, 0) / count;
+        const overall = ratings.length > 0
+            ? ratings.reduce((s, r) => s + r.overall, 0) / count
+            : 0;
 
+        console.log(`--- [ADMIN RATINGS] Success --- Total: ${count}, Overall: ${overall.toFixed(1)}`);
         return { overall, features, totalRatings: count };
     } catch (error) {
         console.error('Error calculating average ratings:', error);
@@ -472,7 +495,7 @@ export const getAdminLogs = async (limitCount: number = 100): Promise<AdminLog[]
             targetUserId: l.target_user_id
         } as AdminLog));
     } catch (error) {
-        console.error('Error getting admin logs:', error);
+        console.error('Error getting admin_logs:', error);
         return [];
     }
 };
@@ -648,8 +671,8 @@ export const unblockUser = async (userId: string): Promise<void> => {
 };
 
 export const getSecurityLogs = async (limitCount: number = 50): Promise<SecurityLog[]> => {
-    // For now we might mock or reuse admin logs if security logs aren't separate.
-    // Let's reuse admin logs that are related to security or auth.
+    // For now we might mock or reuse admin_logs if security logs aren't separate.
+    // Let's reuse admin_logs that are related to security or auth.
     return []; // Placeholder until security logs are fully separated
 };
 
@@ -792,7 +815,11 @@ export const getDemographicStats = async () => {
         return stats;
     } catch (error) {
         console.error('Error getting demographic stats:', error);
-        throw error;
+        return {
+            byGender: { HOMME: 0, FEMME: 0, TOTAL: 0 },
+            byAge: { '15-18': 0, '19-23': 0, '24+': 0, 'unknown': 0, total: 0 },
+            crossTable: []
+        };
     }
 };
 
@@ -842,38 +869,51 @@ export const exportDemographicData = (stats: any, type: 'pdf' | 'csv' | 'json') 
 
 export const getAllShopItems = async (): Promise<ShopItem[]> => {
     try {
-        const querySnapshot = await getDocs(collection(db, 'shop_items'));
-        return querySnapshot.docs.map(doc => ({
-            ...doc.data() as Omit<ShopItem, 'firestoreId'>,
-            firestoreId: doc.id
-        }));
+        const { data, error } = await supabase
+            .from('shop_items')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        return (data || []).map(item => ({
+            ...item,
+            firestoreId: item.id // Keep alias for compatibility
+        } as ShopItem));
     } catch (error) {
         console.error('Error getting shop items:', error);
         throw error;
     }
 };
 
-
 export const addShopItem = async (item: Omit<ShopItem, 'firestoreId'>, imageFile?: File): Promise<string> => {
     try {
         let imageUrl = item.image || '';
 
-        // Convert image to base64 and store directly in Firestore (avoids CORS issues)
         if (imageFile) {
-            imageUrl = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string || '');
-                reader.readAsDataURL(imageFile);
-            });
+            // Upload to Supabase Storage
+            const timestamp = Date.now();
+            const fileName = `shop/${timestamp}_${imageFile.name}`;
+            const { data, error: uploadError } = await supabase.storage
+                .from('assets')
+                .upload(fileName, imageFile);
+
+            if (uploadError) throw uploadError;
+            imageUrl = supabase.storage.from('assets').getPublicUrl(data.path).data.publicUrl;
         }
 
-        const docRef = await addDoc(collection(db, 'shop_items'), {
-            ...item,
-            image: imageUrl,
-            createdAt: Timestamp.now()
-        });
+        const { data, error } = await supabase
+            .from('shop_items')
+            .insert({
+                ...item,
+                image: imageUrl,
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
 
-        return docRef.id;
+        if (error) throw error;
+        return data.id;
     } catch (error) {
         console.error('Error adding shop item:', error);
         throw error;
@@ -881,7 +921,7 @@ export const addShopItem = async (item: Omit<ShopItem, 'firestoreId'>, imageFile
 };
 
 export const updateShopItem = async (
-    firestoreId: string,
+    id: string,
     updates: Partial<Omit<ShopItem, 'firestoreId'>>,
     newImage?: File
 ): Promise<void> => {
@@ -889,38 +929,48 @@ export const updateShopItem = async (
         let imageUrl = updates.image;
 
         if (newImage) {
-            imageUrl = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string || '');
-                reader.readAsDataURL(newImage);
-            });
+            const timestamp = Date.now();
+            const fileName = `shop/${timestamp}_${newImage.name}`;
+            const { data, error: uploadError } = await supabase.storage
+                .from('assets')
+                .upload(fileName, newImage);
+
+            if (uploadError) throw uploadError;
+            imageUrl = supabase.storage.from('assets').getPublicUrl(data.path).data.publicUrl;
         }
 
-        await updateDoc(doc(db, 'shop_items', firestoreId), {
-            ...updates,
-            ...(imageUrl && { image: imageUrl }),
-            updatedAt: Timestamp.now()
-        });
+        const { error } = await supabase
+            .from('shop_items')
+            .update({
+                ...updates,
+                ...(imageUrl && { image: imageUrl }),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+
+        if (error) throw error;
     } catch (error) {
         console.error('Error updating shop item:', error);
         throw error;
     }
 };
 
-export const deleteShopItem = async (firestoreId: string, imageUrl?: string): Promise<void> => {
+export const deleteShopItem = async (id: string, imageUrl?: string): Promise<void> => {
     try {
-        if (imageUrl && imageUrl.includes('firebase')) {
+        if (imageUrl && imageUrl.includes('supabase')) {
             try {
-                const { storage } = await import('./firebase');
-                const { ref, deleteObject } = await import('firebase/storage');
-                const imageRef = ref(storage, imageUrl);
-                await deleteObject(imageRef);
+                // Potential storage cleanup
+                const urlParts = imageUrl.split('/');
+                const fileName = urlParts[urlParts.length - 1];
+                const folder = urlParts[urlParts.length - 2];
+                await supabase.storage.from('assets').remove([`${folder}/${fileName}`]);
             } catch (err) {
-                console.warn('Could not delete image:', err);
+                console.warn('Could not delete image from storage:', err);
             }
         }
 
-        await deleteDoc(doc(db, 'shop_items', firestoreId));
+        const { error } = await supabase.from('shop_items').delete().eq('id', id);
+        if (error) throw error;
     } catch (error) {
         console.error('Error deleting shop item:', error);
         throw error;

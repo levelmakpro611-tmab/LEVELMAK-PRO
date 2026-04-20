@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { MessageCircle, X, Send, Sparkles, Loader2, Minimize2, Camera, Image as ImageIcon, History, Plus, Trash2, ChevronLeft } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, Loader2, Minimize2, Camera, Image as ImageIcon, History, Plus, Trash2, ChevronLeft, GraduationCap } from 'lucide-react';
 import { openrouterService } from '../services/openrouter';
 import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
@@ -342,6 +342,26 @@ const LevelBot: React.FC = () => {
                     </div>
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.typing}</span>
                   </div>
+                </div>
+              )}
+              
+              {/* Teacher Suggestion Chip */}
+              {messages.length >= 3 && (
+                <div 
+                  className="mb-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-indigo-500/20 transition-all mx-4 md:mx-6"
+                  onClick={() => {
+                    setIsOpen(false);
+                    // Open Tutor Hub (simulated by nav_change event if App.tsx listens, or via store)
+                    window.dispatchEvent(new CustomEvent('nav_change', { detail: 'tutor_hub' }));
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-500">
+                      <GraduationCap size={16} />
+                    </div>
+                    <span className="text-[10px] font-black text-white uppercase tracking-tight">Besoin d'un prof pour t'aider ?</span>
+                  </div>
+                  <ChevronLeft size={16} className="text-indigo-500 rotate-180 group-hover:translate-x-1 transition-transform" />
                 </div>
               )}
             </div>

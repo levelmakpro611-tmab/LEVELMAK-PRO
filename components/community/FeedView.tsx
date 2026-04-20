@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Newspaper, Send, Image as ImageIcon, Video, Heart, MessageCircle, Share2, MoreHorizontal, Loader2, Zap, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { chatService, SocialPost } from '../../services/firebase-chat';
+import { chatService, SocialPost } from '../../services/communityService';
 import { useStore } from '../../hooks/useStore';
 
 const FeedView: React.FC = () => {
@@ -18,8 +18,8 @@ const FeedView: React.FC = () => {
     const mediaInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const unsubscribe = chatService.listenToStories(() => { }); // Dummy call to ensure service is ready if needed
         const unsubPosts = chatService.listenToPosts((newPosts) => {
+            console.log('[Feed] Posts updated:', newPosts.length);
             setPosts(newPosts);
             setLoading(false);
         });
@@ -39,11 +39,13 @@ const FeedView: React.FC = () => {
     const handleCreatePost = async () => {
         if ((!postContent.trim() && !selectedMedia) || !user || isPosting) return;
         setIsPosting(true);
+        console.log('[Feed] Creating post...');
         try {
             let mediaUrl = undefined;
             let mediaType: 'image' | 'video' | undefined = undefined;
 
             if (selectedMedia) {
+                console.log('[Feed] Uploading media...');
                 mediaUrl = await chatService.uploadPostMedia(selectedMedia, user.id);
                 mediaType = selectedMedia.type.startsWith('video') ? 'video' : 'image';
             }
@@ -57,11 +59,13 @@ const FeedView: React.FC = () => {
                 mediaType
             );
 
+            console.log('[Feed] Post created successfully');
             setPostContent('');
             setSelectedMedia(null);
             setMediaPreview(null);
         } catch (error) {
-            console.error("Post creation failed", error);
+            console.error("[Feed] Post creation failed", error);
+            alert("Erreur lors de la publication. Veuillez réessayer.");
         } finally {
             setIsPosting(false);
         }
@@ -98,241 +102,264 @@ const FeedView: React.FC = () => {
         }
     };
 
-    const handleShare = async (post: SocialPost) => {
-        const shareData = {
-            title: 'LEVELMAK',
-            text: post.content,
-            url: window.location.href,
-        };
-
-        try {
-            if (navigator.share) {
-                await navigator.share(shareData);
-            } else {
-                await navigator.clipboard.writeText(`${post.content}\n\n${window.location.href}`);
-                alert("Lien copié dans le presse-papier !");
-            }
-        } catch (err) {
-            console.error('Share failed', err);
-        }
-    };
-
     return (
-        <div className="flex-1 flex flex-col h-full bg-[hsl(var(--background))] overflow-hidden p-4 space-y-6">
-            <h2 className="text-2xl font-bold text-white">Contenu</h2>
-
-            {/* Create Post Card */}
-            <div className="bg-[hsl(var(--card))] border border-white/10 rounded-3xl p-4 space-y-4 shadow-xl">
-                <div className="flex gap-3">
-                    <div className="shrink-0">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
-                            {user?.avatar?.image ? <img src={user.avatar.image} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center font-bold">{user?.name?.[0]}</div>}
+        <div className="flex-1 flex flex-col h-full bg-[#020617] overflow-hidden">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 pb-32">
+                
+                {/* ═══════════ CREATE POST ═══════════ */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative group p-6 rounded-[32px] bg-white/[0.03] border border-white/10 shadow-2xl backdrop-blur-xl"
+                >
+                    <div className="flex gap-4">
+                        <div className="shrink-0">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-[1.5px] shadow-lg">
+                                <div className="w-full h-full rounded-[14.5px] bg-slate-900 overflow-hidden flex items-center justify-center">
+                                    {user?.avatar?.image ? (
+                                        <img src={user.avatar.image} className="w-full h-full object-cover" alt="" />
+                                    ) : (
+                                        <span className="text-white font-black">{user?.name?.[0]}</span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <textarea
-                        value={postContent}
-                        onChange={(e) => setPostContent(e.target.value)}
-                        placeholder="Exprime-toi..."
-                        className="flex-1 bg-transparent border-none resize-none outline-none text-white text-sm pt-2 min-h-[60px]"
-                    />
-                </div>
-
-                {mediaPreview && (
-                    <div className="relative rounded-2xl overflow-hidden border border-white/10 max-h-60 bg-black">
-                        <img src={mediaPreview} className="w-full h-full object-contain" alt="Preview" />
-                        <button
-                            onClick={() => { setSelectedMedia(null); setMediaPreview(null); }}
-                            className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-black transition-all"
-                        >
-                            <X size={16} />
-                        </button>
-                    </div>
-                )}
-
-                <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => mediaInputRef.current?.click()}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
-                        >
-                            <ImageIcon size={20} />
-                        </button>
-                        <button
-                            onClick={() => mediaInputRef.current?.click()}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
-                        >
-                            <Video size={20} />
-                        </button>
-                        <input type="file" ref={mediaInputRef} accept="image/*,video/*" onChange={handleMediaSelect} className="hidden" />
-                    </div>
-                    <button
-                        onClick={handleCreatePost}
-                        disabled={(!postContent.trim() && !selectedMedia) || isPosting}
-                        className="px-6 py-2.5 bg-gradient-to-r from-primary to-secondary text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-glow hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
-                    >
-                        {isPosting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                        Publier
-                    </button>
-                </div>
-            </div>
-
-            {/* Posts Feed */}
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-24">
-                <AnimatePresence mode="popLayout">
-                    {posts.length > 0 ? (
-                        posts.map((post) => (
-                            <motion.div
-                                key={post.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                className="bg-[hsl(var(--card))] border border-white/10 rounded-3xl overflow-hidden shadow-lg relative"
-                            >
-                                <div className="p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
-                                            <img src={post.userAvatar} className="w-full h-full object-cover" alt="" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-white">{post.userName}</h4>
-                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
-                                                {post.createdAt?.toDate?.().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) || 'Récent'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setActiveMenu(activeMenu === post.id ? null : post.id)}
-                                            className="p-2 text-slate-500 hover:text-white"
-                                        >
-                                            <MoreHorizontal size={18} />
-                                        </button>
-
-                                        <AnimatePresence>
-                                            {activeMenu === post.id && post.userId === user?.id && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                    exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                                                    className="absolute right-0 top-10 bg-[hsl(var(--sidebar))] border border-white/10 rounded-xl p-1 shadow-2xl z-20 min-w-[140px]"
-                                                >
-                                                    <button
-                                                        onClick={() => handleDeletePost(post.id)}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-500/10 rounded-lg text-xs font-bold transition-all"
-                                                    >
-                                                        <Trash2 size={14} /> Supprimer
-                                                    </button>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                </div>
-
-                                <div className="px-4 pb-3">
-                                    <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
-                                </div>
-
-                                {post.mediaUrl && (
-                                    <div className="bg-black/50 aspect-video relative overflow-hidden flex items-center justify-center">
-                                        {post.mediaType === 'video' ? (
-                                            <video src={post.mediaUrl} controls className="max-w-full max-h-full" />
-                                        ) : (
-                                            <img src={post.mediaUrl} className="w-full h-full object-cover" alt="" />
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="p-2 px-4 border-t border-white/5 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => handleLike(post.id)}
-                                            className={`flex items-center gap-1.5 p-2 rounded-xl transition-all ${post.likes?.includes(user?.id || '') ? 'text-primary bg-primary/10' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                                        >
-                                            <Heart size={18} fill={post.likes?.includes(user?.id || '') ? 'currentColor' : 'none'} />
-                                            <span className="text-xs font-bold">{post.likes?.length || 0}</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setExpandedComments(expandedComments === post.id ? null : post.id)}
-                                            className={`flex items-center gap-1.5 p-2 rounded-xl transition-all ${expandedComments === post.id ? 'text-blue-400 bg-blue-400/10' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                                        >
-                                            <MessageCircle size={18} />
-                                            <span className="text-xs font-bold">{post.comments?.length || 0}</span>
-                                        </button>
-                                    </div>
+                        <div className="flex-1 space-y-4">
+                            <textarea
+                                value={postContent}
+                                onChange={(e) => setPostContent(e.target.value)}
+                                placeholder="Quoi de neuf aujourd'hui ?"
+                                className="w-full bg-transparent border-none resize-none outline-none text-white text-lg placeholder:text-slate-600 font-medium min-h-[80px] pt-1"
+                            />
+                            
+                            {mediaPreview && (
+                                <div className="relative rounded-3xl overflow-hidden border border-white/10 group/preview shadow-2xl bg-black/40">
+                                    <img src={mediaPreview} className="w-full max-h-72 object-contain" alt="" />
                                     <button
-                                        onClick={() => handleShare(post)}
-                                        className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all"
+                                        onClick={() => { setSelectedMedia(null); setMediaPreview(null); }}
+                                        className="absolute top-4 right-4 p-2 bg-black/60 text-white rounded-full hover:bg-red-500 transition-all backdrop-blur-md"
                                     >
-                                        <Share2 size={18} />
+                                        <X size={18} />
                                     </button>
                                 </div>
+                            )}
 
-                                {/* Comments Section */}
-                                <AnimatePresence>
-                                    {expandedComments === post.id && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="border-t border-white/5 overflow-hidden"
-                                        >
-                                            <div className="p-4 space-y-4">
-                                                {/* Comments List */}
-                                                <div className="space-y-3">
-                                                    {(post.comments || []).map((comment: any) => (
-                                                        <div key={comment.id} className="flex gap-3">
-                                                            <div className="shrink-0">
-                                                                <img src={comment.userAvatar} className="w-8 h-8 rounded-lg object-cover border border-white/5" alt="" />
-                                                            </div>
-                                                            <div className="flex-1 bg-white/5 rounded-2xl p-2.5 px-3">
-                                                                <div className="flex items-baseline justify-between gap-2 mb-1">
-                                                                    <span className="text-xs font-black text-white">{comment.userName}</span>
-                                                                    <span className="text-[9px] text-slate-500 font-bold uppercase">
-                                                                        {new Date(comment.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-xs text-slate-300 leading-normal">{comment.text}</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                            <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => mediaInputRef.current?.click()}
+                                        className="p-3 bg-white/5 text-slate-400 hover:text-white hover:bg-blue-600/20 rounded-2xl transition-all border border-transparent hover:border-blue-500/30"
+                                    >
+                                        <ImageIcon size={20} />
+                                    </button>
+                                    <button
+                                        onClick={() => mediaInputRef.current?.click()}
+                                        className="p-3 bg-white/5 text-slate-400 hover:text-white hover:bg-purple-600/20 rounded-2xl transition-all border border-transparent hover:border-purple-500/30"
+                                    >
+                                        <Video size={20} />
+                                    </button>
+                                    <input type="file" ref={mediaInputRef} accept="image/*,video/*" onChange={handleMediaSelect} className="hidden" />
+                                </div>
+                                <button
+                                    onClick={handleCreatePost}
+                                    disabled={(!postContent.trim() && !selectedMedia) || isPosting}
+                                    className="px-8 py-3 bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-[0_8px_20px_rgba(37,99,235,0.3)] hover:scale-105 active:scale-95 disabled:opacity-40 disabled:scale-100 transition-all flex items-center gap-3"
+                                >
+                                    {isPosting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                                    Publier
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* ═══════════ FEED ═══════════ */}
+                <div className="space-y-8">
+                    <AnimatePresence mode="popLayout">
+                        {loading ? (
+                            /* Loading State */
+                            Array.from({ length: 3 }).map((_, i) => (
+                                <div key={i} className="bg-white/[0.02] border border-white/5 rounded-[40px] p-8 h-64 animate-pulse" />
+                            ))
+                        ) : posts.length > 0 ? (
+                            posts.map((post, idx) => (
+                                <motion.div
+                                    key={post.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    className="relative group bg-white/[0.02] border border-white/[0.08] rounded-[40px] overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] backdrop-blur-3xl"
+                                >
+                                    {/* Glassmorphic border glow */}
+                                    <div className="absolute inset-0 border border-white/5 pointer-events-none rounded-[40px]"></div>
+
+                                    <div className="p-8">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 overflow-hidden shadow-inner">
+                                                    <img src={post.userAvatar} className="w-full h-full object-cover" alt="" />
                                                 </div>
-
-                                                {/* Add Comment Input */}
-                                                <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-                                                    <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 shrink-0 overflow-hidden">
-                                                        <img src={user?.avatar?.image} className="w-full h-full object-cover" alt="" />
-                                                    </div>
-                                                    <div className="flex-1 relative">
-                                                        <input
-                                                            type="text"
-                                                            value={commentText}
-                                                            onChange={(e) => setCommentText(e.target.value)}
-                                                            onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
-                                                            placeholder="Ajouter un commentaire..."
-                                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-4 pr-10 text-xs text-white focus:outline-none focus:border-primary/50 transition-all font-bold"
-                                                        />
-                                                        <button
-                                                            onClick={() => handleAddComment(post.id)}
-                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-primary hover:scale-110 active:scale-95 transition-all"
-                                                        >
-                                                            <Send size={14} />
-                                                        </button>
-                                                    </div>
+                                                <div>
+                                                    <h4 className="text-base font-black text-white tracking-tight">{post.userName}</h4>
+                                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-0.5">
+                                                        {post.createdAt?.toDate?.().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) || 'À l\'instant'}
+                                                    </p>
                                                 </div>
                                             </div>
-                                        </motion.div>
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setActiveMenu(activeMenu === post.id ? null : post.id)}
+                                                    className="w-10 h-10 rounded-xl hover:bg-white/5 text-slate-500 hover:text-white transition-all flex items-center justify-center"
+                                                >
+                                                    <MoreHorizontal size={20} />
+                                                </button>
+
+                                                <AnimatePresence>
+                                                    {activeMenu === post.id && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                                            className="absolute right-0 top-12 bg-[#0f172a] border border-white/10 rounded-2xl p-2 shadow-2xl z-20 min-w-[160px] backdrop-blur-xl"
+                                                        >
+                                                            {post.userId === user?.id ? (
+                                                                <button
+                                                                    onClick={() => handleDeletePost(post.id)}
+                                                                    className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                                                                >
+                                                                    <Trash2 size={16} /> Supprimer
+                                                                </button>
+                                                            ) : (
+                                                                <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-white/5 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
+                                                                     Signaler
+                                                                </button>
+                                                            )}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-6">
+                                            <p className="text-slate-200 text-base leading-[1.8] font-medium selection:bg-blue-500 selection:text-white whitespace-pre-wrap">{post.content}</p>
+                                        </div>
+                                    </div>
+
+                                    {post.mediaUrl && (
+                                        <div className="mx-6 mb-6 rounded-[32px] overflow-hidden border border-white/10 bg-black/40 group/media shadow-inner relative">
+                                            {post.mediaType === 'video' ? (
+                                                <video src={post.mediaUrl} controls className="w-full rounded-[30px]" />
+                                            ) : (
+                                                <img src={post.mediaUrl} className="w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-1000" alt="" />
+                                            )}
+                                            {/* Hover overlay hint */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/media:opacity-100 transition-opacity pointer-events-none"></div>
+                                        </div>
                                     )}
-                                </AnimatePresence>
-                            </motion.div>
-                        ))
-                    ) : (
-                        <div className="py-20 text-center text-slate-500 space-y-2">
-                            <Newspaper size={48} className="mx-auto opacity-20" />
-                            <p>Aucun contenu pour le moment</p>
-                        </div>
-                    )}
-                </AnimatePresence>
+
+                                    <div className="px-8 py-6 bg-white/[0.01] border-t border-white/[0.03] flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <button
+                                                onClick={() => handleLike(post.id)}
+                                                className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all border ${post.likes?.includes(user?.id || '') 
+                                                    ? 'text-pink-500 bg-pink-500/10 border-pink-500/20 shadow-[0_0_15px_rgba(236,72,153,0.1)]' 
+                                                    : 'text-slate-500 bg-white/5 border-transparent hover:text-white hover:border-white/10'}`}
+                                            >
+                                                <Heart size={20} weight="fill" fill={post.likes?.includes(user?.id || '') ? 'currentColor' : 'none'} className={post.likes?.includes(user?.id || '') ? 'scale-110 animate-bounce' : ''} />
+                                                <span className="text-[11px] font-black uppercase tracking-widest">{post.likes?.length || 0}</span>
+                                            </button>
+                                            
+                                            <button
+                                                onClick={() => setExpandedComments(expandedComments === post.id ? null : post.id)}
+                                                className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all border ${expandedComments === post.id 
+                                                    ? 'text-blue-400 bg-blue-600/10 border-blue-500/20 shadow-[0_0_15px_rgba(37,99,235,0.1)]' 
+                                                    : 'text-slate-500 bg-white/5 border-transparent hover:text-white hover:border-white/10'}`}
+                                            >
+                                                <MessageCircle size={20} />
+                                                <span className="text-[11px] font-black uppercase tracking-widest">{post.comments?.length || 0}</span>
+                                            </button>
+                                        </div>
+                                        
+                                        <button className="w-12 h-12 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/5 rounded-2xl transition-all">
+                                            <Share2 size={20} />
+                                        </button>
+                                    </div>
+
+                                    {/* ═══════════ COMMENTS ═══════════ */}
+                                    <AnimatePresence>
+                                        {expandedComments === post.id && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="border-t border-white/[0.03] bg-white/[0.005] overflow-hidden"
+                                            >
+                                                <div className="p-8 space-y-6">
+                                                    <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                                                        {(post.comments || []).map((comment: any) => (
+                                                            <div key={comment.id} className="flex gap-4 group/comment">
+                                                                <div className="shrink-0">
+                                                                    <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 overflow-hidden shadow-xl">
+                                                                        <img src={comment.userAvatar} className="w-full h-full object-cover" alt="" />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex-1 bg-white/[0.03] border border-white/[0.05] rounded-[24px] p-4 group-hover/comment:bg-white/[0.05] transition-all">
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-sm font-black text-white tracking-tight">{comment.userName}</span>
+                                                                        <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">
+                                                                            {new Date(comment.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-sm text-slate-400 leading-relaxed">{comment.text}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-4 pt-4 border-t border-white/5">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 shrink-0 overflow-hidden shadow-xl">
+                                                            <img src={user?.avatar?.image} className="w-full h-full object-cover" alt="" />
+                                                        </div>
+                                                        <div className="flex-1 relative">
+                                                            <input
+                                                                type="text"
+                                                                value={commentText}
+                                                                onChange={(e) => setCommentText(e.target.value)}
+                                                                onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                                                                placeholder="Écris ton avis..."
+                                                                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 px-6 pr-14 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/30 transition-all font-bold shadow-inner"
+                                                            />
+                                                            <button
+                                                                onClick={() => handleAddComment(post.id)}
+                                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 hover:scale-110 active:scale-90 transition-all"
+                                                            >
+                                                                <Send size={18} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+                            ))
+                        ) : (
+                            <div className="py-24 text-center space-y-6">
+                                <div className="relative mx-auto w-24 h-24">
+                                    <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full"></div>
+                                    <div className="relative w-full h-full bg-white/[0.03] border border-white/10 rounded-[32px] flex items-center justify-center">
+                                        <Newspaper size={32} className="text-slate-800" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-lg font-black text-white">Le fil est vide</p>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Sois le premier à partager quelque chose !</p>
+                                </div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
         </div>
     );

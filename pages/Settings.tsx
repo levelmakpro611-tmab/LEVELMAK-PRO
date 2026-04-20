@@ -15,7 +15,8 @@ import {
     Globe,
     Moon,
     Volume2,
-    Type
+    Type,
+    GraduationCap
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { audioService } from '../services/audio';
@@ -23,7 +24,7 @@ import { biometricService } from '../services/biometricService';
 import { feedbackService } from '../services/feedbackService';
 import { Fingerprint } from 'lucide-react';
 
-const Settings: React.FC = () => {
+const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate }) => {
     const { user, updateProfile, addActivity, settings, updateSettings, changePassword, t } = useStore();
     const [activeSection, setActiveSection] = useState<'profile' | 'appearance' | 'notifications' | 'security'>('profile');
     const [name, setName] = useState(user?.name || '');

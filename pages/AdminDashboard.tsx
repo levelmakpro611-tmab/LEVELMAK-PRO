@@ -10,15 +10,12 @@ import {
     getGlobalStats,
     getUserAnalytics,
     getAllComments,
-    getAllShopItems,
-    deleteShopItem,
-    updateShopItem,
-    addShopItem,
     getAllRatings,
     getAverageRatings,
     logAdminAction,
     getDemographicStats
 } from '../services/adminService';
+import { getPendingApplications } from '../services/tutorService';
 import {
     AdminStats,
     AdminUserAnalytics,
@@ -26,6 +23,8 @@ import {
     PlatformRating,
     AdminLog
 } from '../types';
+import { adminNotificationService } from '../services/adminNotificationService';
+import AdminNotifPanel from '../components/admin/AdminNotifPanel';
 
 const StatisticsPanel = React.lazy(() => import('../components/admin/StatisticsPanel'));
 const UserManagement = React.lazy(() => import('../components/admin/UserManagement'));
@@ -37,8 +36,9 @@ const RetentionChart = React.lazy(() => import('../components/admin/RetentionCha
 const GamificationPanel = React.lazy(() => import('../components/admin/GamificationPanel'));
 const SecurityPanel = React.lazy(() => import('../components/admin/SecurityPanel'));
 const ShopManager = React.lazy(() => import('../components/admin/ShopManager'));
+const TeacherModeration = React.lazy(() => import('../components/admin/TeacherModeration'));
 
-type Tab = 'overview' | 'stats' | 'users' | 'comments' | 'ratings' | 'export' | 'monitor' | 'retention' | 'gamification' | 'security' | 'shop';
+type Tab = 'overview' | 'stats' | 'users' | 'comments' | 'ratings' | 'export' | 'monitor' | 'retention' | 'gamification' | 'security' | 'shop' | 'teachers';
 
 const AdminDashboard: React.FC = () => {
     const { user, logout } = useStore();
@@ -47,39 +47,49 @@ const AdminDashboard: React.FC = () => {
     const [users, setUsers] = useState<AdminUserAnalytics[]>([]);
     const [comments, setComments] = useState<UserComment[]>([]);
     const [ratings, setRatings] = useState<PlatformRating[]>([]);
+    const [teacherApps, setTeacherApps] = useState<any[]>([]);
     const [averageRatings, setAverageRatings] = useState<any>(null);
     const [demographicStats, setDemographicStats] = useState<any>(null);
     const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
     const [loading, setLoading] = useState(true);
-    // On mobile: sidebar hidden by default. On desktop: open.
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [seenIds, setSeenIds] = useState<string[]>([]);
+    const [adminNotifCount, setAdminNotifCount] = useState(0);
     const [loadingStates, setLoadingStates] = useState<Record<Tab, boolean>>({
         overview: false, stats: false, users: false, comments: false, ratings: false,
-        export: false, monitor: false, retention: false, gamification: false, security: false, shop: false
+        export: false, monitor: false, retention: false, gamification: false, security: false, shop: false, teachers: false
     });
+    const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
+
+    const DEFAULT_STATS: AdminStats = {
+        totalUsers: 0, activeUsers: 0, newUsersToday: 0, newUsersWeek: 0, newUsersMonth: 0, newUsersYear: 0,
+        quizzesGenerated: 0, quizzesToday: 0, flashcardsCreated: 0, flashcardsToday: 0,
+        storiesWritten: 0, storiesToday: 0, booksRead: 0, booksToday: 0,
+        totalLearningHours: 0, averageEngagementRate: 0
+    };
 
     useEffect(() => {
-        // Load seen IDs from local storage
-        const savedSeen = localStorage.getItem('admin_seen_ids');
-        if (savedSeen) {
-            try {
-                setSeenIds(JSON.parse(savedSeen));
-            } catch (e) { console.error("Error parsing admin_seen_ids", e); }
-        }
+        // Start admin realtime notification listener
+        adminNotificationService.startListening();
+        adminNotificationService.loadInitialNotifications();
+
+        // Subscribe to unread count changes
+        const unsub = adminNotificationService.subscribe(notifs => {
+            setAdminNotifCount(notifs.filter(n => !n.read).length);
+        });
 
         // Load cached data...
         const cachedOverview = localStorage.getItem('admin_cache_overview');
         if (cachedOverview) {
             try {
-                const { stats, comments, ratings, averageRatings } = JSON.parse(cachedOverview);
+                const { stats, comments, ratings, teacherApps, averageRatings } = JSON.parse(cachedOverview);
                 if (stats) setStats(stats);
                 if (comments) setComments(comments);
                 if (ratings) setRatings(ratings);
+                if (teacherApps) setTeacherApps(teacherApps);
                 if (averageRatings) setAverageRatings(averageRatings);
-                setLoading(false); // Skip loading screen if cache exists
+                setLoading(false);
             } catch (e) { console.error("Error parsing admin cache", e); }
         }
 
@@ -87,6 +97,11 @@ const AdminDashboard: React.FC = () => {
         if (user) {
             logAdminAction(user.id, user.name, 'login', { timestamp: new Date().toISOString() });
         }
+
+        return () => {
+            unsub();
+            adminNotificationService.stopListening();
+        };
     }, []);
 
     useEffect(() => {
@@ -101,32 +116,60 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    const handleNotificationClick = (notif: any) => {
+        setHighlightItemId(null); // Reset first
+
+        if (notif.type === 'new_comment') {
+            setActiveTab('comments');
+            if (notif.metadata?.commentId) setHighlightItemId(notif.metadata.commentId);
+        } else if (notif.type === 'new_rating') {
+            setActiveTab('ratings');
+            if (notif.metadata?.ratingId) setHighlightItemId(notif.metadata.ratingId);
+        } else if (notif.type === 'new_teacher') {
+            setActiveTab('teachers');
+            if (notif.metadata?.teacherId) setHighlightItemId(notif.metadata.teacherId);
+        } else if (notif.type === 'new_user') {
+            setActiveTab('users');
+            if (notif.metadata?.userId) setHighlightItemId(notif.metadata.userId);
+        }
+        setIsNotifOpen(false);
+    };
+
     const loadTab = async (tab: Tab) => {
         if (loadingStates[tab]) return;
         setLoadingStates(prev => ({ ...prev, [tab]: true }));
         try {
             switch (tab) {
                 case 'overview':
-                    const [sData, cData, rData, avgR] = await Promise.allSettled([
-                        getGlobalStats(period), getAllComments(50), getAllRatings(50), getAverageRatings()
+                    const [sData, cData, rData, avgR, tData] = await Promise.allSettled([
+                        getGlobalStats(period), 
+                        getAllComments(50), 
+                        getAllRatings(50), 
+                        getAverageRatings(),
+                        getPendingApplications()
                     ]);
                     
                     const newStats = sData.status === 'fulfilled' ? sData.value : null;
                     const newComments = cData.status === 'fulfilled' ? cData.value : [];
                     const newRatings = rData.status === 'fulfilled' ? rData.value : [];
+                    const newTeacherApps = tData.status === 'fulfilled' ? tData.value : [];
                     const newAvgR = avgR.status === 'fulfilled' ? avgR.value : null;
 
                     if (newStats) setStats(newStats);
+                    else if (!stats) setStats(DEFAULT_STATS); // Prevent infinite skeleton state
+
                     setComments(newComments);
                     setRatings(newRatings);
-                    setAverageRatings(newAvgR);
+                    setTeacherApps(newTeacherApps);
+                    setAverageRatings(newAvgR || { overall: 0, totalRatings: 0, features: {} });
 
                     // Sync to cache
                     localStorage.setItem('admin_cache_overview', JSON.stringify({
-                        stats: newStats,
+                        stats: newStats || DEFAULT_STATS,
                         comments: newComments,
                         ratings: newRatings,
-                        averageRatings: newAvgR,
+                        teacherApps: newTeacherApps,
+                        averageRatings: newAvgR || { overall: 0, totalRatings: 0, features: {} },
                         timestamp: Date.now()
                     }));
                     break;
@@ -169,35 +212,8 @@ const AdminDashboard: React.FC = () => {
         logout();
     };
 
-    // Combine and sort notifications for the bell
-    const adminNotifications = [
-        ...comments.map(c => ({ 
-            id: c.id, 
-            type: 'comment', 
-            title: 'Nouveau commentaire', 
-            user: c.userName, 
-            content: c.content, 
-            date: c.timestamp,
-            active: c.status === 'pending'
-        })),
-        ...ratings.map(r => ({ 
-            id: r.id, 
-            type: 'rating', 
-            title: 'Nouvelle évaluation', 
-            user: r.userName, 
-            content: `${r.overall} ⭐ ${r.comment ? '- ' + r.comment : ''}`, 
-            date: r.timestamp,
-            active: true
-        }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    const unreadCount = adminNotifications.filter(n => !seenIds.includes(n.id)).length;
-
     const markAllAsRead = () => {
-        const allIds = adminNotifications.map(n => n.id);
-        const newSeen = Array.from(new Set([...seenIds, ...allIds]));
-        setSeenIds(newSeen);
-        localStorage.setItem('admin_seen_ids', JSON.stringify(newSeen));
+        adminNotificationService.markAllAsRead();
     };
 
     // Initial loading is now handled inside the content area with skeletons
@@ -212,9 +228,9 @@ const AdminDashboard: React.FC = () => {
         { id: 'stats' as Tab, icon: TrendingUp, label: 'Statistiques', badge: null },
         { id: 'users' as Tab, icon: Users, label: 'Utilisateurs', badge: users.length },
         { id: 'comments' as Tab, icon: MessageSquare, label: 'Commentaires', badge: comments.filter(c => c.status === 'pending').length },
-        { id: 'ratings' as Tab, icon: Star, label: 'Évaluations', badge: null },
         { id: 'export' as Tab, icon: Download, label: 'Exports', badge: null },
         { id: 'shop' as Tab, icon: ShoppingBag, label: 'Boutique', badge: null },
+        { id: 'teachers' as Tab, icon: Shield, label: 'Enseignants', badge: null },
     ];
 
     const activeNav = navItems.find(item => item.id === activeTab);
@@ -347,8 +363,8 @@ const AdminDashboard: React.FC = () => {
                                 className={`p-2 rounded-xl transition-all relative ${isNotifOpen ? 'bg-blue-600 text-white shadow-lg' : 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
                             >
                                 <Bell size={18} className={isNotifOpen ? 'text-white' : 'text-slate-500 dark:text-slate-400'} />
-                                {unreadCount > 0 && (
-                                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse shadow-lg"></span>
+                                {adminNotifCount > 0 && (
+                                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse shadow-lg">{adminNotifCount > 9 ? '' : ''}</span>
                                 )}
                             </button>
                             <button 
@@ -358,62 +374,13 @@ const AdminDashboard: React.FC = () => {
                                 <Settings size={18} className={isSettingsOpen ? 'text-white' : 'text-slate-500 dark:text-slate-400'} />
                             </button>
 
-                            {/* Notification Panel */}
-                            <AnimatePresence>
-                                {isNotifOpen && (
-                                    <div 
-                                        className="absolute top-14 right-0 w-80 max-h-[450px] bg-slate-950 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
-                                        style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))' }}
-                                    >
-                                        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                                            <h3 className="text-sm font-black text-white">Notifications</h3>
-                                            <button 
-                                                onClick={markAllAsRead} 
-                                                className="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition-colors"
-                                            >
-                                                Tout marquer comme lu
-                                            </button>
-                                        </div>
-                                        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                                            {adminNotifications.length === 0 ? (
-                                                <div className="py-20 text-center flex flex-col items-center gap-4">
-                                                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-slate-600">
-                                                        <Bell size={24} />
-                                                    </div>
-                                                    <p className="text-slate-500 text-xs italic font-medium">Aucune notification pour le moment.</p>
-                                                </div>
-                                            ) : (
-                                                adminNotifications.slice(0, 20).map(n => (
-                                                    <div 
-                                                        key={n.id} 
-                                                        onClick={() => {
-                                                            handleTabChange(n.type === 'comment' ? 'comments' : 'ratings' as Tab);
-                                                            setIsNotifOpen(false);
-                                                            if (!seenIds.includes(n.id)) {
-                                                                const newSeen = [...seenIds, n.id];
-                                                                setSeenIds(newSeen);
-                                                                localStorage.setItem('admin_seen_ids', JSON.stringify(newSeen));
-                                                            }
-                                                        }}
-                                                        className={`p-3 rounded-xl cursor-pointer transition-all border border-transparent ${seenIds.includes(n.id) 
-                                                            ? 'opacity-60 hover:opacity-100 hover:bg-white/5' 
-                                                            : 'bg-blue-600/10 border-blue-500/20 hover:bg-blue-600/20 shadow-lg mb-1'}`}
-                                                    >
-                                                        <div className="flex items-center gap-2 mb-1.5">
-                                                            <div className={`w-2 h-2 rounded-full ${seenIds.includes(n.id) ? 'bg-slate-600' : 'bg-blue-500 pulse'}`}></div>
-                                                            {n.type === 'comment' ? <MessageSquare size={12} className="text-blue-400" /> : <Star size={12} className="text-yellow-400" />}
-                                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">{n.title}</span>
-                                                            <span className="ml-auto text-[9px] text-slate-500 font-bold">{new Date(n.date).toLocaleDateString()}</span>
-                                                        </div>
-                                                        <p className="text-[11px] font-black text-white line-clamp-1 mb-0.5">{n.user}</p>
-                                                        <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{n.content}</p>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </AnimatePresence>
+                            {/* Notification Panel — New real-time system */}
+                            <AdminNotifPanel
+                                isOpen={isNotifOpen}
+                                onClose={() => setIsNotifOpen(false)}
+                                onNavigate={(notif) => handleNotificationClick(notif)}
+                            />
+
 
                             {/* Settings Panel */}
                             <AnimatePresence>
@@ -506,14 +473,15 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                 )}
                                 {activeTab === 'users' && <UserManagement users={users} onRefresh={() => loadTab('users')} />}
-                                {activeTab === 'comments' && <CommentManagement comments={comments} onRefresh={() => loadTab('comments')} />}
-                                {activeTab === 'ratings' && <RatingsTab ratings={ratings} averageRatings={averageRatings} />}
+                                {activeTab === 'comments' && <CommentManagement comments={comments} onRefresh={() => loadTab('comments')} highlightId={highlightItemId} />}
+                                {activeTab === 'ratings' && <RatingsTab ratings={ratings} averageRatings={averageRatings} totalUsers={stats?.totalUsers || 0} highlightId={highlightItemId} />}
                                 {activeTab === 'export' && stats && <ExportTools stats={stats} users={users} comments={comments} period={period} demographicStats={demographicStats} />}
                                 {activeTab === 'shop' && <ShopManager />}
                                 {activeTab === 'monitor' && <ActivityMonitor />}
                                 {activeTab === 'retention' && <RetentionChart />}
                                 {activeTab === 'gamification' && <GamificationPanel />}
                                 {activeTab === 'security' && <SecurityPanel />}
+                                {activeTab === 'teachers' && <TeacherModeration />}
                             </>
                         )}
                     </React.Suspense>
@@ -590,7 +558,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, avera
         <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-600/20 dark:to-purple-600/20 backdrop-blur-xl rounded-2xl border border-blue-500/10 dark:border-blue-500/20 p-6 text-center shadow-sm transition-colors">
             <Star size={36} className="text-yellow-400 mx-auto mb-3" />
             <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-1 transition-colors">
-                {averageRatings?.overall.toFixed(1) || '0.0'} / 5.0
+                {(averageRatings?.overall || 0).toFixed(1)} / 5.0
             </h3>
             <p className="text-slate-600 dark:text-slate-300 font-bold text-sm transition-colors">Note Globale de la Plateforme</p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 transition-colors">Basé sur {averageRatings?.totalRatings || 0} évaluations</p>
@@ -628,36 +596,54 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, color
 interface RatingsTabProps {
     ratings: PlatformRating[];
     averageRatings: any;
+    totalUsers: number;
+    highlightId?: string | null;
 }
 
-const RatingsTab: React.FC<RatingsTabProps> = ({ ratings, averageRatings }) => (
-    <div className="space-y-4 md:space-y-6">
-        <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 dark:from-yellow-600/20 dark:to-orange-600/20 backdrop-blur-xl rounded-2xl border border-yellow-500/10 dark:border-yellow-500/20 p-6 text-center transition-colors shadow-sm">
-            <Star size={48} className="text-yellow-400 mx-auto mb-3" />
-            <h3 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white mb-2 transition-colors">{averageRatings?.overall.toFixed(1) || '0.0'}</h3>
-            <div className="flex items-center justify-center gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} size={20} className="text-yellow-400 fill-yellow-400" />
-                ))}
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 font-bold transition-colors">Note Globale</p>
-            <p className="text-sm text-slate-400 dark:text-slate-500 mt-1 transition-colors">{ratings.length} évaluations totales</p>
-        </div>
+const RatingsTab: React.FC<RatingsTabProps> = ({ ratings, averageRatings, totalUsers, highlightId }) => {
+    useEffect(() => {
+        if (highlightId) {
+            const el = document.getElementById(`rating-${highlightId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [highlightId]);
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-            {averageRatings && Object.entries(averageRatings.features).map(([feature, rating]: [string, any]) => (
-                <div key={feature} className="bg-background-card backdrop-blur-xl rounded-xl border border-black/5 dark:border-white/10 p-4 text-center transition-colors shadow-sm">
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1 font-bold">
-                        {feature === 'quiz' && '📝 Quiz'}
-                        {feature === 'coach' && '🤖 Coach IA'}
-                        {feature === 'flashcards' && '🎴 Flashcards'}
-                        {feature === 'library' && '📚 Bibliothèque'}
-                        {feature === 'interface' && '💎 Interface'}
-                        {feature === 'offline' && '📡 Hors Ligne'}
-                    </p>
-                    <p className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white transition-colors">{rating.toFixed(1)}</p>
+    return (
+    <div className="space-y-4 md:space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 dark:from-yellow-600/20 dark:to-orange-600/20 backdrop-blur-xl rounded-2xl border border-yellow-500/10 dark:border-yellow-500/20 p-6 text-center transition-colors shadow-sm">
+                <Star size={48} className="text-yellow-400 mx-auto mb-3" />
+                <h3 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white mb-2 transition-colors">{averageRatings?.overall.toFixed(1) || '0.0'}</h3>
+                <div className="flex items-center justify-center gap-1 mb-3">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <Star key={star} size={20} className={star <= Math.round(averageRatings?.overall || 0) ? "text-yellow-400 fill-yellow-400" : "text-slate-300 dark:text-slate-700"} />
+                    ))}
                 </div>
-            ))}
+                <p className="text-slate-600 dark:text-slate-300 font-bold transition-colors">Note Globale</p>
+                <p className="text-sm text-slate-400 dark:text-slate-500 mt-1 transition-colors">{ratings.length} évaluations totales</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-600/20 dark:to-purple-600/20 backdrop-blur-xl rounded-2xl border border-blue-500/10 dark:border-blue-500/20 p-6 flex flex-col justify-center transition-colors shadow-sm">
+                <div className="space-y-6">
+                    <div>
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                            <Users size={24} className="text-blue-500" />
+                            <h4 className="text-3xl font-black text-slate-900 dark:text-white">{ratings.length > 0 ? (ratings.length / (totalUsers || 1) * 100).toFixed(1) : 0}%</h4>
+                        </div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Taux de Participation</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-white/5 rounded-xl border border-white/5">
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">{ratings.length}</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase">Évaluations</p>
+                        </div>
+                        <div className="text-center p-3 bg-white/5 rounded-xl border border-white/5">
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">{averageRatings?.totalRatings || 0}</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase">Total Stats</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div className="bg-background-card backdrop-blur-xl rounded-2xl border border-black/5 dark:border-white/10 overflow-hidden transition-colors shadow-sm">
@@ -666,7 +652,11 @@ const RatingsTab: React.FC<RatingsTabProps> = ({ ratings, averageRatings }) => (
             </div>
             <div className="divide-y divide-black/5 dark:divide-white/5 max-h-80 overflow-y-auto">
                 {ratings.slice(0, 10).map((rating) => (
-                    <div key={rating.id} className="p-4 md:p-6 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                    <div 
+                        key={rating.id} 
+                        id={`rating-${rating.id}`}
+                        className={`p-4 md:p-6 transition-all duration-1000 ${highlightId === rating.id ? 'bg-yellow-500/10 dark:bg-yellow-400/10 border-l-4 border-yellow-500' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-100'}`}
+                    >
                         <div className="flex justify-between items-start mb-2">
                             <div>
                                 <p className="font-bold text-slate-900 dark:text-white text-sm transition-colors">{rating.userName}</p>
@@ -685,6 +675,7 @@ const RatingsTab: React.FC<RatingsTabProps> = ({ ratings, averageRatings }) => (
             </div>
         </div>
     </div>
-);
+    );
+};
 
 export default AdminDashboard;

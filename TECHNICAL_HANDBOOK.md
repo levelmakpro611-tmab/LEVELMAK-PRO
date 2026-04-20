@@ -7,14 +7,14 @@ L'application est construite avec des outils modernes et performants :
 - **Langage** : TypeScript (pour éviter les erreurs de code).
 - **Frontend** : **React** avec le moteur de build **Vite** (très rapide).
 - **Style** : **Tailwind CSS** (pour un design moderne et responsive).
-- **Backend/Base de données** : **Firebase** (Firestore pour les données, Auth pour les utilisateurs).
+- **Backend/Base de données** : **Supabase** (PostgreSQL pour les données, Auth pour les utilisateurs).
 - **Mobile** : **Capacitor** (permet de transformer le site web en application Android/iOS).
 - **Intelligence Artificielle** : **Google Gemini API** (Modèle 1.5 Flash).
 ## 2. Architecture et Structure des Dossiers
 Voici comment naviguer dans ton code :
 - `src/components/` : Contient les éléments visuels réutilisables (Boutons, Modales, LevelBot).
 - `src/pages/` : Les pages principales (Dashboard, Bibliothèque, Ranking).
-- `src/services/` : Le "cerveau" de l'app. C'est ici que se trouvent les appels à l'IA (`gemini.ts`), à la base de données (`firebase.ts`), et à la gestion du cache (`cache.ts`).
+- `src/services/` : Le "cerveau" de l'app. C'est ici que se trouvent les appels à l'IA (`gemini.ts`), à la base de données (`supabase.ts`), et à la gestion du cache (`cache.ts`).
 - `src/hooks/` : Contient `useStore.tsx`, le fichier le plus important pour gérer l'état de l'application (XP, Coins, données utilisateur).
 
 ---
@@ -31,7 +31,7 @@ C'est le module le plus complexe. Il gère :
 Nous utilisons **Zustand**. C'est ce qui permet de mettre à jour ton solde de LevelCoins instantanément partout dans l'application sans recharger la page.
 
 ### C. Synchronisation Quotidienne (cache.ts)
-Pour que tout le monde ait le même "Mot du Jour", nous utilisons un système de cache global stocké dans Firestore. L'app vérifie chaque jour si une nouvelle donnée doit être générée.
+Pour que tout le monde ait le même "Mot du Jour", nous utilisons un système de cache global stocké dans Supabase. L'app vérifie chaque jour si une nouvelle donnée doit être générée.
 
 
 ## 4. Design et Esthétique
@@ -46,7 +46,7 @@ Le design repose sur un concept de **"Glassmorphism"** :
 Ouvre `src/services/gemini.ts` et modifie les `systemInstruction`. C'est là que tu donnes ses "ordres" au bot.
 
 ### Pour changer les prix de la boutique :
-Cela se gère dans Firestore (collection `shopItems`) ou directement dans le composant `Shop.tsx`.
+Cela se gère dans Supabase (table `shop_items`) ou directement dans le composant `Shop.tsx`.
 
 ### Pour compiler l'application mobile :
 Utilise les commandes :

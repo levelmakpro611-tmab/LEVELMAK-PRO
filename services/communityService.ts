@@ -112,22 +112,30 @@ export const chatService = {
     },
 
     /**
-     * Rechercher des utilisateurs
+     * Rechercher des utilisateurs par nom ou numéro de téléphone
      */
     async searchUsers(searchTerm: string, currentUserId: string): Promise<UserPresence[]> {
       try {
-        // Try full select first, fallback to minimal if columns don't exist
-        let data: any[] | null = null;
+        console.log(`[Community] Searching users for: "${searchTerm}"`);
+        const cleanedSearch = searchTerm.trim().replace(/\D/g, ''); // Para buscar por número
         
-        const fullQuery = await supabase
+        let query = supabase
             .from('profiles')
-            .select('id, name, avatar_config, status, last_active')
-            .ilike('name', `%${searchTerm}%`)
-            .neq('id', currentUserId)
-            .limit(20);
+            .select('id, name, phone_number, avatar_config, status, last_active')
+            .neq('id', currentUserId);
 
-        if (fullQuery.error) {
-            console.warn('[Community] Full search query failed, trying minimal:', fullQuery.error?.message);
+        if (cleanedSearch.length > 3) {
+            // If it looks like a number, search both name and phone
+            query = query.or(`name.ilike.%${searchTerm}%,phone_number.ilike.%${cleanedSearch}%`);
+        } else {
+            // Otherwise just search by name
+            query = query.ilike('name', `%${searchTerm}%`);
+        }
+
+        const { data, error } = await query.limit(20);
+
+        if (error) {
+            console.warn('[Community] Full search query failed, trying minimal:', error.message);
             // Fallback: minimal columns only
             const minimalQuery = await supabase
                 .from('profiles')
@@ -135,13 +143,19 @@ export const chatService = {
                 .ilike('name', `%${searchTerm}%`)
                 .neq('id', currentUserId)
                 .limit(20);
+                
             if (minimalQuery.error) {
-                console.error('[Community] Search completely failed:', JSON.stringify(minimalQuery.error));
+                console.error('[Community] Search completely failed:', minimalQuery.error);
                 return [];
             }
-            data = minimalQuery.data;
-        } else {
-            data = fullQuery.data;
+            return (minimalQuery.data || []).map((u: any) => ({
+                userId: u.id,
+                name: u.name || 'Utilisateur',
+                avatar: u.avatar_config?.image || u.avatar_config?.baseColor || '#3B82F6',
+                status: 'offline',
+                lastSeen: null,
+                online: false
+            }));
         }
 
         return (data || []).map((u: any) => ({
@@ -218,8 +232,6 @@ export const chatService = {
      * Envoyer une demande d'ami
      */
     async sendFriendRequest(fromUserId: string, toUserId: string) {
-        // En Supabase, on pourrait utiliser une table 'friendships' ou un champ JSONB
-        // Pour rester simple et compatible avec l'existant, on met à jour profiles.friend_requests
         const { data: profile } = await supabase.from('profiles').select('friend_requests').eq('id', toUserId).single();
         const requests = profile?.friend_requests || [];
         if (!requests.includes(fromUserId)) {
@@ -253,10 +265,8 @@ export const chatService = {
     },
 
     async getOrCreateConversation(userId1: string, userId2: string, userName1: string, userName2: string, avatar1: string, avatar2: string): Promise<string> {
-        // Trier les participants pour assurer l'ordre et l'unicité
         const sortedIds = [userId1, userId2].sort();
         
-        // Chercher une conversation existante (individuelle)
         const { data: conversations, error } = await supabase
             .from('conversations')
             .select('id')
@@ -271,7 +281,6 @@ export const chatService = {
             return conversations[0].id;
         }
 
-        // Si pas de conversation, en créer une
         const { data: newConv, error: createError } = await supabase
             .from('conversations')
             .insert({
@@ -313,7 +322,6 @@ export const chatService = {
         const participantAvatars: { [key: string]: string } = {};
         const unreadCount: { [key: string]: number } = {};
 
-        // Récupérer le nom et avatar de l'admin
         const { data: adminData } = await supabase.from('profiles').select('name, avatar_config').eq('id', adminId).single();
 
         participantNames[adminId] = adminData?.name || 'Admin';
@@ -349,7 +357,6 @@ export const chatService = {
      * Envoyer un message (texte et/ou image)
      */
     async sendMessage(conversationId: string, senderId: string, senderName: string, text: string, imageUrl?: string) {
-        // Ajouter le message
         const { error: msgError } = await supabase
             .from('messages')
             .insert({
@@ -365,7 +372,6 @@ export const chatService = {
 
         if (msgError) throw msgError;
 
-        // Mettre à jour la conversation
         const { data: convData } = await supabase.from('conversations').select('participants, unread_count').eq('id', conversationId).single();
         const participants = convData?.participants || [];
         const unreadCount = convData?.unread_count || {};
@@ -418,16 +424,12 @@ export const chatService = {
         await supabase.from('conversations').update({
             unread_count: unreadCount
         }).eq('id', conversationId);
-
-        // Optionnel: mettre à jour tous les messages comme lus pour cet utilisateur
-        // await supabase.from('messages').update({ read: true }).eq('conversation_id', conversationId).neq('sender_id', userId);
     },
 
     /**
      * Écouter les conversations en temps réel
      */
     listenToConversations(userId: string, callback: (conversations: Conversation[]) => void) {
-        // Fetch initial data
         const fetchConversations = async () => {
             const { data } = await supabase
                 .from('conversations')
@@ -453,7 +455,6 @@ export const chatService = {
 
         fetchConversations();
 
-        // Subscribe to changes
         const channel = supabase
             .channel(`public:conversations:participants=cs.{${userId}}`)
             .on('postgres_changes', {
@@ -638,10 +639,8 @@ export const chatService = {
 
         await supabase.from('calls').update({
             status,
-            // duration: duration || 0 // Assuming duration column exists if needed
         }).eq('id', callId);
 
-        // Create a call message in the conversation
         try {
             const { data: conversations } = await supabase
                 .from('conversations')
@@ -665,14 +664,6 @@ export const chatService = {
                     text,
                     timestamp: new Date().toISOString()
                 });
-
-                // Update last message in conversation
-                const unreadCount = conversation.unread_count || {};
-                // If the call was rejected, maybe the caller missed it
-                if (status === 'rejected') {
-                    // Update unread count for the one who missed it (usually the receiver if rejected by them? 
-                    // No, usually missed calls increase unread count for receiver)
-                }
 
                 await supabase.from('conversations').update({
                     last_message: {
@@ -810,15 +801,11 @@ export const chatService = {
      * Ajouter un ICE Candidate
      */
     async addCallIceCandidate(callId: string, candidate: any, type: 'caller' | 'receiver') {
-        // Since we don't have separate sub-collections, we can use a JSONB column or a separate table
-        // Let's use a separate table for cleaner signals if possible, or just a JSONB array in calls.
-        // For simplicity and to avoid schema changes, let's assume we use a table 'call_candidates'
         await supabase.from('messages').insert({
-            conversation_id: callId, // Using callId as a temporary "conversation" for signaling? 
-            // Better: use a dedicated signal table.
+            conversation_id: callId,
             type: 'signal',
             text: JSON.stringify({ candidate, type }),
-            sender_id: type === 'caller' ? 'caller' : 'receiver' as any, // Dummy
+            sender_id: type === 'caller' ? 'caller' : 'receiver' as any,
             timestamp: new Date().toISOString()
         });
     },
@@ -827,8 +814,6 @@ export const chatService = {
      * Écouter les ICE Candidates distants
      */
     listenForIceCandidates(callId: string, type: 'caller' | 'receiver', callback: (candidate: any) => void) {
-        // This is tricky with Supabase without a dedicated signals table.
-        // For a real production app, I'd use Supabase Realtime Broadcast.
         const channel = supabase.channel(`call_signals_${callId}`)
             .on('broadcast', { event: 'candidate' }, ({ payload }) => {
                 if (payload.type !== type) {
@@ -843,7 +828,7 @@ export const chatService = {
     },
 
     /**
-     * Version Broadcast pour envoyer des candidats (plus performant que DB pour signalisation)
+     * Version Broadcast pour envoyer des candidats
      */
     async sendIceCandidate(callId: string, candidate: any, type: 'caller' | 'receiver') {
         const channel = supabase.channel(`call_signals_${callId}`);
@@ -874,14 +859,14 @@ export const chatService = {
     },
 
     /**
-     * Publier une story (status d'apprentissage)
+     * Publier une story
      */
     async postStory(userId: string, userName: string, userAvatar: string, content: string, type: 'achievement' | 'update' | 'quiz_score' | 'text', imageUrl?: string, backgroundColor?: string) {
-        console.log("🚀 postStory starting...", { userId, type });
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        console.log("📡 Calling Supabase insert on 'stories_social'...");
+        console.log(`[Community] Posting story for ${userName} (${userId})...`);
+
         try {
             const { data, error } = await supabase
                 .from('stories_social')
@@ -897,10 +882,16 @@ export const chatService = {
                     expires_at: tomorrow.toISOString(),
                     views: [],
                     reactions: {}
-                });
+                })
+                .select();
 
-            console.log("✅ Supabase insert response received", { error });
-            if (error) throw error;
+            if (error) {
+                console.error("❌ Error in postStory (Supabase):", error);
+                throw error;
+            }
+            
+            console.log(`✅ Story posted successfully: ${data?.[0]?.id}`);
+            return data?.[0];
         } catch (e) {
             console.error("❌ Exception in postStory:", e);
             throw e;
@@ -936,12 +927,10 @@ export const chatService = {
     },
 
     /**
-     * Écouter les stories actives (moins de 24h)
+     * Écouter les stories actives
      */
     listenToStories(callback: (stories: LearningStory[]) => void) {
-        console.log("👂 listenToStories started");
         const fetchStories = async () => {
-            console.log("📡 fetchStories: calling Supabase select...");
             const now = new Date().toISOString();
             const { data, error } = await supabase
                 .from('stories_social')
@@ -983,7 +972,7 @@ export const chatService = {
     },
 
     /**
-     * Obtenir le classement mondial (Leaderboard)
+     * Obtenir le classement mondial
      */
     async getGlobalLeaderboard(): Promise<UserPresence[]> {
         const { data, error } = await supabase
@@ -1030,18 +1019,30 @@ export const chatService = {
      * Créer un post social
      */
     async createPost(userId: string, userName: string, userAvatar: string, content: string, mediaUrl?: string, mediaType?: 'image' | 'video') {
-        const { error } = await supabase.from('social_posts').insert({
-            user_id: userId,
-            user_name: userName,
-            user_avatar: userAvatar,
-            content,
-            media_url: mediaUrl || null,
-            media_type: mediaType || null,
-            likes: [],
-            comments: [],
-            timestamp: new Date().toISOString()
-        });
-        if (error) throw error;
+        console.log(`[Community] Creating post for ${userName}...`);
+        try {
+            const { data, error } = await supabase.from('social_posts').insert({
+                user_id: userId,
+                user_name: userName,
+                user_avatar: userAvatar,
+                content,
+                media_url: mediaUrl || null,
+                media_type: mediaType || null,
+                likes: [],
+                comments: [],
+                timestamp: new Date().toISOString()
+            }).select();
+            
+            if (error) {
+                console.error("❌ Error in createPost (Supabase):", error);
+                throw error;
+            }
+            console.log(`✅ Post created successfully: ${data?.[0]?.id}`);
+            return data?.[0];
+        } catch (err) {
+            console.error("❌ Exception in createPost:", err);
+            throw err;
+        }
     },
 
     /**
@@ -1125,7 +1126,7 @@ export const chatService = {
     },
 
     /**
-     * Écouter l'historique des appels de l'utilisateur
+     * Écouter l'historique des appels
      */
     listenToCallsHistory(userId: string, callback: (calls: Call[]) => void) {
         const fetchCalls = async () => {
