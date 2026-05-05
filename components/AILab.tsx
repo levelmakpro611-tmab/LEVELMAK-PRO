@@ -17,7 +17,11 @@ import {
   RefreshCw,
   Send,
   Activity,
-  Layers
+  Layers,
+  Camera,
+  Image as ImageIcon,
+  X,
+  Loader2
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
@@ -124,7 +128,7 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
         </motion.div>
       ) : (
         <div className="flex-1 flex flex-col bg-slate-900/50 rounded-[2.5rem] border border-white/5 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar pb-40">
             {messages.map((msg, i) => (
               <motion.div key={i} initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }} animate={{ opacity: 1, x: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] p-4 md:p-5 rounded-3xl text-sm md:text-base font-medium leading-relaxed ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none shadow-lg' : 'bg-white/5 text-slate-200 rounded-tl-none border border-white/5'}`}>
@@ -134,7 +138,7 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
             ))}
             {loading && <div className="flex justify-start"><div className="bg-white/5 p-4 rounded-3xl rounded-tl-none border border-white/5 flex gap-1"><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-blue-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-500 rounded-full" /></div></div>}
           </div>
-          <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl">
+          <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,1.5rem)+1.5rem)] md:pb-6">
             <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 md:gap-3 items-center">
               <input 
                 type="text" 
@@ -210,6 +214,8 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(initialSession?.id || `tm_${Date.now()}`);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     console.log("AILab Rendering Version 2.5 - Ultra High Contrast Loaded");
@@ -285,7 +291,7 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] p-4 md:p-8 max-w-7xl mx-auto relative">
+    <div className="flex flex-col h-full bg-slate-950 p-4 md:p-8 max-w-7xl mx-auto relative overflow-hidden">
       {/* Dev Version Toggle */}
       <div className="absolute top-2 right-2 px-2 py-1 bg-white/5 rounded text-[8px] text-white/20 uppercase tracking-widest font-black">V2.5 ULTRA-VISIBILITY</div>
 
@@ -355,38 +361,101 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
         </motion.div>
       ) : (
         <div className="flex-1 flex flex-col bg-slate-900/50 rounded-[2.5rem] border border-white/5 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar pb-40">
             {messages.map((msg, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }} animate={{ opacity: 1, x: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-4 md:p-5 rounded-3xl text-sm md:text-base font-medium leading-relaxed ${msg.role === 'user' ? 'bg-purple-600 text-white rounded-tr-none shadow-lg shadow-purple-500/20' : 'bg-white/5 text-slate-200 rounded-tl-none border border-white/5'}`}>
+              <motion.div key={i} initial={{ opacity: 0, x: msg.role === 'assistant' ? -20 : 20 }} animate={{ opacity: 1, x: 0 }} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'} animate-fade-in`}>
+                {msg.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/20 flex items-center justify-center mr-3 mt-1 shrink-0">
+                    <Sparkles size={14} className="text-purple-400" />
+                  </div>
+                )}
+                <div className={`
+                  max-w-[85%] p-4 rounded-2xl text-sm font-medium leading-relaxed whitespace-pre-wrap
+                  ${msg.role === 'user'
+                    ? 'bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-tr-none shadow-lg shadow-purple-900/20'
+                    : 'bg-white/5 text-slate-200 border border-white/5 rounded-tl-none shadow-inner'}
+                `}>
                   {msg.content}
                 </div>
               </motion.div>
             ))}
             {loading && <div className="flex justify-start"><div className="bg-white/5 p-4 rounded-3xl rounded-tl-none border border-white/5 flex gap-1"><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-purple-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-purple-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-purple-500 rounded-full" /></div></div>}
           </div>
-          <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl">
-            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 md:gap-3 items-center">
-              <input 
-                type="text" 
-                value={input} 
-                onChange={(e) => setInput(e.target.value)} 
-                placeholder={t('ailab.inputPlaceholder')} 
-                className="flex-1 p-3 md:p-5 bg-white/5 border border-white/10 rounded-2xl md:rounded-[1.5rem] text-white text-sm md:text-base outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-medium shadow-inner" 
+          <div className="p-4 md:p-6 bg-slate-950 border-t border-white/10 shrink-0 pb-[calc(env(safe-area-inset-bottom,1.5rem)+1.5rem)] md:pb-6">
+            {selectedImage && (
+              <div className="mb-3 animate-fade-in">
+                <div className="relative inline-block mb-2">
+                  <img src={selectedImage} alt="Preview" className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-xl border border-white/20 shadow-lg" />
+                  <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center border border-white/20 hover:bg-slate-700 shadow-xl transition-colors">
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
+            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="relative flex items-center gap-2 md:gap-3 group">
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setSelectedImage(reader.result as string);
+                    reader.readAsDataURL(file);
+                  }
+                }}
               />
-              <button 
-                type="submit" 
-                disabled={!input.trim() || loading} 
-                className={`
-                  h-12 w-12 md:h-14 md:w-14 flex items-center justify-center shrink-0
-                  rounded-2xl md:rounded-[1.2rem] transition-all active:scale-90
-                  ${input.trim() && !loading 
-                    ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-glow-purple' 
-                    : 'bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed opacity-40'}
-                `}
-              >
-                {loading ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} className="md:w-6 md:h-6" />}
-              </button>
+              <div className="flex gap-1.5 md:gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.setAttribute('capture', 'environment');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-blue-500/30"
+                >
+                  <Camera size={20} className="md:w-5 md:h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.removeAttribute('capture');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-white/5"
+                >
+                  <ImageIcon size={20} className="md:w-5 md:h-5" />
+                </button>
+              </div>
+              <div className="relative flex-1 h-12 md:h-14">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={t('ailab.inputPlaceholder')}
+                  className="w-full h-full bg-white/5 border border-white/10 outline-none rounded-xl md:rounded-2xl px-4 text-sm font-bold text-white placeholder:text-slate-500 focus:bg-white/10 transition-all shadow-inner pr-12 md:pr-14"
+                />
+                <button
+                  type="submit"
+                  disabled={(!input.trim() && !selectedImage) || loading}
+                  className={`
+                    absolute right-1.5 top-1.5 bottom-1.5 
+                    w-10 md:w-12 flex items-center justify-center 
+                    rounded-xl md:rounded-xl shadow-lg border transition-all active:scale-95 group-hover:scale-105
+                    ${(input.trim() || selectedImage) && !loading
+                      ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white border-purple-500/20 shadow-glow-purple'
+                      : 'bg-slate-800 text-slate-500 border-white/5 cursor-not-allowed opacity-50'}
+                  `}
+                >
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={18} className={((input.trim() || selectedImage) && !loading) ? "animate-pulse" : ""} />}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -420,7 +489,7 @@ export const AILab: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent pb-32 md:pb-8">
+    <div className="min-h-screen bg-transparent pb-32 md:pb-8 pt-[env(safe-area-inset-top,1rem)]">
       <AnimatePresence mode="wait">
         {activeView === 'hub' && (
           <motion.div key="hub" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="p-6 md:p-12 space-y-12">
@@ -467,44 +536,6 @@ export const AILab: React.FC = () => {
                   <div className="flex items-center gap-2 text-purple-400 font-black uppercase tracking-widest text-[10px]">{t('ailab.startChallenge')} <ChevronRight size={14} /></div>
                 </div>
               </motion.div>
-            </div>
-
-            {/* Visual Labs Section */}
-            <div className="space-y-8 pt-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-2">
-                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter">{t('ailab.visualLabs')}</h3>
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">{t('ailab.visualLabsDesc')}</p>
-                </div>
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent('nav_change', { detail: 'active_visual' }))}
-                  className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold hover:bg-white/10 transition-all text-sm"
-                >
-                  {t('common.viewAll')}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  { id: 'chemistry', title: t('ailab.chemistryTitle'), sub: t('ailab.chemistrySubtitle'), icon: FlaskRound, color: 'bg-emerald-500' },
-                  { id: 'electricity', title: t('ailab.electricityTitle'), sub: t('ailab.electricitySubtitle'), icon: Zap, color: 'bg-amber-500' },
-                  { id: 'mechanics', title: t('ailab.mechanicsTitle'), sub: t('ailab.mechanicsSubtitle'), icon: Activity, color: 'bg-blue-500' },
-                  { id: 'optics', title: t('ailab.opticsTitle'), sub: t('ailab.opticsSubtitle'), icon: Layers, color: 'bg-fuchsia-500' }
-                ].map((lab) => (
-                  <motion.div 
-                    key={lab.id}
-                    whileHover={{ y: -8, scale: 1.02 }}
-                    onClick={() => window.dispatchEvent(new CustomEvent('nav_change', { detail: 'active_visual' }))}
-                    className="relative group cursor-pointer overflow-hidden rounded-3xl bg-white/5 border border-white/10 p-6 transition-all hover:bg-white/10"
-                  >
-                    <div className={`w-12 h-12 rounded-2xl ${lab.color} flex items-center justify-center text-white mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
-                      <lab.icon size={24} />
-                    </div>
-                    <h4 className="text-white font-black uppercase tracking-tight mb-1">{lab.title}</h4>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{lab.sub}</p>
-                  </motion.div>
-                ))}
-              </div>
             </div>
 
             {/* Recent Sessions Quick Access */}
@@ -604,13 +635,13 @@ export const AILab: React.FC = () => {
         )}
 
         {activeView === 'feynman' && (
-          <motion.div key="feynman" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }}>
+          <motion.div key="feynman" className="fixed inset-0 z-[2000] bg-slate-950 flex flex-col pt-[env(safe-area-inset-top,1.5rem)] pb-[env(safe-area-inset-bottom,1.5rem)]" initial={{ opacity: 0, x: '100%' }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: '100%' }} transition={{ type: "spring", damping: 25, stiffness: 200 }}>
             <FeynmanChallenge onBack={() => setActiveView('hub')} initialSession={selectedSession} />
           </motion.div>
         )}
 
         {activeView === 'timemachine' && (
-          <motion.div key="timemachine" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }}>
+          <motion.div key="timemachine" className="fixed inset-0 z-[2000] bg-slate-950 flex flex-col pt-[env(safe-area-inset-top,1.5rem)] pb-[env(safe-area-inset-bottom,1.5rem)]" initial={{ opacity: 0, x: '100%' }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: '100%' }} transition={{ type: "spring", damping: 25, stiffness: 200 }}>
             <TimeMachine onBack={() => setActiveView('hub')} initialSession={selectedSession} />
           </motion.div>
         )}

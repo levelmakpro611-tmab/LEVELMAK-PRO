@@ -272,6 +272,7 @@ export interface Story {
   likes: number;
   isPublic: boolean;
   createdAt: string;
+  coverImage?: string;
 }
 
 export interface Mission {

@@ -1,481 +1,412 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Square, Save, Trash2, BrainCircuit, Layers, Sparkles, History, ChevronRight, Loader2, Music } from 'lucide-react';
+import { Mic, Square, Sparkles, History, ChevronRight, FileText, Share2, Download, Clock, BookOpen, MessageSquare, BrainCircuit, Layers, CheckCircle } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
-import { openrouterService } from '../services/openrouter';
 import { AudioLogic, AudioNote } from '../utils/audioLogic';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { KeepAwake } from '@capacitor-community/keep-awake';
+import { FlashcardDeck, Flashcard, Quiz } from '../types';
 
-interface AudioLabProps {
-    onQuizGenerated?: (quiz: any) => void;
-    onFlashcardsGenerated?: (deck: any, cards: any[]) => void;
-}
-
-const AudioLab: React.FC<AudioLabProps> = ({ onQuizGenerated, onFlashcardsGenerated }) => {
-    const { t, addXp, settings } = useStore();
+const AudioLab: React.FC<any> = () => {
+    const { t, addXp, settings, saveFlashcardDeck, saveQuiz } = useStore();
     const [isRecording, setIsRecording] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [isTransforming, setIsTransforming] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimTranscript, setInterimTranscript] = useState('');
     const [savedNotes, setSavedNotes] = useState<AudioNote[]>([]);
     const [selectedNote, setSelectedNote] = useState<AudioNote | null>(null);
+    const [currentVolume, setCurrentVolume] = useState(0);
+    const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
+    const [savedToStore, setSavedToStore] = useState<{flashcards: boolean, quiz: boolean}>({flashcards: false, quiz: false});
+    const [audioError, setAudioError] = useState<string | null>(null);
+    
+    const shouldRecordRef = useRef(false);
+    const transcriptRef = useRef('');
+    const lastProcessedIndexRef = useRef(0);
 
-    // ... (useEffect reste inchangé)
-
-    const handleGenerateCards = async () => {
-        if (!selectedNote || !onFlashcardsGenerated) return;
-        setIsTransforming(true);
-        try {
-            const cards = await openrouterService.generateFlashcards(selectedNote.cleanNote, selectedNote.title, settings.language);
-            const deck = {
-                id: `audio_deck_${Date.now()}`,
-                title: selectedNote.title,
-                description: "Généré depuis l'Audio Lab",
-                category: "Audio Lab",
-                totalCards: cards.length,
-                lastStudied: new Date().toISOString()
-            };
-            onFlashcardsGenerated(deck, cards);
-        } catch (err: any) {
-            console.error(err);
-            alert("Erreur lors de la génération des Flashcards: " + err.message);
-        } finally {
-            setIsTransforming(false);
-        }
-    };
-
-    const handleGenerateQuiz = async () => {
-        if (!selectedNote || !onQuizGenerated) return;
-        setIsTransforming(true);
-        try {
-            const quiz = await openrouterService.generateQuiz(selectedNote.cleanNote, selectedNote.title, 'Intermédiaire', settings.language);
-            onQuizGenerated(quiz);
-        } catch (err) {
-            console.error(err);
-            alert("Erreur lors de la génération du Quiz.");
-        } finally {
-            setIsTransforming(false);
-        }
-    };
+    // Sync transcript to ref for auto-chunking
+    useEffect(() => {
+        transcriptRef.current = transcript;
+    }, [transcript]);
 
     useEffect(() => {
-        // Charger les notes depuis le stockage local au démarrage
-        const local = localStorage.getItem('elite_audio_notes');
+        const local = localStorage.getItem('elite_audio_notes_v2');
         if (local) setSavedNotes(JSON.parse(local));
 
-        // Initialiser la reconnaissance vocale
+        console.log("🎤 [Audio] Initializing Speech Recognition...");
+        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+        if (!SpeechRecognition) {
+            console.error("🎤 [Audio] SpeechRecognition NOT supported");
+            setAudioError("La reconnaissance vocale n'est pas supportée sur cet appareil. Assurez-vous que l'application Google est installée et à jour.");
+        }
+
         AudioLogic.initSpeechToText(
             (data: any) => {
-                if (data.final) setTranscript((prev) => prev + (prev.length > 0 && !prev.endsWith(' ') ? " " : "") + data.final);
+                if (data.final) setTranscript(prev => prev + (prev ? ' ' : '') + data.final);
                 setInterimTranscript(data.interim);
+                setAudioError(null);
             },
-            () => setIsRecording(false)
+            () => {
+                if (shouldRecordRef.current) {
+                    setTimeout(() => { if (shouldRecordRef.current) AudioLogic.startRecording(); }, 500);
+                } else {
+                    setIsRecording(false);
+                }
+            },
+            (err: string) => {
+                console.error("🎤 [Audio] Error:", err);
+                setAudioError(err);
+            }
         );
+
+        return () => {
+            AudioLogic.stopRecording();
+            AudioLogic.stopVolumeMonitoring();
+        };
     }, []);
 
-    const saveNotesToLocal = (notes: AudioNote[]) => {
-        localStorage.setItem('elite_audio_notes', JSON.stringify(notes));
-        setSavedNotes(notes);
-    };
+    // Auto-chunking logic (Background Summarization)
+    useEffect(() => {
+        let interval: any;
+        if (isRecording) {
+            // Check every 3 minutes (180000 ms)
+            interval = setInterval(async () => {
+                const currentText = transcriptRef.current;
+                const newText = currentText.substring(lastProcessedIndexRef.current).trim();
+                
+                if (newText.length > 200) { // Enough text to analyze (approx ~30-50 words)
+                    lastProcessedIndexRef.current = currentText.length;
+                    
+                    try {
+                        const analysis = await AudioLogic.analyzeLesson(newText, settings.language);
+                        const newNote: AudioNote = {
+                            id: `note_${Date.now()}`,
+                            date: new Date().toLocaleString(),
+                            rawText: newText,
+                            title: analysis.title ? `${analysis.title} (Auto-généré)` : "Séquence de cours",
+                            cleanNote: analysis.cleanNote || newText,
+                            summary: analysis.summary || "Résumé auto...",
+                            keyNotions: analysis.keyNotions || [],
+                            flashcards: analysis.flashcards || [],
+                            quiz: analysis.quiz || []
+                        };
+
+                        setSavedNotes(prev => {
+                            const updated = [newNote, ...prev];
+                            localStorage.setItem('elite_audio_notes_v2', JSON.stringify(updated));
+                            return updated;
+                        });
+                        
+                        await Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                    } catch (e) {
+                        console.error("Auto-analyse échouée en arrière-plan", e);
+                    }
+                }
+            }, 3 * 60 * 1000); 
+        }
+        
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isRecording, settings.language]);
 
     const handleStart = async () => {
+        const hasPermission = await AudioLogic.requestMicrophonePermission();
+        if (!hasPermission) {
+            alert("Permission micro requise.");
+            return;
+        }
+
         setTranscript('');
         setInterimTranscript('');
+        setAudioError(null);
+        lastProcessedIndexRef.current = 0;
         setIsRecording(true);
+        shouldRecordRef.current = true;
         AudioLogic.startRecording();
+        AudioLogic.startVolumeMonitoring(setCurrentVolume);
         await KeepAwake.keepAwake().catch(() => {});
         await Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
     };
 
     const handleStop = async () => {
-        const fullText = (transcript + " " + interimTranscript).trim();
+        shouldRecordRef.current = false;
+        const currentText = transcript;
+        const newText = currentText.substring(lastProcessedIndexRef.current).trim();
+        const fullTextToProcess = (newText + " " + interimTranscript).trim();
+        
         setIsRecording(false);
         AudioLogic.stopRecording();
+        AudioLogic.stopVolumeMonitoring();
         setInterimTranscript('');
         await KeepAwake.allowSleep().catch(() => {});
         
-        if (fullText.length < 10) {
-            await Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+        if (fullTextToProcess.length < 10) {
+            if (lastProcessedIndexRef.current > 0) {
+                // Notes were already processed in background
+                setActiveTab('history');
+            } else {
+                alert("Enregistrement trop court.");
+            }
             return;
         }
 
-        await Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
         setIsAnalyzing(true);
         try {
-            const analysis = await AudioLogic.analyzeLesson(fullText, settings.language);
-            
+            const analysis = await AudioLogic.analyzeLesson(fullTextToProcess, settings.language);
             const newNote: AudioNote = {
                 id: `note_${Date.now()}`,
-                date: new Date().toLocaleDateString(),
-                rawText: fullText,
+                date: new Date().toLocaleString(),
+                rawText: fullTextToProcess,
                 title: analysis.title || "Leçon sans titre",
-                cleanNote: analysis.cleanNote || transcript,
+                cleanNote: analysis.cleanNote || fullTextToProcess,
                 summary: analysis.summary || "Résumé non disponible",
                 keyNotions: analysis.keyNotions || [],
-                aiLesson: analysis.aiLesson || ""
+                aiLesson: analysis.aiLesson || "",
+                flashcards: analysis.flashcards || [],
+                quiz: analysis.quiz || []
             };
 
-            const updated = [newNote, ...savedNotes];
-            saveNotesToLocal(updated);
+            setSavedNotes(prev => {
+                const finalNotes = [newNote, ...prev];
+                localStorage.setItem('elite_audio_notes_v2', JSON.stringify(finalNotes));
+                return finalNotes;
+            });
             setSelectedNote(newNote);
-            addXp(20); 
-        } catch (err: any) {
+            setSavedToStore({flashcards: false, quiz: false});
+            setActiveTab('history');
+            addXp(50); 
+            await Haptics.notification({ type: 'SUCCESS' as any }).catch(() => {});
+        } catch (err) {
             console.error(err);
-            alert("L'analyse a échoué : " + (err.message || "Erreur inconnue"));
+            alert("Erreur lors de l'analyse.");
         } finally {
             setIsAnalyzing(false);
+            lastProcessedIndexRef.current = 0;
+            setTranscript('');
         }
     };
 
-    const handleAnalyze = async (id: string, text: string) => {
-        setIsAnalyzing(true);
-        try {
-            const analysis = await AudioLogic.analyzeLesson(text, settings.language);
-            
-            const updatedNotes = savedNotes.map(n => 
-                n.id === id ? {
-                    ...n,
-                    title: analysis.title || n.title,
-                    cleanNote: analysis.cleanNote || n.cleanNote,
-                    summary: analysis.summary || n.summary,
-                    keyNotions: analysis.keyNotions || n.keyNotions,
-                    aiLesson: analysis.aiLesson || n.aiLesson
-                } : n
-            );
-
-            saveNotesToLocal(updatedNotes);
-            const updatedNote = updatedNotes.find(n => n.id === id);
-            if (updatedNote) setSelectedNote(updatedNote);
-        } catch (err: any) {
-            console.error(err);
-            alert("Échec de la ré-analyse : " + (err.message || "Erreur de connexion"));
-        } finally {
-            setIsAnalyzing(false);
-        }
+    const handleSaveFlashcards = () => {
+        if (!selectedNote || !selectedNote.flashcards || selectedNote.flashcards.length === 0) return;
+        
+        const deck: FlashcardDeck = {
+            id: `deck_${Date.now()}`,
+            title: `Deck: ${selectedNote.title}`,
+            description: "Généré via Audio Lab",
+            cardCount: selectedNote.flashcards.length,
+            coverImage: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=400",
+            category: "AudioLab",
+            createdAt: Date.now()
+        };
+        
+        const cards: Flashcard[] = selectedNote.flashcards.map((fc, i) => ({
+            id: `fc_${Date.now()}_${i}`,
+            deckId: deck.id,
+            front: fc.front,
+            back: fc.back,
+            level: 1,
+            nextReview: Date.now(),
+            interval: 0,
+            easeFactor: 2.5
+        }));
+        
+        saveFlashcardDeck(deck, cards);
+        setSavedToStore(prev => ({ ...prev, flashcards: true }));
+        Haptics.notification({ type: 'SUCCESS' as any }).catch(() => {});
     };
 
-    const discardRecording = async () => {
-        setIsRecording(false);
-        AudioLogic.stopRecording();
-        setTranscript('');
-        setInterimTranscript('');
-        await KeepAwake.allowSleep().catch(() => {});
-        await Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-    };
-
-    const handleStartNewCourse = () => {
-        setSelectedNote(null);
-        setTranscript('');
-        setInterimTranscript('');
-    };
-
-    const deleteNote = (id: string) => {
-        const filtered = savedNotes.filter(n => n.id !== id);
-        saveNotesToLocal(filtered);
-        if (selectedNote?.id === id) setSelectedNote(null);
+    const handleSaveQuiz = () => {
+        if (!selectedNote || !selectedNote.quiz || selectedNote.quiz.length === 0) return;
+        
+        const quizObj: Quiz = {
+            id: `quiz_${Date.now()}`,
+            title: `Quiz: ${selectedNote.title}`,
+            subject: "AudioLab",
+            difficulty: "Moyen",
+            xpReward: 100,
+            questions: selectedNote.quiz.map((q, i) => ({
+                id: `q_${Date.now()}_${i}`,
+                text: q.question,
+                options: q.options,
+                correctAnswer: q.options.indexOf(q.answer) >= 0 ? q.options.indexOf(q.answer) : 0,
+                explanation: "Généré par l'IA Quantum."
+            }))
+        };
+        
+        saveQuiz(quizObj);
+        setSavedToStore(prev => ({ ...prev, quiz: true }));
+        Haptics.notification({ type: 'SUCCESS' as any }).catch(() => {});
     };
 
     return (
-        <div className="max-w-6xl mx-auto py-6 px-4 space-y-8 animate-fade-in pb-24">
-            {/* Header Audio Lab */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-2">
-                    <h1 className="text-4xl font-display font-black text-white flex items-center gap-3">
-                        <div className="w-12 h-12 bg-primary/20 text-primary rounded-2xl flex items-center justify-center border border-primary/30 shadow-glow">
-                            <Mic size={28} />
-                        </div>
-                        AUDIO LAB <span className="text-gradient-secondary text-sm">PRO</span>
+        <div className="max-w-7xl mx-auto py-8 px-6 space-y-10 animate-fade-in pb-32">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8">
+                <div className="space-y-3">
+                    <h1 className="text-5xl font-display font-black text-white flex items-center gap-4">
+                        AUDIO LAB <Sparkles className="text-secondary" size={32} />
                     </h1>
-                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1">Le futur de la prise de notes intelligente</p>
+                    <p className="text-slate-400 text-sm font-medium italic">Assistant intelligent (Background Auto-Chunking Actif).</p>
                 </div>
-                
-                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5">
-                    <button className="px-6 py-2 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">En direct</button>
-                    <button className="px-6 py-2 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-slate-300">Archives</button>
+                <div className="flex bg-slate-900/50 p-1.5 rounded-[1.5rem] border border-white/5 shadow-inner">
+                    <button onClick={() => setActiveTab('live')} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'live' ? 'bg-primary text-white shadow-glow' : 'text-slate-500 hover:text-slate-300'}`}>En direct</button>
+                    <button onClick={() => { setActiveTab('history'); setSelectedNote(null); }} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-primary text-white shadow-glow' : 'text-slate-500 hover:text-slate-300'}`}>Archives</button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                {/* Section Enregistrement */}
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="glass-morphism p-8 rounded-[3rem] border border-white/10 flex flex-col items-center justify-center space-y-8 shadow-premium relative overflow-hidden">
-                        {isRecording && (
-                            <div className="absolute inset-0 bg-primary/5 animate-pulse-slow"></div>
-                        )}
-                        
-                        <div className="text-center space-y-2">
-                            <h3 className="text-white font-black uppercase tracking-widest text-xs">Microphone Elite</h3>
-                            <p className="text-slate-500 text-[10px] font-medium italic">Placez-vous près du professeur</p>
-                        </div>
-
-                        {/* Waveform Animation Placeholder (using lucide icons for effect) */}
-                        <div className="flex items-center gap-1 h-12">
-                            {[1, 2, 3, 4, 5, 2, 4, 3, 1].map((h, i) => (
-                                <motion.div
-                                    key={i}
-                                    animate={isRecording ? { height: [h*4, h*10, h*4] } : { height: 4 }}
-                                    transition={{ repeat: Infinity, duration: 0.5 + i*0.1 }}
-                                    className={`w-1.5 rounded-full ${isRecording ? 'bg-primary shadow-glow' : 'bg-white/10'}`}
-                                ></motion.div>
-                            ))}
-                        </div>
-
-                        {!isRecording ? (
-                            <button
-                                onClick={handleStart}
-                                className="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center shadow-glow hover:scale-110 transition-all active:scale-95"
-                            >
-                                <Mic size={32} />
-                            </button>
-                        ) : (
-                            <div className="flex items-center gap-6">
-                                <button 
-                                    onClick={discardRecording}
-                                    className="w-14 h-14 bg-white/5 border border-white/10 text-slate-500 rounded-full flex items-center justify-center hover:bg-danger/20 hover:text-danger hover:border-danger/30 transition-all active:scale-95"
-                                    title="Annuler l'enregistrement"
-                                >
-                                    <Trash2 size={24} />
-                                </button>
-                                <button
-                                    onClick={handleStop}
-                                    className="w-20 h-20 bg-danger text-white rounded-full flex items-center justify-center shadow-glow-danger hover:scale-110 transition-all animate-pulse"
-                                >
-                                    <Square size={32} fill="white" />
-                                </button>
-                            </div>
-                        )}
-                        
-                        <div className="space-y-4 w-full">
-                            <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Transcription en direct</div>
-                            <div className="bg-black/40 rounded-2xl p-4 h-32 overflow-y-auto custom-scrollbar border border-white/5">
-                                <p className="text-xs text-slate-400 leading-relaxed font-mono italic">
-                                    {transcript} <span className="text-slate-500 opacity-70">{interimTranscript}</span>
-                                    {(!transcript && !interimTranscript) && (isRecording ? "En attente de voix..." : "Appuyez sur le micro pour commencer.")}
-                                </p>
+            <AnimatePresence mode="wait">
+                {activeTab === 'live' ? (
+                    <motion.div key="live" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                        <div className="lg:col-span-5">
+                            <div className="glass-morphism p-10 rounded-[3.5rem] border border-white/10 flex flex-col items-center justify-center space-y-10 shadow-premium relative overflow-hidden min-h-[500px]">
+                                <div className="flex items-center justify-center gap-2 mb-2 h-24 w-full">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((h, i) => (
+                                        <motion.div
+                                            key={i}
+                                            animate={isRecording ? { height: [h*4, (currentVolume / 100) * 80 + h, h*4] } : { height: 8 }}
+                                            transition={{ duration: 0.15, repeat: Infinity }}
+                                            className={`w-2 rounded-full ${isRecording ? 'bg-gradient-to-t from-primary to-secondary shadow-glow' : 'bg-white/10'}`}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-10">
+                                    {!isRecording ? (
+                                        <button onClick={handleStart} className="w-28 h-28 bg-primary text-white rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.4)] relative">
+                                            <Mic size={40} />
+                                        </button>
+                                    ) : (
+                                        <button onClick={handleStop} className="w-28 h-28 bg-danger text-white rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(239,68,68,0.4)] animate-pulse">
+                                            <Square size={36} fill="white" />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="w-full space-y-4 pt-6 border-t border-white/5">
+                                    <div className="bg-black/40 rounded-[2rem] p-6 h-48 overflow-y-auto custom-scrollbar border border-white/5">
+                                        {audioError ? (
+                                            <p className="text-sm text-danger font-bold text-center pt-10">{audioError}</p>
+                                        ) : (
+                                            <p className="text-sm text-slate-300 leading-relaxed font-mono italic">
+                                                {transcript.substring(lastProcessedIndexRef.current)} <span className="text-primary opacity-90">{interimTranscript}</span>
+                                                {(!transcript.substring(lastProcessedIndexRef.current) && !interimTranscript) && (isRecording ? "L'IA écoute le professeur..." : "Appuyez sur le micro pour commencer.")}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {isRecording && !audioError && <p className="text-xs text-slate-500 text-center animate-pulse">Auto-sauvegarde toutes les 3 minutes</p>}
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Liste des dernières notes */}
-                    <div className="glass-morphism p-6 rounded-[2.5rem] border border-white/5 space-y-4">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                            <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                <History size={14} /> Leçons récentes
-                            </h4>
-                            <button 
-                                onClick={handleStartNewCourse}
-                                className="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
-                            >
-                                + Nouveau
-                            </button>
+                        <div className="lg:col-span-7 grid grid-cols-2 gap-6">
+                            <div className="p-8 bg-white/5 border border-white/10 rounded-[3rem] space-y-4">
+                                <FileText className="text-blue-500" size={32} />
+                                <h3 className="text-xl font-black text-white">Notes Structurées</h3>
+                            </div>
+                            <div className="p-8 bg-white/5 border border-white/10 rounded-[3rem] space-y-4">
+                                <BrainCircuit className="text-purple-500" size={32} />
+                                <h3 className="text-xl font-black text-white">Création Flashcards</h3>
+                            </div>
+                            <div className="p-8 bg-white/5 border border-white/10 rounded-[3rem] space-y-4">
+                                <BookOpen className="text-amber-500" size={32} />
+                                <h3 className="text-xl font-black text-white">Création de Quiz</h3>
+                            </div>
+                            <div className="p-8 bg-white/5 border border-white/10 rounded-[3rem] space-y-4">
+                                <Share2 className="text-green-500" size={32} />
+                                <h3 className="text-xl font-black text-white">Partage Natif & PDF</h3>
+                            </div>
                         </div>
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                            {savedNotes.length === 0 ? (
-                                <div className="text-center py-6 text-slate-600 text-[10px] font-bold uppercase tracking-tighter italic">Aucune note pour le moment</div>
-                            ) : (
-                                savedNotes.map((note) => (
-                                    <div 
-                                        key={note.id}
-                                        onClick={() => setSelectedNote(note)}
-                                        className={`p-3 rounded-2xl border transition-all cursor-pointer group ${selectedNote?.id === note.id ? 'bg-primary/20 border-primary/40' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <div className="text-xs font-black text-white truncate max-w-[150px]">{note.title}</div>
-                                                <div className="text-[9px] text-slate-500 font-bold">{note.date}</div>
-                                            </div>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); deleteNote(note.id); }}
-                                                className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-600 hover:text-danger rounded-lg transition-all"
-                                            >
-                                                <Trash2 size={12} />
-                                            </button>
+                    </motion.div>
+                ) : (
+                    <motion.div key="history" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                        <div className="lg:col-span-4 space-y-6">
+                            <div className="glass-morphism p-8 rounded-[3rem] border border-white/5 space-y-6">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Archives de Cours</h4>
+                                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
+                                    {savedNotes.map((note) => (
+                                        <div key={note.id} onClick={() => { setSelectedNote(note); setSavedToStore({flashcards: false, quiz: false}); }} className={`p-5 rounded-[2rem] border transition-all cursor-pointer ${selectedNote?.id === note.id ? 'bg-primary/20 border-primary/40' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}>
+                                            <div className="text-sm font-black text-white truncate">{note.title}</div>
+                                            <div className="text-[10px] text-slate-500 font-bold mt-1">{note.date}</div>
+                                        </div>
+                                    ))}
+                                    {savedNotes.length === 0 && <p className="text-sm text-slate-500 italic text-center py-10">Aucune note sauvegardée</p>}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="lg:col-span-8">
+                            {selectedNote ? (
+                                <div className="glass-morphism p-10 rounded-[3.5rem] border border-white/10 shadow-premium space-y-10">
+                                    <div className="flex justify-between items-start">
+                                        <h2 className="text-3xl font-display font-black text-white">{selectedNote.title}</h2>
+                                        <div className="flex gap-3">
+                                            <button onClick={() => AudioLogic.exportToWord(selectedNote)} className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400 hover:bg-blue-500/20 transition-colors" title="Export Word"><FileText size={20} /></button>
+                                            <button onClick={() => AudioLogic.exportToPDF(selectedNote)} className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 hover:bg-red-500/20 transition-colors" title="Export PDF"><Download size={20} /></button>
+                                            <button onClick={() => AudioLogic.nativeShare(selectedNote)} className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-green-500 hover:bg-green-500/20 transition-colors" title="Partager"><MessageSquare size={20} /></button>
                                         </div>
                                     </div>
-                                ))
+                                    
+                                    <div className="space-y-8">
+                                        {/* Integration Action Buttons */}
+                                        <div className="flex flex-wrap gap-4">
+                                            {selectedNote.flashcards && selectedNote.flashcards.length > 0 && (
+                                                <button 
+                                                    onClick={handleSaveFlashcards}
+                                                    disabled={savedToStore.flashcards}
+                                                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${savedToStore.flashcards ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-purple-500 hover:bg-purple-400 text-white shadow-lg shadow-purple-500/20'}`}
+                                                >
+                                                    {savedToStore.flashcards ? <><CheckCircle size={16}/> Deck Sauvegardé</> : <><Layers size={16}/> Créer Deck Flashcards</>}
+                                                </button>
+                                            )}
+                                            {selectedNote.quiz && selectedNote.quiz.length > 0 && (
+                                                <button 
+                                                    onClick={handleSaveQuiz}
+                                                    disabled={savedToStore.quiz}
+                                                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${savedToStore.quiz ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/20'}`}
+                                                >
+                                                    {savedToStore.quiz ? <><CheckCircle size={16}/> Quiz Sauvegardé</> : <><BookOpen size={16}/> Créer Quiz</>}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2"><Sparkles size={16} className="text-secondary"/> Résumé Magistral</h3>
+                                            <div className="p-8 bg-slate-900/50 rounded-[2.5rem] border border-white/5 text-slate-200 leading-loose prose-invert whitespace-pre-wrap">{selectedNote.summary}</div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <h3 className="text-sm font-black text-white uppercase tracking-widest">Notions Clés</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {selectedNote.keyNotions.map((notion, i) => (
+                                                    <div key={i} className="p-6 bg-white/5 border border-white/10 rounded-[2rem] space-y-2">
+                                                        <div className="text-xs font-black text-primary uppercase">{notion.split(':')[0]}</div>
+                                                        <div className="text-[11px] text-slate-400 italic">{notion.split(':')[1]}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black text-white uppercase tracking-widest">Notes Détaillées</h3>
+                                            <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-slate-300 leading-relaxed font-serif whitespace-pre-wrap">
+                                                {selectedNote.cleanNote}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex items-center justify-center p-20 text-center glass-morphism rounded-[3.5rem] border border-white/5 border-dashed opacity-30">Sélectionnez une leçon pour voir les détails</div>
                             )}
                         </div>
-                    </div>
-                </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-                {/* Section Analyse & Actions */}
-                <div className="lg:col-span-2 space-y-6">
-                    {selectedNote ? (
-                        <div className="space-y-6">
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="glass-morphism p-8 rounded-[3rem] border border-white/10 shadow-premium relative overflow-hidden"
-                            >
-                                <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <Sparkles className="text-secondary" size={16} />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary">Synthèse IA Elite</span>
-                                        </div>
-                                        <h2 className="text-2xl font-display font-black text-white">{selectedNote.title}</h2>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button className="p-3 bg-white/5 border border-white/5 rounded-2xl text-slate-400 hover:text-white transition-all"><Save size={20} /></button>
-                                        <button className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-glow hover:scale-105 active:scale-95 transition-all">Partager</button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6 overflow-y-auto custom-scrollbar pr-4">
-                                    {/* Alerte Mode Secours / Échec IA */}
-                                    {(selectedNote.title.includes('Secours') || selectedNote.summary.includes('échoué')) && (
-                                        <div className="p-5 bg-amber-500/10 border border-amber-500/20 rounded-3xl flex items-center gap-4 animate-pulse">
-                                            <div className="w-12 h-12 bg-amber-500/20 rounded-2xl flex items-center justify-center shrink-0">
-                                                <Sparkles className="text-amber-500" size={24} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h4 className="text-sm font-black text-amber-200 uppercase tracking-widest">Analyse incomplète</h4>
-                                                <p className="text-[10px] text-amber-500/80 font-bold mb-2">L'IA n'a pas pu structurer cette note automatiquement.</p>
-                                                <button 
-                                                    onClick={() => handleAnalyze(selectedNote.id, selectedNote.rawText)}
-                                                    className="px-4 py-2 bg-amber-500 text-black rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all active:scale-95"
-                                                >
-                                                    Relancer l'Analyse Elite
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Résumé Magistral */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1 h-4 bg-secondary rounded-full"></div>
-                                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Résumé Magistral (Essentiel)</div>
-                                        </div>
-                                        <div className="p-6 bg-white/5 border border-white/5 rounded-[2rem] text-sm md:text-base text-slate-200 leading-relaxed font-sans border-l-4 border-l-secondary whitespace-pre-wrap">
-                                            {selectedNote.summary}
-                                        </div>
-                                    </div>
-
-                                    {/* Leçon du Maître IA */}
-                                    {selectedNote.aiLesson && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="relative p-8 rounded-[2.5rem] bg-gradient-to-br from-secondary/20 via-primary/10 to-transparent border border-secondary/30 shadow-premium overflow-hidden group"
-                                        >
-                                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                                <BrainCircuit size={80} />
-                                            </div>
-                                            <div className="relative z-10 space-y-4">
-                                                <div className="flex items-center gap-3 text-secondary">
-                                                    <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center border border-secondary/30">
-                                                        <Sparkles size={20} />
-                                                    </div>
-                                                    <h3 className="text-lg font-black uppercase tracking-tighter">Perspective du Maître Quantum</h3>
-                                                </div>
-                                                <p className="text-sm text-slate-200 leading-bold italic font-medium">
-                                                    {selectedNote.aiLesson}
-                                                </p>
-                                            </div>
-                                        </motion.div>
-                                    )}
-
-                                    {/* Note Propre */}
-                                    <div className="space-y-3">
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Transcription Élite (Texte Intégral)</div>
-                                        <div className="p-6 bg-black/20 rounded-[2rem] text-xs text-slate-400 leading-loose prose prose-invert font-mono border border-white/5">
-                                            {selectedNote.cleanNote}
-                                        </div>
-                                    </div>
-
-                                    {/* Notions Clés */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1 h-4 bg-primary rounded-full"></div>
-                                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Glossaire des Notions (Notions Clés)</div>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {selectedNote.keyNotions.map((notion, i) => {
-                                                const parts = notion.split(':');
-                                                const name = parts[0];
-                                                const def = parts.slice(1).join(':'); // Handle cases with multiple colons
-                                                return (
-                                                    <motion.div 
-                                                        key={i} 
-                                                        whileHover={{ y: -5 }}
-                                                        className="p-5 bg-white/5 border border-white/10 rounded-[1.5rem] space-y-2 border-b-4 border-b-primary shadow-premium group hover:bg-white/10 transition-all"
-                                                    >
-                                                        <div className="text-xs font-black text-primary uppercase tracking-wider group-hover:text-secondary transition-colors">{name}</div>
-                                                        <div className="text-[11px] text-slate-400 leading-relaxed font-medium italic">
-                                                            {def || "Définition en cours d'analyse..."}
-                                                        </div>
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-
-                            {/* Barre d'Actions de Conversion */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="grid grid-cols-2 gap-4"
-                            >
-                                <button 
-                                    onClick={handleGenerateCards}
-                                    disabled={isTransforming}
-                                    className="p-6 bg-white/5 border border-white/10 rounded-[2rem] flex flex-col items-center justify-center gap-3 group hover:border-primary/50 transition-all active:scale-95 disabled:opacity-50"
-                                >
-                                    <Layers className="text-primary group-hover:scale-125 transition-all" size={32} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-white">Créer des Flashcards</span>
-                                </button>
-                                <button 
-                                    onClick={handleGenerateQuiz}
-                                    disabled={isTransforming}
-                                    className="p-6 bg-white/5 border border-white/10 rounded-[2rem] flex flex-col items-center justify-center gap-3 group hover:border-secondary/50 transition-all active:scale-95 disabled:opacity-50"
-                                >
-                                    <BrainCircuit className="text-secondary group-hover:scale-125 transition-all" size={32} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-white">Générer un Quiz</span>
-                                </button>
-                            </motion.div>
+            {isAnalyzing && (
+                <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-3xl z-[2000] flex items-center justify-center">
+                    <div className="text-center space-y-10 max-w-md w-full">
+                        <div className="relative mx-auto w-40 h-40">
+                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2.5, ease: "linear" }} className="absolute inset-0 rounded-full border-t-2 border-primary shadow-glow" />
+                            <div className="absolute inset-0 flex items-center justify-center"><BrainCircuit className="text-white animate-pulse" size={56} /></div>
                         </div>
-                    ) : (
-                        <div className="h-full flex items-center justify-center p-12 text-center">
-                            <div className="space-y-6 opacity-40">
-                                <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10">
-                                    <Music size={40} className="text-slate-500" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h3 className="text-white font-black uppercase tracking-[0.2em]">Sélectionnez une leçon</h3>
-                                    <p className="text-xs text-slate-500 max-w-xs mx-auto italic">Choisissez une leçon dans la liste à gauche ou commencez un nouvel enregistrement pour voir l'analyse IA.</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Overlays */}
-            {(isAnalyzing || isTransforming) && (
-                <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-[100] flex items-center justify-center p-8">
-                    <div className="text-center space-y-6">
-                        <div className="relative">
-                            <div className="w-24 h-24 bg-secondary/20 rounded-full animate-ping absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-                            <Loader2 className="w-24 h-24 text-secondary animate-spin relative z-10" />
-                        </div>
-                        <div className="space-y-4 animate-pulse">
-                            <h3 className="text-xl font-black text-white uppercase tracking-widest">Analyse Quantum en cours</h3>
-                            <div className="flex flex-col gap-2">
-                                <p className="text-[10px] text-secondary font-black uppercase tracking-[0.3em] flex items-center justify-center gap-2">
-                                    <span className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce"></span>
-                                    {isTransforming ? "Génération des supports d'élite..." : "Déchiffrage & Nettoyage Quantum..."}
-                                </p>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em]">
-                                    {isTransforming ? "Optimisation pédagogique..." : "Rédaction de votre leçon magistrale..."}
-                                </p>
-                            </div>
-                        </div>
+                        <h3 className="text-3xl font-black text-white uppercase italic">Analyse & Création de Contenu...</h3>
+                        <p className="text-slate-400 text-sm">Génération du résumé, des flashcards et du quiz...</p>
                     </div>
                 </div>
             )}

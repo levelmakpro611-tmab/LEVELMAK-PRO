@@ -1,7 +1,7 @@
 {
   "name": "levelmak-pro-v1",
   "private": true,
-  "version": "0.1.9.2",
+  "version": "0.1.9.3",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -25,10 +25,13 @@
     "@capacitor/haptics": "^8.0.0",
     "@capacitor/ios": "^8.0.2",
     "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.2",
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.0",
+    "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.0",
     "@capacitor/status-bar": "^8.0.0",
+    "@capgo/capacitor-native-biometric": "^8.4.2",
     "@emotion/is-prop-valid": "^1.4.0",
     "@supabase/supabase-js": "^2.97.0",
     "@types/canvas-confetti": "^1.9.0",

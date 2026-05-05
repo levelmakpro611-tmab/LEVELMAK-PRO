@@ -15,7 +15,8 @@ import {
   Check,
   ChevronRight,
   History,
-  Target
+  Target,
+  Brain
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logUserActivity } from '../services/activityService';
@@ -24,7 +25,7 @@ import { useStore } from '../hooks/useStore';
 import { feedbackService } from '../services/feedbackService';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { WorldBrainMap } from '../components/WorldBrainMap';
 import { useFlashcardStore } from '../services/flashcardStore';
 
@@ -49,6 +50,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     betAmount: number;
     betTarget: number;
     betWon: boolean | null;
+    flashcardsSaved?: boolean;
   } | null>(null);
 
   const [wrongQuestions, setWrongQuestions] = useState<QuizQuestion[]>([]);
@@ -292,10 +294,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       logUserActivity(user.id, user.name, 'quiz', `Completed Quiz: ${quiz.title}`, { score: score, total: quiz.questions.length, xpGained: xpGained, timeSpent: timeSpent });
     }
 
-    if (wrongQuestions.length > 0) {
-      addFromErrors(wrongQuestions, quiz.title || 'Quiz sans titre', quiz.subject || 'Général');
-      addActivity('flashcard', 'Nouvelles Flashcards ! 🗂️', `${wrongQuestions.length} cartes de révision ont été générées automatiquement de tes erreurs.`);
-    }
+    // Removed automatic flashcard creation to make it optional via button in results
 
     setResultsData({
       correct: score,
@@ -546,12 +545,17 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
           {wrongQuestions.length > 0 && (
              <button
               onClick={() => {
-                 onClose();
-                 // Logic to navigate to Flashcard mode will be in parent or layout
+                 if (resultsData?.flashcardsSaved) return;
+                 addFromErrors(wrongQuestions, quiz.title || 'Quiz sans titre', quiz.subject || 'Général');
+                 addActivity('flashcard', 'Nouvelles Flashcards ! 🗂️', `${wrongQuestions.length} cartes de révision ont été générées de tes erreurs.`);
+                 setResultsData(prev => prev ? { ...prev, flashcardsSaved: true } : null);
+                 Haptics.notification({ type: NotificationType.Success }).catch(() => {});
               }}
-              className="flex-1 py-5 md:py-6 bg-purple-600 text-white rounded-xl md:rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-[11px] shadow-glow flex items-center justify-center gap-2 md:gap-3 hover:scale-[1.03] transition-all"
+              disabled={resultsData?.flashcardsSaved}
+              className={`flex-1 py-5 md:py-6 rounded-xl md:rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-[11px] shadow-glow flex items-center justify-center gap-2 md:gap-3 transition-all ${resultsData?.flashcardsSaved ? 'bg-success/20 text-success border border-success/30' : 'bg-purple-600 text-white hover:scale-[1.03]'}`}
             >
-              <Repeat size={16} className="md:w-[18px] md:h-[18px]" /> Réviser Erreurs ({wrongQuestions.length})
+              <Brain size={16} className="md:w-[18px] md:h-[18px]" /> 
+              {resultsData?.flashcardsSaved ? 'Erreurs Sauvegardées !' : `Sauver Erreurs en Flashcards (${wrongQuestions.length})`}
             </button>
           )}
 
@@ -705,27 +709,31 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4"
+                    className={`p-6 rounded-[2rem] border transition-all ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
-                        {selectedOption === currentQuestion.correctAnswer ? <Trophy size={18} /> : <AlertCircle size={18} />}
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/20 border-success/30 text-success' : 'bg-danger/20 border-danger/30 text-danger animate-pulse'}`}>
+                        {selectedOption === currentQuestion.correctAnswer ? <Trophy size={20} /> : <AlertCircle size={20} />}
                       </div>
-                      <h5 className="font-black uppercase tracking-[0.2em] text-[10px] text-white">
-                        {encouragement}
-                      </h5>
+                      <div className="flex-1">
+                        <h5 className={`font-black uppercase tracking-[0.2em] text-[10px] ${selectedOption === currentQuestion.correctAnswer ? 'text-success' : 'text-danger'}`}>
+                          {encouragement}
+                        </h5>
+                        {selectedOption !== currentQuestion.correctAnswer && (
+                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Explication Pédagogique</p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Explication Pédagogique</p>
-                      <p className="text-xs text-slate-400 leading-relaxed font-medium italic">
-                        {currentQuestion.explanation}
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                      <p className="text-xs md:text-sm text-slate-300 leading-relaxed font-medium">
+                        {currentQuestion.explanation || "L'IA n'a pas fourni d'explication pour cette question, mais la réponse correcte est mise en évidence."}
                       </p>
                     </div>
 
                     <button
                       onClick={nextQuestion}
-                      className="w-full py-3 md:py-4 bg-white text-slate-900 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                      className="w-full mt-6 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
                     >
                       {currentIdx === quiz.questions.length - 1 ? t('quiz.player.activity') : t('quiz.player.nextQuestion')} <ChevronRight size={12} className="md:w-[14px] md:h-[14px]" />
                     </button>

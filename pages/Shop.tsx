@@ -13,7 +13,8 @@ import {
     UserCircle,
     BadgeCheck,
     Lock,
-    FlaskConical
+    FlaskConical,
+    Loader2
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { POTIONS } from '../constants';
@@ -33,31 +34,60 @@ const Shop: React.FC = () => {
     // Load items from Firestore
     useEffect(() => {
         const loadItems = async () => {
+            // Safety timeout to ensure loader disappears no matter what
+            const safetyTimeout = setTimeout(() => {
+                setLoading(false);
+                console.warn('Shop: Safety timeout triggered');
+            }, 10000);
+
             try {
-                const firestoreItems = await getAllShopItems();
+                // Timeout logic to avoid hanging indefinitely
+                const fetchWithTimeout = (promise: Promise<any>, ms: number) => {
+                    let timeoutId: any;
+                    const timeoutPromise = new Promise((_, reject) => {
+                        timeoutId = setTimeout(() => reject(new Error('Timeout')), ms);
+                    });
+                    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+                };
+
+                let firestoreItems: ShopItem[] = [];
+                try {
+                    console.log('Shop: Fetching items from Supabase...');
+                    firestoreItems = await fetchWithTimeout(getAllShopItems(), 8000) as ShopItem[];
+                    console.log(`Shop: Successfully fetched ${firestoreItems.length} items`);
+                } catch (e) {
+                    console.warn('Shop fetch timed out or failed, using fallbacks', e);
+                    firestoreItems = [];
+                }
+
                 const potionItems: ShopItem[] = POTIONS.map(p => ({
                     ...p,
-                    category: 'potion' as const
+                    category: (p as any).category || 'potion'
                 }));
 
-                // If Firestore is empty, use hardcoded avatars as fallback
-                if (firestoreItems.length === 0) {
-                    setItems([...hardcodedItems, ...potionItems]);
-                } else {
-                    setItems([...firestoreItems, ...potionItems]);
-                }
+                // Fusionner les items de la DB avec les items statiques
+                // Les items de la DB (firestoreItems) ont la priorité pour permettre l'édition des prix par l'admin
+                const dbIds = new Set(firestoreItems.map(i => i.id));
+                const mergedItems = [
+                    ...firestoreItems,
+                    ...HARDCODED_ITEMS.filter(item => !dbIds.has(item.id)),
+                    ...potionItems.filter(item => !dbIds.has(item.id))
+                ];
+                
+                setItems(mergedItems);
             } catch (error) {
                 console.error('Error loading shop items:', error);
-                setItems([...hardcodedItems, ...POTIONS.map(p => ({ ...p, category: 'potion' as const }))]);
+                setItems([...HARDCODED_ITEMS, ...POTIONS.map(p => ({ ...p, category: 'potion' as const }))]);
             } finally {
+                clearTimeout(safetyTimeout);
                 setLoading(false);
             }
         };
         loadItems();
     }, []);
 
-    // Hardcoded fallback items (original avatars list)
-    const hardcodedItems: ShopItem[] = [
+// Hardcoded fallback items (original avatars list) - Moved outside for performance
+const HARDCODED_ITEMS: ShopItem[] = [
         // Avatars - Budget Tier (20-50 coins) - 10 avatars
         {
             id: 'onepiece_1',
@@ -739,10 +769,18 @@ const Shop: React.FC = () => {
             </div>
 
             {/* Empty State */}
-            {filteredItems.length === 0 && (
+            {!loading && filteredItems.length === 0 && (
                 <div className="py-20 text-center opacity-40">
                     <Star size={48} className="mx-auto mb-4" />
                     <p className="text-lg font-bold">{t('shop.empty')}</p>
+                </div>
+            )}
+
+            {/* Loading State */}
+            {loading && (
+                <div className="py-20 text-center opacity-40">
+                    <Loader2 size={48} className="mx-auto mb-4 animate-spin" />
+                    <p className="text-lg font-bold">Chargement de la boutique...</p>
                 </div>
             )}
         </div>

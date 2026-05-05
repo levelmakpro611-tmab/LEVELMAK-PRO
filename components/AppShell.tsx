@@ -63,6 +63,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
 import NotificationCenter from './NotificationCenter';
@@ -185,7 +186,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'writing', label: t('nav.writing'), shortLabel: t('nav.short.writing'), icon: PenTool },
     { id: 'flashcards', label: t('nav.flashcards'), shortLabel: t('nav.short.flashcards'), icon: Layers },
     { id: 'ailab', label: t('nav.ailab'), shortLabel: t('nav.ailabShort'), icon: FlaskRound },
-    { id: 'tutor_hub', label: 'Prof', shortLabel: 'Prof', icon: GraduationCap },
     { id: 'atlas', label: t('nav.atlas'), shortLabel: t('nav.short.atlas'), icon: Globe },
     { id: 'audio_lab', label: 'Audio Lab', shortLabel: 'Audio', icon: Mic },
     { id: 'active_visual', label: t('nav.activeVisual'), shortLabel: t('nav.short.activeVisual'), icon: Zap, hideOnMobile: true },
@@ -197,10 +197,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'rating', label: t('nav.rating'), shortLabel: t('nav.short.rating'), icon: Star, onClick: () => setIsRatingOpen(true) },
   ];
 
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !Capacitor.isNativePlatform();
   const navItems = isLocal
     ? navItemsRaw
-    : navItemsRaw.filter(item => !['tutor_hub', 'active_visual', 'planner'].includes(item.id));
+    : navItemsRaw.filter(item => !['tutor_hub', 'active_visual', 'planner', 'audio_lab'].includes(item.id));
 
   if (!user) return <>{children}</>;
 
@@ -213,35 +213,35 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-secondary/10 rounded-full blur-[50px] opacity-20 dark:opacity-100"></div>
       </div>
 
-      {/* Mobile Header */}
-      <header className="md:hidden glass border-b border-black/5 dark:border-white/5 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 flex items-center justify-between sticky top-0 z-[100] h-24 bg-background/90 backdrop-blur-xl transition-all">
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="LEVELMAK" className="h-16 w-auto object-contain brightness-110 dark:brightness-125 drop-shadow-[0_0_15px_rgba(59,130,246,0.2)] dark:drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]" />
+      {/* Mobile Header - Re-adjusted for "Married" look */}
+      <header className="md:hidden glass border-b border-black/5 dark:border-white/5 px-4 pt-[env(safe-area-inset-top)] pb-3 flex items-center justify-between sticky top-0 z-[100] bg-background/90 backdrop-blur-xl transition-all">
+        <div className="flex items-center gap-2 pt-2">
+          <img src="/logo.png" alt="LEVELMAK" className="h-14 w-auto object-contain brightness-110 dark:brightness-125 drop-shadow-[0_0_15px_rgba(59,130,246,0.2)] dark:drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]" />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 pt-2">
           {showInstallButton && (
             <button onClick={handleInstallClick} className="p-3 text-blue-500 dark:text-blue-400 relative active:scale-95 transition-all bg-blue-500/10 dark:bg-blue-400/10 rounded-full hover:bg-blue-500/20 shadow-glow-blue animate-pulse">
-              <Download size={24} />
+              <Download size={22} />
             </button>
           )}
           <button onClick={() => { HapticFeedback.selection(); setIsNotifOpen(true); }} className="p-3 text-slate-600 dark:text-slate-300 relative active:scale-95 transition-all bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
-            <Bell size={24} />
+            <Bell size={22} />
             {notifications.filter(n => !n.read).length > 0 && (
-              <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full text-[10px] font-black flex items-center justify-center text-white border-2 border-white dark:border-slate-900 shadow-glow animate-pulse">
+              <span className="absolute top-2.5 right-2.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-black flex items-center justify-center text-white border-2 border-white dark:border-slate-900 shadow-glow animate-pulse">
                 {notifications.filter(n => !n.read).length}
               </span>
             )}
           </button>
           <button onClick={() => { HapticFeedback.selection(); setIsSidebarOpen(!isSidebarOpen); }} className="p-3 ml-1 text-slate-600 dark:text-slate-300 active:scale-90 transition-transform bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
-            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </header>
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-[150] w-72 glass border-r border-black/5 dark:border-white/5 transform transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-full flex flex-col p-6 md:pt-6 pt-20">
-          <div className="hidden md:flex flex-col items-center mb-10 group">
+      <aside className={`fixed inset-y-0 left-0 z-[150] w-72 glass border-none transform transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} no-scrollbar`}>
+        <div className="h-full flex flex-col p-6 md:pt-6 pt-20 overflow-y-auto no-scrollbar">
+          <div className="hidden md:flex flex-col items-center mb-10 group no-scrollbar">
             <div className="relative">
               <div className="absolute -inset-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-orange-500/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <img src="/logo.png" alt="LEVELMAK" className="w-56 h-auto object-contain relative z-10" />
@@ -249,7 +249,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             <span className="text-[12px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent mt-2">{t('layout.elitePortal')}</span>
           </div>
 
-          <nav className="flex-1 space-y-1.5 overflow-y-auto custom-scrollbar pr-1">
+          <nav className="flex-1 space-y-1.5 overflow-y-auto no-scrollbar pb-10">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -262,39 +262,45 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                   }
                   setIsSidebarOpen(false);
                 }}
-                className={`w-full items-center gap-3.5 px-4 md:px-5 py-3 md:py-4 rounded-xl md:rounded-2xl font-semibold transition-all duration-200 group relative overflow-hidden ${item.hideOnMobile ? 'hidden md:flex' : 'flex'} ${activeTab === item.id ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-white shadow-sm border border-blue-100 dark:border-white/10' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'}`}
+                className={`w-full items-center gap-4 px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 group relative ${item.hideOnMobile ? 'hidden md:flex' : 'flex'} ${activeTab === item.id ? 'bg-blue-500/10 text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
-                <item.icon size={22} className={`transition-transform duration-300 ${activeTab === item.id ? 'text-blue-600 dark:text-blue-400 scale-110 drop-shadow-[0_0_8px_rgba(37,99,235,0.3)]' : 'group-hover:scale-110'}`} />
-                <span className="tracking-wide">{item.label}</span>
-                {activeTab === item.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 shadow-[0_0_10px_rgba(37,99,235,0.8)]"></div>}
+                <item.icon size={22} className={`transition-all duration-300 ${activeTab === item.id ? 'text-blue-500 scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'group-hover:scale-110'}`} />
+                <span className="tracking-wide text-[15px]">{item.label}</span>
+                {activeTab === item.id && (
+                  <motion.div 
+                    layoutId="sidebar-active-dot"
+                    className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"
+                  />
+                )}
               </button>
             ))}
-          </nav>
 
-          <div className="pt-6 border-t border-white/10 space-y-2">
-            <button onClick={() => { HapticFeedback.navigation(); setIsInfoOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3.5 px-5 py-3.5 rounded-2xl font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-white hover:bg-blue-500/5 dark:hover:bg-blue-500/10 transition-all border border-transparent hover:border-blue-500/20">
-              <Info size={20} />
-              <span className="tracking-wide">{t('layout.important')}</span>
-            </button>
-            <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3.5 px-5 py-3.5 rounded-2xl font-semibold transition-all ${activeTab === 'settings' ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-white shadow-sm border border-blue-100 dark:border-white/10' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'}`}>
-              <Settings className={`transition-transform duration-300 ${activeTab === 'settings' ? 'text-blue-600 dark:text-blue-400 scale-110 drop-shadow-[0_0_8px_rgba(37,99,235,0.3)]' : 'group-hover:scale-110'}`} size={20} />
-              <span className="tracking-wide">{t('nav.settings')}</span>
-            </button>
-            <button onClick={logout} className="w-full flex items-center gap-3.5 px-5 py-3.5 rounded-2xl font-semibold text-danger/80 hover:text-danger hover:bg-danger/10 transition-all">
-              <LogOut size={20} />
-              <span className="tracking-wide">{t('auth.logout')}</span>
-            </button>
-            <button onClick={() => { HapticFeedback.selection(); setIsHelpOpen(true); }} className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group flex items-center gap-3 w-full">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <HelpCircle size={18} className="animate-pulse" />
-              </div>
-              <div className="text-left">
-                <p className="text-[10px] font-black text-white uppercase tracking-widest">{t('layout.helpSupport')}</p>
-                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">{t('layout.helpSubtitle')}</p>
-              </div>
-              <ChevronRight size={14} className="ml-auto text-slate-600 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
+            <div className="pt-4 space-y-1.5">
+              <button onClick={() => { HapticFeedback.navigation(); setIsInfoOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-white hover:bg-blue-500/5 dark:hover:bg-blue-500/10 transition-all">
+                <Info size={22} />
+                <span className="tracking-wide text-[15px]">{t('layout.important')}</span>
+              </button>
+              <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold transition-all ${activeTab === 'settings' ? 'bg-blue-500/10 text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                <Settings className={`transition-all duration-300 ${activeTab === 'settings' ? 'text-blue-500 scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'group-hover:scale-110'}`} size={22} />
+                <span className="tracking-wide text-[15px]">{t('nav.settings')}</span>
+              </button>
+              <button onClick={logout} className="w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold text-danger/80 hover:text-danger hover:bg-danger/10 transition-all">
+                <LogOut size={22} />
+                <span className="tracking-wide text-[15px]">{t('auth.logout')}</span>
+              </button>
+              
+              <button onClick={() => { HapticFeedback.selection(); setIsHelpOpen(true); }} className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group flex items-center gap-3 w-full">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <HelpCircle size={18} className="animate-pulse" />
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] font-black text-white uppercase tracking-widest">{t('layout.helpSupport')}</p>
+                  <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">{t('layout.helpSubtitle')}</p>
+                </div>
+                <ChevronRight size={14} className="ml-auto text-slate-600 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </nav>
         </div>
       </aside>
 
@@ -342,12 +348,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto ${activeTab === 'social' ? 'p-0' : 'p-6 md:p-10'} pb-40 md:pb-10 transition-all duration-300`}>
-          <div className={`${activeTab === 'social' ? 'h-full' : ''}`}>{children}</div>
+        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : 'p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : 'pb-40 md:pb-10'} transition-all duration-300`}>
+          <div className={`${(activeTab === 'social' || activeTab === 'ailab') ? 'h-full' : ''}`}>{children}</div>
         </div>
 
         {activeTab !== 'social' && (
-          <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 h-[72px] bg-background dark:bg-[#0F172A] border-t border-black/5 dark:border-white/10 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] dark:shadow-none transition-all duration-500">
+          <nav className="md:hidden fixed bottom-0 left-0 w-full z-[1000] h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-background dark:bg-[#050b18] border-t border-black/5 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.2)] transition-all duration-500">
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
               { id: 'flashcards', icon: Layers, label: 'Flash' },
@@ -360,12 +366,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               const shouldPop = isDashboard;
               const Icon = item.icon;
               return (
-                <div key={item.id} className="relative flex flex-col items-center flex-1 h-[72px] justify-center">
+                <div key={item.id} className="relative flex flex-col items-center flex-1 h-full justify-center">
                   <button onClick={() => { HapticFeedback.selection(); setActiveTab(item.id); }} className="relative flex flex-col items-center justify-center z-10 w-full h-full">
-                    <motion.div initial={false} animate={{ y: shouldPop ? -28 : 2, scale: shouldPop ? 1.2 : (isActive ? 1.1 : 1) }} transition={{ type: "spring", stiffness: 400, damping: 25 }} className={`flex items-center justify-center rounded-full transition-colors duration-300 ${shouldPop ? 'w-14 h-14 shadow-lg shadow-blue-500/30 dark:shadow-[0_8px_25px_rgba(59,130,246,0.5)] border-4 border-background dark:border-[#0F172A] bg-gradient-to-br from-blue-500 to-purple-600 text-white' : 'w-10 h-10 bg-transparent'} ${isActive && !isDashboard ? 'text-blue-500 dark:text-blue-400' : (isActive ? '' : 'text-slate-500 dark:text-slate-400')}`}>
+                    <motion.div initial={false} animate={{ y: shouldPop ? -32 : 0, scale: shouldPop ? 1.25 : (isActive ? 1.1 : 1) }} transition={{ type: "spring", stiffness: 400, damping: 25 }} className={`flex items-center justify-center rounded-full transition-colors duration-300 ${shouldPop ? 'w-14 h-14 shadow-lg shadow-blue-500/30 dark:shadow-[0_8px_25px_rgba(59,130,246,0.5)] border-4 border-background dark:border-[#050b18] bg-gradient-to-br from-blue-500 to-purple-600 text-white' : 'w-10 h-10 bg-transparent'} ${isActive && !isDashboard ? 'text-blue-500 dark:text-blue-400' : (isActive ? '' : 'text-slate-500 dark:text-slate-400')}`}>
                       <Icon size={isActive && !isDashboard ? 26 : 24} fill={isActive && (item.id === 'dashboard' || item.id === 'summary') ? 'currentColor' : 'none'} strokeWidth={isActive ? 2.5 : 2} className="transition-colors duration-300" />
                     </motion.div>
-                    <motion.span initial={false} animate={{ y: shouldPop ? 18 : 24, opacity: isActive || shouldPop ? 1 : 0.6 }} className={`absolute font-bold text-[10px] whitespace-nowrap ${isActive ? 'text-blue-500 dark:text-blue-400' : 'text-slate-500'}`}>{item.label}</motion.span>
+                    <motion.span initial={false} animate={{ y: shouldPop ? 16 : 22, opacity: isActive || shouldPop ? 1 : 0.6 }} className={`absolute font-black text-[10px] uppercase tracking-tighter whitespace-nowrap ${isActive ? 'text-blue-500 dark:text-blue-400' : 'text-slate-500'}`}>{item.label}</motion.span>
                   </button>
                   {shouldPop && <motion.div layoutId="nav-glow" animate={{ opacity: isActive ? 1 : 0.5 }} className="absolute top-0 w-16 h-16 rounded-full blur-xl bg-blue-500/20 dark:bg-blue-500/30 -z-10 pointer-events-none -translate-y-4" />}
                 </div>

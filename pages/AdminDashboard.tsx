@@ -108,6 +108,12 @@ const AdminDashboard: React.FC = () => {
         loadTab(activeTab);
     }, [activeTab, period]);
 
+    const handleRefresh = async () => {
+        // Clear local cache for stats
+        localStorage.removeItem('admin_cache_overview');
+        await loadTab(activeTab);
+    };
+
     // Close sidebar on mobile when a tab is selected
     const handleTabChange = (tab: Tab) => {
         setActiveTab(tab);
@@ -189,6 +195,20 @@ const AdminDashboard: React.FC = () => {
                     const [statsResult, demogResult] = await Promise.allSettled([getGlobalStats(period), getDemographicStats()]);
                     if (statsResult.status === 'fulfilled') setStats(statsResult.value);
                     if (demogResult.status === 'fulfilled') setDemographicStats(demogResult.value);
+                    break;
+                case 'export':
+                    try {
+                        const [uData, cData, dData] = await Promise.all([
+                            exportUserData(),
+                            getAllComments(100),
+                            getDemographicStats()
+                        ]);
+                        setUsers(uData);
+                        setComments(cData);
+                        setDemographicStats(dData);
+                    } catch (err) {
+                        console.error("Error loading export data", err);
+                    }
                     break;
                 case 'monitor':
                 case 'retention':
@@ -357,7 +377,14 @@ const AdminDashboard: React.FC = () => {
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0 relative">
+                            <button 
+                                onClick={handleRefresh}
+                                disabled={loadingStates[activeTab]}
+                                className={`p-2 rounded-xl transition-all bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 ${loadingStates[activeTab] ? 'animate-spin' : ''}`}
+                                title="Actualiser les données"
+                            >
+                                <Activity size={18} className="text-slate-500 dark:text-slate-400" />
+                            </button>
                             <button 
                                 onClick={() => { setIsNotifOpen(!isNotifOpen); setIsSettingsOpen(false); }}
                                 className={`p-2 rounded-xl transition-all relative ${isNotifOpen ? 'bg-blue-600 text-white shadow-lg' : 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
@@ -430,7 +457,6 @@ const AdminDashboard: React.FC = () => {
                             </AnimatePresence>
                         </div>
                     </div>
-                </div>
 
                 {/* Content Area */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
@@ -455,7 +481,13 @@ const AdminDashboard: React.FC = () => {
                             <>
                                 {activeTab === 'overview' && (
                                     stats ? (
-                                        <OverviewTab stats={stats} users={users} comments={comments} averageRatings={averageRatings} />
+                                        <OverviewTab 
+                                            stats={stats} 
+                                            users={users} 
+                                            comments={comments} 
+                                            averageRatings={averageRatings} 
+                                            onNavigate={setActiveTab}
+                                        />
                                     ) : (
                                         <div className="space-y-6">
                                             <Skeleton className="h-32 w-full" />
@@ -497,16 +529,17 @@ interface OverviewTabProps {
     users: AdminUserAnalytics[];
     comments: UserComment[];
     averageRatings: any;
+    onNavigate: (tab: Tab) => void;
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, averageRatings }) => (
+const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, averageRatings, onNavigate }) => (
     <div className="space-y-4 md:space-y-6">
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <StatCard title="Utilisateurs" value={stats.totalUsers} subtitle={`${stats.activeUsers} actifs`} icon={<Users size={20} />} color="from-blue-500 to-cyan-500" trend="+12%" />
-            <StatCard title="Quiz Générés" value={stats.quizzesGenerated} subtitle={`${stats.quizzesToday} aujourd'hui`} icon={<Activity size={20} />} color="from-purple-500 to-pink-500" trend="+8%" />
-            <StatCard title="Flashcards" value={stats.flashcardsCreated} subtitle={`${stats.flashcardsToday} aujourd'hui`} icon={<BarChart3 size={20} />} color="from-orange-500 to-red-500" trend="+15%" />
-            <StatCard title="Engagement" value={`${stats.averageEngagementRate.toFixed(1)}%`} subtitle="Taux d'activité" icon={<TrendingUp size={20} />} color="from-green-500 to-emerald-500" trend="+5%" />
+            <StatCard onClick={() => onNavigate('users')} title="Utilisateurs" value={stats.totalUsers} subtitle={`${stats.activeUsers} actifs`} icon={<Users size={20} />} color="from-blue-500 to-cyan-500" trend="+12%" />
+            <StatCard onClick={() => onNavigate('monitor')} title="Quiz Générés" value={stats.quizzesGenerated} subtitle={`${stats.quizzesToday} aujourd'hui`} icon={<Activity size={20} />} color="from-purple-500 to-pink-500" trend="+8%" />
+            <StatCard onClick={() => onNavigate('stats')} title="Flashcards" value={stats.flashcardsCreated} subtitle={`${stats.flashcardsToday} aujourd'hui`} icon={<BarChart3 size={20} />} color="from-orange-500 to-red-500" trend="+15%" />
+            <StatCard onClick={() => onNavigate('retention')} title="Engagement" value={`${stats.averageEngagementRate.toFixed(1)}%`} subtitle="Taux d'activité" icon={<TrendingUp size={20} />} color="from-green-500 to-emerald-500" trend="+5%" />
         </div>
 
         {/* Activity Overview */}
@@ -521,7 +554,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, avera
                         { label: 'Nouveaux utilisateurs (Sem.)', value: stats.newUsersWeek, color: 'bg-purple-500' },
                         { label: 'Nouveaux utilisateurs (Mois)', value: stats.newUsersMonth, color: 'bg-pink-500' },
                     ].map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between py-1.5">
+                        <div key={idx} className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-white/5 rounded-lg px-2 transition-all" onClick={() => onNavigate('users')}>
                             <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${item.color} shrink-0`}></div>
                                 <span className="text-xs md:text-sm text-slate-600 dark:text-slate-300 transition-colors">{item.label}</span>
@@ -542,7 +575,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, avera
                         { label: 'Approuvés', value: comments.filter(c => c.status === 'approved').length, color: 'bg-green-500' },
                         { label: 'Rejetés', value: comments.filter(c => c.status === 'rejected').length, color: 'bg-red-500' },
                     ].map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between py-1.5">
+                        <div key={idx} className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-white/5 rounded-lg px-2 transition-all" onClick={() => onNavigate('comments')}>
                             <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${item.color} shrink-0`}></div>
                                 <span className="text-xs md:text-sm text-slate-600 dark:text-slate-300 transition-colors">{item.label}</span>
@@ -574,10 +607,14 @@ interface StatCardProps {
     icon: React.ReactNode;
     color: string;
     trend: string;
+    onClick?: () => void;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, color, trend }) => (
-    <div className="group bg-background-card backdrop-blur-xl rounded-xl md:rounded-2xl border border-black/5 dark:border-white/10 p-3 md:p-5 hover:border-black/10 dark:hover:border-white/20 transition-all hover:scale-105 cursor-pointer shadow-sm">
+const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, color, trend, onClick }) => (
+    <div 
+        onClick={onClick}
+        className="group bg-background-card backdrop-blur-xl rounded-xl md:rounded-2xl border border-black/5 dark:border-white/10 p-3 md:p-5 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all hover:scale-105 cursor-pointer shadow-sm active:scale-95"
+    >
         <div className="flex items-start justify-between mb-2 md:mb-3">
             <div className={`p-2 rounded-lg md:rounded-xl bg-gradient-to-br ${color} shadow-lg`}>
                 <div className="text-white">{icon}</div>

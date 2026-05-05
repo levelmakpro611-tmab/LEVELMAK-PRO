@@ -3,13 +3,15 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { Document, Packer, Paragraph, TextRun, Table, TableCell, TableRow, HeadingLevel } from 'docx';
 import { AdminStats, UserAnalytics, UserComment, PlatformRating, AdminUserAnalytics } from '../types';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { isNativePlatform } from './nativeAdapters';
 
 // ========== PDF EXPORT ==========
 
 export const exportStatsToPDF = (stats: AdminStats, period: string): void => {
     const doc = new jsPDF();
 
-    // Title
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
     doc.text('LEVELMAK - Rapport Statistiques', 14, 20);
@@ -19,7 +21,6 @@ export const exportStatsToPDF = (stats: AdminStats, period: string): void => {
     doc.text(`Période: ${getPeriodLabel(period)}`, 14, 30);
     doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 37);
 
-    // Stats Table
     const statsData = [
         ['Métrique', 'Valeur'],
         ['Utilisateurs totaux', stats.totalUsers.toString()],
@@ -43,11 +44,11 @@ export const exportStatsToPDF = (stats: AdminStats, period: string): void => {
         headStyles: { fillColor: [37, 99, 235] }
     });
 
-    // Footer
     doc.setFontSize(10);
     doc.text('LEVELMAK © TMAB GROUP', 14, doc.internal.pageSize.height - 10);
 
-    doc.save(`levelmak-stats-${period}-${Date.now()}.pdf`);
+    const blob = doc.output('blob');
+    downloadBlob(blob, `levelmak-stats-${period}-${Date.now()}.pdf`);
 };
 
 export const exportUsersToPDF = (users: AdminUserAnalytics[]): void => {
@@ -84,7 +85,8 @@ export const exportUsersToPDF = (users: AdminUserAnalytics[]): void => {
     doc.setFontSize(10);
     doc.text('LEVELMAK © TMAB GROUP', 14, doc.internal.pageSize.height - 10);
 
-    doc.save(`levelmak-users-${Date.now()}.pdf`);
+    const blob = doc.output('blob');
+    downloadBlob(blob, `levelmak-users-${Date.now()}.pdf`);
 };
 
 export const exportCommentsToPDF = (comments: UserComment[]): void => {
@@ -120,7 +122,8 @@ export const exportCommentsToPDF = (comments: UserComment[]): void => {
     doc.setFontSize(10);
     doc.text('LEVELMAK © TMAB GROUP', 14, doc.internal.pageSize.height - 10);
 
-    doc.save(`levelmak-comments-${Date.now()}.pdf`);
+    const blob = doc.output('blob');
+    downloadBlob(blob, `levelmak-comments-${Date.now()}.pdf`);
 };
 
 // ========== EXCEL EXPORT ==========
@@ -154,7 +157,9 @@ export const exportStatsToExcel = (stats: AdminStats, period: string): void => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Statistiques');
 
-    XLSX.writeFile(workbook, `levelmak-stats-${period}-${Date.now()}.xlsx`);
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    downloadBlob(blob, `levelmak-stats-${period}-${Date.now()}.xlsx`);
 };
 
 export const exportUsersToExcel = (users: AdminUserAnalytics[]): void => {
@@ -187,7 +192,9 @@ export const exportUsersToExcel = (users: AdminUserAnalytics[]): void => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Utilisateurs');
 
-    XLSX.writeFile(workbook, `levelmak-users-${Date.now()}.xlsx`);
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    downloadBlob(blob, `levelmak-users-${Date.now()}.xlsx`);
 };
 
 export const exportCommentsToExcel = (comments: UserComment[]): void => {
@@ -216,7 +223,9 @@ export const exportCommentsToExcel = (comments: UserComment[]): void => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Commentaires');
 
-    XLSX.writeFile(workbook, `levelmak-comments-${Date.now()}.xlsx`);
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    downloadBlob(blob, `levelmak-comments-${Date.now()}.xlsx`);
 };
 
 // ========== WORD EXPORT ==========
@@ -292,13 +301,41 @@ function createStatsRow(metric: string, value: string): TableRow {
     });
 }
 
-function downloadBlob(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+async function downloadBlob(blob: Blob, filename: string): Promise<void> {
+    if (isNativePlatform()) {
+        try {
+            // Convert Blob to Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = async () => {
+                const base64Data = (reader.result as string).split(',')[1];
+                
+                const path = filename;
+                const result = await Filesystem.writeFile({
+                    path,
+                    data: base64Data,
+                    directory: Directory.Cache
+                });
+
+                await Share.share({
+                    title: 'Exporter le document',
+                    text: 'Document exporté de LEVELMAK PRO',
+                    url: result.uri,
+                    dialogTitle: 'Enregistrer ou Partager'
+                });
+            };
+        } catch (error) {
+            console.error('Error sharing document natively:', error);
+            alert('Erreur lors du partage du document.');
+        }
+    } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
 }

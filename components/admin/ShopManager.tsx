@@ -13,6 +13,21 @@ import {
 } from 'lucide-react';
 import { getAllShopItems, addShopItem, updateShopItem, deleteShopItem } from '../../services/adminService';
 import { ShopItem } from '../../types';
+import { POTIONS } from '../../constants';
+
+// Copying HARDCODED_ITEMS from Shop.tsx for the manager view
+const HARDCODED_ITEMS: Partial<ShopItem>[] = [
+    { id: 'onepiece_1', name: 'Rookie Pirate', description: 'Le début de ta légende commence ici.', price: 20, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.03.53.jpeg' },
+    { id: 'onepiece_2', name: 'Marine Cadet', description: 'Justice et honneur guident tes pas.', price: 25, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.12.jpeg' },
+    { id: 'onepiece_3', name: 'Apprenti Navigateur', description: 'Trace ta route vers Grand Line.', price: 30, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.20.jpeg' },
+    { id: 'onepiece_4', name: 'Cuisinier Débutant', description: 'Nourris tes rêves avec passion.', price: 35, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.33.jpeg' },
+    { id: 'onepiece_5', name: 'Combattant Rookie', description: 'Forge ton style de combat unique.', price: 40, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.39.jpeg' },
+    { id: 'onepiece_11', name: 'Escrimeur Confirmé', description: 'La voie du sabre te révèle.', price: 60, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.59.jpeg' },
+    { id: 'onepiece_26', name: 'Roi des Mers', description: 'Domine les océans par ta force.', price: 150, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.19.jpeg' },
+    { id: 'onepiece_49', name: 'Dieu du Soleil', description: 'Illumine le monde de ta puissance.', price: 800, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.40.jpeg' },
+    { id: 'onepiece_53', name: 'Roi des Pirates', description: 'Le One Piece t\'attend au bout du voyage.', price: 1000, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.44.jpeg' },
+    { id: 'badge_elite', name: 'Badge Élite', description: 'Affiche ton statut d\'étudiant exceptionnel.', price: 300, category: 'badge', color: '#F59E0B' },
+];
 
 const ShopManager: React.FC = () => {
     const [items, setItems] = useState<ShopItem[]>([]);
@@ -39,10 +54,21 @@ const ShopManager: React.FC = () => {
 
     const loadItems = async () => {
         try {
-            const shopItems = await getAllShopItems();
-            setItems(shopItems);
+            const dbItems = await getAllShopItems();
+            
+            // Merge with hardcoded to show everything
+            const dbIds = new Set(dbItems.map(i => i.id));
+            const merged = [
+                ...dbItems,
+                ...HARDCODED_ITEMS.filter(i => !dbIds.has(i.id!)) as ShopItem[],
+                ...POTIONS.filter(i => !dbIds.has(i.id)) as any[]
+            ];
+            
+            setItems(merged);
         } catch (error) {
             console.error('Error loading shop items:', error);
+            // Fallback to hardcoded if DB fails
+            setItems([...HARDCODED_ITEMS, ...POTIONS] as any);
         } finally {
             setLoading(false);
         }
@@ -92,26 +118,24 @@ const ShopManager: React.FC = () => {
 
         setSaving(true);
         try {
-            if (editingItem && editingItem.firestoreId) {
-                await updateShopItem(editingItem.firestoreId, formData, imageFile || undefined);
+            if (editingItem && editingItem.id) {
+                // Determine if we update existing or "create" (for hardcoded items being customized)
+                // If it doesn't have a firestoreId (id in DB), it's a hardcoded item being edited for the first time
+                if (editingItem.firestoreId) {
+                    await updateShopItem(editingItem.id, formData, imageFile || undefined);
+                } else {
+                    // Create in DB with same ID
+                    await addShopItem({ ...formData, id: editingItem.id } as ShopItem, imageFile || undefined);
+                }
             } else {
-                const newItem: Omit<ShopItem, 'firestoreId'> = {
-                    id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                    name: formData.name!,
-                    description: formData.description!,
-                    price: formData.price!,
-                    category: formData.category!,
-                    image: formData.image,
-                    color: formData.color,
-                    icon: formData.icon
-                };
-                await addShopItem(newItem, imageFile || undefined);
+                const newItemId = `item_${Date.now()}`;
+                await addShopItem({ ...formData, id: newItemId } as ShopItem, imageFile || undefined);
             }
             await loadItems();
             setShowModal(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving item:', error);
-            alert('Erreur lors de la sauvegarde');
+            alert(`Erreur lors de la sauvegarde: ${error.message || 'Erreur inconnue'}`);
         } finally {
             setSaving(false);
         }

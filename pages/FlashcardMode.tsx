@@ -4,9 +4,17 @@ import { useFlashcardStore, LocalFlashcard } from '../services/flashcardStore';
 import { Brain, ArrowLeft, CheckCircle, XCircle, RotateCcw, ShieldCheck, Flame, BookOpen } from 'lucide-react';
 import { HapticFeedback } from '../services/nativeAdapters';
 
-export const FlashcardMode: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string }> = ({ onClose, filterTopic }) => {
   const { cards, getCardsToReview, reviewCard, markAsMastered } = useFlashcardStore();
-  const [cardsToReview] = useState<LocalFlashcard[]>(getCardsToReview());
+  
+  // Filter cards to review based on topic if provided
+  const [cardsToReview] = useState<LocalFlashcard[]>(() => {
+    const allToReview = getCardsToReview();
+    if (filterTopic) {
+      return allToReview.filter(c => c.sourceQuizTitle === filterTopic);
+    }
+    return allToReview;
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(cardsToReview.length === 0);
@@ -115,43 +123,66 @@ export const FlashcardMode: React.FC<{ onClose: () => void }> = ({ onClose }) =>
           animate={{ width: `${((currentIndex) / cardsToReview.length) * 100}%` }}
         />
       </div>
-
-      {/* Card Area */}
       <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full relative perspective-[2000px]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentCard.id + (isFlipped ? 'back' : 'front')}
-            initial={{ rotateX: isFlipped ? -90 : 90, opacity: 0 }}
-            animate={{ rotateX: 0, opacity: 1 }}
-            exit={{ rotateX: isFlipped ? 90 : -90, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            onClick={!isFlipped ? handleFlip : undefined}
-            className={`w-full max-w-md aspect-[3/4] rounded-[2.5rem] p-8 flex flex-col justify-center items-center text-center cursor-pointer relative shadow-2xl border ${isFlipped ? 'bg-slate-800 border-purple-500/30' : 'bg-gradient-to-br from-slate-800 to-slate-900 border-white/10'}`}
-          >
-             <div className="absolute top-6 left-6 right-6 flex justify-between items-center text-slate-500">
-               <span className="text-[10px] font-black uppercase tracking-widest">{currentCard.subject}</span>
-               {isFlipped ? <Flame size={16} className="text-orange-500" /> : <BookOpen size={16} />}
-             </div>
+        <motion.div
+            className="relative w-full max-w-md aspect-[3/4] cursor-pointer"
+            style={{ transformStyle: 'preserve-3d' }}
+            onClick={handleFlip}
+            initial={false}
+            animate={{ rotateY: isFlipped ? 180 : 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        >
+            {/* Front Side */}
+            <div
+                className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 rounded-[2.5rem] p-8 flex flex-col justify-center items-center text-center shadow-2xl transition-all"
+                style={{
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    zIndex: isFlipped ? 0 : 1,
+                    opacity: isFlipped ? 0 : 1,
+                    transition: 'opacity 0.3s'
+                }}
+            >
+                <div className="absolute top-6 left-6 right-6 flex justify-between items-center text-slate-500">
+                    <span className="text-[10px] font-black uppercase tracking-widest">{currentCard.subject}</span>
+                    <BookOpen size={16} />
+                </div>
+                <div className="space-y-6 flex flex-col items-center">
+                    <h3 className="text-3xl font-black text-white leading-tight select-none">
+                        {currentCard.front}
+                    </h3>
+                    <p className="text-sm font-bold text-slate-500 mt-8 animate-pulse text-center">
+                        👆 Tap pour retourner la carte
+                    </p>
+                </div>
+            </div>
 
-             {!isFlipped ? (
-               <div className="space-y-6 flex flex-col items-center">
-                 <h3 className="text-3xl font-black text-white leading-tight">
-                   {currentCard.front}
-                 </h3>
-                 <p className="text-sm font-bold text-slate-500 mt-8 animate-pulse text-center">
-                   👆 Tap pour retourner la carte
-                 </p>
-               </div>
-             ) : (
-               <div className="w-full space-y-6 text-left">
-                 <h4 className="text-xs font-black uppercase text-purple-400 tracking-widest mb-2 border-b border-white/10 pb-2">Réponse</h4>
-                 <div className="text-lg text-white font-medium whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[50vh]">
-                   {currentCard.back}
-                 </div>
-               </div>
-             )}
-          </motion.div>
-        </AnimatePresence>
+            {/* Back Side */}
+            <div
+                className="absolute inset-0 bg-slate-800 border border-purple-500/30 rounded-[2.5rem] p-8 flex flex-col text-left shadow-2xl transition-all"
+                style={{
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    transform: 'rotateY(180deg)',
+                    zIndex: isFlipped ? 1 : 0,
+                    opacity: isFlipped ? 1 : 0,
+                    transition: 'opacity 0.3s'
+                }}
+            >
+                <div className="absolute top-6 left-6 right-6 flex justify-between items-center text-purple-400">
+                    <span className="text-[10px] font-black uppercase tracking-widest">Réponse</span>
+                    <Flame size={16} className="text-orange-500" />
+                </div>
+                <div className="w-full h-full pt-8 overflow-y-auto custom-scrollbar flex items-center">
+                    <div className="text-lg text-white font-medium whitespace-pre-wrap leading-relaxed select-none">
+                        {currentCard.back}
+                    </div>
+                </div>
+                <div className="absolute bottom-6 left-0 right-0 text-center text-slate-500 text-[10px] font-black uppercase tracking-widest opacity-50">
+                    Cliquer pour revoir la question
+                </div>
+            </div>
+        </motion.div>
       </div>
 
       {/* Actions / Evaluation */}
@@ -164,22 +195,18 @@ export const FlashcardMode: React.FC<{ onClose: () => void }> = ({ onClose }) =>
              Révéler
           </button>
         ) : (
-          <div className="w-full flex justify-between flex-wrap gap-2 md:gap-4 px-2">
-            <button onClick={() => handleScore(1)} className="flex-1 p-3 bg-danger/20 border border-danger/30 text-danger rounded-xl hover:bg-danger/30 transition-all">
-              <span className="block text-xs font-black uppercase whitespace-nowrap">À revoir</span>
-              <span className="block text-[10px] opacity-70 mt-1">1 Min</span>
+          <div className="flex gap-4 w-full px-2">
+            <button
+                onClick={(e) => { e.stopPropagation(); handleScore(1); }}
+                className="flex-1 py-4 md:py-6 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-500 rounded-xl md:rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs transition-all flex items-center justify-center gap-3"
+            >
+                <RotateCcw size={20} /> À REPRENDRE
             </button>
-            <button onClick={() => handleScore(3)} className="flex-1 p-3 bg-orange-500/20 border border-orange-500/30 text-orange-400 rounded-xl hover:bg-orange-500/30 transition-all">
-              <span className="block text-xs font-black uppercase whitespace-nowrap">Difficile</span>
-              <span className="block text-[10px] opacity-70 mt-1">2 Jours</span>
-            </button>
-            <button onClick={() => handleScore(5)} className="flex-1 p-3 bg-success/20 border border-success/30 text-success rounded-xl hover:bg-success/30 transition-all">
-              <span className="block text-xs font-black uppercase whitespace-nowrap">Facile</span>
-              <span className="block text-[10px] opacity-70 mt-1">4 Jours</span>
-            </button>
-            <button onClick={handleMastery} className="flex-1 p-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all shadow-glow-purple flex flex-col items-center justify-center gap-1">
-              <ShieldCheck size={16} />
-              <span className="block text-[10px] font-black uppercase whitespace-nowrap">Maîtrisé</span>
+            <button
+                onClick={(e) => { e.stopPropagation(); handleScore(4); }}
+                className="flex-1 py-4 md:py-6 bg-success text-white rounded-xl md:rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs transition-all flex items-center justify-center gap-3 shadow-glow"
+            >
+                <ChevronRight size={20} /> AVANCER
             </button>
           </div>
         )}

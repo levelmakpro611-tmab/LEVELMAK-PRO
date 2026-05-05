@@ -598,31 +598,87 @@ export const translations: Record<string, any> = {
                 "example": "Exemple",
                 "empty": "Aucun mot disponible pour le moment."
             },
-            "activity": {
-                "title": "Activité Récente",
-                "viewAll": "Voir Tout",
-                "reduce": "Réduire",
-                "empty": "Pas d'activité.",
-                "noActivity": "Aucune activité récente."
+        "creativeWriting": {
+            "tag": "Labo d'Écriture Elite",
+            "title": "Assistant Atelier Écriture",
+            "newDraft": "Nouveau Brouillon",
+            "tabs": {
+                "write": "Rédaction",
+                "myStories": "Mes Textes",
+                "discover": "Inspirations"
             },
-            "missions": {
-                "title": "Objectifs",
-                "empty": "Tous les objectifs sont complétés ! 🎉",
-                "allCompleted": "Tous les objectifs sont complétés ! 🎉"
+            "form": {
+                "titlePlaceholder": "Titre de ton chef-d'œuvre...",
+                "contentPlaceholder": "Laisse libre cours à ton imagination ici...",
+                "documentSettings": "Configuration du Document",
+                "public": "Partager avec la communauté",
+                "saveBtn": "Sauvegarder",
+                "saving": "Synchronisation...",
+                "autoSaved": "Sauvegardé automatiquement"
             },
-            "ranking": {
-                "title": "Classement",
-                "button": "Classement Global"
+            "categories": {
+                "story": "Histoire",
+                "poem": "Poésie",
+                "column": "Chronique",
+                "essay": "Essai",
+                "other": "Autre"
             },
-            "footer": {
-                "property": "PROPRIÉTÉ EXCLUSIVE DE"
+            "coach": {
+                "title": "Assistant Pédagogique",
+                "inspire": "M'inspirer",
+                "review": "Critique Pro",
+                "continue": "Suite IA",
+                "errorQuota": "Quota IA atteint pour aujourd'hui.",
+                "errorGeneral": "L'IA est momentanément indisponible."
             },
-            "srs": {
-                "title": "À Réviser",
-                "items": "éléments dus",
-                "cardsDue": "cartes à revoir"
+            "writingLab": {
+                "title": "Laboratoire de Correction",
+                "empty": "Écris au moins 50 mots pour lancer l'analyse pédagogique.",
+                "analyzeBtn": "Lancer l'Analyse Elite",
+                "analyzing": "Analyse en cours...",
+                "score": "Score Global",
+                "corrections": "Fautes & Accords",
+                "synonyms": "Vocabulaire",
+                "apply": "Appliquer",
+                "getSynonyms": "Plus de synonymes",
+                "criteria": {
+                    "style": "Style",
+                    "grammar": "Grammaire",
+                    "vocabulary": "Lexique",
+                    "structure": "Structure"
+                }
             },
-            "activityTypes": {
+            "list": {
+                "empty": "Ta bibliothèque est vide.",
+                "startBtn": "Écrire mon premier texte",
+                "deleteConfirm": "Supprimer définitivement ce texte ?"
+            }
+        },
+        "activity": {
+            "title": "Activité Récente",
+            "viewAll": "Voir Tout",
+            "reduce": "Réduire",
+            "empty": "Pas d'activité.",
+            "noActivity": "Aucune activité récente."
+        },
+        "missions": {
+            "title": "Objectifs",
+            "empty": "Tous les objectifs sont complétés ! 🎉",
+            "allCompleted": "Tous les objectifs sont complétés ! 🎉"
+        },
+        "ranking": {
+            "title": "Classement",
+            "button": "Classement Global"
+        },
+        "footer": {
+            "property": "PROPRIÉTÉ EXCLUSIVE DE"
+        },
+        "srs": {
+            "title": "À Réviser",
+            "items": "éléments dus",
+            "cardsDue": "cartes à revoir"
+        },
+        "activityTypes": {
                 "quiz": "Quiz complété",
                 "badge": "Nouveau badge !",
                 "post": "Partage réussi",

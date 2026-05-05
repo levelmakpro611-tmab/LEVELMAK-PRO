@@ -579,6 +579,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const timer = setTimeout(async () => {
       try {
+        const lastSync = localStorage.getItem('levelmak_last_sync');
+        const now = Date.now();
+        const tenHours = 10 * 60 * 60 * 1000;
+
+        if (lastSync && now - parseInt(lastSync) < tenHours) {
+            // Skip expensive notification/logging to keep UI smooth
+        } else {
+            localStorage.setItem('levelmak_last_sync', now.toString());
+            console.log("Progress saved to Supabase ☁️");
+        }
+
         const syncData = {
           ...user,
           last_sync: new Date().toISOString()
@@ -605,7 +616,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
 
         localStorage.setItem('levelmak_user', JSON.stringify(user));
-        console.log("Progress saved to Supabase ☁️");
       } catch (error) {
         console.error("Supabase sync failed:", error);
       }
@@ -620,7 +630,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const heartbeatInterval = setInterval(async () => {
       try {
-        console.log('💓 Heartbeat: Updating last_active...');
         await supabase.from('profiles').update({
           last_active: new Date().toISOString()
         }).eq('id', user.id);
@@ -1013,7 +1022,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       text: t('levelBot.firstQuestion'),
       timestamp: new Date().toISOString()
     };
-
+    
     const newSession: CoachSession = {
       id: newId,
       title: t('levelBot.newChat'),
@@ -2008,9 +2017,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Sync XP and stats to Supabase
     await syncUserWithSupabase(user);
 
-    // Additional sync logic for local flashcard/quiz updates could go here
-    addNotification('info', 'Synchronisation terminée', 'Vos progrès ont été synchronisés avec le cloud.');
-    HapticFeedback.selection();
+    // Throttle notifications to once every 10 hours (36,000,000 ms)
+    const LAST_SYNC_NOTIF_KEY = 'last_sync_notif_time';
+    const lastNotifTime = localStorage.getItem(LAST_SYNC_NOTIF_KEY);
+    const now = Date.now();
+    const TEN_HOURS = 10 * 60 * 60 * 1000;
+
+    if (!lastNotifTime || now - parseInt(lastNotifTime) > TEN_HOURS) {
+      addNotification('info', 'Synchronisation terminée', 'Vos progrès ont été synchronisés avec le cloud.');
+      localStorage.setItem(LAST_SYNC_NOTIF_KEY, now.toString());
+      HapticFeedback.selection();
+    }
   }, [isOnline, user, syncUserWithSupabase, addNotification]);
 
   const downloadCourse = useCallback(async (courseId: string) => {

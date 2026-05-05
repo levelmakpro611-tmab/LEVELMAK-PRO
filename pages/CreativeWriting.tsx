@@ -23,9 +23,11 @@ import {
     Activity,
     CheckCircle2,
     RefreshCw,
-    Languages
+    Languages,
+    BadgeCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HapticFeedback } from '../services/nativeAdapters';
 import { useStore } from '../hooks/useStore';
 import { openrouterService } from '../services/openrouter';
 import { Story } from '../types';
@@ -65,12 +67,50 @@ const CreativeWriting: React.FC = () => {
 
     // View Modal state
     const [viewingStory, setViewingStory] = useState<Story | null>(null);
+    const [coverImage, setCoverImage] = useState<string | null>(null);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-    // Discovery state (mocking some public stories)
-    const discoverStories = [
-        { id: 'ext1', title: "L'ombre du Baobab", authorName: 'Ibrahim67', category: 'Chronique', likes: 124, content: "Sous le soleil de midi, l'ombre du vieux baobab était le seul refuge..." },
-        { id: 'ext2', title: "Les ailes du désert", authorName: 'Aminata_Dev', category: 'Histoire', likes: 89, content: "Le vent de sable hurlait entre les dunes, mais Ali ne s'arrêtait pas..." },
+    // Discovery state - Filter real public stories from the store + Verified Community Stories
+    const VERIFIED_STORIES: Story[] = [
+        {
+            id: 'v_story_1',
+            title: 'L\'Odyssée du Petit Robot',
+            content: 'Dans un futur lointain, un petit robot nommé Sparky découvre une fleur au milieu d\'une cité de métal...',
+            authorId: 'system',
+            authorName: 'Élite Écrivain',
+            category: 'story',
+            isPublic: true,
+            likes: 1250,
+            createdAt: new Date().toISOString(),
+            isVerified: true
+        } as any,
+        {
+            id: 'v_story_2',
+            title: 'Le Secret de la Forêt Bleue',
+            content: 'Les arbres murmuraient des secrets anciens que seul le vent pouvait comprendre...',
+            authorId: 'system',
+            authorName: 'Plume d\'Or',
+            category: 'poem',
+            isPublic: true,
+            likes: 840,
+            createdAt: new Date().toISOString(),
+            isVerified: true
+        } as any,
+        {
+            id: 'v_story_3',
+            title: 'L\'Intelligence Artificielle et l\'Éducation',
+            content: 'Une réflexion profonde sur l\'impact des nouvelles technologies dans l\'apprentissage moderne...',
+            authorId: 'system',
+            authorName: 'Prof. Sagesse',
+            category: 'essay',
+            isPublic: true,
+            likes: 2100,
+            createdAt: new Date().toISOString(),
+            isVerified: true
+        } as any
     ];
+
+    const discoverStories = [...VERIFIED_STORIES, ...stories.filter(s => s.isPublic && !VERIFIED_STORIES.find(vs => vs.id === s.id))];
 
     // Auto-save logic
     useEffect(() => {
@@ -95,14 +135,19 @@ const CreativeWriting: React.FC = () => {
             category,
             isPublic,
             likes: 0,
-            createdAt: lastSaved?.toISOString() || new Date().toISOString()
+            createdAt: lastSaved?.toISOString() || new Date().toISOString(),
+            coverImage: coverImage || undefined
         };
 
         if (!editingId) setEditingId(story.id);
 
         saveStory(story);
         setLastSaved(new Date());
-        if (!isAuto) setTimeout(() => setIsSaving(false), 800);
+        if (!isAuto) {
+            HapticFeedback.success();
+            setTimeout(() => setIsSaving(true), 100); // Trigger saving animation
+            setTimeout(() => setIsSaving(false), 800);
+        }
     };
 
     const handleEdit = (story: Story) => {
@@ -137,16 +182,18 @@ const CreativeWriting: React.FC = () => {
         setActiveTab('write');
     };
 
-    const handleAiAction = async (mode: 'write' | 'review') => {
-        if (!content && !title) return;
+    const handleAiAction = async (mode: 'write' | 'review' | 'help') => {
+        if (mode !== 'help' && !content && !title) return;
         setIsAiLoading(true);
         setAiError(null);
         try {
             let prompt = "";
             if (mode === 'write') {
                 prompt = `Agis comme un écrivain expérimenté. Voici un début de texte ("${title}"): "${content.substring(content.length - 1500)}". Propose-moi une suite créative d'environ 100-150 mots qui s'intègre parfaitement à ce style. Sois inspirant. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
-            } else {
-                prompt = `Agis comme un critique littéraire bienveillant. Analyse ce texte ("${title}"): "${content}". Donne ton avis honnête : ce que tu aimes, ce qui pourrait être amélioré (style, rythme, vocabulaire). Sois constructif et encourageant. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
+            } else if (mode === 'review') {
+                prompt = `Agis comme un critique littéraire bienveillant d'élite. Analyse ce texte ("${title}"): "${content}". Donne ton avis honnête : ce que tu aimes, ce qui pourrait être amélioré (style, rythme, vocabulaire). Sois constructif, professionnel et encourageant. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
+            } else if (mode === 'help') {
+                prompt = `Agis comme un coach d'écriture créative. L'élève manque d'inspiration. Propose 3 sujets ou thèmes originaux et percutants pour un nouveau texte (histoire, poème ou essai). Sois très créatif et varié. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
             }
 
             const response = await openrouterService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
@@ -155,7 +202,7 @@ const CreativeWriting: React.FC = () => {
                 { id: `ai_${Date.now()}`, text: response, type: mode === 'write' ? 'suggestion' : 'review' },
                 ...prev
             ]);
-            addXp(mode === 'write' ? 5 : 10);
+            addXp(mode === 'help' ? 5 : 10);
         } catch (e: any) {
             console.error("AI Action failed", e);
             if (e.message?.includes('429')) {
@@ -217,11 +264,22 @@ const CreativeWriting: React.FC = () => {
         setAiError(null);
         try {
             const analysis = await openrouterService.analyzeWriting(content, title, language);
-            setWritingAnalysis(analysis);
+            
+            // Safety: Ensure all required fields exist to prevent crashes
+            const safeAnalysis = {
+                score: analysis.score || 0,
+                criteria: analysis.criteria || { style: 0, grammar: 0, vocabulary: 0, structure: 0 },
+                feedback: analysis.feedback || "Analyse terminée.",
+                corrections: Array.isArray(analysis.corrections) ? analysis.corrections : [],
+                synonyms: Array.isArray(analysis.synonyms) ? analysis.synonyms : []
+            };
+
+            setWritingAnalysis(safeAnalysis);
             addXp(10);
         } catch (e: any) {
             console.error("Analysis failed", e);
             setAiError(t('creativeWriting.coach.errorGeneral'));
+            // Reset loading state and show notification if possible
         } finally {
             setIsLabLoading(false);
         }
@@ -249,16 +307,18 @@ const CreativeWriting: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b border-white/5 pb-8 md:pb-10">
                 <div className="space-y-3 md:space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-secondary/10 rounded-full border border-secondary/20 text-secondary-light font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
-                        <PenTool size={10} md:size={14} className="animate-pulse" /> {t('creativeWriting.tag')}
+                        <PenTool className="w-3 h-3 md:w-4 md:h-4 animate-pulse" /> {t('creativeWriting.tag')}
                     </div>
                     <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
-                        <h1 className="text-2xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter transition-colors">{t('creativeWriting.title').split(' ')[0]} {t('creativeWriting.title').split(' ').slice(1, -1).join(' ')} <span className="text-gradient-primary">{t('creativeWriting.title').split(' ').pop()}</span></h1>
+                        <h1 className="text-2xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter transition-colors">
+                            {t('creativeWriting.title').split(' ')[0]} {t('creativeWriting.title').split(' ').slice(1, -1).join(' ')} <span className="text-gradient-primary">{t('creativeWriting.title').split(' ').pop()}</span>
+                        </h1>
                         {editingId && (
                             <button
                                 onClick={handleNew}
                                 className="w-fit px-4 md:px-6 py-1.5 md:py-2 bg-black/5 dark:bg-white/5 text-slate-900 dark:text-white rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-black/5 dark:border-white/10 transition-all flex items-center gap-1.5 md:gap-2"
                             >
-                                <PenTool size={12} md:size={14} /> {t('creativeWriting.newDraft')}
+                                <PenTool className="w-3 h-3 md:w-4 md:h-4" /> {t('creativeWriting.newDraft')}
                             </button>
                         )}
                     </div>
@@ -272,7 +332,7 @@ const CreativeWriting: React.FC = () => {
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 md:flex-none px-3 md:px-8 py-2.5 md:py-3.5 rounded-lg md:rounded-[1.5rem] font-black uppercase tracking-widest text-[8px] md:text-[10px] transition-all duration-500 flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${activeTab === tab ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-glow' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
                         >
-                            {tab === 'write' ? <PenTool size={10} md:size={12} /> : tab === 'my-stories' ? <Layout size={10} md:size={12} /> : <Globe size={10} md:size={12} />}
+                            {tab === 'write' ? <PenTool className="w-3 h-3 md:w-4 md:h-4" /> : tab === 'my-stories' ? <Layout className="w-3 h-3 md:w-4 md:h-4" /> : <Globe className="w-3 h-3 md:w-4 md:h-4" />}
                             <span>{tab === 'write' ? t('creativeWriting.tabs.write') : tab === 'my-stories' ? t('creativeWriting.tabs.myStories') : t('creativeWriting.tabs.discover')}</span>
                         </button>
                     ))}
@@ -347,31 +407,31 @@ const CreativeWriting: React.FC = () => {
                                             <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{t('creativeWriting.coach.subtitle')}</p>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col gap-2">
-                                        <div className="flex gap-2">
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex gap-3">
                                             <button
                                                 onClick={() => handleAiAction('review')}
                                                 disabled={isAiLoading || (!content && !title)}
-                                                className="flex-1 px-3 py-2 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                                className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${isAiLoading ? 'opacity-50 grayscale' : 'bg-white/5 border-white/10 hover:bg-white/10 text-white shadow-lg shadow-black/20 active:scale-95'}`}
                                             >
-                                                {t('creativeWriting.coach.reviewBtn')}
+                                                AVIS
                                             </button>
                                             <button
-                                                onClick={() => handleAiAction('write')}
-                                                disabled={isAiLoading || (!content && !title)}
-                                                className="flex-1 px-3 py-2 bg-gradient-to-r from-secondary to-accent text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-glow"
+                                                onClick={() => handleAiAction('help')}
+                                                disabled={isAiLoading}
+                                                className={`flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-glow shadow-purple-500/20`}
                                             >
                                                 {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-                                                {t('creativeWriting.coach.helpBtn')}
+                                                M'AIDER
                                             </button>
                                         </div>
                                         {consumables['potion_inspiration'] > 0 && (
                                             <button
                                                 onClick={handleInspirationPotion}
                                                 disabled={isAiLoading}
-                                                className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all group"
+                                                className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all group shadow-inner"
                                             >
-                                                <div className="w-6 h-6 rounded-lg overflow-hidden flex items-center justify-center bg-amber-500/10 shadow-glow shadow-amber-500/20">
+                                                <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center bg-amber-500/10 shadow-glow shadow-amber-500/20">
                                                     <img src="/assets/fiole magique/WhatsApp Image 2026-02-10 at 02.26.07.jpeg" alt="Inspiration" className="w-full h-full object-contain group-hover:rotate-12 transition-transform" />
                                                 </div>
                                                 {t('creativeWriting.coach.potion')} ({consumables['potion_inspiration']})
@@ -451,19 +511,28 @@ const CreativeWriting: React.FC = () => {
                                                         </div>
                                                     ) : (
                                                         writingAnalysis.corrections.map((corr, i) => (
-                                                            <div key={i} className="p-5 bg-danger/5 border border-danger/10 rounded-2xl space-y-3 group hover:border-danger/30 transition-all">
-                                                                <div className="flex items-start justify-between gap-2">
-                                                                    <p className="text-xs text-slate-400 line-through decoration-danger/50 italic">"{corr.original}"</p>
+                                                            <div key={i} className="p-5 bg-danger/5 border border-danger/10 rounded-2xl space-y-3 group hover:border-danger/30 transition-all relative overflow-hidden">
+                                                                <div className="absolute top-0 right-0 w-16 h-16 bg-danger/5 rounded-bl-full -mr-8 -mt-8 group-hover:bg-danger/10 transition-colors"></div>
+                                                                <div className="flex items-start justify-between gap-2 relative z-10">
+                                                                    <div className="space-y-1">
+                                                                        <span className="text-[8px] font-black text-danger uppercase tracking-widest opacity-50">Erreur détectée</span>
+                                                                        <p className="text-xs text-slate-400 line-through decoration-danger/50 italic">"{corr.original}"</p>
+                                                                    </div>
                                                                     <button
                                                                         onClick={() => applyCorrection(corr.original, corr.correction)}
-                                                                        className="p-1.5 bg-primary text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                                                                        className="p-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 active:scale-95 transition-all"
                                                                         title={t('creativeWriting.writingLab.apply')}
                                                                     >
-                                                                        <RefreshCw size={12} />
+                                                                        <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
                                                                     </button>
                                                                 </div>
-                                                                <p className="text-sm text-slate-900 dark:text-white font-bold transition-colors">→ {corr.correction}</p>
-                                                                <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{corr.reason}</p>
+                                                                <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                                                    <p className="text-sm text-slate-900 dark:text-white font-bold transition-colors">→ {corr.correction}</p>
+                                                                </div>
+                                                                <div className="flex items-start gap-3 bg-blue-500/5 p-3 rounded-xl border border-blue-500/10">
+                                                                    <Sparkles size={14} className="text-blue-400 shrink-0 mt-0.5" />
+                                                                    <p className="text-[10px] text-slate-600 dark:text-blue-200/70 font-medium leading-relaxed italic">"{corr.reason}"</p>
+                                                                </div>
                                                             </div>
                                                         ))
                                                     )}
@@ -506,6 +575,45 @@ const CreativeWriting: React.FC = () => {
                             {/* Document Config Area */}
                             <div className="glass rounded-[2rem] md:rounded-[3rem] border border-white/5 p-6 md:p-8 space-y-6 md:space-y-8">
                                 <div className="space-y-6">
+                                    {/* Cover Image Selector */}
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-1 truncate block">COUVERTURE DU LIVRE</label>
+                                        <div 
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-full aspect-[3/4] rounded-3xl bg-white/5 border-2 border-dashed border-white/10 hover:border-secondary/50 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center group relative"
+                                        >
+                                            {coverImage ? (
+                                                <>
+                                                    <img src={coverImage} alt="Cover" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <PenTool size={32} className="text-white" />
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-slate-500 group-hover:text-secondary group-hover:scale-110 transition-all mb-4">
+                                                        <Globe size={32} />
+                                                    </div>
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center px-6">Ajouter une image de couverture</p>
+                                                </>
+                                            )}
+                                        </div>
+                                        <input 
+                                            type="file" 
+                                            ref={fileInputRef} 
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => setCoverImage(reader.result as string);
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                            accept="image/*" 
+                                            className="hidden" 
+                                        />
+                                    </div>
+
                                     <div className="space-y-4">
                                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-1 truncate block">{t('creativeWriting.form.documentSettings')}</label>
                                         <div className="grid grid-cols-2 gap-2">
@@ -582,35 +690,47 @@ const CreativeWriting: React.FC = () => {
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-                                        className="glass p-8 rounded-[2.5rem] border border-white/5 hover:border-secondary/30 transition-all group relative overflow-hidden flex flex-col"
+                                        className="glass p-4 rounded-[2.5rem] border border-white/5 hover:border-secondary/30 transition-all group relative overflow-hidden flex flex-col h-[500px]"
                                     >
-                                        <div className="flex items-center justify-between mb-6">
-                                            <span className="px-3 py-1 bg-secondary/10 text-secondary-light text-[8px] font-black uppercase tracking-widest rounded-full">{t(`creativeWriting.categories.${story.category as any}`)}</span>
-                                            <div className="flex gap-2">
+                                        {/* Cover Image Background */}
+                                        <div className="absolute inset-0 z-0">
+                                            {story.coverImage ? (
+                                                <img src={story.coverImage} className="w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-700" />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-950" />
+                                            )}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent" />
+                                        </div>
+
+                                        <div className="relative z-10 flex flex-col h-full">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <span className="px-3 py-1 bg-secondary/20 backdrop-blur-xl border border-secondary/20 text-secondary-light text-[8px] font-black uppercase tracking-widest rounded-full">{t(`creativeWriting.categories.${story.category as any}`)}</span>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setViewingStory(story)}
+                                                        className="p-2 bg-white/10 backdrop-blur-xl rounded-lg text-slate-300 hover:text-white transition-all hover:scale-110"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDelete(story.id, e)}
+                                                        className="p-2 bg-danger/10 backdrop-blur-xl rounded-lg text-danger transition-all hover:scale-110 hover:bg-danger hover:text-white"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <h4 className="text-xl font-display font-black text-white leading-tight mb-3 group-hover:text-secondary-light transition-colors line-clamp-2">{story.title}</h4>
+                                            <p className="text-xs text-slate-400 line-clamp-4 mb-6 flex-1 transition-colors leading-relaxed font-medium">{story.content}</p>
+                                            <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{new Date(story.createdAt).toLocaleDateString()}</span>
                                                 <button
-                                                    onClick={() => setViewingStory(story)}
-                                                    className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-white transition-all hover:scale-110"
+                                                    onClick={() => handleEdit(story)}
+                                                    className="text-primary-light font-black uppercase tracking-widest text-[9px] flex items-center gap-1 group/btn hover:text-white transition-all"
                                                 >
-                                                    <Eye size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => handleDelete(story.id, e)}
-                                                    className="p-2 bg-danger/10 rounded-lg text-danger transition-all hover:scale-110 hover:bg-danger hover:text-white"
-                                                >
-                                                    <Trash2 size={14} />
+                                                    {t('creativeWriting.list.modified')} <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                                                 </button>
                                             </div>
-                                        </div>
-                                        <h4 className="text-2xl font-display font-bold text-slate-900 dark:text-white leading-tight mb-4 group-hover:text-secondary-light transition-colors line-clamp-2">{story.title}</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mb-8 flex-1 transition-colors">{story.content}</p>
-                                        <div className="flex items-center justify-between pt-6 border-t border-black/5 dark:border-white/5">
-                                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{new Date(story.createdAt).toLocaleDateString()}</span>
-                                            <button
-                                                onClick={() => handleEdit(story)}
-                                                className="text-primary font-black uppercase tracking-widest text-[10px] flex items-center gap-1 group/btn hover:text-white transition-all"
-                                            >
-                                                {t('creativeWriting.list.modified')} <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                                            </button>
                                         </div>
                                     </motion.div>
                                 ))
@@ -633,8 +753,13 @@ const CreativeWriting: React.FC = () => {
                                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
                                     </div>
                                     <div>
-                                        <p className="text-slate-900 dark:text-white font-bold text-sm tracking-tight transition-colors">{story.authorName}</p>
-                                        <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{story.category}</p>
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="text-slate-900 dark:text-white font-bold text-sm tracking-tight transition-colors">{story.authorName}</p>
+                                            {(story as any).isVerified && (
+                                                <BadgeCheck size={14} className="text-secondary fill-secondary/20" />
+                                            )}
+                                        </div>
+                                        <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t(`creativeWriting.categories.${story.category as any}`)}</p>
                                     </div>
                                 </div>
                                 <h3 className="text-3xl font-display font-black text-slate-900 dark:text-white leading-tight group-hover:text-primary-light transition-colors">{story.title}</h3>

@@ -83,20 +83,50 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        fetch(dataUrl)
-          .then(res => res.blob())
-          .then(blob => {
-            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-            const id = Math.random().toString(36).substr(2, 9);
-            setFiles(prev => [...prev, { id, file, preview: dataUrl, type: 'image' }]);
-          });
+        const rawDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        compressImage(rawDataUrl).then(compressedDataUrl => {
+          fetch(compressedDataUrl)
+            .then(res => res.blob())
+            .then(blob => {
+              const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+              const id = Math.random().toString(36).substr(2, 9);
+              setFiles(prev => [...prev, { id, file, preview: compressedDataUrl, type: 'image' }]);
+            });
+        });
       }
     }
   };
 
   const getFileType = (file: File): 'image' => {
     return 'image';
+  };
+
+  const compressImage = async (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.width > 0 && canvas.height > 0 ? canvas.getContext('2d') : null;
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,11 +137,12 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
 
       let preview = '';
       if (type === 'image') {
-        preview = await new Promise<string>((resolve) => {
+        const rawBase64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string || '');
           reader.readAsDataURL(file as File);
         });
+        preview = await compressImage(rawBase64);
       }
 
       setFiles(prev => [...prev, { id, file: file as File, preview, type }]);
@@ -146,11 +177,7 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
         setStatus(t('quiz.generator.status.prep'));
         for (const f of files) {
           setStatus(`${t('quiz.generator.status.process')} ${f.file.name}...`);
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string || '');
-            reader.readAsDataURL(f.file as File);
-          });
+          const base64 = f.preview; // Use already compressed preview
 
           // OCR-first approach for Quiz Generator
           if (f.type === 'image') {
@@ -159,10 +186,17 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
               const langMap: any = { 'fr': 'fra+eng', 'en': 'eng', 'ar': 'ara' };
               const ocrLang = langMap[settings.language] || 'fra+eng';
               const text = await ocrService.extractText(base64, ocrLang);
-              sources.push({ type: 'text', data: `[TEXTE EXTRAIT DE L'IMAGE ${f.file.name}]:\n${text}` });
+              
+              // Si le texte extrait est trop court, on envoie aussi l'image pour que l'IA Vision puisse aider
+              if (text.trim().length < 50) {
+                sources.push({ type: 'image', data: base64 });
+                sources.push({ type: 'text', data: `[Texte partiel extrait par OCR]:\n${text}` });
+              } else {
+                sources.push({ type: 'text', data: `[TEXTE EXTRAIT DE L'IMAGE ${f.file.name}]:\n${text}` });
+              }
             } catch (e) {
               console.warn("Fallback vision direct suite à l'échec de l'OCR:", e);
-              sources.push({ type: f.type, data: base64 });
+              sources.push({ type: 'image', data: base64 });
             }
           } else {
             sources.push({ type: f.type, data: base64 });

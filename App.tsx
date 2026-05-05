@@ -32,6 +32,7 @@ import TutorRegistration from './pages/TutorRegistration';
 import TutorHub from './pages/TutorHub';
 import TeacherDashboard from './pages/TeacherDashboard';
 
+
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
 import { Loader2 } from 'lucide-react';
 import { openrouterService } from './services/openrouter';
@@ -310,6 +311,7 @@ const AppContent: React.FC = () => {
         )}
       </AnimatePresence>
     </AppShell>
+
   );
 };
 

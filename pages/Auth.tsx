@@ -32,11 +32,15 @@ const Auth: React.FC = () => {
   const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [activateBiometric, setActivateBiometric] = useState(false);
+  const [canShowBiometricToggle, setCanShowBiometricToggle] = useState(false);
 
   React.useEffect(() => {
     const checkBiometrics = async () => {
       const isEnabled = await biometricService.isEnabled();
+      const isHardwareAvailable = await biometricService.isAvailable();
       setBiometricAvailable(isEnabled);
+      setCanShowBiometricToggle(isHardwareAvailable);
     };
     checkBiometrics();
   }, []);
@@ -129,6 +133,12 @@ const Auth: React.FC = () => {
 
         const identifier = email.trim();
         await loginWithEmail(identifier, password);
+        
+        // Si l'utilisateur a coché la biométrie, on l'active maintenant
+        if (activateBiometric) {
+          await biometricService.enable(identifier, password);
+        }
+        
         console.log('Login success');
       }
     } catch (err: any) {
@@ -644,6 +654,26 @@ const Auth: React.FC = () => {
                         </button>
                       </div>
                     </div>
+
+                    {canShowBiometricToggle && (
+                      <div 
+                        className="flex items-center gap-3 p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl cursor-pointer group transition-all hover:bg-purple-500/10"
+                        onClick={() => setActivateBiometric(!activateBiometric)}
+                      >
+                        <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${activateBiometric ? 'bg-purple-600 border-purple-500 shadow-glow-purple' : 'border-white/20 group-hover:border-purple-500/50'}`}>
+                          {activateBiometric && <Sparkles size={10} className="text-white" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest">
+                            {t('auth.activateBiometric') || 'Activer la connexion biométrique'}
+                          </p>
+                          <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight">
+                            {t('auth.biometricDesc') || 'Accès rapide par empreinte ou visage'}
+                          </p>
+                        </div>
+                        <Fingerprint size={16} className={activateBiometric ? 'text-purple-400 animate-pulse' : 'text-slate-600'} />
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

@@ -19,15 +19,7 @@ const SecurityPanel: React.FC = () => {
         try {
             if (activeTab === 'reports') {
                 const data = await getReports();
-                if (data.length === 0) {
-                    // Mock data for demo
-                    setReports([
-                        { id: '1', reporterId: 'u1', reporterName: 'Alice', targetId: 'c1', targetType: 'comment', reason: 'Spam / Pub', status: 'pending', timestamp: new Date().toISOString() },
-                        { id: '2', reporterId: 'u2', reporterName: 'Bob', targetId: 'u3', targetType: 'user', reason: 'Harcèlement', status: 'pending', timestamp: new Date(Date.now() - 86400000).toISOString() },
-                    ]);
-                } else {
-                    setReports(data);
-                }
+                setReports(data || []);
             } else {
                 const data = await getBlockedUsers();
                 setBlockedUsers(data);

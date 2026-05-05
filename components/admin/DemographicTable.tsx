@@ -117,6 +117,7 @@ const DemographicTable: React.FC<DemographicTableProps> = ({ stats }) => {
                                 <th className="p-4">Tranche d'Âge</th>
                                 <th className="p-4 text-center text-blue-400">Hommes</th>
                                 <th className="p-4 text-center text-pink-400">Femmes</th>
+                                <th className="p-4 text-center text-slate-400">Inconnu</th>
                                 <th className="p-4 text-right text-white">Total</th>
                             </tr>
                         </thead>
@@ -130,6 +131,7 @@ const DemographicTable: React.FC<DemographicTableProps> = ({ stats }) => {
                                     </td>
                                     <td className="p-4 text-center font-bold text-slate-300">{row.HOMME}</td>
                                     <td className="p-4 text-center font-bold text-slate-300">{row.FEMME}</td>
+                                    <td className="p-4 text-center font-bold text-slate-400">{(row as any).AUTRE || 0}</td>
                                     <td className="p-4 text-right font-black text-white">{row.total}</td>
                                 </tr>
                             ))}
@@ -139,6 +141,7 @@ const DemographicTable: React.FC<DemographicTableProps> = ({ stats }) => {
                                 <td className="p-4 font-black text-white">TOTAL</td>
                                 <td className="p-4 text-center font-black text-blue-400">{stats.byGender.HOMME}</td>
                                 <td className="p-4 text-center font-black text-pink-400">{stats.byGender.FEMME}</td>
+                                <td className="p-4 text-center font-black text-slate-400">{(stats.byGender as any).AUTRE || 0}</td>
                                 <td className="p-4 text-right font-black text-emerald-400 text-lg">{stats.byGender.TOTAL}</td>
                             </tr>
                         </tfoot>

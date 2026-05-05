@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export type AdminNotifType = 'new_comment' | 'new_teacher' | 'new_user' | 'new_rating' | 'system';
 
@@ -61,7 +62,20 @@ class AdminNotificationService {
     private notifications: AdminNotification[] = loadFromStorage();
     private realtimeSubscriptions: any[] = [];
 
-    private constructor() {}
+    private constructor() {
+        this.initNativeNotifications();
+    }
+
+    private async initNativeNotifications() {
+        try {
+            const status = await LocalNotifications.checkPermissions();
+            if (status.display !== 'granted') {
+                await LocalNotifications.requestPermissions();
+            }
+        } catch (err) {
+            console.warn('LocalNotifications permissions error:', err);
+        }
+    }
 
     public static getInstance(): AdminNotificationService {
         if (!AdminNotificationService.instance) {
@@ -117,7 +131,29 @@ class AdminNotificationService {
         if (recentDuplicate) return;
 
         this.notifications = [notif, ...this.notifications].slice(0, 50);
+        this.triggerNativeNotification(notif);
         this.notify();
+    }
+
+    private async triggerNativeNotification(notif: AdminNotification) {
+        try {
+            await LocalNotifications.schedule({
+                notifications: [
+                    {
+                        title: notif.title,
+                        body: notif.message,
+                        id: Math.floor(Math.random() * 1000000),
+                        schedule: { at: new Date(Date.now() + 500) }, // slight delay for feel
+                        sound: 'default',
+                        attachments: [],
+                        actionTypeId: '',
+                        extra: { tab: notif.actionTab }
+                    }
+                ]
+            });
+        } catch (err) {
+            console.warn('Failed to trigger native notification:', err);
+        }
     }
 
     // ── Realtime Supabase Listeners ──────────────────────────────────────────
@@ -220,13 +256,14 @@ class AdminNotificationService {
 
     public async loadInitialNotifications() {
         try {
-            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            // Load last 30 days of notifications to ensure the panel is populated
+            const historyRange = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
             const [commentsRes, teachersRes, usersRes, ratingsRes] = await Promise.allSettled([
-                supabase.from('user_comments').select('id, user_name, content, timestamp').gte('timestamp', oneDayAgo).order('timestamp', { ascending: false }).limit(10),
+                supabase.from('user_comments').select('id, user_name, content, timestamp').gte('timestamp', historyRange).order('timestamp', { ascending: false }).limit(15),
                 supabase.from('teachers').select('id, name, type, created_at').eq('status', 'pending').order('created_at', { ascending: false }).limit(10),
-                supabase.from('profiles').select('id, name, created_at').gte('created_at', oneDayAgo).order('created_at', { ascending: false }).limit(10),
-                supabase.from('user_ratings').select('id, user_name, overall, timestamp').gte('timestamp', oneDayAgo).order('timestamp', { ascending: false }).limit(5),
+                supabase.from('profiles').select('id, name, created_at').gte('created_at', historyRange).order('created_at', { ascending: false }).limit(15),
+                supabase.from('user_ratings').select('id, user_name, overall, timestamp').gte('timestamp', historyRange).order('timestamp', { ascending: false }).limit(10),
             ]);
 
             const generated: AdminNotification[] = [];

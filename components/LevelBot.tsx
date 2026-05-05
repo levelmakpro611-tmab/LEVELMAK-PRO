@@ -94,11 +94,43 @@ const LevelBot: React.FC = () => {
 
   const messages = currentSession?.messages || [];
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = async (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setSelectedImage(reader.result as string);
+      reader.onloadend = async () => {
+        const rawBase64 = reader.result as string;
+        const compressed = await compressImage(rawBase64);
+        setSelectedImage(compressed);
+      };
       reader.readAsDataURL(file);
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -226,7 +258,7 @@ const LevelBot: React.FC = () => {
 
   return (
     <div className={`
-      fixed transition-all duration-300 z-[200]
+      fixed transition-all duration-300 z-[2000]
       bottom-0 right-0 md:bottom-6 md:right-6 
       w-full md:w-[450px] md:max-w-[calc(100vw-3rem)]
       h-[calc(100dvh-env(safe-area-inset-top))] md:h-auto md:max-h-[calc(100dvh-3rem)]
@@ -345,29 +377,11 @@ const LevelBot: React.FC = () => {
                 </div>
               )}
               
-              {/* Teacher Suggestion Chip */}
-              {messages.length >= 3 && (
-                <div 
-                  className="mb-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-indigo-500/20 transition-all mx-4 md:mx-6"
-                  onClick={() => {
-                    setIsOpen(false);
-                    // Open Tutor Hub (simulated by nav_change event if App.tsx listens, or via store)
-                    window.dispatchEvent(new CustomEvent('nav_change', { detail: 'tutor_hub' }));
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-500">
-                      <GraduationCap size={16} />
-                    </div>
-                    <span className="text-[10px] font-black text-white uppercase tracking-tight">Besoin d'un prof pour t'aider ?</span>
-                  </div>
-                  <ChevronLeft size={16} className="text-indigo-500 rotate-180 group-hover:translate-x-1 transition-transform" />
-                </div>
-              )}
+              {/* Assistant Littéraire : Quick Prompts removed for cleaner UI as per user request */}
             </div>
 
             {/* Input Area */}
-            <div className="p-4 md:p-6 bg-slate-950 border-t border-white/10 shrink-0 pb-[calc(env(safe-area-inset-bottom,0.5rem)+1rem)] md:pb-6">
+            <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,1.5rem)+1.5rem)] md:pb-6">
               {selectedImage && (
                 <div className="mb-3 animate-fade-in">
                   <div className="relative inline-block mb-2">

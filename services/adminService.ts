@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import {
     AdminStats,
     UserAnalytics,
@@ -22,17 +23,33 @@ const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'TMAB611';
 
 export const submitComment = async (comment: Partial<UserComment>): Promise<void> => {
     try {
+        console.log('--- SUBMITTING COMMENT ---', comment);
         const { error } = await supabase.from('user_comments').insert({
             user_id: comment.userId,
             user_name: comment.userName,
-            user_phone: comment.userPhone, // Added
+            user_phone: comment.userPhone || 'N/A',
             content: comment.content,
-            rating: comment.rating, // Added
-            category: comment.category, // Added
+            rating: comment.rating || 0,
+            category: comment.category || 'general',
             status: 'pending',
             timestamp: new Date().toISOString()
         });
-        if (error) throw error;
+        
+        if (error) {
+            console.error('Supabase insert error (comment):', error);
+            throw error;
+        }
+
+        // Fire-and-forget notification to avoid hanging the UI
+        LocalNotifications.schedule({
+            notifications: [{
+                title: 'Merci ! 💬',
+                body: 'Votre commentaire a été reçu. Levelmak est fier de vous !',
+                id: Math.floor(Math.random() * 10000),
+                schedule: { at: new Date(Date.now() + 500) }
+            }]
+        }).catch(e => console.warn('Notification schedule failed:', e));
+
     } catch (error) {
         console.error('Error submitting comment:', error);
         throw error;
@@ -41,15 +58,30 @@ export const submitComment = async (comment: Partial<UserComment>): Promise<void
 
 export const submitRating = async (rating: Omit<PlatformRating, 'id'>): Promise<void> => {
     try {
+        console.log('--- SUBMITTING RATING ---', rating);
         const { error } = await supabase.from('user_ratings').insert({
             user_id: rating.userId,
-            user_name: rating.userName, // Added
+            user_name: rating.userName || 'Anonyme',
             overall: rating.overall,
-            features: rating.features,
-            comment: rating.comment,
+            features: rating.features || {},
+            comment: rating.comment || '',
             timestamp: new Date().toISOString()
         });
-        if (error) throw error;
+        
+        if (error) {
+            console.error('Supabase insert error (rating):', error);
+            throw error;
+        }
+
+        LocalNotifications.schedule({
+            notifications: [{
+                title: 'Évaluation Reçue ⭐',
+                body: "Merci d'avoir noté cette application ! Levelmak est fier de vous.",
+                id: Math.floor(Math.random() * 10000),
+                schedule: { at: new Date(Date.now() + 500) }
+            }]
+        }).catch(e => console.warn('Notification schedule failed:', e));
+
     } catch (error) {
         console.error('Error submitting rating:', error);
         throw error;
@@ -93,7 +125,7 @@ export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => 
 // ========== STATISTICS ==========
 
 let cachedStats: { data: AdminStats, timestamp: number } | null = null;
-const STATS_CACHE_TIME = 300000; // 5 minutes
+const STATS_CACHE_TIME = 30000; // 30 secondes pour un feeling "temps réel"
 
 export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' = 'month'): Promise<AdminStats> => {
     const now = new Date();
@@ -680,23 +712,29 @@ export const getSecurityLogs = async (limitCount: number = 50): Promise<Security
 
 export const exportUserData = async (): Promise<any[]> => {
     try {
-        const users = await getUserAnalytics();
-        return users.map((u: AdminUserAnalytics) => ({
-            "ID Utilisateur": u.userId,
-            "Nom": u.userName,
+        // Fetch ALL users for export, not just a small sample
+        const { data: users, error } = await supabase
+            .from('profiles')
+            .select('id, name, email, phone_number, age_range, gender, status, level, total_xp, created_at, last_active')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return (users || []).map(u => ({
+            "ID Utilisateur": u.id,
+            "Nom": u.name,
             "Email": u.email,
-            "Téléphone": u.phoneNumber || 'N/A',
-            "Âge": u.ageRange || 'N/A',
-            "Genre": u.gender || 'N/A',
-            "Éducation": u.education || 'N/A',
-            "Niveau": u.level,
-            "XP": u.xp,
-            "Date Inscription": u.registrationDate,
-            "Dernière Activité": u.lastActive,
-            "Statut": u.status
+            "Téléphone": u.phone_number || 'N/A',
+            "Âge": u.age_range || 'N/A',
+            "Genre": u.gender || 'Inconnu',
+            "Niveau": u.level || 1,
+            "XP": u.total_xp || 0,
+            "Date Inscription": u.created_at ? u.created_at.split('T')[0] : 'N/A',
+            "Dernière Activité": u.last_active ? u.last_active.split('T')[0] : (u.created_at ? u.created_at.split('T')[0] : 'N/A'),
+            "Statut": u.status || 'active'
         }));
     } catch (error) {
-        console.error('Error exporting user data:', error);
+        console.error('Error in exportUserData:', error);
         throw error;
     }
 };
@@ -715,6 +753,22 @@ export const exportSystemLogs = async (): Promise<any[]> => {
     } catch (error) {
         console.error('Error exporting system logs:', error);
         throw error;
+    }
+};
+
+export const exportDemographicData = async (): Promise<any[]> => {
+    try {
+        const stats = await getDemographicStats();
+        return stats.crossTable.map(row => ({
+            "Tranche d'Âge": row.ageRange,
+            "Hommes": row.HOMME,
+            "Femmes": row.FEMME,
+            "Inconnu": row.AUTRE || 0,
+            "Total": row.total
+        }));
+    } catch (error) {
+        console.error('Error exporting demographic data:', error);
+        return [];
     }
 };
 
@@ -754,14 +808,13 @@ function isInPeriod(dateString: string, days: number): boolean {
 
 export const getDemographicStats = async () => {
     try {
-        // Optimized: only select essential columns for demographic stats
         const { data: users, error } = await supabase
             .from('profiles')
             .select('gender, age_range');
         if (error) throw error;
 
         const stats = {
-            byGender: { HOMME: 0, FEMME: 0, TOTAL: 0 },
+            byGender: { HOMME: 0, FEMME: 0, AUTRE: 0, TOTAL: 0 },
             byAge: {
                 '15-18': 0,
                 '19-23': 0,
@@ -769,39 +822,30 @@ export const getDemographicStats = async () => {
                 'unknown': 0,
                 total: 0
             },
-            crossTable: [] as { ageRange: string; HOMME: number; FEMME: number; total: number }[]
+            crossTable: [] as { ageRange: string; HOMME: number; FEMME: number; AUTRE: number; total: number }[]
         };
 
-        const crossMap: Record<string, { HOMME: number; FEMME: number }> = {
-            '15-18': { HOMME: 0, FEMME: 0 },
-            '19-23': { HOMME: 0, FEMME: 0 },
-            '24+': { HOMME: 0, FEMME: 0 },
-            'unknown': { HOMME: 0, FEMME: 0 }
+        const crossMap: Record<string, { HOMME: number; FEMME: number; AUTRE: number }> = {
+            '15-18': { HOMME: 0, FEMME: 0, AUTRE: 0 },
+            '19-23': { HOMME: 0, FEMME: 0, AUTRE: 0 },
+            '24+': { HOMME: 0, FEMME: 0, AUTRE: 0 },
+            'unknown': { HOMME: 0, FEMME: 0, AUTRE: 0 }
         };
 
         users.forEach(user => {
             // Gender Stats
-            if (user.gender === 'HOMME') stats.byGender.HOMME++;
-            else if (user.gender === 'FEMME') stats.byGender.FEMME++;
+            const gender = user.gender === 'HOMME' || user.gender === 'FEMME' ? user.gender : 'AUTRE';
+            stats.byGender[gender]++;
             stats.byGender.TOTAL++;
 
             // Age Stats
-            const age = user.ageRange || 'unknown';
-            if (stats.byAge[age as keyof typeof stats.byAge] !== undefined) {
-                stats.byAge[age as keyof typeof stats.byAge]++;
-            } else {
-                stats.byAge.unknown++;
-            }
+            const age = user.age_range || 'unknown';
+            const targetAge = (crossMap[age]) ? age : 'unknown';
+            stats.byAge[targetAge as keyof typeof stats.byAge]++;
             stats.byAge.total++;
 
             // Cross Table Data
-            const genderKey = (user.gender === 'HOMME' || user.gender === 'FEMME') ? user.gender : 'HOMME'; // Default/Fallback to avoid crash, or handle 'Autre' if we add it
-
-            // Safe update for crossMap
-            const targetAge = (crossMap[age]) ? age : 'unknown';
-            if (user.gender === 'HOMME' || user.gender === 'FEMME') {
-                crossMap[targetAge][user.gender]++;
-            }
+            crossMap[targetAge][gender]++;
         });
 
         // Format Cross Table
@@ -809,14 +853,15 @@ export const getDemographicStats = async () => {
             ageRange: age === 'unknown' ? 'Non spécifié' : age,
             HOMME: genders.HOMME,
             FEMME: genders.FEMME,
-            total: genders.HOMME + genders.FEMME
+            AUTRE: genders.AUTRE,
+            total: genders.HOMME + genders.FEMME + genders.AUTRE
         }));
 
         return stats;
     } catch (error) {
         console.error('Error getting demographic stats:', error);
         return {
-            byGender: { HOMME: 0, FEMME: 0, TOTAL: 0 },
+            byGender: { HOMME: 0, FEMME: 0, AUTRE: 0, TOTAL: 0 },
             byAge: { '15-18': 0, '19-23': 0, '24+': 0, 'unknown': 0, total: 0 },
             crossTable: []
         };
@@ -902,17 +947,30 @@ export const addShopItem = async (item: Omit<ShopItem, 'firestoreId'>, imageFile
             imageUrl = supabase.storage.from('assets').getPublicUrl(data.path).data.publicUrl;
         }
 
+        const payload: any = {
+            name: item.name,
+            description: item.description,
+            price: item.price,
+            category: item.category,
+            image: imageUrl,
+            created_at: new Date().toISOString()
+        };
+        if (item.id) payload.id = item.id;
+        if (item.color) payload.color = item.color;
+        if (item.icon) payload.icon = item.icon;
+
+        console.log('Adding shop item with payload:', payload);
+
         const { data, error } = await supabase
             .from('shop_items')
-            .insert({
-                ...item,
-                image: imageUrl,
-                created_at: new Date().toISOString()
-            })
+            .insert(payload)
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error adding shop item:', error);
+            throw error;
+        }
         return data.id;
     } catch (error) {
         console.error('Error adding shop item:', error);
@@ -939,16 +997,28 @@ export const updateShopItem = async (
             imageUrl = supabase.storage.from('assets').getPublicUrl(data.path).data.publicUrl;
         }
 
+        const payload: any = {
+            updated_at: new Date().toISOString()
+        };
+        if (updates.name) payload.name = updates.name;
+        if (updates.description) payload.description = updates.description;
+        if (updates.price !== undefined) payload.price = updates.price;
+        if (updates.category) payload.category = updates.category;
+        if (imageUrl) payload.image = imageUrl;
+        if (updates.color) payload.color = updates.color;
+        if (updates.icon) payload.icon = updates.icon;
+
+        console.log(`Updating shop item ${id} with payload:`, payload);
+
         const { error } = await supabase
             .from('shop_items')
-            .update({
-                ...updates,
-                ...(imageUrl && { image: imageUrl }),
-                updated_at: new Date().toISOString()
-            })
+            .update(payload)
             .eq('id', id);
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error updating shop item:', error);
+            throw error;
+        }
     } catch (error) {
         console.error('Error updating shop item:', error);
         throw error;

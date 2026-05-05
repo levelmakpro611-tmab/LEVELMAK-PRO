@@ -4,13 +4,27 @@
  */
 
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || "";
-// Modèle texte premium gratuit — Nemotron 3 Super 120B (NVIDIA, vérifié disponible avril 2026)
-const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
-// Modèle vision gratuit — Gemma 3 27B (supporte les images)
-const VISION_MODEL = "google/gemma-3-27b-it:free";
-// Fallback universel : routage automatique OpenRouter (toujours disponible)
+
+// --- Système de Rotation des Modèles (Pro & Rapide) ---
+const PRIMARY_MODEL = "google/gemini-2.0-flash-001"; // Ultra Rapide & Précis
+const SECONDARY_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free";
+const LOGIC_MODEL = "deepseek/deepseek-chat:free";
+const TEXT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+const GROK_MODEL = "x-ai/grok-2-1212:free";
+
+const VISION_MODEL = "google/gemini-2.0-flash-001";
+const DEFAULT_MODEL = PRIMARY_MODEL;
 const FALLBACK_MODEL = "openrouter/free";
-const MULTIMODAL_MODEL = "openrouter/free"; // Routage automatique pour OCR
+const MULTIMODAL_MODEL = VISION_MODEL;
+
+const MODEL_ROTATION = [
+  PRIMARY_MODEL,
+  SECONDARY_MODEL,
+  LOGIC_MODEL,
+  TEXT_MODEL,
+  GROK_MODEL,
+  FALLBACK_MODEL
+];
 
 const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -69,6 +83,31 @@ async function callOpenRouter(messages: any[], model: string = DEFAULT_MODEL, js
   }
 }
 
+/**
+ * Appelle l'IA avec une rotation automatique des modèles en cas d'erreur (Rate limit, etc.)
+ */
+async function callWithRotation(messages: any[], jsonMode: boolean = false) {
+  let lastError = null;
+  
+  for (const model of MODEL_ROTATION) {
+    try {
+      console.log(`🚀 Tentative avec le modèle : ${model}`);
+      return await callOpenRouter(messages, model, jsonMode);
+    } catch (error: any) {
+      lastError = error;
+      // Si c'est une erreur 429 (Too Many Requests) ou une erreur serveur, on passe au suivant
+      if (error.status === 429 || error.status >= 500 || error.message.includes("saturée") || error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+        console.warn(`⚠️ Modèle ${model} indisponible ou erreur réseau, passage au suivant...`);
+        continue;
+      }
+      // Pour les autres erreurs (ex: clé invalide), on arrête tout de suite
+      throw error;
+    }
+  }
+  
+  throw lastError || new Error("Tous les modèles d'IA sont actuellement indisponibles.");
+}
+
 export const openrouterService = {
   /**
    * Génère un quiz à partir de sources textuelles ou visuelles
@@ -124,27 +163,16 @@ export const openrouterService = {
       });
     }
 
-    // Gestion du fallback en cas de 429 sur le premier modèle
-    let text = "";
-    try {
-      console.log(`🚀 Quiz Multimodal: Envoi au modèle ${model}`);
-      text = await callOpenRouter(messages, model, true);
-    } catch (e: any) {
-      if (e.status === 429) {
-        console.warn("⚠️ 429 sur Gemma, fallback sur Google Flash 2.0...");
-        text = await callOpenRouter(messages, "google/gemma-3-27b-it:free", true);
-      } else {
-        throw e;
-      }
-    }
+    // Utilisation de la rotation automatique pour garantir rapidité et précision
+    const responseText = await callWithRotation(messages, true);
 
     let data: any;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
       data = JSON.parse(jsonStr);
     } catch (err) {
-      console.error("Erreur de formatage Quiz:", err, "Texte brut:", text);
+      console.error("Erreur de formatage Quiz:", err, "Texte brut:", responseText);
       throw new Error("L'IA n'a pas réussi à structurer le Quiz correctement.");
     }
 
@@ -162,22 +190,17 @@ export const openrouterService = {
     const hasImage = !!base64Image;
     const model = hasImage ? VISION_MODEL : DEFAULT_MODEL;
 
-    const systemPrompt = `Tu es le "Elite Coach" de Levelmak Pro, un enseignant et mentor pédagogique exceptionnel, bienveillant mais exigeant.
-Ton but est d'aider l'élève à progresser, à comprendre ses leçons et à rester motivé.
-REGLER CRUCIALES DE FORMATAGE :
-1. NE JAMAIS utiliser de séparateurs comme "---" ou "===".
-2. Utilise des titres Markdown clairs (##, ###) pour structurer tes réponses.
-3. Utilise des listes à puces pour les explications.
-4. Ton ton doit être professionnel, encourageant et structuré.
-5. Évite les emojis excessifs, utilise-les uniquement pour souligner un point de motivation important.
-6. Ne réponds pas par des messages trop longs, sois incisif et efficace.
+    const systemPrompt = `Tu es l'ELITE COACH de LEVELMAK PRO, un professeur émérite et un mentor pédagogique d'élite.
+Ton langage est soutenu, élégant et profondément intellectuel. Tu ne parles pas comme une machine, mais comme un véritable maître à penser qui s'adresse à un esprit brillant.
+Directives cruciales :
+1. ÉLOQUENCE : Utilise un vocabulaire riche et une structure de phrase soignée. Évite les réponses robotiques ou trop courtes.
+2. TON PROFESSORAL : Sois courtois, solennel et inspirant. Salue l'utilisateur avec distinction si c'est le début de la conversation.
+3. PÉDAGOGIE DE MAÎTRE : Ne donne pas seulement la réponse. Guide la réflexion par des analogies puissantes ou des questions socratiques qui stimulent l'intelligence.
+4. ANALYSE D'EXPERT : Pour les images d'exercices, décompose la complexité avec la rigueur d'un académicien.
+5. ÉVITE LA BRIÈVETÉ EXCESSIVE : Prends le temps d'expliquer les concepts en profondeur si nécessaire, tout en restant pertinent.
+6. FORMATAGE : Utilise le Markdown (##, ###) pour une présentation digne d'une thèse universitaire.
 
-${hasImage ? `
-DIRECTIVES SPÉCIFIQUES (Tu as reçu une image de l'élève) :
-1. "Correction Experte (Snap & Solve)" : Si l'image contient un exercice (Maths, Physique, etc.), n'écris SURTOUT PAS juste la réponse finale. Agis comme un vrai tuteur : identifie le blocage, explique la méthodologie étape par étape avec pédagogie.
-2. "Correcteur de Copies & Dissertations" : Si l'image est une copie (Philo, Français, etc.), corrige l'orthographe, analyse le plan et les arguments, donne une note estimative et des conseils très concrets d'amélioration.
-3. "Professeur de Langues" : Si l'image est un texte en langue étrangère, ne te contente pas de traduire bêtement. Explique les règles de grammaire importantes utilisées dans le texte et dresse une liste du vocabulaire essentiel à mémoriser.
-` : ''}`;
+Contexte actuel : ${userContext}`;
 
     const formattedHistory = history.map(msg => ({
       role: msg.role === 'bot' ? 'assistant' : 'user',
@@ -198,14 +221,9 @@ DIRECTIVES SPÉCIFIQUES (Tu as reçu une image de l'élève) :
     ];
 
     try {
-      console.log(`🚀 CoachIA: Envoi requête au modèle ${model}`);
-      return await callOpenRouter(messages, model);
+      console.log(`🚀 CoachIA: Envoi requête avec rotation`);
+      return await callWithRotation(messages);
     } catch (e: any) {
-      if (e.status === 429) {
-        const fallback = FALLBACK_MODEL;
-        console.warn(`⚠️ 429 sur ${model}, fallback sur ${fallback}...`);
-        return await callOpenRouter(messages, fallback);
-      }
       throw e;
     }
   },
@@ -221,7 +239,7 @@ DIRECTIVES SPÉCIFIQUES (Tu as reçu une image de l'élève) :
         ]
       }
     ];
-    return await callOpenRouter(messages, MULTIMODAL_MODEL);
+    return await callWithRotation(messages);
   },
 
   async searchBooksWithGemini(query: string, lang: string = 'fr') {
@@ -237,7 +255,7 @@ DIRECTIVES SPÉCIFIQUES (Tu as reçu une image de l'élève) :
       }
     ];
 
-    const text = await callOpenRouter(messages, DEFAULT_MODEL, true);
+    const text = await callWithRotation(messages, true);
     const data = JSON.parse(text);
 
     if (!data.recommendations) return { text: "Pas de résultats précis.", links: [] };
@@ -274,7 +292,7 @@ DIRECTIVES SPÉCIFIQUES (Tu as reçu une image de l'élève) :
   },
 
   async generateText(prompt: string, model: string = DEFAULT_MODEL) {
-    return await callOpenRouter([{ role: "user", content: prompt }], model);
+    return await callWithRotation([{ role: "user", content: prompt }]);
   },
 
   async generatePlanMultimodal(examDate: string, subjects: string[], sources: { type: 'text' | 'image' | 'pdf' | 'word', data: string }[], lang: string = 'fr') {
@@ -343,16 +361,10 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
 
     console.log("🚀 Envoi requête Plan Multimodal à OpenRouter avec le modèle:", model);
     
-    let responseText = "";
     try {
-      responseText = await callOpenRouter(messages, model, true);
+      responseText = await callWithRotation(messages, true);
     } catch (e: any) {
-      if (e.status === 429 && hasImages) {
-        console.warn("⚠️ 429 sur modèle Plan vision, fallback sur Google Flash 2.0...");
-        responseText = await callOpenRouter(messages, "google/gemma-3-27b-it:free", true);
-      } else {
-         throw e;
-      }
+      throw e;
     }
 
     try {
@@ -381,14 +393,9 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
 
     let text = "";
     try {
-      // Modèle haute qualité pour flashcards — Llama 3.3 70B
-      text = await callOpenRouter(messages, DEFAULT_MODEL, false);
+      text = await callWithRotation(messages, false);
     } catch (e: any) {
-      if (e.status === 429) {
-        text = await callOpenRouter(messages, "google/gemma-3-27b-it:free", false);
-      } else {
-        throw e;
-      }
+      throw e;
     }
 
     try {
@@ -421,7 +428,7 @@ Génère STRICTEMENT exactement deux NOUVEAUX mots de vocabulaire sophistiqués 
 ${excludeList}
 RÈGLE ABSOLUE : Remplace les valeurs par du VRAI texte, n'écris JAMAIS "...".
 JSON REQUIS : { "words": [ { "word": "Mot", "explanation": "Explication claire", "usage": "Phrase d'exemple" } ] }.`;
-    const text = await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL, true);
+    const text = await callWithRotation([{ role: "user", content: prompt }], true);
     const data = JSON.parse(text);
     return data.words;
   },
@@ -433,25 +440,25 @@ Génère STRICTEMENT une NOUVELLE phrase de motivation puissante et rare pour un
 ${excludeList}
 RÈGLE ABSOLUE : Remplace les valeurs par du VRAI texte, n'écris JAMAIS "...".
 JSON REQUIS : { "quote": "La citation inspirante", "author": "Nom de l'Auteur" }.`;
-    const text = await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL, true);
+    const text = await callWithRotation([{ role: "user", content: prompt }], true);
     return JSON.parse(text);
   },
 
   async summarizeBook(title: string, author: string, description: string, lang: string = 'fr') {
     const prompt = `Analyse littéraire de ${title} (${author}) en ${lang}. JSON: { "mainSummary", "keyTakeaways", "difficulty", "estimatedReadingTime" }.`;
-    const text = await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL, true);
+    const text = await callWithRotation([{ role: "user", content: prompt }], true);
     return JSON.parse(text);
   },
 
   async getDiceSurprise(lang: string = 'fr') {
     const prompt = `Génère une blague ou anecdote éducative en ${lang}. JSON: { "type", "title", "content", "author" }.`;
-    const text = await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL, true);
+    const text = await callWithRotation([{ role: "user", content: prompt }], true);
     return JSON.parse(text);
   },
 
   async generateOfflinePack(topic: string, level: string = 'Intermédiaire', lang: string = 'fr') {
     const prompt = `Pack de survie éducatif sur "${topic}" en ${lang}. JSON avec title, summary, keyPoints, definitions, faq, quiz.`;
-    const text = await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL, true);
+    const text = await callWithRotation([{ role: "user", content: prompt }], true);
     return JSON.parse(text);
   },
 
@@ -507,7 +514,7 @@ JSON REQUIS : { "quote": "La citation inspirante", "author": "Nom de l'Auteur" }
 
     try {
         console.log(`🚀 Synthèse Multimodale: Envoi au modèle ${model}`);
-        const responseText = await callOpenRouter(messages, model, true);
+        const responseText = await callWithRotation(messages, true);
         
         // Nettoyage au cas où l'IA ajoute du texte avant/après le JSON
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -534,16 +541,43 @@ JSON REQUIS : { "quote": "La citation inspirante", "author": "Nom de l'Auteur" }
     const messages = [
       {
         role: "system",
-        content: "Expert en correction littéraire. Retourne un JSON uniquement."
+        content: `Tu es un expert en linguistique et en correction littéraire d'élite.
+        Ton rôle est d'analyser le texte d'un élève pour détecter :
+        1. Les fautes d'orthographe.
+        2. Les fautes de grammaire et de conjugaison.
+        3. Les fautes d'accord (sujet-verbe, adjectifs, etc.).
+        4. Le style et le vocabulaire.
+
+        Tu dois ABSOLUMENT fournir une explication pédagogique pour chaque erreur afin que l'élève comprenne la règle et ne la reproduise plus.
+        RETOURNE UNIQUEMENT UN OBJET JSON avec cette structure :
+        {
+          "score": 0-100,
+          "criteria": { "style": 0-100, "grammar": 0-100, "vocabulary": 0-100, "structure": 0-100 },
+          "feedback": "Commentaire global encourageant et pro",
+          "corrections": [
+            { "original": "le mot faux", "correction": "le mot juste", "reason": "Explication de la règle d'orthographe ou d'accord appliquée ici." }
+          ],
+          "synonyms": [
+            { "word": "mot simple", "suggestions": ["synonyme 1", "synonyme 2"], "context": "Pourquoi ce synonyme est plus adapté ici ?" }
+          ]
+        }`
       },
       {
         role: "user",
-        content: `Analyse ce texte "${title}": "${text}". Langue: ${lang}.`
+        content: `Analyse ce texte intitulé "${title}" :
+        "${text}"
+        
+        Langue : ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}`
       }
     ];
 
-    const textResponse = await callOpenRouter(messages, DEFAULT_MODEL, true);
-    return JSON.parse(textResponse);
+    try {
+      const textResponse = await callWithRotation(messages, true);
+      const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+      return JSON.parse(jsonMatch ? jsonMatch[0] : textResponse);
+    } catch (e) {
+      throw e;
+    }
   },
 
   async getBattleQuiz(lang: string = 'fr') {
@@ -551,7 +585,7 @@ JSON REQUIS : { "quote": "La citation inspirante", "author": "Nom de l'Auteur" }
     Le quiz doit comporter exactement 10 questions variées (Histoire, Géo, Sciences, Mathématiques, Culture Générale).
     Retourne UNIQUEMENT un objet JSON : { "questions": [ { "text", "options": [4], "correctAnswer": 0-3, "explanation" } ] }.`;
     
-    const text = await callOpenRouter([{ role: "user", content: prompt }], DEFAULT_MODEL, true);
+    const text = await callWithRotation([{ role: "user", content: prompt }], true);
     const data = JSON.parse(text);
     
     if (data.questions) {
@@ -572,6 +606,7 @@ REGLER CRUCIALES :
 3. Pose une seule question à la fois, courte et directe.
 4. Si l'explication est vraiment claire et imagée (avec des analogies), dis "Génial ! J'ai enfin compris !" et résume ce que tu as retenu en une phrase.
 5. Sinon, continue de poser des questions de curiosité ("Pourquoi ?", "Comment ça marche ?").
+6. RÈGLE DE SALUTATION : Ne salue JAMAIS l'utilisateur si l'historique contient déjà des messages.
 Langue: ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}`;
 
     const messages = [
@@ -580,7 +615,7 @@ Langue: ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}`;
       { role: "user", content: message }
     ];
 
-    return await callOpenRouter(messages, DEFAULT_MODEL);
+    return await callWithRotation(messages);
   },
 
   async historyChat(message: string, history: { role: 'user' | 'assistant'; content: string }[], character: string, era: string, lang: string = 'fr') {
@@ -590,7 +625,8 @@ REGLER CRUCIALES :
 1. Adopte strictement le ton, le vocabulaire et les opinions de ${character}.
 2. Tu ne connais rien de ce qui s'est passé après ta mort ou ton époque, sauf si le voyageur t'en parle.
 3. Sois immersif et passionnant.
-4. Réponds en ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}.`;
+4. Réponds en ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}.
+5. RÈGLE DE SALUTATION : Ne salue JAMAIS l'utilisateur si l'historique contient déjà des messages.`;
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -598,7 +634,7 @@ REGLER CRUCIALES :
       { role: "user", content: message }
     ];
 
-    return await callOpenRouter(messages, DEFAULT_MODEL);
+    return await callWithRotation(messages);
   },
 
   async solveScientificProblem(problem: string, context?: string, base64Image?: string, lang: string = 'fr') {
@@ -631,7 +667,7 @@ RÈGLES :
       { role: "user", content: userContent }
     ];
 
-    const response = await callOpenRouter(messages, model, true);
+    const response = await callWithRotation(messages, true);
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       return JSON.parse(jsonMatch ? jsonMatch[0] : response);
@@ -669,7 +705,7 @@ RÈGLES :
       ]}
     ];
 
-    const response = await callOpenRouter(messages, model, true);
+    const response = await callWithRotation(messages, true);
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       return JSON.parse(jsonMatch ? jsonMatch[0] : response);
