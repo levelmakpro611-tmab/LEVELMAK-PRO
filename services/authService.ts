@@ -37,6 +37,12 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
         }
 
         if (profile) {
+            // Blocked user check
+            if (profile.status === 'blocked' || profile.status === 'suspended') {
+                await supabase.auth.signOut();
+                throw new Error("Veuillez contacter l'administration. Votre compte est bloqué jusqu'à nouvel ordre.");
+            }
+
             // Check if profile is already up to date with auth email if it's missing
             if (!profile.email && supabaseUser.email) {
                 await supabase.from('profiles').update({ 
@@ -166,13 +172,19 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 // ======================================================
 // Sign up with Email and Password
 // ======================================================
-export const signUpWithEmail = async (email: string, password: string, name: string, gender?: string, ageRange?: string): Promise<User | null> => {
+export const signUpWithEmail = async (email: string, password: string, name: string, gender?: string, ageRange?: string, phone?: string): Promise<User | null> => {
     try {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                data: { name, real_email: email, gender, age_range: ageRange }
+                data: { 
+                    name, 
+                    real_email: email, 
+                    gender, 
+                    age_range: ageRange,
+                    phone: phone || ''
+                }
             }
         });
 
@@ -213,6 +225,9 @@ export const signInWithEmail = async (email: string, password: string): Promise<
         return await convertSupabaseUser(data.user);
     } catch (error: any) {
         console.error('Sign in error:', error);
+        if (error.message?.includes('bloqué')) {
+            throw new Error(error.message);
+        }
         throw new Error(error.message);
     }
 };
@@ -347,7 +362,10 @@ export const signInWithPhone = async (phone: string, password: string): Promise<
                     console.log(`✅ Login successful via Fast-Path in ${Date.now() - startTime}ms`);
                     return await convertSupabaseUser(data.user);
                 }
-            } catch (fastErr) {
+            } catch (fastErr: any) {
+                if (fastErr.message?.includes('bloqué')) {
+                    throw fastErr;
+                }
                 console.warn('Fast-Path failed, falling back to full discovery');
             }
         }
@@ -421,9 +439,13 @@ export const signInWithPhone = async (phone: string, password: string): Promise<
         
         // Flatten error for UI
         let message = 'La connexion a échoué. Vérifie tes identifiants.';
-        if (error.errors) {
+        if (error.message?.includes('bloqu')) {
+            message = error.message;
+        } else if (error.errors) {
             const invalidCreds = error.errors.some((e: any) => e.message?.includes('Invalid login credentials'));
             if (invalidCreds) message = 'Numéro ou mot de passe incorrect.';
+            const blockedErr = error.errors.find((e: any) => e.message?.includes('bloqu'));
+            if (blockedErr) message = blockedErr.message;
         } else if (error.message?.includes('Invalid login credentials')) {
             message = 'Numéro ou mot de passe incorrect.';
         }
@@ -483,15 +505,32 @@ export const getCurrentSession = async () => {
 };
 
 // ======================================================
-// Change Password
+// Change Password with verification
 // ======================================================
 export const changeUserPassword = async (oldPassword: string, newPassword: string): Promise<void> => {
     try {
-        const { error } = await supabase.auth.updateUser({
+        // 1. Get current user email
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !user.email) throw new Error('Utilisateur non connecté.');
+
+        // 2. Re-authenticate to verify old password
+        const { error: reauthError } = await supabase.auth.signInWithPassword({
+            email: user.email,
+            password: oldPassword
+        });
+
+        if (reauthError) {
+            throw new Error('L\'ancien mot de passe est incorrect.');
+        }
+
+        // 3. If successful, update to new password
+        const { error: updateError } = await supabase.auth.updateUser({
             password: newPassword
         });
 
-        if (error) throw error;
+        if (updateError) throw updateError;
+        
+        console.log('Password updated successfully');
     } catch (error: any) {
         console.error('Change password error:', error);
         throw new Error(error.message);

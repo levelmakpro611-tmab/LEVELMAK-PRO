@@ -129,8 +129,8 @@ export class AudioLogic {
         `;
 
         try {
-            const { openRouterRequest } = await import('../services/openrouter');
-            const res = await openRouterRequest([{ role: 'user', content: prompt }]);
+            const { aiService } = await import('../services/aiService');
+            const res = await aiService.generateText(prompt);
             let cleanedRes = res.replace(/```json/g, '').replace(/```/g, '').trim();
             // Handle edge case where AI might include a markdown prefix
             if (cleanedRes.startsWith('{') === false && cleanedRes.indexOf('{') !== -1) {
@@ -185,7 +185,7 @@ export class AudioLogic {
                     });
                 };
             } catch (error) {
-                console.error('Erreur export natif:', error);
+                console.error("Erreur export natif:", error);
             }
         } else {
             const url = URL.createObjectURL(blob);

@@ -30,7 +30,7 @@ const SUBJECTS = [
 ];
 
 const TutorHub: React.FC = () => {
-  const { t } = useStore();
+  const { user, t } = useStore();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -296,7 +296,7 @@ const TutorHub: React.FC = () => {
                     try {
                       // Import submitRating dynamically or use service
                       const { submitRating } = await import('../services/tutorService');
-                      await submitRating(ratingTeacher.id, user.id, userRating);
+                      await submitRating(ratingTeacher.id, user.id, user.name, userRating, "");
                       setRatingTeacher(null);
                       fetchTeachers(); // Refresh
                     } catch (e) { console.error(e); } finally { setIsSubmittingRating(false); }

@@ -14,7 +14,8 @@ import {
     BadgeCheck,
     Lock,
     FlaskConical,
-    Loader2
+    Loader2,
+    Image as ImageIcon
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { POTIONS } from '../constants';
@@ -23,7 +24,7 @@ import { getAllShopItems } from '../services/adminService';
 
 const Shop: React.FC = () => {
     const { user, purchaseItem, equipItem, purchasePotion, usePotion, t } = useStore();
-    const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'potion'>('all');
+    const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'potion' | 'wallpaper'>('all');
     const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
     const [items, setItems] = useState<ShopItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -548,6 +549,39 @@ const HARDCODED_ITEMS: ShopItem[] = [
             category: 'badge',
             color: '#8B5CF6'
         },
+        // Wallpapers
+        {
+            id: 'wall_galaxy',
+            name: 'Nébuleuse lointaine',
+            description: 'Un fond d\'écran spatial pour tes révisions stellaires.',
+            price: 150,
+            category: 'wallpaper',
+            image: 'https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=2070&auto=format&fit=crop'
+        },
+        {
+            id: 'wall_forest',
+            name: 'Forêt Zen',
+            description: 'Retrouve ton calme avec ce paysage apaisant.',
+            price: 120,
+            category: 'wallpaper',
+            image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2071&auto=format&fit=crop'
+        },
+        {
+            id: 'wall_tech',
+            name: 'Code Matrix',
+            description: 'Plonge dans le flux des données.',
+            price: 200,
+            category: 'wallpaper',
+            image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2070&auto=format&fit=crop'
+        },
+        {
+            id: 'wall_sunset',
+            name: 'Coucher de soleil',
+            description: 'Une lueur dorée pour finir tes devoirs.',
+            price: 100,
+            category: 'wallpaper',
+            image: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=2070&auto=format&fit=crop'
+        }
 
     ];
 
@@ -596,7 +630,7 @@ const HARDCODED_ITEMS: ShopItem[] = [
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b border-white/5 pb-8 md:pb-10">
                 <div className="space-y-3 md:space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-secondary/10 rounded-full border border-secondary/20 text-secondary font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
-                        <ShoppingBag size={12} md:size={14} className="animate-pulse" /> {t('shop.title')}
+                        <ShoppingBag className="w-3 h-3 md:w-3.5 md:h-3.5 animate-pulse" /> {t('shop.title')}
                     </div>
                     <h1 className="text-3xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">
                         {t('shop.subtitle')}
@@ -611,7 +645,7 @@ const HARDCODED_ITEMS: ShopItem[] = [
                         <span className="text-[8px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest">{t('shop.balance')}</span>
                         <div className="flex items-center gap-1.5 md:gap-2">
                             <span className="text-xl md:text-3xl font-display font-black text-slate-900 dark:text-white">{coins}</span>
-                            <Coins className="text-secondary" size={18} md:size={24} />
+                            <Coins className="text-secondary w-4.5 h-4.5 md:w-6 md:h-6" />
                         </div>
                     </div>
                     <div className="w-px h-8 md:h-10 bg-white/10" />
@@ -628,7 +662,7 @@ const HARDCODED_ITEMS: ShopItem[] = [
                     { id: 'all', icon: Gem },
                     { id: 'avatar', icon: UserCircle },
                     { id: 'badge', icon: BadgeCheck },
-
+                    { id: 'wallpaper', icon: ImageIcon },
                     { id: 'potion', icon: FlaskConical },
                 ].map(tab => (
                     <button
@@ -748,7 +782,7 @@ const HARDCODED_ITEMS: ShopItem[] = [
                                         : 'bg-white/10 text-white hover:bg-white/20'
                                         }`}
                                 >
-                                    {(item.category === 'avatar' && user?.avatar?.image === item.image)
+                                    {(item.category === 'avatar' && user?.avatar?.image === item.image) || (item.category === 'wallpaper' && user?.wallpaper === item.image)
                                         ? <><BadgeCheck size={14} md={16} /> {t('shop.active')}</>
                                         : t('shop.equip')
                                     }

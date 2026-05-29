@@ -48,7 +48,7 @@ const StoriesView: React.FC = () => {
         try {
             console.log('[Stories] Starting photo upload...');
             const userAvatar = user.avatar?.image || user.avatar?.baseColor || '#3B82F6';
-            const imageUrl = await chatService.uploadStoryImage(selectedFile, user.id);
+            const imageUrl = await chatService.uploadMedia(selectedFile, user.id, 'stories');
             
             await chatService.postStory(
                 user.id,

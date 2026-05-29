@@ -119,17 +119,17 @@ const ShopManager: React.FC = () => {
         setSaving(true);
         try {
             if (editingItem && editingItem.id) {
-                // Determine if we update existing or "create" (for hardcoded items being customized)
-                // If it doesn't have a firestoreId (id in DB), it's a hardcoded item being edited for the first time
+                // If it has a firestoreId, it's already in the DB
                 if (editingItem.firestoreId) {
                     await updateShopItem(editingItem.id, formData, imageFile || undefined);
                 } else {
-                    // Create in DB with same ID
-                    await addShopItem({ ...formData, id: editingItem.id } as ShopItem, imageFile || undefined);
+                    // It's a hardcoded item being saved to DB for the first time
+                    // Omit the string ID to let Supabase generate a valid UUID
+                    await addShopItem({ ...formData } as ShopItem, imageFile || undefined);
                 }
             } else {
-                const newItemId = `item_${Date.now()}`;
-                await addShopItem({ ...formData, id: newItemId } as ShopItem, imageFile || undefined);
+                // New item: Omit ID to let Supabase generate a valid UUID
+                await addShopItem({ ...formData } as ShopItem, imageFile || undefined);
             }
             await loadItems();
             setShowModal(false);
@@ -178,7 +178,7 @@ const ShopManager: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {items.map((item) => (
                     <motion.div
-                        key={item.firestoreId}
+                        key={item.id}
                         layout
                         className="bg-slate-900 border border-white/10 rounded-2xl p-6 space-y-4 hover:border-primary/50 transition-all group"
                     >
@@ -330,6 +330,39 @@ const ShopManager: React.FC = () => {
                                             <option value="theme">Thème</option>
                                             <option value="potion">Potion</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                {/* Color & Icon (Optional) */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-slate-500">Couleur (Hex)</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={formData.color || ''}
+                                                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary/50 outline-none"
+                                                placeholder="#FF0000"
+                                                disabled={saving}
+                                            />
+                                            <div 
+                                                className="w-12 h-12 rounded-xl border border-white/10" 
+                                                style={{ backgroundColor: formData.color || 'transparent' }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-widest text-slate-500">Icône (Lucide name)</label>
+                                        <input
+                                            type="text"
+                                            value={formData.icon || ''}
+                                            onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary/50 outline-none"
+                                            placeholder="Zap, Star, etc."
+                                            disabled={saving}
+                                        />
                                     </div>
                                 </div>
 

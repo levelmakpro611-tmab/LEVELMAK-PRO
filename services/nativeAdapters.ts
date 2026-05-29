@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 /**
  * Native Platform Detection
@@ -96,6 +97,43 @@ export const HapticFeedback = {
         await hapticNotification(NotificationType.Success);
         await new Promise(resolve => setTimeout(resolve, 100));
         await hapticImpact(ImpactStyle.Heavy);
+    }
+};
+
+/**
+ * Local Notifications
+ */
+export const sendLocalNotification = async (title: string, body: string, id: number = 1) => {
+    if (!isNativePlatform()) {
+        // Fallback to browser notification if permitted
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body });
+        }
+        return;
+    }
+
+    try {
+        const perm = await LocalNotifications.checkPermissions();
+        if (perm.display !== 'granted') {
+            await LocalNotifications.requestPermissions();
+        }
+        
+        await LocalNotifications.schedule({
+            notifications: [
+                {
+                    title,
+                    body,
+                    id,
+                    schedule: { at: new Date(Date.now() + 1000) },
+                    sound: 'default',
+                    attachments: [],
+                    actionTypeId: '',
+                    extra: null
+                }
+            ]
+        });
+    } catch (e) {
+        console.warn('Local notifications not available', e);
     }
 };
 

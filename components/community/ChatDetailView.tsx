@@ -61,7 +61,7 @@ const ChatDetailView: React.FC<ChatDetailViewProps> = ({ conversation, currentUs
         if (!file) return;
         setIsUploading(true);
         try {
-            const url = await chatService.uploadChatMessageImage(file, currentUser.id);
+            const url = await chatService.uploadMedia(file, currentUser.id, 'chats');
             await handleSend(url);
         } catch (error) { console.error("Upload failed", error); }
         finally { setIsUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }

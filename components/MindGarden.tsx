@@ -13,31 +13,33 @@ export const MindGarden: React.FC = () => {
   const waterCans = user?.consumables?.['water_can'] || 0;
   const fertilizers = user?.consumables?.['fertilizer'] || 0;
 
-  // Render different SVGs or emojis for plants based on growth stage
+  // Render different system emojis for plants based on growth stage to prevent broken network URLs
   const renderPlant = (plant: GardenPlant) => {
     const { type, state, growthStage } = plant;
     const isSad = state !== 'healthy';
     const filter = isSad ? 'grayscale(50%) sepia(50%) hue-rotate(-30deg) brightness(0.8)' : 'none';
     const opacity = state === 'dead' ? 0.3 : 1;
 
-    let imgUrl = 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals%20and%20Nature/Seedling.png';
-    let imgClass = 'w-12 h-12';
+    let emoji = '🌱';
+    let emojiClass = 'text-5xl';
     
     if (growthStage === 0) {
-      imgUrl = 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food%20and%20Drink/Chestnut.png';
-      imgClass = 'w-8 h-8 mb-2';
+      // Graine
+      emoji = '🌰';
+      emojiClass = 'text-3xl mb-2';
     } else if (growthStage === 1) {
-      imgUrl = 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals%20and%20Nature/Seedling.png';
-      imgClass = 'w-10 h-10 mb-1';
+      // Petite pousse
+      emoji = '🌱';
+      emojiClass = 'text-4xl mb-1';
     } else if (growthStage >= 2) {
-      const isAdult = growthStage === 4;
-      imgClass = isAdult ? 'w-24 h-24 mb-[-8px]' : 'w-16 h-16';
+      const isAdult = growthStage >= 4;
+      emojiClass = isAdult ? 'text-7xl mb-[-4px]' : 'text-5xl';
       
-      if (type === 'flower') imgUrl = isAdult ? 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals%20and%20Nature/Blossom.png' : 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals%20and%20Nature/Rose.png';
-      else if (type === 'tree') imgUrl = isAdult ? 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Deciduous%20Tree.png' : 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals%20and%20Nature/Evergreen%20Tree.png';
-      else if (type === 'cactus') imgUrl = 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals%20and%20Nature/Cactus.png';
-      else if (type === 'bonsai') imgUrl = 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals%20and%20Nature/Potted%20Plant.png';
-      else if (type === 'lotus') imgUrl = 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals%20and%20Nature/Lotus.png';
+      if (type === 'flower') emoji = isAdult ? '🌸' : '🌹';
+      else if (type === 'tree') emoji = isAdult ? '🌳' : '🌲';
+      else if (type === 'cactus') emoji = '🌵';
+      else if (type === 'bonsai') emoji = '🪴';
+      else if (type === 'lotus') emoji = '🪷';
     }
 
     const isSelected = selectedPlant === plant.id;
@@ -48,12 +50,12 @@ export const MindGarden: React.FC = () => {
         style={{ filter, opacity }}
         onClick={() => setSelectedPlant(isSelected ? null : plant.id)}
       >
-        <img 
-          src={imgUrl} 
-          alt={type} 
-          className={`${imgClass} object-contain transition-all duration-500`}
+        <span 
+          className={`${emojiClass} select-none transition-all duration-500`}
           style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.5))' }}
-        />
+        >
+          {emoji}
+        </span>
         
         {/* Growth Progress Bar */}
         <div className="w-12 h-1 bg-black/20 rounded-full mt-2 overflow-hidden">

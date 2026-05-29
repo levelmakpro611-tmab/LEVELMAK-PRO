@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Flag, MessageSquare, User, CheckCircle, XCircle, Clock, 
-    AlertTriangle, Shield, Trash2, Eye, Ban, Search, RefreshCw
+    AlertTriangle, Shield, Trash2, Eye, Ban, Search, RefreshCw, Printer
 } from 'lucide-react';
-import { chatService, Report } from '../../services/communityService';
+import { Report } from '../../types';
+import { getReports, resolveReport } from '../../services/adminService';
 import { adminNotificationService } from '../../services/adminNotificationService';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const ReportManagement: React.FC = () => {
     const [reports, setReports] = useState<Report[]>([]);
@@ -24,7 +29,7 @@ const ReportManagement: React.FC = () => {
     const loadReports = async () => {
         setLoading(true);
         try {
-            const data = await chatService.getReports();
+            const data = await getReports();
             setReports(data);
         } catch (error) {
             console.error('Error loading reports:', error);
@@ -35,13 +40,73 @@ const ReportManagement: React.FC = () => {
 
     const handleResolve = async (reportId: string, status: 'resolved' | 'dismissed') => {
         try {
-            await chatService.resolveReport(reportId, status);
+            await resolveReport(reportId, status);
             setReports(prev => prev.map(r => r.id === reportId ? { ...r, status } : r));
             if (selectedReport?.id === reportId) setSelectedReport(null);
             
             // Log action or send notification if needed
         } catch (error) {
             console.error('Error resolving report:', error);
+        }
+    };
+
+    const handlePrint = async () => {
+        if (filteredReports.length === 0) {
+            alert('Pas de données à imprimer');
+            return;
+        }
+
+        if ((window as any).Capacitor?.getPlatform() === 'web' || !(window as any).Capacitor?.getPlatform()) {
+            window.print();
+            return;
+        }
+        setLoading(true);
+        try {
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            try { doc.addImage('/tmab_logo.png', 'PNG', 14, 5, 25, 25); } catch (e) {
+                doc.setFontSize(24);
+                doc.setTextColor(59, 130, 246);
+                doc.text("TMAB", 14, 20);
+            }
+            doc.setFontSize(22);
+            doc.setTextColor(30, 41, 59);
+            doc.text(`SIGNALEMENTS`, 45, 18);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Filtre: ${filter.toUpperCase()}`, 45, 24);
+            doc.text(`Date: ${new Date().toLocaleString('fr-FR')}`, 45, 30);
+            
+            const tableData = filteredReports.map(report => [
+                report.targetType === 'message' ? 'Message' : 'Utilisateur',
+                report.reporterName,
+                report.reason,
+                new Date(report.timestamp).toLocaleDateString('fr-FR'),
+                report.status
+            ]);
+            autoTable(doc, {
+                startY: 40,
+                head: [['Cible', 'Signaleur', 'Motif', 'Date', 'Statut']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [249, 115, 22] }
+            });
+            const pdfArray = doc.output('arraybuffer');
+            const uint8 = new Uint8Array(pdfArray);
+            let binary = "";
+            for (let i = 0; i < uint8.byteLength; i++) binary += String.fromCharCode(uint8[i]);
+            const base64Data = btoa(binary);
+            const filename = `signalements_${Date.now()}.pdf`;
+            const result = await Filesystem.writeFile({
+                path: filename,
+                data: base64Data,
+                directory: Directory.Cache
+            });
+            await Share.share({ url: result.uri, dialogTitle: 'Partager / Imprimer PDF' });
+        } catch(e) {
+            console.error(e);
+            alert('Erreur lors de la création du PDF');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -105,6 +170,14 @@ const ReportManagement: React.FC = () => {
                             {f === 'pending' ? 'En attente' : f === 'resolved' ? 'Résolus' : f === 'dismissed' ? 'Refusés' : 'Tous'}
                         </button>
                     ))}
+                    <button
+                        onClick={handlePrint}
+                        disabled={loading}
+                        className="flex-1 md:flex-none px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-slate-500 hover:text-white hover:bg-white/5 flex items-center justify-center disabled:opacity-50"
+                        title="Imprimer"
+                    >
+                        <Printer size={16} />
+                    </button>
                 </div>
                 <div className="relative w-full md:w-80 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={16} />

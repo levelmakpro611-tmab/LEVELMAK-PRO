@@ -41,12 +41,21 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
 import { useFlashcardStore } from '../services/flashcardStore';
-import { openrouterService } from '../services/openrouter';
-import { XP_PER_LEVEL, AVATAR_LEVELS, LEAGUES, getLeagueFromXp, getXpForNextLevel } from '../constants';
-import { MindGarden } from '../components/MindGarden';
-import { WorldBrainMap } from '../components/WorldBrainMap';
-import { CollaborativeDoodle } from '../components/CollaborativeDoodle';
+import { aiService } from '../services/aiService';
+import { getXpForNextLevel, AVATAR_LEVELS, LEAGUES, getLeagueFromXp } from '../constants';
 import { feedbackService } from '../services/feedbackService';
+
+// Lazy load heavy components
+const MindGarden = React.lazy(() => import('../components/MindGarden').then(m => ({ default: m.MindGarden })));
+const WorldBrainMap = React.lazy(() => import('../components/WorldBrainMap').then(m => ({ default: m.WorldBrainMap })));
+const CollaborativeDoodle = React.lazy(() => import('../components/CollaborativeDoodle').then(m => ({ default: m.CollaborativeDoodle })));
+
+const WidgetLoader = ({ label }: { label: string }) => (
+  <div className="glass p-12 rounded-[2.5rem] border border-white/5 flex flex-col items-center justify-center space-y-4">
+    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">{label}...</p>
+  </div>
+);
 
 interface DashboardProps {
   onNavigate: (tab: string) => void;
@@ -56,26 +65,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { user, missions, quizzes, flashcards, decks, dailyVocab, dailyMotivation, rollDice, isOnline, t, settings } = useStore();
   const [showHistory, setShowHistory] = React.useState(false);
 
-  if (!user) return null;
+  if (!user) {
+    console.warn('[Dashboard] User is null, showing inner loader');
+    return <WidgetLoader label="Chargement de votre profil" />;
+  }
 
-  const prevLevelRef = React.useRef(user.avatar.currentLevel);
+  const prevLevelRef = React.useRef(user.avatar?.currentLevel || 1);
 
   React.useEffect(() => {
-    if (user.avatar.currentLevel > prevLevelRef.current) {
+    if ((user.avatar?.currentLevel || 1) > prevLevelRef.current) {
       feedbackService.fullSuccess();
-      prevLevelRef.current = user.avatar.currentLevel;
+      prevLevelRef.current = user.avatar?.currentLevel || 1;
     }
-  }, [user.avatar.currentLevel]);
+  }, [user.avatar?.currentLevel]);
 
   const currentLevelInfo = React.useMemo(() =>
-    AVATAR_LEVELS.find(l => l.level === user.avatar.currentLevel) || AVATAR_LEVELS[0],
-    [user.avatar.currentLevel]
+    AVATAR_LEVELS.find(l => l.level === (user.avatar?.currentLevel || 1)) || AVATAR_LEVELS[0],
+    [user.avatar?.currentLevel]
   );
 
   const xpPercentage = React.useMemo(() => {
-    const xpNeeded = getXpForNextLevel(user.avatar.currentLevel || 1);
+    const xpNeeded = getXpForNextLevel(user.avatar?.currentLevel || 1);
     return Math.min(100, Math.max(0, (user.xp / xpNeeded) * 100));
-  }, [user.xp, user.avatar.currentLevel]);
+  }, [user.xp, user.avatar?.currentLevel]);
 
   const today = React.useMemo(() => new Date().toISOString().split('T')[0], []);
   
@@ -123,10 +135,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       {/* Stats Summary Card */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {[
-          { label: t('dashboard.stats.xp'), value: user.totalXp, icon: Zap, color: 'text-amber-500', glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]', border: 'border-amber-500/10' },
+          { label: t('dashboard.stats.xp'), value: user.totalXp || 0, icon: Zap, color: 'text-amber-500', glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]', border: 'border-amber-500/10' },
           { label: t('dashboard.stats.quiz'), value: quizzes.length, icon: BookOpenCheck, color: 'text-blue-500', glow: 'shadow-[0_0_15px_rgba(37,99,235,0.15)]', border: 'border-blue-500/10' },
-          { label: t('dashboard.stats.time'), value: formatTime(user.stats.hoursLearned), icon: Clock, color: 'text-purple-500', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]', border: 'border-purple-500/10', tab: 'analytics' },
-          { label: t('dashboard.stats.badges'), value: user.badges.length, icon: Award, color: 'text-rose-500', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]', border: 'border-rose-500/10' },
+          { label: t('dashboard.stats.time'), value: formatTime(user.stats?.hoursLearned || 0), icon: Clock, color: 'text-purple-500', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]', border: 'border-purple-500/10', tab: 'analytics' },
+          { label: t('dashboard.stats.badges'), value: (user.badges || []).length, icon: Award, color: 'text-rose-500', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]', border: 'border-rose-500/10' },
         ].map((stat, i) => (
           <div
             key={i}
@@ -157,9 +169,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <div className="w-20 md:w-32 h-20 md:h-32 rounded-[1.2rem] md:rounded-[3rem] bg-gradient-to-br from-primary to-secondary p-0.5 md:p-1 rotate-2 md:rotate-3 group-hover:rotate-6 transition-transform shadow-2xl overflow-hidden">
                   <div className="w-full h-full rounded-[1.1rem] md:rounded-[2.8rem] overflow-hidden bg-slate-900 border md:border-4 border-slate-900 flex items-center justify-center">
                     {user.avatar?.image ? (
-                      <img src={user.avatar.image} alt={user.name} className="w-full h-full object-cover" />
+                      <img src={user.avatar.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-2xl md:text-5xl font-black text-white">{user.name.charAt(0).toUpperCase()}</span>
+                      <span className="text-2xl md:text-5xl font-black text-white">{(user.name || 'U').charAt(0).toUpperCase()}</span>
                     )}
                   </div>
                 </div>
@@ -204,7 +216,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         <span className="text-[7px] md:text-[8px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest">{t('shop.balance')}</span>
                         <div className="flex items-center gap-1.5 md:gap-2">
                           <span className="text-base md:text-3xl font-display font-black text-slate-900 dark:text-white">{user.levelCoins || 0}</span>
-                          <Coins className="text-amber-500 group-hover/balance:rotate-12 transition-transform" size={14} md:size={24} />
+                          <Coins className="text-amber-500 group-hover/balance:rotate-12 transition-transform w-3.5 h-3.5 md:w-6 md:h-6" />
                         </div>
                       </div>
                     </div>
@@ -446,16 +458,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </section>
 
           {/* World Brain Map */}
-          <WorldBrainMap onNavigate={onNavigate} />
+          <div id="world-map" className="scroll-mt-24">
+            <React.Suspense fallback={<WidgetLoader label="Initialisation du Réseau Mondial" />}>
+              <WorldBrainMap onNavigate={onNavigate} />
+            </React.Suspense>
+          </div>
 
           {/* Collaborative Doodle */}
-          <CollaborativeDoodle />
+          <React.Suspense fallback={<WidgetLoader label="Atelier Collaboratif" />}>
+            <CollaborativeDoodle />
+          </React.Suspense>
         </div>
 
         {/* Sidebar Column */}
         <div className="space-y-8">
           {/* Mind Garden */}
-          <MindGarden />
+          <React.Suspense fallback={<WidgetLoader label="Culture de l'Esprit" />}>
+            <MindGarden />
+          </React.Suspense>
 
           {/* Mission Widgets */}
           <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 shadow-premium">

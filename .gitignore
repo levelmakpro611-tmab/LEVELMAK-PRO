@@ -37,3 +37,10 @@ ios/
 # Temporary scripts
 list_models.cjs
 list_models.js
+list_models.mjs
+payload.json
+test-*.cjs
+test-*.js
+test-*.mjs
+test-*.ts
+

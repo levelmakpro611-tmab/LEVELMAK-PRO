@@ -26,8 +26,101 @@ import {
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
 import { audioService } from '../services/audio';
-import { openrouterService } from '../services/openrouter';
+import { aiService } from '../services/aiService';
 import { AILabSession } from '../types';
+
+// --- AILab Inline Formatter to support Bold & Italics adaptively ---
+const formatAILabInline = (text: string, theme: 'light' | 'dark' = 'dark') => {
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong 
+          key={i} 
+          className={`font-black underline-offset-2 ${
+            theme === 'light' 
+              ? 'text-slate-950 decoration-slate-950/50' 
+              : 'text-white decoration-primary/50'
+          }`}
+        >
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return (
+        <em 
+          key={i} 
+          className={`italic ${
+            theme === 'light' ? 'text-slate-600' : 'text-slate-300'
+          }`}
+        >
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    return part;
+  });
+};
+
+// --- AILab Message Formatter for Historical Figures ---
+const AILabMessageFormatter: React.FC<{ 
+  text: string; 
+  role: 'user' | 'assistant'; 
+  theme?: 'light' | 'dark' 
+}> = ({ text, role, theme = 'dark' }) => {
+  if (role === 'user') {
+    return (
+      <div className={`text-sm font-medium leading-relaxed whitespace-pre-wrap ${
+        theme === 'light' ? 'text-slate-800' : 'text-white'
+      }`}>
+        {text}
+      </div>
+    );
+  }
+
+  // Regex to extract scenario in parentheses at the start of the message
+  const match = text.match(/^\(([^)]+)\)\s*([\s\S]*)/);
+  if (match) {
+    const scenario = match[1];
+    const dialogue = match[2];
+    const dialogueLines = dialogue.split('\n').filter(line => !line.trim().match(/^[-=]{3,}$/));
+    
+    return (
+      <div className="space-y-3">
+        {/* Scenario/Mise en scène Block without icon 🎬 */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-xs italic text-white shadow-inner">
+          <span className="leading-relaxed font-black">({scenario})</span>
+        </div>
+        {/* Dialogue with adaptive color and bold formatting */}
+        {dialogue.trim() && (
+          <div className={`font-semibold text-sm tracking-wide leading-relaxed pl-1 space-y-2 ${
+            theme === 'light' 
+              ? 'text-slate-800 drop-shadow-sm' 
+              : 'text-slate-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]'
+          }`}>
+            {dialogueLines.map((line, idx) => {
+              if (line.trim() === '') return <div key={idx} className="h-2" />;
+              return <p key={idx}>{formatAILabInline(line, theme === 'light' ? 'light' : 'dark')}</p>;
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const lines = text.split('\n').filter(line => !line.trim().match(/^[-=]{3,}$/));
+  return (
+    <div className={`text-sm font-medium leading-relaxed space-y-2 ${
+      theme === 'light' ? 'text-slate-800' : 'text-slate-200'
+    }`}>
+      {lines.map((line, idx) => {
+        if (line.trim() === '') return <div key={idx} className="h-2" />;
+        return <p key={idx}>{formatAILabInline(line, theme === 'light' ? 'light' : 'dark')}</p>;
+      })}
+    </div>
+  );
+};
 
 // --- Sub-component: FeynmanChallenge ---
 const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, initialSession?: AILabSession }) => {
@@ -37,41 +130,43 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(initialSession?.id || `fey_${Date.now()}`);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { saveAILabSession, t, settings } = useStore();
   const lang = settings.language;
+
+  useEffect(() => {
+    if (isStarted && messages.length === 0 && topic) {
+      const welcome = { role: 'assistant' as const, content: t('ailab.feynmanWelcome', { topic }) };
+      setMessages([welcome]);
+    }
+  }, [isStarted, messages.length, topic]);
 
   const handleStart = () => {
     if (topic.trim()) {
       setIsStarted(true);
-      const firstMsg = { role: 'assistant' as const, content: t('ailab.feynmanWelcome', { topic }) };
-      const newMessages = [firstMsg];
-      setMessages(newMessages);
-      
-      saveAILabSession({
-        id: sessionId,
-        type: 'feynman',
-        topic,
-        messages: newMessages,
-        timestamp: new Date().toISOString()
-      });
-      
+      // Messages will be initialized by useEffect
       HapticFeedback.success();
     }
   };
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
+    if ((!input.trim() && !selectedImage) || loading) return;
 
     const userMsg = input.trim();
+    const currentImage = selectedImage;
     setInput('');
-    const userMessageObj = { role: 'user' as const, content: userMsg };
+    setSelectedImage(null);
+    
+    const userMessageObj = { role: 'user' as const, content: userMsg || "Analyse de l'image" };
     const newMessagesPostUser = [...messages, userMessageObj];
     setMessages(newMessagesPostUser);
     setLoading(true);
     HapticFeedback.selection();
 
     try {
-      const response = await openrouterService.feynmanChat(userMsg, messages, topic);
+      const currentLang = settings?.language || 'fr';
+      const response = await aiService.feynmanChat(userMsg, messages, topic, currentLang, currentImage || undefined);
       const assistantMessageObj = { role: 'assistant' as const, content: response };
       const finalMessages = [...newMessagesPostUser, assistantMessageObj];
       setMessages(finalMessages);
@@ -85,10 +180,12 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
       });
       
       HapticFeedback.success();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      const errorMsg = { role: 'assistant' as const, content: t('ailab.leoError') };
+      const errorMessage = error.message || "Erreur de connexion";
+      const errorMsg = { role: 'assistant' as const, content: `${t('ailab.leoError')}\n\n(Détails : ${errorMessage})` };
       setMessages([...newMessagesPostUser, errorMsg]);
+      HapticFeedback.error();
     } finally {
       setLoading(false);
     }
@@ -139,27 +236,80 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
             {loading && <div className="flex justify-start"><div className="bg-white/5 p-4 rounded-3xl rounded-tl-none border border-white/5 flex gap-1"><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-blue-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-500 rounded-full" /><motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-500 rounded-full" /></div></div>}
           </div>
           <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,1.5rem)+1.5rem)] md:pb-6">
-            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 md:gap-3 items-center">
-              <input 
-                type="text" 
-                value={input} 
-                onChange={(e) => setInput(e.target.value)} 
-                placeholder={t('ailab.inputPlaceholder')} 
-                className="flex-1 p-3 md:p-5 bg-white/5 border border-white/10 rounded-2xl md:rounded-[1.5rem] text-white text-sm md:text-base outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all font-medium shadow-inner" 
+            {selectedImage && (
+              <div className="mb-3 animate-fade-in">
+                <div className="relative inline-block mb-2">
+                  <img src={selectedImage} alt="Preview" className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-xl border border-white/20 shadow-lg" />
+                  <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center border border-white/20 hover:bg-slate-700 shadow-xl transition-colors">
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
+            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="relative flex items-center gap-2 md:gap-3 group">
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setSelectedImage(reader.result as string);
+                    reader.readAsDataURL(file);
+                  }
+                }}
               />
-              <button 
-                type="submit" 
-                disabled={!input.trim() || loading} 
-                className={`
-                  h-12 w-12 md:h-14 md:w-14 flex items-center justify-center shrink-0
-                  rounded-2xl md:rounded-[1.2rem] transition-all active:scale-90
-                  ${input.trim() && !loading 
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-glow-blue' 
-                    : 'bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed opacity-40'}
-                `}
-              >
-                {loading ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} className="md:w-6 md:h-6" />}
-              </button>
+              <div className="flex gap-1.5 md:gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.setAttribute('capture', 'environment');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-blue-500/30"
+                >
+                  <Camera size={20} className="md:w-5 md:h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.removeAttribute('capture');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-white/5"
+                >
+                  <ImageIcon size={20} className="md:w-5 md:h-5" />
+                </button>
+              </div>
+              <div className="relative flex-1 h-12 md:h-14">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={t('ailab.inputPlaceholder')}
+                  className="w-full h-full bg-white/5 border border-white/10 outline-none rounded-xl md:rounded-2xl px-4 text-sm font-bold text-white placeholder:text-slate-500 focus:bg-white/10 transition-all shadow-inner pr-12 md:pr-14"
+                />
+                <button
+                  type="submit"
+                  disabled={(!input.trim() && !selectedImage) || loading}
+                  className={`
+                    absolute right-1.5 top-1.5 bottom-1.5 
+                    w-10 md:w-12 flex items-center justify-center 
+                    rounded-xl md:rounded-xl shadow-lg border transition-all active:scale-95 group-hover:scale-105
+                    ${(input.trim() || selectedImage) && !loading
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-500/20 shadow-glow-blue'
+                      : 'bg-slate-800 text-slate-500 border-white/5 cursor-not-allowed opacity-50'}
+                  `}
+                >
+                  {loading ? <RefreshCw size={16} className="animate-spin" /> : <Send size={18} className={((input.trim() || selectedImage) && !loading) ? "animate-pulse" : ""} />}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -175,35 +325,65 @@ const FIGURE_IMAGES: Record<string, string> = {
   socrate: '/portraits/socrate.png',
   einstein: '/portraits/einstein.png',
   davinci: '/portraits/davinci.png',
-  hugo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Victor_Hugo_by_Etienne_Carjat_1876_-_full.jpg/800px-Victor_Hugo_by_Etienne_Carjat_1876_-_full.jpg',
-  cleopatre: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Cleopatra_VII_Altes_Museum_Berlin.jpg/800px-Cleopatra_VII_Altes_Museum_Berlin.jpg',
-  mandela: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Nelson_Mandela_1994.jpg/800px-Nelson_Mandela_1994.jpg',
-  veil: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Simone_Veil_Pr%C3%A9sidente_du_Parlement_europ%C3%A9en.jpg/800px-Simone_Veil_Pr%C3%A9sidente_du_Parlement_europ%C3%A9en.jpg',
-  pasteur: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Albert_Edelfelt_-_Louis_Pasteur_-_1885.jpg/800px-Albert_Edelfelt_-_Louis_Pasteur_-_1885.jpg',
-  moliere: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Moliere_par_Mignard_2.jpg/800px-Moliere_par_Mignard_2.jpg',
-  aristote: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Aristotle_Altemps_Inv8575.jpg/800px-Aristotle_Altemps_Inv8575.jpg',
-  degaulle: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Charles_de_Gaulle-1961.jpg/800px-Charles_de_Gaulle-1961.jpg',
-  jeannedarc: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Joan_of_arc_miniature_graded.jpg/800px-Joan_of_arc_miniature_graded.jpg',
-  newton: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/GodfreyKneller-IsaacNewton-1689.jpg/800px-GodfreyKneller-IsaacNewton-1689.jpg',
-  rosaparks: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Rosa_Parks_1955.jpg/800px-Rosa_Parks_1955.jpg',
-  galilee: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg/800px-Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg',
-  mlk: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Martin_Luther_King%2C_Jr..jpg/800px-Martin_Luther_King%2C_Jr..jpg',
-  claude_bernard: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Claude_Bernard_1870.jpg/800px-Claude_Bernard_1870.jpg',
-  mozart: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Wolfgang-amadeus-mozart_1.jpg/800px-Wolfgang-amadeus-mozart_1.jpg'
+  hugo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Victor_Hugo_by_Etienne_Carjat_1876_-_full.jpg/400px-Victor_Hugo_by_Etienne_Carjat_1876_-_full.jpg',
+  cleopatre: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Cleopatra_VII_Altes_Museum_Berlin.jpg/400px-Cleopatra_VII_Altes_Museum_Berlin.jpg',
+  mandela: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Nelson_Mandela_1994.jpg/400px-Nelson_Mandela_1994.jpg',
+  veil: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Simone_Veil_Pr%C3%A9sidente_du_Parlement_europ%C3%A9en.jpg/400px-Simone_Veil_Pr%C3%A9sidente_du_Parlement_europ%C3%A9en.jpg',
+  pasteur: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Albert_Edelfelt_-_Louis_Pasteur_-_1885.jpg/400px-Albert_Edelfelt_-_Louis_Pasteur_-_1885.jpg',
+  moliere: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Moliere_par_Mignard_2.jpg/400px-Moliere_par_Mignard_2.jpg',
+  aristote: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Aristotle_Altemps_Inv8575.jpg/400px-Aristotle_Altemps_Inv8575.jpg',
+  degaulle: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Charles_de_Gaulle-1961.jpg/400px-Charles_de_Gaulle-1961.jpg',
+  jeannedarc: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Joan_of_arc_miniature_graded.jpg/400px-Joan_of_arc_miniature_graded.jpg',
+  newton: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/GodfreyKneller-IsaacNewton-1689.jpg/400px-GodfreyKneller-IsaacNewton-1689.jpg',
+  rosaparks: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Rosa_Parks_1955.jpg/400px-Rosa_Parks_1955.jpg',
+  galilee: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg/400px-Justus_Sustermans_-_Portrait_of_Galileo_Galilei%2C_1636.jpg',
+  mlk: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Martin_Luther_King%2C_Jr..jpg/400px-Martin_Luther_King%2C_Jr..jpg',
+  claude_bernard: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Claude_Bernard_1870.jpg/400px-Claude_Bernard_1870.jpg',
+  mozart: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Wolfgang-amadeus-mozart_1.jpg/400px-Wolfgang-amadeus-mozart_1.jpg',
+  tesla: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/N.Tesla.JPG/400px-N.Tesla.JPG',
+  gandhi: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Mahatma-Gandhi%2C_studio%2C_1931.jpg/400px-Mahatma-Gandhi%2C_studio%2C_1931.jpg',
+  lovelace: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Ada_Lovelace_portrait.jpg/400px-Ada_Lovelace_portrait.jpg',
+  hawking: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Stephen_Hawking.StarChild.jpg/400px-Stephen_Hawking.StarChild.jpg',
+  kahlo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Frida_Kahlo%2C_by_Guillermo_Kahlo.jpg/400px-Frida_Kahlo%2C_by_Guillermo_Kahlo.jpg',
+  belfort: '',
+  kiyosaki: '',
+  trump: '',
+  buffett: '',
+  vex_king: '',
+  musk: '',
+  bezos: ''
 };
 
 const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSession?: AILabSession }) => {
-  const { saveAILabSession, t } = useStore();
+  const { saveAILabSession, t, settings } = useStore();
   
   const historicalFigures = React.useMemo(() => {
     const figures = t('historicalFigures') as any;
     if (typeof figures !== 'object') return [];
     
-    return Object.keys(FIGURE_IMAGES).map(id => ({
-      id,
-      image: FIGURE_IMAGES[id],
-      ...(figures[id] || {})
-    }));
+    return Object.keys(FIGURE_IMAGES).map(id => {
+      const charData = figures[id] || {};
+      let name = charData.name || id;
+      
+      // Mask living authors' names and use initials
+      const livingIds = ['musk', 'bezos', 'trump', 'buffett', 'vex_king', 'kiyosaki', 'belfort'];
+      if (livingIds.includes(id)) {
+        if (id === 'musk') name = "E. Muskes (LM)";
+        else if (id === 'bezos') name = "J. Bezoses";
+        else if (id === 'trump') name = "D. Trumpes";
+        else if (id === 'buffett') name = "W. Buffettes";
+        else if (id === 'vex_king') name = "V. Kinges";
+        else if (id === 'kiyosaki') name = "R. Kiyosakies";
+        else if (id === 'belfort') name = "J. Belfortes";
+      }
+
+      return {
+        id,
+        image: FIGURE_IMAGES[id] || `https://ui-avatars.com/api/?name=${name.split(' ')[0]}&background=1e293b&color=fff&size=512&bold=true`,
+        ...charData,
+        name // Override name with masked version
+      };
+    });
   }, [t]);
 
   const [selectedChar, setSelectedChar] = useState<any | null>(
@@ -221,45 +401,62 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
     console.log("AILab Rendering Version 2.5 - Ultra High Contrast Loaded");
   }, []);
 
-  const handleSelect = (char: any) => {
-    HapticFeedback.success();
-    audioService.playTimeTravel();
-    setSelectedChar(char);
-    setIsTraveling(true);
-    
-    setTimeout(() => {
-      setIsTraveling(false);
-      const firstMsg = { 
-        role: 'assistant' as const, 
-        content: t('ailab.tmWelcome', { name: char.name, role: char.role, era: char.era }) 
-      };
-      const newMessages = [firstMsg];
-      setMessages(newMessages);
+    useEffect(() => {
+      if (selectedChar && messages.length === 0 && !isTraveling) {
+        const welcomeText = `(${selectedChar.name} apparaît majestueusement devant toi dans une lueur temporelle...) Bonjour, jeune voyageur du temps ! Je suis ${selectedChar.name}, ${selectedChar.role} de l'époque ${selectedChar.era}. De quoi souhaites-tu que nous discutions aujourd'hui ?`;
+        const welcome = { 
+          role: 'assistant' as const, 
+          content: welcomeText
+        };
+        const newMessages = [welcome];
+        setMessages(newMessages);
+        
+        saveAILabSession({
+          id: sessionId,
+          type: 'history',
+          topic: selectedChar.name,
+          characterId: selectedChar.id,
+          messages: newMessages,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }, [selectedChar, messages.length, isTraveling, sessionId]);
+
+    const handleSelect = (char: any) => {
+      HapticFeedback.success();
+      audioService.playTimeTravel();
+      setSelectedChar(char);
+      setSessionId(`tm_${Date.now()}`); // Génère un nouvel ID de session unique
+      setMessages([]); // Réinitialise les messages pour déclencher le message d'accueil
+      setIsTraveling(true);
       
-      saveAILabSession({
-        id: sessionId,
-        type: 'history',
-        topic: char.name,
-        characterId: char.id,
-        messages: newMessages,
-        timestamp: new Date().toISOString()
-      });
-    }, 2000);
-  };
+      setTimeout(() => {
+        setIsTraveling(false);
+      }, 2000);
+    };
 
   const handleSend = async () => {
-    if (!input.trim() || loading || !selectedChar) return;
+    if ((!input.trim() && !selectedImage) || loading || !selectedChar) return;
 
     const userMsg = input.trim();
+    const currentImage = selectedImage;
     setInput('');
-    const userMessageObj = { role: 'user' as const, content: userMsg };
+    setSelectedImage(null);
+    
+    const userMessageObj = { role: 'user' as const, content: userMsg || "Vision temporelle" };
     const newMessagesPostUser = [...messages, userMessageObj];
     setMessages(newMessagesPostUser);
     setLoading(true);
     HapticFeedback.selection();
 
     try {
-      const response = await openrouterService.historyChat(userMsg, messages, selectedChar.name, selectedChar.era);
+      const currentLang = settings?.language || 'fr';
+      const charName = selectedChar.name || "Inconnu";
+      const charEra = selectedChar.era || "Époque inconnue";
+      const charDates = selectedChar.dates || "";
+      const charBio = selectedChar.bio || "";
+      
+      const response = await aiService.historyChat(userMsg, messages, charName, charEra, charDates, charBio, currentLang, currentImage || undefined);
       const assistantMessageObj = { role: 'assistant' as const, content: response };
       const finalMessages = [...newMessagesPostUser, assistantMessageObj];
       setMessages(finalMessages);
@@ -274,8 +471,14 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
       });
       
       HapticFeedback.success();
-    } catch (error) {
-       setMessages([...newMessagesPostUser, { role: 'assistant' as const, content: "Le continuum espace-temps semble perturbé... Peux-tu reformuler ta question ?" }]);
+    } catch (error: any) {
+      console.error('AI Lab Error:', error);
+      const errorMessage = error.message || "Erreur de connexion";
+      setMessages([...newMessagesPostUser, { 
+        role: 'assistant' as const, 
+        content: `${t('ailab.tmError')}\n\n(Détails : ${errorMessage})`
+      }]);
+      HapticFeedback.error();
     } finally {
       setLoading(false);
     }
@@ -292,8 +495,7 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
 
   return (
     <div className="flex flex-col h-full bg-slate-950 p-4 md:p-8 max-w-7xl mx-auto relative overflow-hidden">
-      {/* Dev Version Toggle */}
-      <div className="absolute top-2 right-2 px-2 py-1 bg-white/5 rounded text-[8px] text-white/20 uppercase tracking-widest font-black">V2.5 ULTRA-VISIBILITY</div>
+
 
       <div className="flex items-center justify-between mb-8">
         <button onClick={selectedChar && !initialSession ? () => { setSelectedChar(null); setMessages([]); } : onBack} className="p-3 bg-white/5 rounded-2xl text-slate-400 hover:text-white transition-all flex items-center gap-2 active:scale-95">
@@ -309,14 +511,14 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
       </div>
 
       {!selectedChar ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 overflow-y-auto pr-4 custom-scrollbar pb-20">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 grid grid-cols-2 gap-4 overflow-y-auto pr-2 custom-scrollbar pb-20">
           {historicalFigures.map((char: any) => (
             <motion.div 
               key={char.id} 
-              whileHover={{ scale: 1.05, y: -10 }} 
-              whileTap={{ scale: 0.95 }} 
+              whileHover={{ scale: 1.02 }} 
+              whileTap={{ scale: 0.98 }} 
               onClick={() => handleSelect(char)} 
-              className="relative group cursor-pointer flex flex-col bg-slate-900 border-2 border-white/5 hover:border-blue-500/50 rounded-[3rem] overflow-hidden shadow-2xl transition-all h-[550px]"
+              className="relative group cursor-pointer flex flex-col bg-slate-900 border border-white/10 hover:border-blue-500/50 rounded-3xl overflow-hidden shadow-xl transition-all h-[280px]"
             >
               {/* Image Section (Giant) */}
               <div className="relative flex-1 overflow-hidden">
@@ -338,21 +540,19 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
                 </div>
               </div>
 
-              {/* ULTRA-VISIBILITY INFO PANEL */}
-              <div className="p-8 bg-slate-950 border-t border-white/10 flex flex-col items-center gap-6">
-                <h4 className="font-display font-black text-white text-2xl md:text-3xl text-center leading-tight">
+              {/* Info Panel */}
+              <div className="p-4 bg-slate-950 border-t border-white/5 flex flex-col items-center gap-2">
+                <h4 className="font-display font-black text-white text-sm text-center leading-tight truncate w-full">
                   {char.name}
                 </h4>
                 
-                {/* THE DATE BADGE - IMPOSSIBLE TO MISS */}
-                <div className="w-full bg-yellow-400 p-4 rounded-[1.5rem] shadow-[0_0_40px_rgba(250,204,21,0.3)] flex flex-col items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
-                   <p className="text-slate-900 text-xl md:text-2xl font-black tracking-tighter uppercase">
+                <div className="w-full bg-blue-500 py-1.5 rounded-xl shadow-lg flex flex-col items-center justify-center">
+                   <p className="text-white text-[10px] font-black tracking-tight uppercase">
                      {char.dates}
                    </p>
-                   <div className="h-1 w-12 bg-slate-900/20 rounded-full mt-1" />
                 </div>
                 
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest truncate w-full text-center">
                   {char.era}
                 </p>
               </div>
@@ -370,12 +570,12 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
                   </div>
                 )}
                 <div className={`
-                  max-w-[85%] p-4 rounded-2xl text-sm font-medium leading-relaxed whitespace-pre-wrap
+                  max-w-[85%] p-4 rounded-2xl text-sm font-medium leading-relaxed
                   ${msg.role === 'user'
                     ? 'bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-tr-none shadow-lg shadow-purple-900/20'
                     : 'bg-white/5 text-slate-200 border border-white/5 rounded-tl-none shadow-inner'}
                 `}>
-                  {msg.content}
+                  <AILabMessageFormatter text={msg.content} role={msg.role} theme={settings.theme} />
                 </div>
               </motion.div>
             ))}

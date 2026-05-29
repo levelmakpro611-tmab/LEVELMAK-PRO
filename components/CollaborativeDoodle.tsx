@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Palette, Swords, Trophy, Timer as TimerIcon, Info, Coins, X, CheckCircle, Skull } from 'lucide-react';
+import { Palette, Swords, Trophy, Timer as TimerIcon, Info, Coins, X } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
 import { supabase } from '../services/supabase';
@@ -19,7 +19,7 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
   isHost = false, 
   onClose 
 }) => {
-  const { user, resolveBattle } = useStore();
+  const { user, resolveBattle, addLevelCoins, addNotification } = useStore();
   const [battle, setBattle] = useState<BattleState | null>(battleState || null);
   const [grid, setGrid] = useState<string[]>(battleState?.grid || Array(GRID_SIZE * GRID_SIZE).fill('#ffffff'));
   const [timeLeft, setTimeLeft] = useState(battleState?.timeLeft || 180);
@@ -27,9 +27,16 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
   const [channel, setChannel] = useState<any>(null);
   const [resolved, setResolved] = useState(false);
 
+  // Forfeit states
+  const [abandonedByOpponent, setAbandonedByOpponent] = useState(false);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [abandonRewardsClaimed, setAbandonRewardsClaimed] = useState(false);
+
+  const opponentJoinedRef = useRef(false);
+
   // Colors
-  const HOST_COLOR = '#FF0000'; // Brut Red (rouge rouge)
-  const GUEST_COLOR = '#000000'; // Black/Bleu foncé as requested
+  const HOST_COLOR = '#FF3B3B'; // Vivid Neon Red
+  const GUEST_COLOR = '#00D1FF'; // Vivid Neon Blue
   const myColor = isHost ? HOST_COLOR : GUEST_COLOR;
 
   // Turn logic
@@ -37,7 +44,7 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
   const isHostTurn = placedPixelsCount % 2 === 0;
   const isMyTurn = isHost ? isHostTurn : !isHostTurn;
 
-  // Sync with Supabase
+  // Sync with Supabase & Realtime events
   useEffect(() => {
     if (!battle) return;
 
@@ -57,11 +64,46 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
             setBattle(prev => prev ? { ...prev, status: 'finished', winnerId: payload.winnerId } : null);
         }
       })
-      .subscribe();
+      .on('broadcast', { event: 'battle_abandoned' }, ({ payload }) => {
+        if (payload.senderId !== user?.id) {
+          setAbandonedByOpponent(true);
+          HapticFeedback.levelUp();
+        }
+      })
+      .on('presence', { event: 'sync' }, () => {
+        if (battle.status !== 'active' || abandonedByOpponent) return;
+        const presenceState = doodleChannel.presenceState();
+        const pList = Object.values(presenceState).flat() as any[];
+        const opponentId = isHost ? battle.guest.id : battle.host.id;
+        const isOpponentPresent = pList.some((p: any) => p.userId === opponentId);
+        
+        if (isOpponentPresent) {
+          opponentJoinedRef.current = true;
+        }
+
+        // Opponent disconnected/left presence during active gameplay
+        if (opponentJoinedRef.current && !isOpponentPresent) {
+          setTimeout(() => {
+            const currentPresence = doodleChannel.presenceState();
+            const currentList = Object.values(currentPresence).flat() as any[];
+            const stillGone = !currentList.some((p: any) => p.userId === opponentId);
+            if (stillGone && battle.status === 'active' && !abandonedByOpponent) {
+              setAbandonedByOpponent(true);
+              HapticFeedback.levelUp();
+            }
+          }, 15000); // 15 seconds grace period
+        }
+      });
+
+    doodleChannel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED' && user) {
+        await doodleChannel.track({ userId: user.id, onlineAt: new Date().toISOString() });
+      }
+    });
 
     setChannel(doodleChannel);
     return () => { supabase.removeChannel(doodleChannel); };
-  }, [battle?.id]);
+  }, [battle?.id, user, isHost, abandonedByOpponent]);
 
   // Game Loop (Host Only)
   useEffect(() => {
@@ -104,14 +146,30 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
     });
   };
 
+  // Process normal game completion
   useEffect(() => {
-    if (battle?.status === 'finished' && !resolved && user) {
+    if (battle?.status === 'finished' && !resolved && user && !abandonedByOpponent) {
         setResolved(true);
         const isDraw = !battle.winnerId;
         resolveBattle(battle.winnerId || '', isDraw);
         if (battle.winnerId === user.id) HapticFeedback.levelUp();
     }
-  }, [battle?.status, battle?.winnerId, resolved, user, resolveBattle]);
+  }, [battle?.status, battle?.winnerId, resolved, user, resolveBattle, abandonedByOpponent]);
+
+  // Process Forfeit / Abandon rewards
+  useEffect(() => {
+    if (abandonedByOpponent && !abandonRewardsClaimed && user && battle) {
+      setAbandonRewardsClaimed(true);
+      resolveBattle(user.id, false);
+      const betAmount = battle.betAmount || 0;
+      if (betAmount > 0) {
+        addLevelCoins(betAmount);
+        addNotification('success', '🏆 Victoire par Forfait !', `L'adversaire a quitté. Vous remportez ${betAmount} LevelCoins !`);
+      } else {
+        addNotification('success', '🏆 Victoire par Forfait !', "L'adversaire a abandonné. Victoire enregistrée !");
+      }
+    }
+  }, [abandonedByOpponent, abandonRewardsClaimed, user, battle, resolveBattle, addLevelCoins, addNotification]);
 
   const handleRemotePixel = (payload: any) => {
       setGrid(prev => {
@@ -155,9 +213,8 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
   };
 
   const handlePixelClick = useCallback((index: number) => {
-    if (!battle || battle.status !== 'active' || grid[index] !== '#ffffff') return;
+    if (!battle || battle.status !== 'active' || grid[index] !== '#ffffff' || abandonedByOpponent) return;
     if (!isMyTurn) {
-        // Not your turn
         HapticFeedback.error?.() || HapticFeedback.navigation();
         return;
     }
@@ -182,7 +239,22 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
       event: 'pixel_claim',
       payload: { index, color: myColor, scores: newScores }
     });
-  }, [battle, grid, scores, isHost, myColor, channel, isMyTurn]);
+  }, [battle, grid, scores, isHost, myColor, channel, isMyTurn, abandonedByOpponent]);
+
+  const confirmQuit = () => {
+    channel?.send({
+      type: 'broadcast',
+      event: 'battle_abandoned',
+      payload: { senderId: user?.id, battleId: battle?.id }
+    });
+    const betAmount = battle?.betAmount || 0;
+    if (betAmount > 0) {
+      addLevelCoins(-betAmount);
+    }
+    setTimeout(() => {
+      onClose?.();
+    }, 500);
+  };
 
   if (!battle) {
     return (
@@ -196,9 +268,7 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
         </p>
         <button 
           onClick={() => {
-            const el = document.getElementById('world-map');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-            else window.dispatchEvent(new CustomEvent('nav_change', { detail: 'dashboard' }));
+            window.dispatchEvent(new CustomEvent('find_opponent'));
           }}
           className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform shadow-xl flex items-center gap-3"
         >
@@ -209,7 +279,7 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
     );
   }
 
-  if (battle.status === 'finished') {
+  if (battle.status === 'finished' && !abandonedByOpponent) {
     const isWinner = battle.winnerId === user?.id;
     const isDraw = !battle.winnerId;
     return (
@@ -221,7 +291,7 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
           {isDraw ? 'Match Nul !' : isWinner ? '🏆 Victoire Totale !' : 'Défaite cuisante'}
         </h2>
         
-        <div className="flex items-center gap-2 px-5 py-2 rounded-full border mb-8 font-black ${isWinner ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/10 text-red-400'}">
+        <div className={`flex items-center gap-2 px-5 py-2 rounded-full border mb-8 font-black ${isWinner ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
           <Coins size={18} />
           {isWinner ? '+10 LevelCoins • +50 XP' : isDraw ? '+0 Coins • +20 XP' : '-10 LevelCoins • +20 XP'}
         </div>
@@ -246,7 +316,7 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-slate-950 flex flex-col p-4 md:p-8">
+    <div className="fixed inset-0 z-[1000] bg-slate-950 flex flex-col p-4 md:p-8 relative">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
@@ -269,7 +339,16 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
                 {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
               </span>
            </div>
-           <button onClick={onClose} className="p-3 bg-white/10 rounded-2xl hover:bg-white/20 transition-colors text-white">
+           <button 
+              onClick={() => {
+                if (battle?.status === 'active' && !abandonedByOpponent) {
+                  setShowQuitConfirm(true);
+                } else {
+                  onClose?.();
+                }
+              }} 
+              className="p-3 bg-white/10 rounded-2xl hover:bg-white/20 transition-colors text-white border border-white/5"
+           >
               <X size={20} />
            </button>
         </div>
@@ -277,42 +356,66 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
 
       {/* Scoreboard & Turn Indicator */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className={`p-4 rounded-3xl border relative transition-all duration-300 ${isHost ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-900 border-white/5 opacity-50'} ${isHostTurn ? 'ring-2 ring-red-500 scale-105 shadow-[0_0_15px_rgba(255,0,0,0.2)]' : 'scale-100 opacity-60'}`}>
-           {isHostTurn && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase shadow-lg whitespace-nowrap">Au tour de</span>}
-           <p className="text-[10px] font-black text-red-500 uppercase mb-1 text-center">{battle?.host.name}</p>
-           <p className="text-2xl font-black text-white text-center">{scores.host} pts</p>
+        <div className={`p-5 rounded-[2rem] border relative transition-all duration-500 ${isHost ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-900/50 border-white/5'} ${isHostTurn ? 'ring-4 ring-red-500/50 scale-105 shadow-[0_0_30px_rgba(255,59,59,0.3)] z-10' : 'opacity-40 scale-95'}`}>
+           {isHostTurn && (
+             <motion.span 
+               initial={{ y: 5, opacity: 0 }} 
+               animate={{ y: 0, opacity: 1 }}
+               className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[8px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-xl whitespace-nowrap"
+             >
+               C'est ton tour
+             </motion.span>
+           )}
+           <p className="text-[10px] font-black text-red-500 uppercase mb-2 text-center tracking-tighter">{battle?.host.name}</p>
+           <p className="text-4xl font-black text-white text-center drop-shadow-md">{scores.host}</p>
+           <p className="text-[8px] font-bold text-red-500/50 uppercase text-center mt-1">Points</p>
         </div>
-        <div className={`p-4 rounded-3xl border relative transition-all duration-300 ${!isHost ? 'bg-slate-800 border-slate-500/50' : 'bg-slate-900 border-white/5 opacity-50'} ${!isHostTurn ? 'ring-2 ring-slate-400 scale-105 shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'scale-100 opacity-60'}`}>
-           {!isHostTurn && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-700 text-white text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase shadow-lg whitespace-nowrap">Au tour de</span>}
-           <p className="text-[10px] font-black text-slate-400 uppercase mb-1 text-center">{battle?.guest.name}</p>
-           <p className="text-2xl font-black text-white text-center">{scores.guest} pts</p>
+        
+        <div className={`p-5 rounded-[2rem] border relative transition-all duration-500 ${!isHost ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-900/50 border-white/5'} ${!isHostTurn ? 'ring-4 ring-blue-500/50 scale-105 shadow-[0_0_30px_rgba(0,209,255,0.3)] z-10' : 'opacity-40 scale-95'}`}>
+           {!isHostTurn && (
+             <motion.span 
+               initial={{ y: 5, opacity: 0 }} 
+               animate={{ y: 0, opacity: 1 }}
+               className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[8px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-xl whitespace-nowrap"
+             >
+               C'est ton tour
+             </motion.span>
+           )}
+           <p className="text-[10px] font-black text-blue-400 uppercase mb-2 text-center tracking-tighter">{battle?.guest.name}</p>
+           <p className="text-4xl font-black text-white text-center drop-shadow-md">{scores.guest}</p>
+           <p className="text-[8px] font-bold text-blue-400/50 uppercase text-center mt-1">Points</p>
         </div>
       </div>
 
       {/* Grid Container */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden">
+      <div className="flex-1 flex items-center justify-center w-full p-2 overflow-hidden">
         <div 
-          className="grid gap-[1px] bg-slate-800 p-1 rounded-xl shadow-2xl overflow-hidden aspect-square h-full max-h-[70vh]"
+          className="grid gap-[1px] bg-slate-800 p-1 rounded-xl shadow-2xl overflow-hidden aspect-square w-full"
           style={{ 
             gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
-            gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`
+            gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`,
+            maxWidth: 'min(calc(100vw - 2rem), 55vh, 450px)'
           }}
         >
           {grid.map((color, i) => (
             <motion.div
               key={i}
-              whileHover={{ scale: 1.1, zIndex: 10 }}
+              whileHover={battle.status === 'active' && grid[i] === '#ffffff' && !abandonedByOpponent ? { scale: 1.1, backgroundColor: '#334155', zIndex: 10 } : {}}
               onClick={() => handlePixelClick(i)}
-              className="w-full h-full cursor-pointer relative"
-              style={{ backgroundColor: color === '#ffffff' ? '#1e293b' : color }}
+              className={`w-full h-full cursor-pointer relative transition-colors duration-200 ${grid[i] === '#ffffff' ? 'hover:shadow-lg' : ''}`}
+              style={{ 
+                backgroundColor: color === '#ffffff' ? '#0f172a' : color,
+                boxShadow: color !== '#ffffff' ? `inset 0 0 10px rgba(0,0,0,0.3), 0 0 15px ${color}66` : 'none',
+                borderRadius: color !== '#ffffff' ? '4px' : '0'
+              }}
             >
               {color !== '#ffffff' && (
                 <motion.div 
-                    initial={{ scale: 0 }} 
-                    animate={{ scale: 1 }} 
+                    initial={{ scale: 0, rotate: -45 }} 
+                    animate={{ scale: 1, rotate: 0 }} 
                     className="absolute inset-0 flex items-center justify-center"
                 >
-                    <CheckCircle size={8} className="text-white/30" />
+                    <div className="w-1.5 h-1.5 bg-white/40 rounded-full blur-[1px]" />
                 </motion.div>
               )}
             </motion.div>
@@ -327,6 +430,83 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
           Aligne <strong className="text-white">3 pixels</strong> de ta couleur horizontalement ou verticalement pour gagner 1 point. Ton adversaire essaie de te bloquer !
         </p>
       </div>
+
+      {/* Quit Confirmation Dialog */}
+      <AnimatePresence>
+        {showQuitConfirm && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1001] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-6 text-center"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl"
+            >
+              <h3 className="text-2xl font-black text-white uppercase mb-4 tracking-tight">Abandonner le duel ?</h3>
+              <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                Attention ! Si vous quittez maintenant, l'adversaire remportera la partie par forfait.
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={confirmQuit} 
+                  className="w-full py-4 bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                >
+                  Oui, abandonner 🏳️
+                </button>
+                <button 
+                  onClick={() => setShowQuitConfirm(false)} 
+                  className="w-full py-4 bg-slate-850 text-slate-300 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-colors border border-white/5"
+                >
+                  Non, continuer ⚔️
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Forfeit Victory Overlay */}
+      <AnimatePresence>
+        {abandonedByOpponent && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
+          >
+            <motion.div 
+              initial={{ scale: 0, rotate: -10 }} 
+              animate={{ scale: 1, rotate: 0 }} 
+              transition={{ type: 'spring', bounce: 0.5, delay: 0.1 }}
+            >
+              <Trophy size={100} className="mb-6 text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.5)] animate-bounce" />
+            </motion.div>
+            <h2 className="text-4xl font-black text-white mb-2 uppercase tracking-widest italic">
+              🏆 Victoire par Forfait !
+            </h2>
+            <p className="text-slate-400 max-w-sm mb-6 text-sm">
+              L'adversaire a abandonné ou s'est déconnecté. Tu remportes automatiquement ce duel !
+            </p>
+
+            <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-6 py-3 rounded-full font-black text-lg mb-10 shadow-premium">
+              <Coins size={22} className="animate-spin-slow" />
+              {battle.betAmount && battle.betAmount > 0 ? `+${battle.betAmount * 2} LevelCoins` : `+10 LevelCoins • +50 XP`}
+            </div>
+
+            <button 
+              onClick={onClose} 
+              className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl"
+            >
+              Retourner à la carte
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

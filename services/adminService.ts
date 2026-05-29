@@ -105,12 +105,10 @@ export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => 
 
         if (error) throw error;
         
-        const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'levelmak611';
         const isAdmin = 
-            data.name?.toLowerCase().includes('administrateur principal') ||
-            data.name?.toLowerCase().includes('mouctar') ||
+            data.name?.toLowerCase() === 'administrateur principal' ||
             data.phone_number === ADMIN_USERNAME ||
-            data.email?.includes(ADMIN_USERNAME);
+            data.email === 'admin@levelmak.com';
 
         if (isAdmin) {
             return 'admin';
@@ -144,7 +142,7 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
         const { count: activeUsers, error: aError } = await supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true })
-            .or(`last_active.gt."${sevenDaysAgo.toISOString()}",created_at.gt."${sevenDaysAgo.toISOString()}"`);
+            .or(`last_active.gt.${sevenDaysAgo.toISOString()},created_at.gt.${sevenDaysAgo.toISOString()}`);
 
         // Fallback or Diagnostic for RLS: if count is 0 but we have a session, try a manual fetch
         let statsFallbackCount = 0;
@@ -191,6 +189,51 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
         const totalUsersClean = totalUsers || statsFallbackCount || 0;
         const activeUsersClean = activeUsers || (statsFallbackCount > 0 ? statsFallbackCount : 0);
 
+        // Compute real flowData (last 24h)
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const { data: recentActivities } = await supabase
+            .from('user_activities')
+            .select('timestamp')
+            .gt('timestamp', yesterday.toISOString());
+            
+        const flowMap: Record<string, number> = {};
+        for(let i=23; i>=0; i--) {
+            const d = new Date();
+            d.setHours(d.getHours() - i);
+            flowMap[`${d.getHours()}h`] = 0;
+        }
+        (recentActivities || []).forEach(act => {
+            const h = new Date(act.timestamp).getHours();
+            if (flowMap[`${h}h`] !== undefined) flowMap[`${h}h`]++;
+        });
+        const flowData = Object.keys(flowMap).map(hour => ({ hour, activity: flowMap[hour] }));
+
+        // Compute real growthData (last 7 days registrations)
+        const growthMap: Record<string, number> = {};
+        for(let i=6; i>=0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toLocaleDateString('fr-FR', { weekday: 'short' });
+            growthMap[dateStr] = 0;
+        }
+        data.forEach(u => {
+            if (u.created_at) {
+                const d = new Date(u.created_at);
+                if (d >= sevenDaysAgo) {
+                    const dateStr = d.toLocaleDateString('fr-FR', { weekday: 'short' });
+                    if (growthMap[dateStr] !== undefined) growthMap[dateStr]++;
+                }
+            }
+        });
+        
+        // Calculate base cumulative users from before 7 days
+        let cumulative = totalUsersClean - (data.filter(u => new Date(u.created_at) >= sevenDaysAgo).length);
+        const growthData = Object.keys(growthMap).map(date => {
+            cumulative += growthMap[date];
+            return { date, users: cumulative };
+        });
+
         const stats: AdminStats = {
             totalUsers: totalUsersClean,
             activeUsers: activeUsersClean,
@@ -207,7 +250,9 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             booksRead: booksRead || 0,
             booksToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastBookDate) ? 1 : 0), 0),
             totalLearningHours: totalLearningHours || 0,
-            averageEngagementRate: totalUsersClean > 0 ? Number(((activeUsersClean / totalUsersClean) * 100).toFixed(1)) : 0
+            averageEngagementRate: totalUsersClean > 0 ? Number(((activeUsersClean / totalUsersClean) * 100).toFixed(1)) : 0,
+            flowData,
+            growthData
         };
 
         console.log(`--- [ADMIN STATS] Success --- Users: ${stats.totalUsers}, Active: ${stats.activeUsers}`);
@@ -232,11 +277,12 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             booksRead: 0,
             booksToday: 0,
             totalLearningHours: 0,
-            averageEngagementRate: 0
+            averageEngagementRate: 0,
+            flowData: [],
+            growthData: []
         };
     }
 }
-;
 
 // ========== USER ANALYTICS ==========
 
@@ -466,6 +512,50 @@ export const blockUser = async (userId: string): Promise<void> => {
     }
 };
 
+export const unblockUser = async (userId: string): Promise<void> => {
+    try {
+        const { error } = await supabase.from('profiles').update({ status: 'active' }).eq('id', userId);
+        if (error) throw error;
+        await logAdminAction('system', 'System', 'user_activity', { type: 'unblock' }, userId);
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+        throw error;
+    }
+};
+
+export const sanctionUser = async (userId: string, type: 'deduct_xp' | 'deduct_coins' | 'warning', amount: number = 0, reason: string = ''): Promise<void> => {
+    try {
+        const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('xp, level_coins')
+            .eq('id', userId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+
+        let updates: any = {};
+        if (type === 'deduct_xp') {
+            updates.xp = Math.max(0, (profile.xp || 0) - amount);
+        } else if (type === 'deduct_coins') {
+            updates.level_coins = Math.max(0, (profile.level_coins || 0) - amount);
+        } else if (type === 'warning') {
+            // For now, warning is just logged in the admin logs
+            console.log(`Warning issued to user ${userId}: ${reason}`);
+        }
+
+        if (Object.keys(updates).length > 0) {
+            const { error } = await supabase
+                .from('profiles')
+                .update(updates)
+                .eq('id', userId);
+            if (error) throw error;
+        }
+    } catch (error) {
+        console.error('Error sanctioning user:', error);
+        throw error;
+    }
+};
+
 // ========== ADMIN LOGS ==========
 
 export const logAdminAction = async (
@@ -691,17 +781,6 @@ export const getBlockedUsers = async (): Promise<User[]> => {
     }
 };
 
-export const unblockUser = async (userId: string): Promise<void> => {
-    try {
-        const { error } = await supabase.from('profiles').update({ status: 'active' }).eq('id', userId);
-        if (error) throw error;
-        await logAdminAction('system', 'System', 'user_activity', { type: 'unblock' }, userId);
-    } catch (error) {
-        console.error('Error unblocking user:', error);
-        throw error;
-    }
-};
-
 export const getSecurityLogs = async (limitCount: number = 50): Promise<SecurityLog[]> => {
     // For now we might mock or reuse admin_logs if security logs aren't separate.
     // Let's reuse admin_logs that are related to security or auth.
@@ -758,13 +837,20 @@ export const exportSystemLogs = async (): Promise<any[]> => {
 
 export const exportDemographicData = async (): Promise<any[]> => {
     try {
-        const stats = await getDemographicStats();
-        return stats.crossTable.map(row => ({
-            "Tranche d'Âge": row.ageRange,
-            "Hommes": row.HOMME,
-            "Femmes": row.FEMME,
-            "Inconnu": row.AUTRE || 0,
-            "Total": row.total
+        const { data: users, error } = await supabase
+            .from('profiles')
+            .select('id, name, gender, age_range, city, neighborhood, created_at');
+        
+        if (error) throw error;
+
+        return (users || []).map(u => ({
+            'ID Utilisateur': u.id,
+            'Nom': u.name || 'Anonyme',
+            'Genre': u.gender || 'N/A',
+            'Tranche d\'âge': u.age_range || 'N/A',
+            'Ville': u.city || 'N/A',
+            'Quartier': u.neighborhood || 'N/A',
+            'Date Inscription': u.created_at ? new Date(u.created_at).toLocaleDateString('fr-FR') : 'N/A'
         }));
     } catch (error) {
         console.error('Error exporting demographic data:', error);
@@ -810,105 +896,56 @@ export const getDemographicStats = async () => {
     try {
         const { data: users, error } = await supabase
             .from('profiles')
-            .select('gender, age_range');
+            .select('gender, age_range, city, neighborhood');
+        
         if (error) throw error;
 
         const stats = {
             byGender: { HOMME: 0, FEMME: 0, AUTRE: 0, TOTAL: 0 },
-            byAge: {
-                '15-18': 0,
-                '19-23': 0,
-                '24+': 0,
-                'unknown': 0,
-                total: 0
-            },
-            crossTable: [] as { ageRange: string; HOMME: number; FEMME: number; AUTRE: number; total: number }[]
+            byAge: { '15-18': 0, '19-23': 0, '24+': 0, 'unknown': 0, total: 0 },
+            byLocation: {} as Record<string, number>,
+            crossTable: [] as any[]
         };
 
-        const crossMap: Record<string, { HOMME: number; FEMME: number; AUTRE: number }> = {
-            '15-18': { HOMME: 0, FEMME: 0, AUTRE: 0 },
-            '19-23': { HOMME: 0, FEMME: 0, AUTRE: 0 },
-            '24+': { HOMME: 0, FEMME: 0, AUTRE: 0 },
-            'unknown': { HOMME: 0, FEMME: 0, AUTRE: 0 }
-        };
+        if (users) {
+            stats.byGender.TOTAL = users.length;
+            users.forEach(u => {
+                const g = (u.gender || 'unknown').toUpperCase();
+                if (g === 'HOMME') stats.byGender.HOMME++;
+                else if (g === 'FEMME') stats.byGender.FEMME++;
+                else stats.byGender.AUTRE++;
 
-        users.forEach(user => {
-            // Gender Stats
-            const gender = user.gender === 'HOMME' || user.gender === 'FEMME' ? user.gender : 'AUTRE';
-            stats.byGender[gender]++;
-            stats.byGender.TOTAL++;
+                const age = u.age_range || 'Non spécifié';
+                if (age === '15-18') stats.byAge['15-18']++;
+                else if (age === '19-23') stats.byAge['19-23']++;
+                else if (age === '24+') stats.byAge['24+']++;
+                else stats.byAge.unknown++;
 
-            // Age Stats
-            const age = user.age_range || 'unknown';
-            const targetAge = (crossMap[age]) ? age : 'unknown';
-            stats.byAge[targetAge as keyof typeof stats.byAge]++;
-            stats.byAge.total++;
+                const loc = u.city || 'Inconnue';
+                stats.byLocation[loc] = (stats.byLocation[loc] || 0) + 1;
+            });
 
-            // Cross Table Data
-            crossMap[targetAge][gender]++;
-        });
-
-        // Format Cross Table
-        stats.crossTable = Object.entries(crossMap).map(([age, genders]) => ({
-            ageRange: age === 'unknown' ? 'Non spécifié' : age,
-            HOMME: genders.HOMME,
-            FEMME: genders.FEMME,
-            AUTRE: genders.AUTRE,
-            total: genders.HOMME + genders.FEMME + genders.AUTRE
-        }));
+            // Build cross table
+            const ageRanges = ['15-18', '19-23', '24+', 'Non spécifié'];
+            stats.crossTable = ageRanges.map(range => {
+                const filtered = users.filter(u => (u.age_range || 'Non spécifié') === range);
+                return {
+                    ageRange: range,
+                    HOMME: filtered.filter(u => u.gender?.toUpperCase() === 'HOMME').length,
+                    FEMME: filtered.filter(u => u.gender?.toUpperCase() === 'FEMME').length,
+                    AUTRE: filtered.filter(u => !['HOMME', 'FEMME'].includes(u.gender?.toUpperCase() || '')).length,
+                    total: filtered.length
+                };
+            });
+        }
 
         return stats;
     } catch (error) {
         console.error('Error getting demographic stats:', error);
-        return {
-            byGender: { HOMME: 0, FEMME: 0, AUTRE: 0, TOTAL: 0 },
-            byAge: { '15-18': 0, '19-23': 0, '24+': 0, 'unknown': 0, total: 0 },
-            crossTable: []
-        };
+        return null;
     }
 };
 
-export const exportDemographicData = (stats: any, type: 'pdf' | 'csv' | 'json') => {
-    if (!stats) return;
-
-    if (type === 'json') {
-        const dataStr = JSON.stringify(stats, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-        const exportFileDefaultName = `demographics_report_${new Date().toISOString().split('T')[0]}.json`;
-        const linkElement = document.createElement('a');
-        linkElement.setAttribute('href', dataUri);
-        linkElement.setAttribute('download', exportFileDefaultName);
-        linkElement.click();
-    } else if (type === 'csv') {
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Type,Category,Value\n";
-
-        // Gender
-        csvContent += `Gender,HOMME,${stats.byGender.HOMME}\n`;
-        csvContent += `Gender,FEMME,${stats.byGender.FEMME}\n`;
-        csvContent += `Gender,TOTAL,${stats.byGender.TOTAL}\n`;
-
-        // Age
-        Object.entries(stats.byAge).forEach(([key, value]) => {
-            if (key !== 'total') csvContent += `Age,${key},${value}\n`;
-        });
-
-        // Cross Table
-        csvContent += "\nCross Table (Age x Gender)\n";
-        csvContent += "Age Range,Male,Female,Total\n";
-        stats.crossTable.forEach((row: any) => {
-            csvContent += `${row.ageRange},${row.HOMME},${row.FEMME},${row.total}\n`;
-        });
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `demographics_report_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-};
 
 // ========== SHOP MANAGEMENT ==========
 
@@ -918,16 +955,22 @@ export const getAllShopItems = async (): Promise<ShopItem[]> => {
             .from('shop_items')
             .select('*')
             .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
+
+        if (error) {
+            if (error.code === '42P01') {
+                console.warn('Table "shop_items" missing in Supabase. Shop will use hardcoded fallback.');
+                return [];
+            }
+            throw error;
+        }
+
         return (data || []).map(item => ({
             ...item,
-            firestoreId: item.id // Keep alias for compatibility
-        } as ShopItem));
+            firestoreId: item.id // Maintain compatibility with older logic
+        })) as ShopItem[];
     } catch (error) {
-        console.error('Error getting shop items:', error);
-        throw error;
+        console.error('Error fetching shop items:', error);
+        return [];
     }
 };
 
@@ -955,7 +998,15 @@ export const addShopItem = async (item: Omit<ShopItem, 'firestoreId'>, imageFile
             image: imageUrl,
             created_at: new Date().toISOString()
         };
-        if (item.id) payload.id = item.id;
+        if (item.id) {
+            // Only include ID if it's a valid UUID to avoid Supabase errors (invalid input syntax for type uuid)
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id);
+            if (isUuid) {
+                payload.id = item.id;
+            } else {
+                console.warn(`Ignoring invalid UUID: ${item.id}. Database will generate a new one.`);
+            }
+        }
         if (item.color) payload.color = item.color;
         if (item.icon) payload.icon = item.icon;
 
@@ -997,9 +1048,7 @@ export const updateShopItem = async (
             imageUrl = supabase.storage.from('assets').getPublicUrl(data.path).data.publicUrl;
         }
 
-        const payload: any = {
-            updated_at: new Date().toISOString()
-        };
+        const payload: any = {};
         if (updates.name) payload.name = updates.name;
         if (updates.description) payload.description = updates.description;
         if (updates.price !== undefined) payload.price = updates.price;

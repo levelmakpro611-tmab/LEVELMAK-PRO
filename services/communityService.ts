@@ -41,6 +41,7 @@ export interface Conversation {
     isGroup?: boolean;
     groupName?: string;
     groupAdmin?: string;
+    groupModerators?: string[];
 }
 
 export interface Call {
@@ -57,6 +58,7 @@ export interface Call {
     sdpOffer?: any;
     sdpAnswer?: any;
     timestamp: any;
+    duration?: number;
 }
 
 export interface SocialPost {
@@ -394,11 +396,11 @@ export const chatService = {
     },
 
     /**
-     * Upload an image for a chat message
+     * Upload media (image/video) to Supabase Storage
      */
-    async uploadChatMessageImage(file: File, userId: string): Promise<string> {
+    async uploadMedia(file: File, userId: string, folder: 'chats' | 'stories' | 'posts'): Promise<string> {
         const timestamp = Date.now();
-        const fileName = `chats/${userId}/${timestamp}_${file.name}`;
+        const fileName = `${folder}/${userId}/${timestamp}_${file.name}`;
 
         const { data, error } = await supabase.storage
             .from('assets')
@@ -993,27 +995,7 @@ export const chatService = {
         } as any as UserPresence));
     },
 
-    /**
-     * Upload une image pour une story
-     */
-    async uploadStoryImage(file: File, userId: string): Promise<string> {
-        const timestamp = Date.now();
-        const fileName = `stories/${userId}/${timestamp}_${file.name}`;
-        const { data, error } = await supabase.storage.from('assets').upload(fileName, file);
-        if (error) throw error;
-        return supabase.storage.from('assets').getPublicUrl(data.path).data.publicUrl;
-    },
 
-    /**
-     * Upload une image/vidéo pour un post social
-     */
-    async uploadPostMedia(file: File, userId: string): Promise<string> {
-        const timestamp = Date.now();
-        const fileName = `posts/${userId}/${timestamp}_${file.name}`;
-        const { data, error } = await supabase.storage.from('assets').upload(fileName, file);
-        if (error) throw error;
-        return supabase.storage.from('assets').getPublicUrl(data.path).data.publicUrl;
-    },
 
     /**
      * Créer un post social
@@ -1182,5 +1164,53 @@ export const chatService = {
      */
     async deletePost(postId: string) {
         await supabase.from('social_posts').delete().eq('id', postId);
+    },
+
+    /**
+     * Supprimer une conversation
+     */
+    async deleteConversation(conversationId: string, userId: string) {
+        const { error } = await supabase.from('conversations').delete().eq('id', conversationId);
+        if (error) throw error;
+    },
+
+    /**
+     * Mettre à jour le rôle d'un membre (ex: modérateur)
+     */
+    async updateMemberRole(conversationId: string, userId: string, role: 'moderator' | 'member') {
+        const { data: conv } = await supabase.from('conversations').select('group_moderators').eq('id', conversationId).single();
+        let moderators = conv?.group_moderators || [];
+        if (role === 'moderator') {
+            if (!moderators.includes(userId)) {
+                moderators = [...moderators, userId];
+            }
+        } else {
+            moderators = moderators.filter((id: string) => id !== userId);
+        }
+        const { error } = await supabase.from('conversations').update({
+            group_moderators: moderators
+        }).eq('id', conversationId);
+        if (error) throw error;
+    },
+
+    /**
+     * Exclure un membre du groupe
+     */
+    async kickMember(conversationId: string, userId: string) {
+        const { data: conv } = await supabase.from('conversations').select('participants').eq('id', conversationId).single();
+        let participants = conv?.participants || [];
+        participants = participants.filter((id: string) => id !== userId);
+        const { error } = await supabase.from('conversations').update({
+            participants: participants
+        }).eq('id', conversationId);
+        if (error) throw error;
+    },
+
+    /**
+     * Dissoudre un groupe
+     */
+    async dissolveGroup(conversationId: string) {
+        const { error } = await supabase.from('conversations').delete().eq('id', conversationId);
+        if (error) throw error;
     }
 };

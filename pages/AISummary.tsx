@@ -19,7 +19,7 @@ import {
     Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { openrouterService } from '../services/openrouter';
+import { aiService } from '../services/aiService';
 import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
 import mammoth from 'mammoth';
@@ -28,15 +28,28 @@ const AISummary: React.FC<{
     onGenerateQuiz: (content: string, title: string) => void;
     onGenerateFlashcards: (content: string, title: string) => void;
 }> = ({ onGenerateQuiz, onGenerateFlashcards }) => {
-    const { saveBook, addActivity, settings } = useStore();
+    const { saveBook, library, addActivity, settings, t } = useStore();
     const [files, setFiles] = useState<{ id: string, file: File, preview: string, type: 'image' | 'pdf' | 'word' }[]>([]);
     const [manualText, setManualText] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState('');
     const [status, setStatus] = useState('');
     const [inputMode, setInputMode] = useState<'file' | 'text'>('file');
+    const [viewMode, setViewMode] = useState<'generator' | 'saved'>('generator');
     const [summary, setSummary] = useState<any | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const savedSummaries = library?.filter(book => book.category === 'Synthèse') || [];
+
+    const restoreSummary = (book: any) => {
+        try {
+            const restored = JSON.parse(book.content);
+            setSummary(restored);
+            setViewMode('generator');
+        } catch(e) {
+            alert(t('aiSummary.errors.restore'));
+        }
+    };
 
     const getFileType = (file: File): 'image' | 'pdf' | 'word' => {
         if (file.type.includes('image')) return 'image';
@@ -70,17 +83,17 @@ const AISummary: React.FC<{
 
     const handleSummarize = async () => {
         if (inputMode === 'file' && files.length === 0) {
-            setError("Ajoute au moins un document ou une photo !");
+            setError(t('aiSummary.errors.noFile'));
             return;
         }
         if (inputMode === 'text' && !manualText.trim()) {
-            setError("Saisis du texte pour générer le résumé !");
+            setError(t('aiSummary.errors.noText'));
             return;
         }
 
         setIsProcessing(true);
         setError('');
-        setStatus('Initialisation...');
+        setStatus(t('aiSummary.status.init'));
         setSummary(null);
 
         try {
@@ -89,33 +102,24 @@ const AISummary: React.FC<{
             if (inputMode === 'text') {
                 sources.push({ type: 'text', data: manualText });
             } else {
-                setStatus('Préparation des documents...');
+                setStatus(t('aiSummary.status.prep'));
                 for (const f of files) {
                     if (f.type === 'word') {
-                        setStatus(`Lecture de ${f.file.name}...`);
+                        setStatus(t('aiSummary.status.read').replace('{name}', f.file.name));
                         const arrayBuffer = await (f.file as File).arrayBuffer();
                         const result = await mammoth.extractRawText({ arrayBuffer });
                         sources.push({ type: 'text', data: result.value });
                     } else {
-                        setStatus(`Traitement de ${f.file.name}...`);
+                        setStatus(t('aiSummary.status.process').replace('{name}', f.file.name));
                         const base64 = await new Promise<string>((resolve) => {
                             const reader = new FileReader();
                             reader.onload = () => resolve(reader.result as string || '');
                             reader.readAsDataURL(f.file as File);
                         });
                         
-                        // OCR-first approach
+                        // Use Gemini native vision directly
                         if (f.type === 'image') {
-                            setStatus(`Extraction du texte de ${f.file.name}...`);
-                            try {
-                                const langMap: any = { 'fr': 'fra+eng', 'en': 'eng', 'ar': 'ara' };
-                                const ocrLang = langMap[settings.language] || 'fra+eng';
-                                const text = await ocrService.extractText(base64, ocrLang);
-                                sources.push({ type: 'text', data: `[TEXTE EXTRAIT DE L'IMAGE ${f.file.name}]:\n${text}` });
-                            } catch (e) {
-                                console.warn("Fallback vision direct suite à l'échec de l'OCR:", e);
-                                sources.push({ type: f.type, data: base64 });
-                            }
+                            sources.push({ type: f.type, data: base64 });
                         } else {
                             sources.push({ type: f.type, data: base64 });
                         }
@@ -123,12 +127,12 @@ const AISummary: React.FC<{
                 }
             }
 
-            setStatus('Analyse & Synthèse par l\'IA...');
-            const summaryData = await openrouterService.summarizeMultimodal(sources, 'Cours Multimodal', settings.language);
+            setStatus(t('aiSummary.status.analyze'));
+            const summaryData = await aiService.summarizeMultimodal(sources, 'Cours Multimodal', settings.language);
             setSummary(summaryData);
             setStatus('');
         } catch (err: any) {
-            setError(err.message || 'Une erreur est survenue lors de la synthèse.');
+            setError(err.message || t('aiSummary.errors.general'));
         } finally {
             setIsProcessing(false);
             setStatus('');
@@ -142,15 +146,15 @@ const AISummary: React.FC<{
             id: `summary_${Date.now()}`,
             title: summary.title,
             author: 'IA LEVELMAK',
-            category: 'Synthèse',
+            category: t('aiSummary.categoryLabel'),
             cover: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?q=80&w=800&auto=format&fit=crop',
             description: summary.mainSummary,
             content: JSON.stringify(summary), // Store full structured data
             uri: '#',
         });
 
-        addActivity('reading', 'Synthèse Enregistrée', `Le résumé "${summary.title}" a été ajouté à ta bibliothèque.`);
-        alert('Résumé sauvegardé dans ta bibliothèque !');
+        addActivity('reading', t('aiSummary.saveActivityTitle'), t('aiSummary.saveActivityDesc').replace('{title}', summary.title));
+        alert(t('aiSummary.savedSuccess'));
     };
 
     return (
@@ -163,16 +167,84 @@ const AISummary: React.FC<{
             >
                 <div className="space-y-2 md:space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 rounded-full border border-blue-500/20 text-blue-400 font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
-                        <Sparkles size={10} className="animate-pulse" /> Synthèse Intelligente
+                        <Sparkles size={10} className="animate-pulse" /> {t('aiSummary.badge')}
                     </div>
-                    <h1 className="text-4xl md:text-7xl font-display font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-4 md:mb-6 transition-colors">Résumé <span className="text-blue-500">IA Élite</span></h1>
+                    <h1 className="text-4xl md:text-7xl font-display font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-4 md:mb-6 transition-colors">{t('aiSummary.title')} <span className="text-blue-500">{t('aiSummary.titleAccent')}</span></h1>
                     <p className="text-slate-400 text-[10px] md:text-xl font-medium max-w-2xl leading-relaxed">
-                        Obtiens l'essentiel de tes cours en quelques secondes. <span className="text-white font-bold">Gagne du temps</span> sur tes révisions.
+                        {t('aiSummary.desc')}<span className="text-white font-bold">{t('aiSummary.descAccent')}</span>
                     </p>
+                </div>
+
+                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 shrink-0">
+                    <button
+                        onClick={() => { setViewMode('generator'); setSummary(null); }}
+                        className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'generator' ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        {t('aiSummary.tabs.new')}
+                    </button>
+                    <button
+                        onClick={() => { setViewMode('saved'); setSummary(null); }}
+                        className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'saved' ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        {t('aiSummary.tabs.saved')}
+                    </button>
                 </div>
             </motion.div>
 
-            {!summary ? (
+            {viewMode === 'saved' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                    {savedSummaries.length === 0 ? (
+                        <div className="col-span-full py-20 text-center space-y-4">
+                            <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto text-slate-600">
+                                <BookOpen size={40} />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-slate-900 dark:text-white font-bold text-xl">{t('aiSummary.noSaved')}</p>
+                                <p className="text-slate-500 font-medium">{t('aiSummary.noSavedDesc')}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        savedSummaries.map((book) => (
+                            <motion.div
+                                key={book.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="group cursor-pointer"
+                                onClick={() => restoreSummary(book)}
+                            >
+                                <div className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 shadow-xl hover:border-blue-500/40 transition-all relative overflow-hidden h-full flex flex-col">
+                                    <div className="absolute top-0 right-0 p-4 md:p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                                        <BookOpen className="w-[60px] h-[60px] md:w-[80px] md:h-[80px]" />
+                                    </div>
+
+                                    <div className="space-y-4 md:space-y-6 relative z-10">
+                                        <div className="px-2.5 py-1 bg-white/5 rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 w-fit">
+                                            {t('aiSummary.categoryLabel')}
+                                        </div>
+
+                                        <div>
+                                            <h4 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-1.5 md:mb-2 leading-tight group-hover:text-blue-400 transition-colors">{book.title}</h4>
+                                            <p className="text-[10px] md:text-xs text-slate-500 font-medium line-clamp-2">
+                                                {book.description}
+                                            </p>
+                                        </div>
+
+                                        <div className="pt-4 md:pt-6 border-t border-white/5 mt-auto flex items-center justify-between">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 flex items-center gap-1">
+                                                {t('aiSummary.consult')} <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                                            </span>
+                                            <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                                <Layers size={16} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
+                </div>
+            ) : !summary ? (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
                     <div className="lg:col-span-8 space-y-8">
                         <div className="glass p-1 md:p-2 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/5 flex gap-1 md:gap-2 shadow-2xl">
@@ -180,13 +252,13 @@ const AISummary: React.FC<{
                                 onClick={() => setInputMode('file')}
                                 className={`flex-1 flex items-center justify-center gap-2 md:gap-3 py-3 md:py-5 rounded-[1.2rem] md:rounded-[2rem] font-black uppercase tracking-widest text-[8px] md:text-xs transition-all duration-500 ${inputMode === 'file' ? 'bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-glow' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
                             >
-                                <Upload size={14} md:size={18} /> Documents
+                                <Upload className="w-3.5 h-3.5 md:w-4.5 md:h-4.5" /> {t('aiSummary.inputModes.file')}
                             </button>
                             <button
                                 onClick={() => setInputMode('text')}
                                 className={`flex-1 flex items-center justify-center gap-2 md:gap-3 py-3 md:py-5 rounded-[1.2rem] md:rounded-[2rem] font-black uppercase tracking-widest text-[8px] md:text-xs transition-all duration-500 ${inputMode === 'text' ? 'bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-glow' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
                             >
-                                <Type size={14} md:size={18} /> Saisir Texte
+                                <Type className="w-3.5 h-3.5 md:w-4.5 md:h-4.5" /> {t('aiSummary.inputModes.text')}
                             </button>
                         </div>
 
@@ -206,7 +278,7 @@ const AISummary: React.FC<{
                                         <div className="relative">
                                             <div className="w-24 h-24 md:w-36 md:h-36 border-4 border-blue-500/20 rounded-[2.5rem] md:rounded-[3rem] animate-spin-slow"></div>
                                             <div className="absolute inset-0 flex items-center justify-center">
-                                                <Sparkles size={32} className="md:size-[40px] text-blue-500 animate-pulse" />
+                                                <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-blue-500 animate-pulse" />
                                             </div>
                                         </div>
                                         <h3 className="text-lg md:text-2xl font-black text-white px-4">{status}</h3>
@@ -227,7 +299,7 @@ const AISummary: React.FC<{
                                                             <img src={f.preview} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full flex flex-col items-center justify-center space-y-2 p-4">
-                                                                <FileText size={24} className="md:size-[32px] text-blue-500" />
+                                                                <FileText className="w-6 h-6 md:w-8 md:h-8 text-blue-500" />
                                                                 <span className="text-[7px] md:text-[8px] font-black uppercase text-slate-500 truncate w-full text-center px-1">{f.file.name}</span>
                                                             </div>
                                                         )}
@@ -251,7 +323,7 @@ const AISummary: React.FC<{
                                                 className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-glow active:scale-95"
                                             >
                                                 <ImageIcon size={20} />
-                                                <span className="text-xs md:text-sm">Prendre une Photo</span>
+                                                <span className="text-xs md:text-sm">{t('aiSummary.actions.takePhoto')}</span>
                                             </button>
 
                                             <button
@@ -262,13 +334,13 @@ const AISummary: React.FC<{
                                                 className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 border border-white/5"
                                             >
                                                 <Upload size={20} />
-                                                <span className="text-xs md:text-sm">Parcourir Documents</span>
+                                                <span className="text-xs md:text-sm">{t('aiSummary.actions.browseDocs')}</span>
                                             </button>
                                         </div>
 
                                         <div className="text-center">
                                             <span className="text-[8px] md:text-[10px] text-slate-500 font-medium italic">
-                                                Combine tes photos de cahiers, PDF ou fichiers Word
+                                                {t('aiSummary.actions.helpText')}
                                             </span>
                                         </div>
 
@@ -296,7 +368,7 @@ const AISummary: React.FC<{
                                         <textarea
                                             value={manualText}
                                             onChange={(e) => setManualText(e.target.value)}
-                                            placeholder="Colle ici ton document ou ton cours pour le résumer..."
+                                            placeholder={t('aiSummary.placeholders.text')}
                                             className="flex-1 w-full p-6 md:p-10 bg-white/5 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/5 text-white font-medium text-sm md:text-lg leading-relaxed outline-none resize-none"
                                         />
                                     </motion.div>
@@ -309,10 +381,10 @@ const AISummary: React.FC<{
                         <div className="glass rounded-[2rem] md:rounded-[2.5rem] border border-white/5 p-6 md:p-8 space-y-6 sticky top-8">
                             <div className="space-y-3">
                                 <h3 className="text-[10px] md:text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                    <Info size={14} className="text-blue-500" /> Conseils
+                                    <Info size={14} className="text-blue-500" /> {t('aiSummary.tips.title')}
                                 </h3>
                                 <p className="text-[10px] md:text-xs text-slate-400 leading-relaxed font-medium">
-                                    Formats supportés : <span className="text-white">PDF, Word (.docx)</span> et photos de tes cours. Assure-toi que le texte est lisible.
+                                    {t('aiSummary.tips.desc')}
                                 </p>
                             </div>
 
@@ -321,7 +393,7 @@ const AISummary: React.FC<{
                                 disabled={isProcessing}
                                 className="w-full py-4 md:py-6 bg-gradient-to-r from-blue-600 to-blue-400 text-white rounded-xl md:rounded-[2rem] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-glow disabled:opacity-50 text-[10px] md:text-xs"
                             >
-                                {isProcessing ? <Loader2 className="animate-spin" /> : <>Générer le Résumé <ArrowRight size={16} /></>}
+                                {isProcessing ? <Loader2 className="animate-spin" /> : <>{t('aiSummary.actions.generate')} <ArrowRight size={16} /></>}
                             </button>
 
                             {error && (
@@ -345,8 +417,8 @@ const AISummary: React.FC<{
                                     <Sparkles size={28} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tight">{summary?.title || "Résumé sans titre"}</h2>
-                                    <p className="text-[10px] md:text-xs text-slate-500 font-black uppercase tracking-[0.2em]">Synthèse Intelligente LEVELMAK</p>
+                                    <h2 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tight">{summary?.title || t('aiSummary.title')}</h2>
+                                    <p className="text-[10px] md:text-xs text-slate-500 font-black uppercase tracking-[0.2em]">{t('aiSummary.categoryLabel')} LEVELMAK</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -354,13 +426,13 @@ const AISummary: React.FC<{
                                     onClick={() => setSummary(null)}
                                     className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/5 transition-all"
                                 >
-                                    Nouveau
+                                    {t('aiSummary.actions.newBtn')}
                                 </button>
                                 <button
                                     onClick={handleSaveSummary}
                                     className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-glow transition-all"
                                 >
-                                    Sauvegarder
+                                    {t('aiSummary.actions.save')}
                                 </button>
                             </div>
                         </div>
@@ -369,16 +441,16 @@ const AISummary: React.FC<{
                             <div className="lg:col-span-2 space-y-8">
                                 <div className="p-6 md:p-8 bg-blue-500/5 rounded-3xl border border-blue-500/10">
                                     <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <BookOpen size={16} /> Synthèse Globale
+                                        <BookOpen size={16} /> {t('aiSummary.result.title')}
                                     </h3>
                                     <div className="text-slate-200 leading-relaxed text-sm md:text-lg font-medium whitespace-pre-wrap">
-                                        {summary?.mainSummary || "Contenu du résumé non disponible."}
+                                        {summary?.mainSummary || ""}
                                     </div>
                                 </div>
 
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                        <BarChart3 size={16} className="text-blue-500" /> Points Clés à Retenir
+                                        <BarChart3 size={16} className="text-blue-500" /> {t('aiSummary.result.keyPoints')}
                                     </h3>
                                     <div className="grid gap-3">
                                         {(summary?.keyPoints || []).map((point: string, i: number) => (
@@ -396,15 +468,15 @@ const AISummary: React.FC<{
                             <div className="space-y-8">
                                 <div className="glass p-6 md:p-8 rounded-3xl border border-white/5 space-y-6">
                                     <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <Clock size={16} className="text-blue-500" /> Métriques
+                                        <Clock size={16} className="text-blue-500" /> {t('aiSummary.result.metrics.title')}
                                     </h3>
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                            <span className="text-xs text-slate-500 font-bold uppercase">Lecture</span>
+                                            <span className="text-xs text-slate-500 font-bold uppercase">{t('aiSummary.result.metrics.reading')}</span>
                                             <span className="text-sm font-black text-blue-400">{summary?.estimatedReadingTime || "5 min"}</span>
                                         </div>
                                         <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                            <span className="text-xs text-slate-500 font-bold uppercase">Difficulté</span>
+                                            <span className="text-xs text-slate-500 font-bold uppercase">{t('aiSummary.result.metrics.difficulty')}</span>
                                             <span className={`text-sm font-black ${summary?.difficulty === 'Facile' ? 'text-green-500' :
                                                 summary?.difficulty === 'Intermédiaire' ? 'text-orange-500' : 'text-red-500'
                                                 }`}>{summary?.difficulty || "Intermédiaire"}</span>
@@ -415,7 +487,7 @@ const AISummary: React.FC<{
                                 {summary.definitions && summary.definitions.length > 0 && (
                                     <div className="glass p-6 md:p-8 rounded-3xl border border-white/5">
                                         <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <Type size={16} className="text-blue-500" /> Glossaire
+                                            <Type size={16} className="text-blue-500" /> {t('aiSummary.result.glossary')}
                                         </h3>
                                         <div className="space-y-4">
                                             {(summary?.definitions || []).map((def: any, i: number) => (
@@ -433,13 +505,13 @@ const AISummary: React.FC<{
                                         onClick={() => onGenerateQuiz(summary.mainSummary, summary.title)}
                                         className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-glow flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
                                     >
-                                        <Zap size={16} /> Créer un Quiz IA
+                                        <Zap size={16} /> {t('aiSummary.result.createQuiz')}
                                     </button>
                                     <button
                                         onClick={() => onGenerateFlashcards(summary.mainSummary, summary.title)}
                                         className="w-full py-4 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] border border-white/5 shadow-premium flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
                                     >
-                                        <Layers size={16} /> Flashcards IA
+                                        <Layers size={16} /> {t('aiSummary.result.createFlashcards')}
                                     </button>
                                 </div>
                             </div>

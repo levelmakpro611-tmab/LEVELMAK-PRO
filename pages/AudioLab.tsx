@@ -193,11 +193,9 @@ const AudioLab: React.FC<any> = () => {
         const deck: FlashcardDeck = {
             id: `deck_${Date.now()}`,
             title: `Deck: ${selectedNote.title}`,
-            description: "Généré via Audio Lab",
+            subject: "AudioLab",
             cardCount: selectedNote.flashcards.length,
-            coverImage: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=400",
-            category: "AudioLab",
-            createdAt: Date.now()
+            createdAt: new Date().toISOString()
         };
         
         const cards: Flashcard[] = selectedNote.flashcards.map((fc, i) => ({
@@ -208,14 +206,15 @@ const AudioLab: React.FC<any> = () => {
             level: 1,
             nextReview: Date.now(),
             interval: 0,
-            easeFactor: 2.5
+            easeFactor: 2.5,
+            repetitions: 0
         }));
         
         saveFlashcardDeck(deck, cards);
         setSavedToStore(prev => ({ ...prev, flashcards: true }));
         Haptics.notification({ type: 'SUCCESS' as any }).catch(() => {});
     };
-
+ 
     const handleSaveQuiz = () => {
         if (!selectedNote || !selectedNote.quiz || selectedNote.quiz.length === 0) return;
         
@@ -223,15 +222,15 @@ const AudioLab: React.FC<any> = () => {
             id: `quiz_${Date.now()}`,
             title: `Quiz: ${selectedNote.title}`,
             subject: "AudioLab",
-            difficulty: "Moyen",
-            xpReward: 100,
+            summary: selectedNote.summary || "Généré via Audio Lab",
             questions: selectedNote.quiz.map((q, i) => ({
                 id: `q_${Date.now()}_${i}`,
                 text: q.question,
                 options: q.options,
                 correctAnswer: q.options.indexOf(q.answer) >= 0 ? q.options.indexOf(q.answer) : 0,
                 explanation: "Généré par l'IA Quantum."
-            }))
+            })),
+            createdAt: new Date().toISOString()
         };
         
         saveQuiz(quizObj);

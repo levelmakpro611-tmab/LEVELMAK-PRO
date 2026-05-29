@@ -38,6 +38,7 @@ export const translations: Record<string, any> = {
             "pseudoOrEmail": "Pseudo ou Email",
             "pseudo": "Ton Pseudo",
             "email": "E-mail Personnel",
+            "phoneNumber": "Numéro de Téléphone",
             "password": "Mot de Passe",
             "newPassword": "Nouveau Mot de Passe (Min. 6)",
             "gender": "Genre",
@@ -91,7 +92,7 @@ export const translations: Record<string, any> = {
             "teacherDesc": "Partage ton savoir et gère tes élèves",
             "firstName": "Prénom",
             "lastName": "Nom de Famille",
-            "phoneOrEmail": "Numéro WhatsApp ou Email",
+            "phoneOrEmail": "Email",
             "profilePhoto": "Photo de Profil",
             "proofDocs": "Dossier / Preuves d'Enseignement",
             "uploadDoc": "Ajouter un document (Diplôme, CV...)",
@@ -101,11 +102,19 @@ export const translations: Record<string, any> = {
         "profile": {
             "title": "Mon Profil"
         },
+        "notifications": {
+            "title": "Centre de Notifications",
+            "clearAll": "Tout supprimer",
+            "empty": "Aucune notification",
+            "markRead": "Marquer comme lue",
+            "soundsOn": "Activer les sons",
+            "soundsOff": "Désactiver les sons"
+        },
         "nav": {
             "dashboard": "Tableau de bord",
             "quiz": "Quiz IA",
             "summary": "Résumé IA",
-            "library": "Bibliothèque",
+            "library": "Bibliothèque Intelligente",
             "writing": "Atelier Écriture",
             "flashcards": "Flashcards",
             "ranking": "Classement",
@@ -884,7 +893,21 @@ export const translations: Record<string, any> = {
                     "process": "Traitement de",
                     "analyze": "Analyse pédagogique par l'IA...",
                     "ready": "Quiz prêt ! Redirection..."
-                }
+                },
+                "tabs": {
+                    "new": "Nouveau",
+                    "saved": "Mes Sauvegardes"
+                },
+                "savedTitle": "Mes Quiz Sauvegardés ({count})",
+                "savedDesc": "Ces quiz sont stockés localement sur ton appareil. Tu peux les refaire à tout moment, même sans connexion internet ! 🚀",
+                "noSaved": "Aucune sauvegarde",
+                "noSavedDesc": "Génère ton premier quiz IA et sauvegarde-le !",
+                "launchQuiz": "Lancer le Quiz",
+                "deleteConfirm": "Supprimer ce quiz ?",
+                "cameraBtn": "Appareil Photo",
+                "galleryBtn": "Parcourir Galerie",
+                "photoHelp": "Combine tes photos de cahiers pour générer un quiz précis.",
+                "photosBtn": "PHOTOS"
             },
             "player": {
                 "oracle": {
@@ -1031,7 +1054,7 @@ export const translations: Record<string, any> = {
             "error": "Oups, j'ai eu un petit bug. Recommence ?",
             "quotaError": "Oups ! Quota dépassé. Réessaie dans un instant ! ⏳",
             "genericError": "Désolé, je n'arrive pas à me connecter au savoir universel pour l'instant. 😔",
-            "firstQuestion": "Bonjour ! Je suis ton **Elite Coach**. Je suis là pour t'accompagner dans tes études, résoudre tes problèmes complexes et booster ta productivité. Pose-moi n'importe quelle question pour commencer !",
+            "firstQuestion": "Bonjour ! C'est moi, ton **Elite Coach**. Je suis là pour t'accompagner dans tes études, résoudre tes problèmes complexes et booster ta productivité. Pose-moi n'importe quelle question pour commencer !",
             "snapSolve": "Prendre une photo (Snap & Solve)",
             "gallery": "Parcourir la galerie",
             "extractedTextPrefix": "Voici le texte extrait de ta photo. De quoi souhaites-tu discuter ?",
@@ -1053,7 +1076,7 @@ export const translations: Record<string, any> = {
             "backToLab": "Retour au Lab",
             "noHistory": "Pas encore de conversations enregistrées.",
             "startChallenge": "Lancer un défi",
-            "feynmanWelcome": "Salut ! Je suis **Léo**. Je ne connais rien à **{topic}**, mais j'ai trop envie d'apprendre ! Tu m'expliques comme si j'avais 10 ans ?",
+            "feynmanWelcome": "Salut ! C'est moi **Léo**. Je ne connais rien à **{topic}**, mais j'ai trop envie d'apprendre ! Tu m'expliques comme si j'avais 10 ans ?",
             "talkTo": "Parler à",
             "traveling": "Voyage en cours...",
             "topicLabel": "Quel sujet caches-tu ?",
@@ -1088,7 +1111,19 @@ export const translations: Record<string, any> = {
             "galilee": { "name": "Galilée", "dates": "1564 - 1642", "era": "Renaissance", "role": "Astronome", "bio": "Pionnier de l'astronomie moderne." },
             "mlk": { "name": "Martin Luther King Jr.", "dates": "1929 - 1968", "era": "20ème siècle", "role": "Pasteur & Militant", "bio": "Leader du mouvement des droits civiques." },
             "claude_bernard": { "name": "Claude Bernard", "dates": "1813 - 1878", "era": "19ème siècle", "role": "Physiologiste", "bio": "Père de la médecine expérimentale." },
-            "mozart": { "name": "Wolfgang Mozart", "dates": "1756 - 1791", "era": "18ème siècle", "role": "Compositeur", "bio": "Génie absolu de la musique classique." }
+            "mozart": { "name": "Wolfgang Mozart", "dates": "1756 - 1791", "era": "18ème siècle", "role": "Compositeur", "bio": "Génie absolu de la musique classique." },
+            "tesla": { "name": "Nikola Tesla", "dates": "1856 - 1943", "era": "Début 20ème", "role": "Inventeur & Génie", "bio": "Père de l'électricité moderne et du courant alternatif." },
+            "gandhi": { "name": "Mahatma Gandhi", "dates": "1869 - 1948", "era": "20ème siècle", "role": "Guide Spirituel", "bio": "Leader de l'indépendance de l'Inde par la non-violence." },
+            "lovelace": { "name": "Ada Lovelace", "dates": "1815 - 1852", "era": "19ème siècle", "role": "Mathématicienne", "bio": "Première programmeuse informatique de l'histoire." },
+            "hawking": { "name": "Stephen Hawking", "dates": "1942 - 2018", "era": "21ème siècle", "role": "Cosmologiste", "bio": "Spécialiste des trous noirs et de l'origine de l'univers." },
+            "kahlo": { "name": "Frida Kahlo", "dates": "1907 - 1954", "era": "20ème siècle", "role": "Artiste Peintre", "bio": "Icône de l'art mexicain et de la résilience." },
+            "belfort": { "name": "Jordan Belfort", "dates": "1962 - Présent", "era": "Ère Moderne", "role": "Expert en Vente", "bio": "Le 'Loup de Wall Street', maître de la persuasion et de la vente." },
+            "kiyosaki": { "name": "Robert Kiyosaki", "dates": "1947 - Présent", "era": "Ère Moderne", "role": "Éducateur Financier", "bio": "Auteur de 'Père Riche, Père Pauvre', pionnier de l'indépendance financière." },
+            "trump": { "name": "Donald Trump", "dates": "1946 - Présent", "era": "Ère Moderne", "role": "Magnat & Président", "bio": "Entrepreneur immobilier et 45e président des États-Unis." },
+            "buffett": { "name": "Warren Buffett", "dates": "1930 - Présent", "era": "Ère Moderne", "role": "Investisseur", "bio": "L'Oracle d'Omaha, l'un des plus grands investisseurs de l'histoire." },
+            "vex_king": { "name": "Vex King", "dates": "1984 - Présent", "era": "Ère Moderne", "role": "Coach de Vie", "bio": "Auteur sur le self-love et la pensée positive." },
+            "musk": { "name": "Elon Musk", "dates": "1971 - Présent", "era": "Ère Moderne", "role": "Visionnaire & Entrepreneur", "bio": "Fondateur de SpaceX et Tesla, pionnier de l'innovation technologique." },
+            "bezos": { "name": "Jeff Bezos", "dates": "1964 - Présent", "era": "Ère Moderne", "role": "Entrepreneur & Pionnier", "bio": "Fondateur d'Amazon et Blue Origin, pionnier du commerce en ligne." }
         },
         "chemistry": {
             "title": "Laboratoire de Chimie",
@@ -1218,6 +1253,99 @@ export const translations: Record<string, any> = {
                     "didYouKnow": "Le gaz NO₂ est un polluant atmosphérique majeur issu des pots d'échappement."
                 }
             }
+        },
+        "aiSummary": {
+            "badge": "Synthèse Intelligente",
+            "title": "Résumé",
+            "titleAccent": "IA Élite",
+            "desc": "Obtiens l'essentiel de tes cours en quelques secondes. ",
+            "descAccent": "Gagne du temps sur tes révisions.",
+            "tabs": {
+                "new": "Nouveau",
+                "saved": "Mes Sauvegardes"
+            },
+            "noSaved": "Aucune sauvegarde",
+            "noSavedDesc": "Génère ton premier résumé IA et sauvegarde-le !",
+            "categoryLabel": "Synthèse",
+            "consult": "Consulter",
+            "inputModes": {
+                "file": "Documents",
+                "text": "Saisir Texte"
+            },
+            "placeholders": {
+                "text": "Colle ici ton document ou ton cours pour le résumer..."
+            },
+            "actions": {
+                "takePhoto": "Prendre une Photo",
+                "browseDocs": "Parcourir Documents",
+                "helpText": "Combine tes photos de cahiers, PDF ou fichiers Word",
+                "generate": "Générer le Résumé",
+                "save": "Sauvegarder",
+                "newBtn": "Nouveau"
+            },
+            "savedTitle": "Mes Résumés Sauvegardés",
+            "savedSuccess": "Résumé sauvegardé ! Tu peux le retrouver dans \"Mes Sauvegardes\".",
+            "saveActivityTitle": "Synthèse Enregistrée",
+            "saveActivityDesc": "Le résumé \"{title}\" a été ajouté à ta bibliothèque.",
+            "errors": {
+                "noFile": "Ajoute au moins un document ou une photo !",
+                "noText": "Saisis du texte pour générer le résumé !",
+                "restore": "Impossible de restaurer ce résumé."
+            },
+            "status": {
+                "init": "Initialisation...",
+                "prep": "Préparation des documents...",
+                "read": "Lecture de {name}...",
+                "process": "Traitement de {name}...",
+                "analyze": "Analyse & Synthèse par l'IA..."
+            },
+            "result": {
+                "title": "Synthèse Globale",
+                "keyPoints": "Points Clés à Retenir",
+                "metrics": {
+                    "title": "Métriques",
+                    "reading": "Lecture",
+                    "difficulty": "Difficulté"
+                },
+                "glossary": "Glossaire",
+                "createQuiz": "Créer un Quiz IA",
+                "createFlashcards": "Flashcards IA"
+            },
+            "tips": {
+                "title": "Conseils",
+                "desc": "Formats supportés : PDF, Word (.docx) et photos de tes cours. Assure-toi que le texte est lisible."
+            }
+        },
+        "activeVisual": {
+            "badge": "NOUVEAU",
+            "title": "Active Visuel",
+            "desc": "Bienvenue dans le laboratoire du futur. Manipulez, expérimentez et visualisez la théorie à travers des simulations en 3D interactives. L'apprentissage par l'action.",
+            "recommended": "Expérience Recommandée",
+            "launchExp": "Lancer l'expérience",
+            "expList": "Liste des Expériences",
+            "backBtn": "Retour au Catalogue",
+            "experiments": {
+                "chemistry": {
+                    "title": "Labo Chimie (Titrage & Précipitation)",
+                    "category": "Chimie",
+                    "description": "Expérimentez le titrage acide-base et la précipitation des ions. Manipulez les béchers en 3D."
+                },
+                "electricity": {
+                    "title": "Électricité & Induction",
+                    "category": "Physique",
+                    "description": "Construisez un circuit interactif. Visualisez le courant, la résistance et les lois de l'électricité."
+                },
+                "optics": {
+                    "title": "Optique (Réfraction du Laser)",
+                    "category": "Physique",
+                    "description": "Pointez un laser vers différents milieux (Air, Eau, Verre) pour vérifier la Loi de Descartes."
+                },
+                "mechanics": {
+                    "title": "Mécanique (Chute Libre)",
+                    "category": "Physique",
+                    "description": "Lâchez des objets avec ou sans la résistance de l'air. Découvrez pourquoi la gravité est universelle."
+                }
+            }
         }
     },
     "en": {
@@ -1306,11 +1434,19 @@ export const translations: Record<string, any> = {
         "profile": {
             "title": "My Profile"
         },
+        "notifications": {
+            "title": "Notification Center",
+            "clearAll": "Clear All",
+            "empty": "No notifications",
+            "markRead": "Mark as read",
+            "soundsOn": "Enable sounds",
+            "soundsOff": "Disable sounds"
+        },
         "nav": {
             "dashboard": "Dashboard",
             "quiz": "AI Quiz",
             "summary": "AI Summary",
-            "library": "Library",
+            "library": "Intelligent Library",
             "writing": "Writing Lab",
             "flashcards": "Flashcards",
             "ranking": "Ranking",
@@ -2167,7 +2303,21 @@ export const translations: Record<string, any> = {
                     "process": "Processing",
                     "analyze": "Pedagogical AI Analysis...",
                     "ready": "Quiz ready! Redirecting..."
-                }
+                },
+                "tabs": {
+                    "new": "New",
+                    "saved": "My Saved"
+                },
+                "savedTitle": "My Saved Quizzes ({count})",
+                "savedDesc": "These quizzes are stored locally on your device. You can retake them at any time, even without an internet connection! 🚀",
+                "noSaved": "No Saved Quizzes",
+                "noSavedDesc": "Generate your first AI quiz and save it!",
+                "launchQuiz": "Start Quiz",
+                "deleteConfirm": "Delete this quiz?",
+                "cameraBtn": "Camera",
+                "galleryBtn": "Browse Gallery",
+                "photoHelp": "Combine your notebook photos to generate an accurate quiz.",
+                "photosBtn": "PHOTOS"
             },
             "player": {
                 "oracle": {
@@ -2314,7 +2464,7 @@ export const translations: Record<string, any> = {
             "error": "Oops, I had a little bug. Try again?",
             "quotaError": "Oops! Quota exceeded. Try again in a moment! ⏳",
             "genericError": "Sorry, I can't connect to universal knowledge right now. 😔",
-            "firstQuestion": "Hello! I am your **Elite Coach**. I am here to assist you with your studies, solve complex problems, and boost your productivity. Ask me any question to get started!",
+            "firstQuestion": "Hello! It's me, your **Elite Coach**. I am here to assist you with your studies, solve complex problems, and boost your productivity. Ask me any question to get started!",
             "snapSolve": "Take a photo (Snap & Solve)",
             "gallery": "Browse gallery",
             "extractedTextPrefix": "Here is the text extracted from your photo. What would you like to discuss?",
@@ -2336,7 +2486,7 @@ export const translations: Record<string, any> = {
             "backToLab": "Back to Lab",
             "noHistory": "No conversations recorded yet.",
             "startChallenge": "Launch a challenge",
-            "feynmanWelcome": "Hi! I'm **Leo**. I don't know anything about **{topic}**, but I really want to learn! Can you explain it to me like I'm 10 years old?",
+            "feynmanWelcome": "Hi! It's me **Leo**. I don't know anything about **{topic}**, but I really want to learn! Can you explain it to me like I'm 10 years old?",
             "talkTo": "Talk to",
             "traveling": "Travel in progress...",
             "topicLabel": "What subject are you hiding?",
@@ -2371,8 +2521,108 @@ export const translations: Record<string, any> = {
             "galilee": { "name": "Galileo", "dates": "1564 - 1642", "era": "Renaissance", "role": "Astronomer", "bio": "Pioneer of modern astronomy." },
             "mlk": { "name": "Martin Luther King Jr.", "dates": "1929 - 1968", "era": "20th Century", "role": "Pastor & Activist", "bio": "Leader of the civil rights movement." },
             "claude_bernard": { "name": "Claude Bernard", "dates": "1813 - 1878", "era": "19th Century", "role": "Physiologist", "bio": "Father of experimental medicine." },
-            "mozart": { "name": "Wolfgang Mozart", "dates": "1756 - 1791", "era": "18th Century", "role": "Composer", "bio": "Absolute genius of classical music." }
+            "mozart": { "name": "Wolfgang Mozart", "dates": "1756 - 1791", "era": "18th Century", "role": "Composer", "bio": "Absolute genius of classical music." },
+            "belfort": { "name": "Jordan Belfort", "dates": "1962 - Present", "era": "Modern Era", "role": "Sales Expert", "bio": "The 'Wolf of Wall Street', master of persuasion and sales." },
+            "kiyosaki": { "name": "Robert Kiyosaki", "dates": "1947 - Present", "era": "Modern Era", "role": "Financial Educator", "bio": "Author of 'Rich Dad Poor Dad', pioneer of financial independence." },
+            "trump": { "name": "Donald Trump", "dates": "1946 - Present", "era": "Modern Era", "role": "Tycoon & President", "bio": "Real estate entrepreneur and 45th President of the USA." },
+            "buffett": { "name": "Warren Buffett", "dates": "1930 - Present", "era": "Modern Era", "role": "Investor", "bio": "The Oracle of Omaha, one of the greatest investors in history." },
+            "vex_king": { "name": "Vex King", "dates": "1984 - Present", "era": "Modern Era", "role": "Mindset Coach", "bio": "Bestselling author on self-love and positive thinking." },
+            "musk": { "name": "Elon Musk", "dates": "1971 - Present", "era": "Modern Era", "role": "Visionary & Entrepreneur", "bio": "Founder of SpaceX and Tesla, pioneer of tech innovation." },
+            "bezos": { "name": "Jeff Bezos", "dates": "1964 - Present", "era": "Modern Era", "role": "Entrepreneur & Pioneer", "bio": "Founder of Amazon and Blue Origin, pioneer of e-commerce." }
         },
+        "aiSummary": {
+            "badge": "Smart Synthesis",
+            "title": "Summary",
+            "titleAccent": "AI Elite",
+            "desc": "Get the core of your courses in seconds. ",
+            "descAccent": "Save time on your revisions.",
+            "tabs": {
+                "new": "New",
+                "saved": "My Saved"
+            },
+            "noSaved": "No Saved Summaries",
+            "noSavedDesc": "Generate your first AI summary and save it!",
+            "categoryLabel": "Synthesis",
+            "consult": "Consult",
+            "inputModes": {
+                "file": "Documents",
+                "text": "Type Text"
+            },
+            "placeholders": {
+                "text": "Paste your document or course here to summarize it..."
+            },
+            "actions": {
+                "takePhoto": "Take a Photo",
+                "browseDocs": "Browse Documents",
+                "helpText": "Combine your notebook photos, PDF or Word files",
+                "generate": "Generate Summary",
+                "save": "Save",
+                "newBtn": "New"
+            },
+            "savedTitle": "My Saved Summaries",
+            "savedSuccess": "Summary saved! You can find it in \"My Saved\".",
+            "saveActivityTitle": "Summary Saved",
+            "saveActivityDesc": "The summary \"{title}\" has been added to your library.",
+            "errors": {
+                "noFile": "Add at least one document or photo!",
+                "noText": "Enter text to generate the summary!",
+                "restore": "Unable to restore this summary."
+            },
+            "status": {
+                "init": "Initializing...",
+                "prep": "Preparing documents...",
+                "read": "Reading {name}...",
+                "process": "Processing {name}...",
+                "analyze": "AI Analysis & Synthesis..."
+            },
+            "result": {
+                "title": "Global Synthesis",
+                "keyPoints": "Key Points to Remember",
+                "metrics": {
+                    "title": "Metrics",
+                    "reading": "Reading",
+                    "difficulty": "Difficulty"
+                },
+                "glossary": "Glossary",
+                "createQuiz": "Create AI Quiz",
+                "createFlashcards": "AI Flashcards"
+            },
+            "tips": {
+                "title": "Tips",
+                "desc": "Supported formats: PDF, Word (.docx) and photos of your courses. Make sure the text is readable."
+            }
+        },
+        "activeVisual": {
+            "badge": "NEW",
+            "title": "Active Visual",
+            "desc": "Welcome to the laboratory of the future. Manipulate, experiment, and visualize theory through interactive 3D simulations. Learning by doing.",
+            "recommended": "Recommended Experiment",
+            "launchExp": "Launch Experiment",
+            "expList": "List of Experiments",
+            "backBtn": "Back to Catalog",
+            "experiments": {
+                "chemistry": {
+                    "title": "Chemistry Lab (Titration & Precipitation)",
+                    "category": "Chemistry",
+                    "description": "Experiment with acid-base titration and ion precipitation. Manipulate beakers in 3D."
+                },
+                "electricity": {
+                    "title": "Electricity & Induction",
+                    "category": "Physics",
+                    "description": "Build an interactive circuit. Visualize current, resistance, and the laws of electricity."
+                },
+                "optics": {
+                    "title": "Optics (Laser Refraction)",
+                    "category": "Physics",
+                    "description": "Point a laser at different mediums (Air, Water, Glass) to verify Descartes' Law."
+                },
+                "mechanics": {
+                    "title": "Mechanics (Free Fall)",
+                    "category": "Physics",
+                    "description": "Drop objects with or without air resistance. Find out why gravity is universal."
+                }
+            }
+        }
     },
     "ar": {
         "common": {
@@ -2458,11 +2708,19 @@ export const translations: Record<string, any> = {
         "profile": {
             "title": "ملفي الشخصي"
         },
+        "notifications": {
+            "title": "مركز الإشعارات",
+            "clearAll": "حذف الكل",
+            "empty": "لا توجد إشعارات",
+            "markRead": "تحديد كمقروء",
+            "soundsOn": "تفعيل الأصوات",
+            "soundsOff": "تعطيل الأصوات"
+        },
         "nav": {
             "dashboard": "لوحة القيادة",
             "quiz": "اختبار الذكاء الاصطناعي",
             "summary": "ملخص الذكاء الاصطناعي",
-            "library": "المكتبة",
+            "library": "المكتبة الذكية",
             "writing": "ورشة الكتابة",
             "flashcards": "البطاقات التعليمية",
             "ranking": "الترتيب",
@@ -3123,7 +3381,21 @@ export const translations: Record<string, any> = {
                     "process": "معالجة",
                     "analyze": "تحليل الذكاء الاصطناعي التربوي...",
                     "ready": "الاختبار جاهز! جاري إعادة التوجيه..."
-                }
+                },
+                "tabs": {
+                    "new": "جديد",
+                    "saved": "محفوظاتي"
+                },
+                "savedTitle": "اختباراتي المحفوظة ({count})",
+                "savedDesc": "يتم تخزين هذه الاختبارات محليًا على جهازك. يمكنك إعادتها في أي وقت، حتى بدون اتصال بالإنترنت! 🚀",
+                "noSaved": "لا يوجد محفوظات",
+                "noSavedDesc": "أنشئ أول اختبار ذكاء اصطناعي لك واحفظه!",
+                "launchQuiz": "بدء الاختبار",
+                "deleteConfirm": "هل تريد حذف هذا الاختبار؟",
+                "cameraBtn": "الكاميرا",
+                "galleryBtn": "تصفح المعرض",
+                "photoHelp": "اجمع صور دفاتر الملاحظات لإنشاء اختبار دقيق.",
+                "photosBtn": "الصور"
             },
             "player": {
                 "oracle": {
@@ -3270,7 +3542,7 @@ export const translations: Record<string, any> = {
             "error": "عذراً، حدث خطأ بسيط. حاول مرة أخرى؟",
             "quotaError": "عذراً! تم تجاوز الحصة. حاول مرة أخرى بعد قليل! ⏳",
             "genericError": "عذراً، لا يمكنني الاتصال بالمعرفة العالمية حالياً. 😔",
-            "firstQuestion": "مرحباً! أنا **مدرب النخبة** الخاص بك. أنا هنا لمساعدتك في دراستك، وحل مشكلاتك المعقدة، وتعزيز إنتاجيتك. اطرح عليّ أي سؤال للبدء!",
+            "firstQuestion": "مرحباً! أنا هو **مدرب النخبة** الخاص بك. أنا هنا لمساعدتك في دراستك، وحل مشكلاتك المعقدة، وتعزيز إنتاجيتك. اطرح عليّ أي سؤال للبدء!",
             "snapSolve": "التقاط صورة (التقط وحل)",
             "gallery": "تصفح الاستوديو",
             "extractedTextPrefix": "إليك النص المستخرج من صورتك. ماذا تود أن نناقش؟",
@@ -3292,7 +3564,7 @@ export const translations: Record<string, any> = {
             "backToLab": "العودة إلى المختبر",
             "noHistory": "لا توجد محادثات مسجلة بعد.",
             "startChallenge": "إطلاق تحدي",
-            "feynmanWelcome": "أهلاً! أنا **ليو**. لا أعرف شيئاً عن **{topic}**، لكنني أريد حقاً أن أتعلم! هل يمكنك شرح ذلك لي كأنني في العاشرة من عمري؟",
+            "feynmanWelcome": "أهلاً! أنا هو **ليو**. لا أعرف شيئاً عن **{topic}**، لكنني أريد حقاً أن أتعلم! هل يمكنك شرح ذلك لي كأنني في العاشرة من عمري؟",
             "talkTo": "التحدث إلى",
             "traveling": "السفر جارٍ...",
             "topicLabel": "ما هو الموضوع الذي تخفيه؟",
@@ -3327,7 +3599,107 @@ export const translations: Record<string, any> = {
             "galilee": { "name": "غاليليو", "dates": "1564 - 1642", "era": "عصر النهضة", "role": "عالم فلك", "bio": "رائد علم الفلك الحديث." },
             "mlk": { "name": "مارتن لوثر كينغ الابن", "dates": "1929 - 1968", "era": "القرن الـ20", "role": "قس وناشط", "bio": "زعيم حركة الحقوق المدنية." },
             "claude_bernard": { "name": "كلود برنارد", "dates": "1813 - 1878", "era": "القرن الـ19", "role": "عالم فسيولوجي", "bio": "أبو الطب التجريبي." },
-            "mozart": { "name": "وولفغانغ موزارت", "dates": "1756 - 1791", "era": "القرن الـ18", "role": "مؤلف موسيقي", "bio": "عبقري الموسيقى الكلاسيكية المطلق." }
+            "mozart": { "name": "وولفغانغ موزارت", "dates": "1756 - 1791", "era": "القرن الـ18", "role": "مؤلف موسيقي", "bio": "عبقري الموسيقى الكلاسيكية المطلق." },
+            "belfort": { "name": "جوردان بيلفورت", "dates": "1962 - الحاضر", "era": "العصر الحديث", "role": "خبير مبيعات", "bio": "ذئب وول ستريت، سيد الإقناع والمبيعات." },
+            "kiyosaki": { "name": "روبرت كيوساكي", "dates": "1947 - الحاضر", "era": "العصر الحديث", "role": "مربي مالي", "bio": "مؤلف كتاب 'الأب الغني والأب الفقير'، رائد الاستقلال المالي." },
+            "trump": { "name": "دونالد ترامب", "dates": "1946 - الحاضر", "era": "العصر الحديث", "role": "رجل أعمال ورئيس", "bio": "رائد أعمال عقاري والرئيس الـ45 للولايات المتحدة." },
+            "buffett": { "name": "وارن بافيت", "dates": "1930 - الحاضر", "era": "العصر الحديث", "role": "مستثمر", "bio": "أوراكل أوماها، واحد من أعظم المستثمرين في التاريخ." },
+            "vex_king": { "name": "فيكس كينغ", "dates": "1984 - الحاضر", "era": "العصر الحديث", "role": "مدرب تطوير ذاتي", "bio": "المؤلف الأكثر مبيعاً في حب الذات والتفكير الإيجابي." },
+            "musk": { "name": "إيلون ماسك", "dates": "1971 - الحاضر", "era": "العصر الحديث", "role": "مبتكر ورائد أعمال", "bio": "مؤسس سبيس إكس وتسلا، رائد الابتكار التكنولوجي." },
+            "bezos": { "name": "جيف بيزوس", "dates": "1964 - الحاضر", "era": "العصر الحديث", "role": "رائد أعمال ومبتكر", "bio": "مؤسس أمازون وبلو أوريجين، رائد التجارة الإلكترونية." }
         },
+        "aiSummary": {
+            "badge": "تلخيص ذكي",
+            "title": "ملخص",
+            "titleAccent": "ذكاء اصطناعي متميز",
+            "desc": "احصل على جوهر دروسك في ثوانٍ. ",
+            "descAccent": "وفر الوقت في مراجعاتك.",
+            "tabs": {
+                "new": "جديد",
+                "saved": "محفوظاتي"
+            },
+            "noSaved": "لا توجد محفوظات",
+            "noSavedDesc": "أنشئ أول ملخص ذكاء اصطناعي واحفظه!",
+            "categoryLabel": "تلخيص",
+            "consult": "استشارة",
+            "inputModes": {
+                "file": "مستندات",
+                "text": "إدخال نص"
+            },
+            "placeholders": {
+                "text": "الصق مستندك أو درسك هنا لتلخيصه..."
+            },
+            "actions": {
+                "takePhoto": "التقاط صورة",
+                "browseDocs": "تصفح المستندات",
+                "helpText": "اجمع صور دفاتر الملاحظات أو ملفات PDF أو Word",
+                "generate": "إنشاء الملخص",
+                "save": "حفظ",
+                "newBtn": "جديد"
+            },
+            "savedTitle": "ملخصاتي المحفوظة",
+            "savedSuccess": "تم حفظ الملخص! يمكنك العثور عليه في \"محفوظاتي\".",
+            "saveActivityTitle": "تم حفظ التلخيص",
+            "saveActivityDesc": "تمت إضافة الملخص \"{title}\" إلى مكتبتك.",
+            "errors": {
+                "noFile": "أضف مستندًا أو صورة واحدة على الأقل!",
+                "noText": "أدخل نصًا لإنشاء الملخص!",
+                "restore": "تعذر استعادة هذا الملخص."
+            },
+            "status": {
+                "init": "جار التهيئة...",
+                "prep": "جار إعداد المستندات...",
+                "read": "قراءة {name}...",
+                "process": "معالجة {name}...",
+                "analyze": "تحليل وتلخيص بالذكاء الاصطناعي..."
+            },
+            "result": {
+                "title": "التلخيص الشامل",
+                "keyPoints": "النقاط الرئيسية للتذكر",
+                "metrics": {
+                    "title": "المقاييس",
+                    "reading": "القراءة",
+                    "difficulty": "الصعوبة"
+                },
+                "glossary": "المصطلحات",
+                "createQuiz": "إنشاء اختبار ذكاء اصطناعي",
+                "createFlashcards": "بطاقات تعليمية ذكاء اصطناعي"
+            },
+            "tips": {
+                "title": "نصائح",
+                "desc": "الصيغ المدعومة: PDF وWord (.docx) وصور دروسك. تأكد من أن النص مقروء."
+            }
+        },
+        "activeVisual": {
+            "badge": "جديد",
+            "title": "البصري النشط",
+            "desc": "مرحبًا بك في مختبر المستقبل. تلاعب، جرب، وتصور النظرية من خلال محاكاة ثلاثية الأبعاد تفاعلية. التعلم بالممارسة.",
+            "recommended": "التجربة الموصى بها",
+            "launchExp": "بدء التجربة",
+            "expList": "قائمة التجارب",
+            "backBtn": "العودة إلى الكتالوج",
+            "experiments": {
+                "chemistry": {
+                    "title": "مختبر الكيمياء (المعايرة والترسيب)",
+                    "category": "كيمياء",
+                    "description": "جرب المعايرة الحمضية القاعدية وترسيب الأيونات. تلاعب بالأكواب في 3D."
+                },
+                "electricity": {
+                    "title": "الكهرباء والحث",
+                    "category": "فيزياء",
+                    "description": "قم ببناء دائرة تفاعلية. تصور التيار والمقاومة وقوانين الكهرباء."
+                },
+                "optics": {
+                    "title": "البصريات (انكسار الليزر)",
+                    "category": "فيزياء",
+                    "description": "وجّه ليزرًا نحو أوساط مختلفة (الهواء، الماء، الزجاج) للتحقق من قانون ديكارت."
+                },
+                "mechanics": {
+                    "title": "الميكانيكا (السقوط الحر)",
+                    "category": "فيزياء",
+                    "description": "أسقط أجسامًا مع أو بدون مقاومة الهواء. اكتشف لماذا الجاذبية عالمية."
+                }
+            }
+        }
     }
 };

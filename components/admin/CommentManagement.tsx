@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { MessageSquare, CheckCircle, XCircle, Trash2, MessageSquareOff, Filter, Reply, Send } from 'lucide-react';
+import { MessageSquare, CheckCircle, XCircle, Trash2, MessageSquareOff, Filter, Reply, Send, Printer } from 'lucide-react';
 import { UserComment } from '../../types';
 import { updateCommentStatus, deleteComment } from '../../services/adminService';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface CommentManagementProps {
     comments: UserComment[];
@@ -63,6 +67,68 @@ const CommentManagement: React.FC<CommentManagementProps> = ({ comments, onRefre
         }
     };
 
+    const [exporting, setExporting] = useState(false);
+
+    const handlePrint = async () => {
+        if (filteredComments.length === 0) {
+            alert('Pas de données à imprimer');
+            return;
+        }
+
+        if ((window as any).Capacitor?.getPlatform() === 'web' || !(window as any).Capacitor?.getPlatform()) {
+            window.print();
+            return;
+        }
+        setExporting(true);
+        try {
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            try { doc.addImage('/tmab_logo.png', 'PNG', 14, 5, 25, 25); } catch (e) {
+                doc.setFontSize(24);
+                doc.setTextColor(59, 130, 246);
+                doc.text("TMAB", 14, 20);
+            }
+            doc.setFontSize(22);
+            doc.setTextColor(30, 41, 59);
+            doc.text(`COMMENTAIRES & AVIS`, 45, 18);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Filtre: ${filterStatus.toUpperCase()}`, 45, 24);
+            doc.text(`Date: ${new Date().toLocaleString('fr-FR')}`, 45, 30);
+            
+            const tableData = filteredComments.map(comment => [
+                comment.userName,
+                comment.category,
+                `${comment.rating} ⭐`,
+                comment.content.length > 50 ? comment.content.substring(0, 50) + '...' : comment.content,
+                comment.status
+            ]);
+            autoTable(doc, {
+                startY: 40,
+                head: [['Utilisateur', 'Catégorie', 'Note', 'Commentaire', 'Statut']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [139, 92, 246] }
+            });
+            const pdfArray = doc.output('arraybuffer');
+            const uint8 = new Uint8Array(pdfArray);
+            let binary = "";
+            for (let i = 0; i < uint8.byteLength; i++) binary += String.fromCharCode(uint8[i]);
+            const base64Data = btoa(binary);
+            const filename = `commentaires_${Date.now()}.pdf`;
+            const result = await Filesystem.writeFile({
+                path: filename,
+                data: base64Data,
+                directory: Directory.Cache
+            });
+            await Share.share({ url: result.uri, dialogTitle: 'Partager / Imprimer PDF' });
+        } catch(e) {
+            console.error(e);
+            alert('Erreur lors de la création du PDF');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Filters Bar */}
@@ -107,6 +173,14 @@ const CommentManagement: React.FC<CommentManagementProps> = ({ comments, onRefre
                                 {category}
                             </button>
                         ))}
+                        <button
+                            onClick={handlePrint}
+                            disabled={exporting}
+                            className="whitespace-nowrap px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center disabled:opacity-50"
+                            title="Imprimer"
+                        >
+                            <Printer size={16} />
+                        </button>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import {
     X,
     RotateCcw,
@@ -23,6 +22,14 @@ interface FlashcardPlayerProps {
     onClose: () => void;
 }
 
+const getFontSize = (text?: string) => {
+    if (!text) return 'text-xl md:text-3xl';
+    if (text.length > 150) return 'text-xs md:text-sm';
+    if (text.length > 80) return 'text-sm md:text-lg';
+    if (text.length > 40) return 'text-base md:text-xl';
+    return 'text-xl md:text-3xl';
+};
+
 const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose }) => {
     const { user, addXp, addLevelCoins, addActivity, incrementFlashcardsStudied, updateSRSMetadata, trackTime } = useStore();
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -32,11 +39,15 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
     const [isFinished, setIsFinished] = useState(false);
     const [startTime] = useState(Date.now());
 
+    const dragX = useMotionValue(0);
+    const dragRotate = useTransform(dragX, [-200, 200], [-15, 15]);
+
     const currentCard = activeCards[currentIndex];
     const progress = (stats.known / cards.length) * 100;
 
     const handleRate = (isMastered: boolean) => {
         HapticFeedback.selection();
+        dragX.set(0);
 
         if (isMastered) {
             setStats(prev => ({ ...prev, known: prev.known + 1 }));
@@ -143,7 +154,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
     }
 
     return (
-        <div className="min-h-[80vh] flex flex-col max-w-4xl mx-auto py-8 space-y-8 animate-fade-in">
+        <div className="min-h-[80vh] flex flex-col max-w-4xl mx-auto py-8 px-6 space-y-8 animate-fade-in">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all">
@@ -170,16 +181,32 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
             {/* Card Area */}
             <div className="flex-1 flex items-center justify-center perspective-1000 py-12">
                 <motion.div
-                    className="relative w-full max-w-lg aspect-[4/3] cursor-pointer"
-                    style={{ transformStyle: 'preserve-3d' }}
-                    onClick={() => setIsFlipped(!isFlipped)}
+                    className="relative w-full max-w-md aspect-[3/4] md:aspect-[4/3] cursor-pointer"
+                    drag={isFlipped ? "x" : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.8}
+                    onDragEnd={(event, info) => {
+                        if (!isFlipped) return;
+                        const swipeThreshold = 100;
+                        if (info.offset.x > swipeThreshold) {
+                            handleRate(true); // Swiped Right -> Mastered
+                        } else if (info.offset.x < -swipeThreshold) {
+                            handleRate(false); // Swiped Left -> Repeat
+                        }
+                    }}
+                    style={{ x: dragX, rotate: dragRotate, transformStyle: 'preserve-3d' }}
+                    onClick={() => {
+                        if (Math.abs(dragX.get()) < 10) {
+                            setIsFlipped(!isFlipped);
+                        }
+                    }}
                     initial={false}
                     animate={{ rotateY: isFlipped ? 180 : 0 }}
                     transition={{ type: "spring", stiffness: 260, damping: 20 }}
                 >
                     {/* Front */}
                     <div
-                        className="absolute inset-0 glass rounded-[3rem] border border-white/10 shadow-2xl flex flex-col items-center justify-center p-12 text-center group"
+                        className="absolute inset-0 glass rounded-[3rem] border border-white/10 shadow-2xl flex flex-col items-center justify-center p-6 md:p-12 text-center group"
                         style={{
                             backfaceVisibility: 'hidden',
                             WebkitBackfaceVisibility: 'hidden',
@@ -188,7 +215,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
                             transition: 'opacity 0.3s'
                         }}
                     >
-                        <h3 className="text-xl md:text-3xl font-display font-black text-white leading-tight select-none">
+                        <h3 className={`font-display font-black text-white leading-tight select-none ${getFontSize(currentCard?.front)}`}>
                             {currentCard?.front}
                         </h3>
                         <div className="absolute bottom-12 flex items-center gap-2 text-slate-500 font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
@@ -198,7 +225,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
 
                     {/* Back */}
                     <div
-                        className="absolute inset-0 glass rounded-[3rem] border border-primary/20 shadow-2xl flex flex-col items-center justify-center p-8 text-center bg-primary/5"
+                        className="absolute inset-0 glass rounded-[3rem] border border-primary/20 shadow-2xl flex flex-col items-center justify-center p-6 md:p-8 text-center bg-primary/5"
                         style={{
                             backfaceVisibility: 'hidden',
                             WebkitBackfaceVisibility: 'hidden',
@@ -209,7 +236,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
                         }}
                     >
                         <div className="w-full h-full overflow-y-auto custom-scrollbar flex items-center justify-center py-4">
-                            <p className="text-lg md:text-2xl font-bold text-white leading-relaxed select-none">
+                            <p className={`font-bold text-white leading-relaxed select-none ${getFontSize(currentCard?.back)}`}>
                                 {currentCard?.back}
                             </p>
                         </div>

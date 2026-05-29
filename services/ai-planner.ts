@@ -1,4 +1,4 @@
-import { openrouterService } from './openrouter';
+import { aiService } from './aiService';
 import { StudyPlan, StudyTask } from '../types';
 
 export const aiPlannerService = {
@@ -26,8 +26,8 @@ Retourne UNIQUEMENT un objet JSON valide avec la structure suivante :
 
 Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de l'examen. Varie les matières et prévois des temps de pause.`;
 
-        console.log("🚀 Envoi requête Plan Textuel à OpenRouter...");
-        const response = await openrouterService.generateText(prompt);
+        console.log("🚀 Envoi requête Plan Textuel à Gemini Flash...");
+        const response = await aiService.generateText(prompt);
         console.log("📥 Réponse brute reçue:", response.substring(0, 100) + "...");
 
         try {
@@ -44,6 +44,6 @@ Assure-toi que les sessions sont réparties intelligemment jusqu'à la veille de
     },
 
     async generatePlanWithImages(examDate: string, subjects: string[], base64Images: string[]): Promise<StudyPlan> {
-        return await openrouterService.generatePlanWithImages(examDate, subjects, base64Images);
+        return await aiService.generatePlanWithImages(examDate, subjects, base64Images);
     }
 };

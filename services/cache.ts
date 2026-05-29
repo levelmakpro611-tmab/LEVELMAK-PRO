@@ -38,6 +38,30 @@ class CacheService {
     }
 
     /**
+     * Retourne le vocabulaire quotidien depuis le cache synchrone
+     */
+    getSyncDailyVocab(lang: string = 'fr'): any | null {
+        this.loadFromStorage();
+        const today = new Date().toISOString().split('T')[0];
+        if (this.storage.dailyVocab && this.storage.dailyVocab.dateString === today) {
+            return this.storage.dailyVocab.data;
+        }
+        return null;
+    }
+
+    /**
+     * Retourne la motivation quotidienne depuis le cache synchrone
+     */
+    getSyncDailyMotivation(lang: string = 'fr'): any | null {
+        this.loadFromStorage();
+        const today = new Date().toISOString().split('T')[0];
+        if (this.storage.dailyMotivation && this.storage.dailyMotivation.dateString === today) {
+            return this.storage.dailyMotivation.data;
+        }
+        return null;
+    }
+
+    /**
      * Récupère le vocabulaire quotidien (Global Sync via Supabase)
      */
     async getDailyVocab(generator: () => Promise<any>, lang: string = 'fr'): Promise<any> {

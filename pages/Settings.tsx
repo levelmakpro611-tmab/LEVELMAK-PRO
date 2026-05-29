@@ -14,6 +14,7 @@ import {
     Check,
     Globe,
     Moon,
+    Sun,
     Volume2,
     Type,
     GraduationCap
@@ -228,21 +229,51 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                         </h3>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div
-                                                onClick={toggleTheme}
-                                                className="bg-white/5 p-6 rounded-3xl border border-white/5 flex items-center gap-4 group hover:bg-white/10 transition-all cursor-pointer"
-                                            >
-                                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-300 group-hover:text-primary transition-colors">
-                                                    <Moon size={20} className="md:w-6 md:h-6" />
+                                            <div className="bg-white/5 p-6 rounded-3xl border border-white/5 space-y-4 col-span-1 md:col-span-2">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-300">
+                                                        <Palette size={20} className="md:w-6 md:h-6 text-primary" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.darkMode')}</h4>
+                                                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
+                                                            {settings.theme === 'dark' ? 'Mode Sombre Activé' : 'Mode Clair Activé'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.darkMode')}</h4>
-                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
-                                                        {settings.theme === 'dark' ? t('settings.darkOn') : t('settings.lightOn')}
-                                                    </p>
-                                                </div>
-                                                <div className={`w-8 md:w-10 h-4 md:h-5 rounded-full relative transition-colors ${settings.theme === 'dark' ? 'bg-primary/40' : 'bg-slate-700'}`}>
-                                                    <div className={`absolute top-0.5 w-3 h-3 md:w-4 md:h-4 bg-white rounded-full transition-all ${settings.theme === 'dark' ? 'right-0.5' : 'left-0.5'}`}></div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div
+                                                        onClick={() => updateSettings({ theme: 'light' })}
+                                                        className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${
+                                                            settings.theme === 'light'
+                                                                ? 'bg-white/10 border-primary shadow-glow text-primary scale-[1.02]'
+                                                                : 'bg-black/25 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                                        }`}
+                                                    >
+                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                                                            settings.theme === 'light' ? 'bg-primary/20 text-primary' : 'bg-slate-800 text-slate-400'
+                                                        }`}>
+                                                            <Sun size={24} />
+                                                        </div>
+                                                        <span className="font-black tracking-wider text-xs uppercase">Mode Clair</span>
+                                                    </div>
+
+                                                    <div
+                                                        onClick={() => updateSettings({ theme: 'dark' })}
+                                                        className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${
+                                                            settings.theme === 'dark'
+                                                                ? 'bg-white/10 border-primary shadow-glow text-primary scale-[1.02]'
+                                                                : 'bg-black/25 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                                        }`}
+                                                    >
+                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                                                            settings.theme === 'dark' ? 'bg-primary/20 text-primary' : 'bg-slate-800 text-slate-400'
+                                                        }`}>
+                                                            <Moon size={24} />
+                                                        </div>
+                                                        <span className="font-black tracking-wider text-xs uppercase">Mode Sombre</span>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -302,21 +333,42 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                 </AnimatePresence>
                                             </div>
 
-                                            <div
-                                                onClick={toggleLanguage}
-                                                className="bg-white/5 p-6 rounded-3xl border border-white/5 flex items-center gap-4 group hover:bg-white/10 transition-all cursor-pointer col-span-1 md:col-span-2"
-                                            >
-                                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-300 group-hover:text-accent transition-colors">
-                                                    <Globe size={20} className="md:w-6 md:h-6" />
+                                            <div className="bg-white/5 p-6 rounded-3xl border border-white/5 space-y-4 col-span-1 md:col-span-2">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-300">
+                                                        <Globe size={20} className="md:w-6 md:h-6 text-accent" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.lang')}</h4>
+                                                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
+                                                            {settings.language === 'fr' ? 'Français' : settings.language === 'ar' ? 'العربية' : 'English'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.lang')}</h4>
-                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">
-                                                        {settings.language === 'fr' ? 'Français (France)' : settings.language === 'ar' ? 'العربية (AR)' : 'English (US)'}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-2 bg-black/20 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border border-white/5 font-black text-[8px] md:text-[10px] text-white tracking-widest uppercase">
-                                                    {t('settings.change')}
+
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {[
+                                                        { code: 'fr', name: 'Français', label: 'FR', flag: '🇫🇷' },
+                                                        { code: 'en', name: 'English', label: 'EN', flag: '🇬🇧' },
+                                                        { code: 'ar', name: 'العربية', label: 'AR', flag: '🇸🇦' }
+                                                    ].map((lang) => {
+                                                        const isActive = settings.language === lang.code;
+                                                        return (
+                                                            <div
+                                                                key={lang.code}
+                                                                onClick={() => updateSettings({ language: lang.code as any })}
+                                                                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-2 text-center ${
+                                                                    isActive
+                                                                        ? 'bg-white/10 border-accent shadow-glow text-accent scale-[1.02]'
+                                                                        : 'bg-black/25 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                                                }`}
+                                                            >
+                                                                <span className="text-2xl md:text-3xl filter saturate-100">{lang.flag}</span>
+                                                                <span className="font-bold text-xs md:text-sm text-slate-900 dark:text-white transition-colors">{lang.name}</span>
+                                                                <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-60">{lang.label}</span>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
 

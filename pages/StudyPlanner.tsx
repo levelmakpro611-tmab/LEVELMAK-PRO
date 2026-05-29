@@ -24,7 +24,7 @@ import 'jspdf-autotable';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../hooks/useStore';
 import { aiPlannerService } from '../services/ai-planner';
-import { openrouterService } from '../services/openrouter';
+import { aiService } from '../services/aiService';
 import { StudyPlan } from '../types';
 import mammoth from 'mammoth';
 
@@ -212,7 +212,7 @@ const StudyPlanner: React.FC = () => {
                         sources.push({ type: f.type, data: base64 });
                     }
                 }
-                result = await openrouterService.generatePlanMultimodal(examDate, subjects, sources, settings.language);
+                result = await aiService.generatePlanMultimodal(examDate, subjects, sources, settings.language);
             } else {
                 result = await aiPlannerService.generatePlan(examDate, subjects);
             }

@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
     appId: 'com.levelmak.app',
@@ -29,8 +30,8 @@ const config: CapacitorConfig = {
             overlaysWebView: true
         },
         Keyboard: {
-            resize: 'body',
-            style: 'dark',
+            resize: KeyboardResize.Body,
+            style: KeyboardStyle.Dark,
             resizeOnFullScreen: true
         },
         Haptics: {

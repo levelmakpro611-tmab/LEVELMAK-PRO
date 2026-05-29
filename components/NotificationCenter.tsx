@@ -60,7 +60,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                         className="fixed top-0 right-0 bottom-0 z-[700] w-full max-w-sm md:max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/5 shadow-2xl flex flex-col"
                     >
                         {/* Header */}
-                        <div className="p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                        <div className="pt-12 pb-6 px-6 md:p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                                     <Bell size={20} />

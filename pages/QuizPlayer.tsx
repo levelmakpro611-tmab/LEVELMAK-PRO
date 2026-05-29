@@ -28,6 +28,7 @@ import 'jspdf-autotable';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { WorldBrainMap } from '../components/WorldBrainMap';
 import { useFlashcardStore } from '../services/flashcardStore';
+import { audioService } from '../services/audio';
 
 interface QuizPlayerProps {
   quiz: Quiz;
@@ -71,6 +72,12 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
   useEffect(() => {
     console.log("🧩 QuizPlayer mounted with quiz:", quiz.title);
     console.log("🔮 Oracle State (showOracle):", showOracle);
+    
+    // Start background piano music
+    audioService.startBackgroundPiano();
+    return () => {
+      audioService.stopBackgroundPiano();
+    };
   }, [quiz.title, showOracle]);
 
   // Start quiz logging
@@ -101,6 +108,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     if (isAnswered) return;
 
     await Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+    audioService.playClick();
     setSelectedOption(idx);
     setIsAnswered(true);
 
@@ -109,6 +117,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       setScore(prev => prev + 1);
       setEncouragement(encouragements[Math.floor(Math.random() * encouragements.length)]);
       feedbackService.answerFeedback(true);
+      audioService.playSuccess('quiz');
     } else {
       if (shieldActive) {
         setShieldActive(false);
@@ -124,6 +133,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
       });
       setEncouragement(t('quiz.player.feedback.fail'));
       feedbackService.answerFeedback(false);
+      audioService.playError('quiz');
     }
   };
 
@@ -229,6 +239,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
   };
 
   const handleStartWithBet = () => {
+    audioService.playClick();
     if (betAmount > 0) {
       const success = betLevelCoins(betAmount);
       if (!success) {
@@ -314,7 +325,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
   if (isInviting) {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-950 animate-fade-in">
+      <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl animate-fade-in">
         <WorldBrainMap 
           customBattleMode="custom_quiz" 
           customBattleData={quiz} 
@@ -327,7 +338,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
   if (showOracle) {
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl animate-fade-in">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-fade-in">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -592,17 +603,17 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
   }
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-2xl bg-slate-900/40 backdrop-blur-3xl rounded-[3.5rem] border border-white/10 shadow-premium overflow-hidden flex flex-col relative">
+    <div className="min-h-[80vh] md:min-h-[85vh] flex items-center justify-center px-3 py-4 md:py-12">
+      <div className="w-full max-w-2xl bg-slate-900/60 backdrop-blur-3xl rounded-[2rem] md:rounded-[3.5rem] border border-white/10 shadow-premium overflow-hidden flex flex-col relative">
         {/* Progress Header */}
-        <div className="p-8 pb-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 text-slate-400">
-              <Zap size={20} />
+        <div className="p-4 md:p-8 md:pb-4 flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 text-slate-400">
+              <Zap size={16} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{quiz.title}</p>
-              <h4 className="text-white font-display font-bold text-lg">Question {currentIdx + 1}/{quiz.questions.length}</h4>
+              <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">{quiz.title}</p>
+              <h4 className="text-white font-display font-bold text-sm md:text-lg">Question {currentIdx + 1}/{quiz.questions.length}</h4>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -611,37 +622,37 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
               <button
                 onClick={useShieldPotion}
                 disabled={isAnswered || shieldActive}
-                className={`p-1.5 rounded-xl border flex items-center gap-2 transition-all overflow-hidden ${shieldActive ? 'bg-primary/20 border-primary/40 text-primary animate-pulse' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
+                className={`p-1 rounded-xl border flex items-center gap-1.5 transition-all overflow-hidden ${shieldActive ? 'bg-primary/20 border-primary/40 text-primary animate-pulse' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
                 title={t('quiz.player.potions.shield')}
               >
-                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5">
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5">
                   <img src="/assets/fiole magique/WhatsApp Image 2026-02-10 at 02.26.02.jpeg" alt="Shield" className="w-full h-full object-contain" />
                 </div>
-                <span className="text-[10px] font-black pr-1">{consumables['potion_shield']}</span>
+                <span className="text-[9px] md:text-[10px] font-black pr-1">{consumables['potion_shield']}</span>
               </button>
             )}
             {consumables['potion_skip'] > 0 && (
               <button
                 onClick={useSkipPotion}
                 disabled={isAnswered}
-                className="p-1.5 bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl flex items-center gap-2 transition-all overflow-hidden"
+                className="p-1 bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl flex items-center gap-1.5 transition-all overflow-hidden"
                 title={t('quiz.player.potions.skip')}
               >
-                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5">
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5">
                   <img src="/assets/fiole magique/WhatsApp Image 2026-02-10 at 02.26.03.jpeg" alt="Skip" className="w-full h-full object-contain" />
                 </div>
-                <span className="text-[10px] font-black pr-1">{consumables['potion_skip']}</span>
+                <span className="text-[9px] md:text-[10px] font-black pr-1">{consumables['potion_skip']}</span>
               </button>
             )}
-            <button onClick={onClose} className="p-3 hover:bg-white/10 text-slate-500 hover:text-white rounded-2xl transition-all">
-              <X size={24} />
+            <button onClick={onClose} className="p-2 md:p-3 hover:bg-white/10 text-slate-500 hover:text-white rounded-xl md:rounded-2xl transition-all">
+              <X size={20} />
             </button>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="px-8 mb-8">
-          <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+        <div className="px-4 mb-4 md:px-8 md:mb-8">
+          <div className="h-1.5 md:h-2 w-full bg-white/5 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-gradient-to-r from-primary to-secondary"
               initial={{ width: 0 }}
@@ -652,20 +663,20 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         </div>
 
         {/* Question Area */}
-        <div className="px-8 pb-10 flex-1 flex flex-col">
+        <div className="px-4 pb-4 md:px-8 md:pb-10 flex-1 flex flex-col">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIdx}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-8 flex-1 flex flex-col"
+              className="space-y-3 md:space-y-8 flex-1 flex flex-col"
             >
-              <h2 className="text-xl md:text-2xl font-bold text-white text-center leading-snug px-4 py-4 min-h-[4rem] flex items-center justify-center">
+              <h2 className="text-sm md:text-xl font-bold text-white text-center leading-snug px-2 py-2 md:py-4 min-h-[3.5rem] md:min-h-[4rem] flex items-center justify-center">
                 {currentQuestion.text}
               </h2>
 
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-2.5 md:gap-4">
                 {currentQuestion.options.map((option, i) => {
                   const isCorrect = i === currentQuestion.correctAnswer;
                   const isSelected = selectedOption === i;
@@ -683,20 +694,20 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                       disabled={isAnswered}
                       onClick={() => handleOptionClick(i)}
                       className={`
-                        w-full p-6 rounded-2xl border text-left font-bold transition-all duration-300 flex items-center justify-between gap-4 group
+                        w-full p-3.5 md:p-6 rounded-xl md:rounded-2xl border text-left font-bold transition-all duration-300 flex items-center justify-between gap-3 md:gap-4 group
                         ${stateStyle}
-                        ${!isAnswered && "hover:scale-[1.02] active:scale-95"}
+                        ${!isAnswered && "hover:scale-[1.01] active:scale-98"}
                       `}
                     >
-                      <div className="flex items-center gap-4">
-                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black uppercase transition-colors ${isSelected ? 'bg-white/20' : 'bg-white/5 text-slate-500'}`}>
+                      <div className="flex items-center gap-3 md:gap-4">
+                        <span className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center text-[10px] md:text-xs font-black uppercase transition-colors ${isSelected ? 'bg-white/20' : 'bg-white/5 text-slate-500'}`}>
                           {String.fromCharCode(65 + i)}
                         </span>
-                        <span className="text-sm tracking-tight">{option}</span>
+                        <span className="text-xs md:text-sm tracking-tight leading-snug">{option}</span>
                       </div>
                       <AnimatePresence>
-                        {isAnswered && isCorrect && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><CheckCircle2 size={24} className="text-success" /></motion.div>}
-                        {isAnswered && isSelected && !isCorrect && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><XCircle size={24} className="text-danger" /></motion.div>}
+                        {isAnswered && isCorrect && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><CheckCircle2 size={18} className="text-success md:w-[24px] md:h-[24px]" /></motion.div>}
+                        {isAnswered && isSelected && !isCorrect && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><XCircle size={18} className="text-danger md:w-[24px] md:h-[24px]" /></motion.div>}
                       </AnimatePresence>
                     </button>
                   );
@@ -709,33 +720,33 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`p-6 rounded-[2rem] border transition-all ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}
+                    className={`p-4 md:p-6 rounded-2xl md:rounded-[2rem] border transition-all ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}
                   >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/20 border-success/30 text-success' : 'bg-danger/20 border-danger/30 text-danger animate-pulse'}`}>
-                        {selectedOption === currentQuestion.correctAnswer ? <Trophy size={20} /> : <AlertCircle size={20} />}
+                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
+                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center border ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/20 border-success/30 text-success' : 'bg-danger/20 border-danger/30 text-danger animate-pulse'}`}>
+                        {selectedOption === currentQuestion.correctAnswer ? <Trophy size={16} /> : <AlertCircle size={16} />}
                       </div>
                       <div className="flex-1">
-                        <h5 className={`font-black uppercase tracking-[0.2em] text-[10px] ${selectedOption === currentQuestion.correctAnswer ? 'text-success' : 'text-danger'}`}>
+                        <h5 className={`font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px] ${selectedOption === currentQuestion.correctAnswer ? 'text-success' : 'text-danger'}`}>
                           {encouragement}
                         </h5>
                         {selectedOption !== currentQuestion.correctAnswer && (
-                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Explication Pédagogique</p>
+                           <p className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Explication Pédagogique</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                      <p className="text-xs md:text-sm text-slate-300 leading-relaxed font-medium">
+                    <div className="bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 border border-white/5 max-h-[8rem] overflow-y-auto custom-scrollbar">
+                      <p className="text-[11px] md:text-sm text-slate-300 leading-relaxed font-medium">
                         {currentQuestion.explanation || "L'IA n'a pas fourni d'explication pour cette question, mais la réponse correcte est mise en évidence."}
                       </p>
                     </div>
 
                     <button
                       onClick={nextQuestion}
-                      className="w-full mt-6 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                      className="w-full mt-4 py-3 md:py-4 bg-white text-slate-900 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
                     >
-                      {currentIdx === quiz.questions.length - 1 ? t('quiz.player.activity') : t('quiz.player.nextQuestion')} <ChevronRight size={12} className="md:w-[14px] md:h-[14px]" />
+                      {currentIdx === quiz.questions.length - 1 ? t('quiz.player.activity') : t('quiz.player.nextQuestion')} <ChevronRight size={10} className="md:w-[14px] md:h-[14px]" />
                     </button>
                   </motion.div>
                 )}
@@ -745,15 +756,15 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         </div>
 
         {/* Score Footer */}
-        <div className="p-6 bg-slate-950/50 border-t border-white/5 flex items-center justify-between absolute bottom-0 inset-x-0 relative z-0">
-          <div className="flex gap-1">
+        <div className="p-4 md:p-6 bg-slate-950/50 border-t border-white/5 flex items-center justify-between relative z-0">
+          <div className="flex gap-1 overflow-x-auto max-w-[60%] py-1">
             {quiz.questions.map((_, i) => (
-              <div key={i} className={`h-1.5 w-6 rounded-full transition-colors ${i < currentIdx ? 'bg-success' : i === currentIdx ? 'bg-primary animate-pulse' : 'bg-white/5'}`}></div>
+              <div key={i} className={`h-1.5 w-4 md:w-6 rounded-full transition-colors flex-shrink-0 ${i < currentIdx ? 'bg-success' : i === currentIdx ? 'bg-primary animate-pulse' : 'bg-white/5'}`}></div>
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Précision actuelle :</span>
-            <span className="text-sm font-black text-white">{score}/{quiz.questions.length}</span>
+            <span className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">Précision :</span>
+            <span className="text-xs md:text-sm font-black text-white">{score}/{quiz.questions.length}</span>
           </div>
         </div>
       </div>

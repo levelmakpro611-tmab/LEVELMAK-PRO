@@ -64,6 +64,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
 import NotificationCenter from './NotificationCenter';
@@ -72,6 +73,7 @@ import OfflineIndicator from './OfflineIndicator';
 import { BubbleWrap } from './BubbleWrap';
 import { FloatingBubble } from './FloatingBubble';
 import { getXpForNextLevel } from '../constants';
+
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -100,7 +102,23 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const [activeHelpCategory, setActiveHelpCategory] = useState('account');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      Keyboard.addListener('keyboardWillShow', () => setIsKeyboardOpen(true));
+      Keyboard.addListener('keyboardWillHide', () => setIsKeyboardOpen(false));
+      return () => { Keyboard.removeAllListeners(); };
+    } else {
+      const handleResize = () => {
+        if (window.innerHeight < window.screen.height * 0.75) setIsKeyboardOpen(true);
+        else setIsKeyboardOpen(false);
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
 
   // PWA Detection
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
@@ -157,15 +175,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     };
   }, [user?.id]); // Only re-run if user ID changes
 
-  if (!user) return null;
 
   const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && user) {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        updateProfile(user.name, undefined, base64String);
+        updateProfile(user.name || 'Utilisateur', undefined, { avatar: { ...(user.avatar || {}), image: base64String } });
       };
       reader.readAsDataURL(file);
     }
@@ -183,6 +200,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'dashboard', label: t('nav.dashboard'), shortLabel: t('nav.short.dashboard'), icon: LayoutDashboard },
     { id: 'quiz', label: t('nav.quiz'), shortLabel: t('nav.short.quiz'), icon: BrainCircuit },
     { id: 'summary', label: t('nav.summary'), shortLabel: t('nav.short.summary'), icon: Sparkles },
+    { id: 'library', label: t('nav.library'), shortLabel: t('nav.short.library'), icon: BookOpen, hideOnMobile: true },
     { id: 'writing', label: t('nav.writing'), shortLabel: t('nav.short.writing'), icon: PenTool },
     { id: 'flashcards', label: t('nav.flashcards'), shortLabel: t('nav.short.flashcards'), icon: Layers },
     { id: 'ailab', label: t('nav.ailab'), shortLabel: t('nav.ailabShort'), icon: FlaskRound },
@@ -200,18 +218,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !Capacitor.isNativePlatform();
   const navItems = isLocal
     ? navItemsRaw
-    : navItemsRaw.filter(item => !['tutor_hub', 'active_visual', 'planner', 'audio_lab'].includes(item.id));
+    : navItemsRaw.filter(item => !['tutor_hub', 'active_visual', 'planner', 'audio_lab', 'library'].includes(item.id));
 
   if (!user) return <>{children}</>;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans text-slate-900 dark:text-slate-200 relative overflow-hidden transition-colors duration-500">
+    <div className="min-h-screen bg-transparent flex flex-col md:flex-row font-sans text-slate-900 dark:text-slate-200 relative overflow-hidden transition-colors duration-500">
       <OfflineIndicator />
-      {/* Background Aurora Blobs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[60px] opacity-20 dark:opacity-100"></div>
-        <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-secondary/10 rounded-full blur-[50px] opacity-20 dark:opacity-100"></div>
-      </div>
 
       {/* Mobile Header - Re-adjusted for "Married" look */}
       <header className="md:hidden glass border-b border-black/5 dark:border-white/5 px-4 pt-[env(safe-area-inset-top)] pb-3 flex items-center justify-between sticky top-0 z-[100] bg-background/90 backdrop-blur-xl transition-all">
@@ -339,7 +352,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               </div>
               <div className="relative group cursor-pointer ml-2" onClick={() => setIsProfileOpen(true)}>
                 <div className="w-12 h-12 rounded-[1rem] bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-black text-xl shadow-lg ring-1 ring-black/5 dark:ring-white/10 group-hover:scale-105 transition-transform overflow-hidden relative">
-                  {user.avatar?.image ? <img src={user.avatar.image} alt={user.name} className="w-full h-full object-cover" /> : user.name.charAt(0).toUpperCase()}
+                  {user.avatar?.image ? <img src={user.avatar.image} alt={user.name || 'User'} className="w-full h-full object-cover" /> : (user.name || 'U').charAt(0).toUpperCase()}
                   <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#10B981] rounded-full border-2 border-[#060915] shadow-lg"></div>
@@ -349,11 +362,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         </header>
 
         <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : 'p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : 'pb-40 md:pb-10'} transition-all duration-300`}>
-          <div className={`${(activeTab === 'social' || activeTab === 'ailab') ? 'h-full' : ''}`}>{children}</div>
+          <div className={`${(activeTab === 'social' || activeTab === 'ailab') ? 'h-full' : ''}`}>
+            {children}
+          </div>
         </div>
 
-        {activeTab !== 'social' && (
-          <nav className="md:hidden fixed bottom-0 left-0 w-full z-[1000] h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-background dark:bg-[#050b18] border-t border-black/5 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.2)] transition-all duration-500">
+        {activeTab !== 'social' && !isKeyboardOpen && (
+          <nav className="md:hidden fixed bottom-0 left-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-background/80 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-black/5 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.2)] transition-all duration-500">
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
               { id: 'flashcards', icon: Layers, label: 'Flash' },
@@ -393,10 +408,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                   </div>
                   <div className="flex flex-col items-center gap-6">
                     <div className="w-24 h-24 rounded-full bg-blue-500/20 flex items-center justify-center text-4xl font-black text-white ring-4 ring-blue-500/10">
-                      {user.avatar?.image ? <img src={user.avatar.image} alt={user.name} className="w-full h-full object-cover rounded-full" /> : user.name.charAt(0).toUpperCase()}
+                      {user.avatar?.image ? <img src={user.avatar.image} alt={user.name || 'User'} className="w-full h-full object-cover rounded-full" /> : (user.name || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div className="text-center">
-                      <h2 className="text-3xl font-black text-white">{user.name}</h2>
+                      <h2 className="text-3xl font-black text-white">{user.name || 'Utilisateur'}</h2>
                       <p className="text-slate-500 font-bold uppercase tracking-widest text-sm mt-1">Étudiant Elite</p>
                     </div>
                     <button onClick={logout} className="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Déconnexion</button>
@@ -521,14 +536,49 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                     <h2 className="text-4xl font-black text-white tracking-tighter mb-4">L'Espace Elite LEVELMAK</h2>
                     <p className="mt-6 text-slate-400 font-bold uppercase tracking-widest text-xs">Guide Complet de ton Ascension</p>
                   </div>
-                  <div className="space-y-16">
+                  <div className="space-y-12">
                     <section className="space-y-6">
                       <div className="flex items-center gap-3 text-blue-400"><BrainCircuit size={28} /><h3 className="text-2xl font-black uppercase tracking-widest">C'est quoi LEVELMAK ?</h3></div>
-                      <p className="text-slate-200 leading-relaxed text-xl font-medium">LEVELMAK est une plateforme éducative de nouvelle génération développée par TMAB GROUP. C'est bien plus qu'une application : c'est un écosystème intelligent qui utilise l'IA pour transformer chaque élève en un champion du savoir.</p>
+                      <div className="space-y-4">
+                        <p className="text-slate-200 leading-relaxed text-lg font-medium">LEVELMAK est une plateforme éducative de nouvelle génération développée par la société technologique <span className="text-blue-400 font-bold">TMAB GROUP</span>. C'est bien plus qu'une simple application : c'est un véritable écosystème d'apprentissage intelligent.</p>
+                        <p className="text-slate-300 leading-relaxed text-base">Nous avons conçu LEVELMAK pour qu'elle agisse comme un tuteur personnel pour chaque élève. En utilisant l'Intelligence Artificielle de façon encadrée, LEVELMAK s'adapte au niveau de l'élève, identifie ses lacunes et l'accompagne pas à pas vers la maîtrise de ses cours.</p>
+                        <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20 mt-4">
+                          <p className="text-blue-400 font-bold mb-2">Les avantages majeurs :</p>
+                          <ul className="list-disc list-inside text-slate-300 space-y-2 text-sm">
+                            <li>Un apprentissage personnalisé et ciblé sur les difficultés de l'élève.</li>
+                            <li>Une disponibilité 24h/24 et 7j/7 pour réviser, poser des questions et s'exercer.</li>
+                            <li>Des outils innovants : Quiz intelligents, Flashcards, Résumés automatiques, et Atlas interactif.</li>
+                            <li>Une plateforme qui valorise l'effort et la progression par la gamification.</li>
+                            <li>Des défis multijoueurs (Quiz, Morpion, Bataille de Territoire) pour affronter ses amis et gagner des LevelCoins en s'amusant.</li>
+                          </ul>
+                        </div>
+                      </div>
                     </section>
                     <section className="space-y-6">
-                      <div className="flex items-center gap-3 text-purple-400"><Users size={28} /><h3 className="text-2xl font-black uppercase tracking-widest">Fondateurs</h3></div>
-                      <p className="text-slate-200 leading-relaxed text-lg">L'application a été fondée par deux jeunes visionnaires : <span className="font-bold text-white text-2xl">Thierno Mamadou Alimou Barry</span> & <span className="font-bold text-white text-2xl">Ibrahim Barry</span>.</p>
+                      <div className="flex items-center gap-3 text-red-400"><AlertCircle size={28} /><h3 className="text-2xl font-black uppercase tracking-widest">Notre Mission & Les Risques</h3></div>
+                      <div className="space-y-4">
+                        <p className="text-slate-200 leading-relaxed text-lg">Pourquoi avons-nous créé LEVELMAK ? La réponse vient d'un constat alarmant sur le terrain. Les administrateurs de TMAB GROUP, témoins directs de l'évolution de l'éducation, ont remarqué que de plus en plus d'élèves se tournaient vers des Intelligences Artificielles génériques (comme ChatGPT) sans aucun encadrement.</p>
+                        <p className="text-rose-300 leading-relaxed text-base font-medium">Cette utilisation non guidée présente des risques majeurs et dévastateurs pour l'apprentissage :</p>
+                        <ul className="list-none space-y-3 text-slate-300 text-sm">
+                          <li className="flex items-start gap-2"><span className="text-red-500 font-black">X</span> <strong>La perte de l'esprit critique :</strong> L'élève demande la réponse directe au lieu d'apprendre à réfléchir et à résoudre le problème par lui-même.</li>
+                          <li className="flex items-start gap-2"><span className="text-red-500 font-black">X</span> <strong>La dépendance intellectuelle :</strong> L'incapacité à produire un travail de réflexion personnel sans l'assistance d'une machine.</li>
+                          <li className="flex items-start gap-2"><span className="text-red-500 font-black">X</span> <strong>La destruction de la formation :</strong> Un élève qui fait faire ses devoirs par l'IA arrive aux examens ou dans la vie professionnelle sans aucune compétence réelle, voué à l'échec.</li>
+                        </ul>
+                        <p className="text-slate-200 leading-relaxed text-lg font-bold mt-4 border-l-4 border-blue-500 pl-4 py-2 bg-white/5 rounded-r-xl">C'est ce qui nous a poussés à agir.</p>
+                        <p className="text-slate-300 leading-relaxed text-base">Nous avons conçu LEVELMAK pour combler ce vide. Notre plateforme offre un cadre pédagogique ultra-sécurisé où l'IA est bridée pour <strong className="text-white">ne jamais donner la réponse directe</strong>, mais pour agir comme un tuteur socratique qui accompagne, stimule et encadre l'élève pour maximiser son potentiel sans jamais faire le travail à sa place.</p>
+                      </div>
+                    </section>
+                    <section className="space-y-6 pb-6 border-t border-white/10 pt-6">
+                      <div className="flex items-center gap-3 text-purple-400"><Users size={28} /><h3 className="text-2xl font-black uppercase tracking-widest">Fondateurs & TMAB GROUP</h3></div>
+                      <div className="space-y-4">
+                        <p className="text-slate-200 leading-relaxed text-lg">L'application a été fondée et pensée par deux jeunes visionnaires guinéens engagés pour l'avenir de la jeunesse :</p>
+                        <div className="flex flex-col gap-2 my-4">
+                          <span className="font-black text-white text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Thierno Mamadou Alimou Barry</span>
+                          <span className="font-black text-white text-2xl bg-gradient-to-r from-purple-400 to-orange-400 bg-clip-text text-transparent">Ibrahim Barry</span>
+                        </div>
+                        <p className="text-slate-300 leading-relaxed text-base">À travers la société <strong>TMAB GROUP</strong>, leur vision est de démocratiser l'accès à une éducation d'élite pour tous les élèves, peu importe leur localisation. Ils ont compris très tôt que l'innovation technologique devait servir de levier pour propulser l'éducation, et non pour l'affaiblir.</p>
+                        <p className="text-slate-300 leading-relaxed text-base">Avec LEVELMAK, TMAB GROUP réaffirme son engagement profond : aider les élèves, protéger leur capacité d'analyse, et les équiper des meilleures ressources pour affronter les défis du monde de demain. C'est un projet fait par la jeunesse, pour la jeunesse.</p>
+                      </div>
                     </section>
                   </div>
                 </div>

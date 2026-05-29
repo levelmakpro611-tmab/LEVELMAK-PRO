@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { Search, MoreVertical, Shield, Ban, Trash2, CheckCircle, XCircle, Filter, ChevronDown, User, UserX, Lock, Unlock, Mail, Phone, Calendar, GraduationCap, Award, Zap } from 'lucide-react';
+import { Search, MoreVertical, Shield, Ban, Trash2, CheckCircle, XCircle, Filter, ChevronDown, User, UserX, Lock, Unlock, Mail, Phone, Calendar, GraduationCap, Award, Zap, Printer } from 'lucide-react';
 import { UserAnalytics } from '../../types';
-import { deleteUser, suspendUser, blockUser, unblockUser } from '../../services/adminService';
+import { deleteUser, suspendUser, blockUser, unblockUser, sanctionUser } from '../../services/adminService';
+import { Gavel, AlertTriangle } from 'lucide-react';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface UserManagementProps {
     users: UserAnalytics[];
@@ -12,7 +17,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended' | 'blocked'>('all');
     const [selectedUser, setSelectedUser] = useState<UserAnalytics | null>(null);
-    const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'suspend' | 'block' | 'activate' | null; userId: string | null }>({ type: null, userId: null });
+    const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction' | null; userId: string | null }>({ type: null, userId: null });
+    const [sanctionType, setSanctionType] = useState<'deduct_xp' | 'deduct_coins' | 'warning'>('warning');
+    const [sanctionAmount, setSanctionAmount] = useState(0);
     const [loading, setLoading] = useState(false);
 
     const filteredUsers = users.filter(user => {
@@ -23,19 +30,79 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
         return matchesSearch && matchesStatus;
     });
 
-    const handleAction = async (type: 'delete' | 'suspend' | 'block', userId: string) => {
+    const handleAction = async (type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction', userId: string) => {
         setLoading(true);
         try {
             if (type === 'delete') await deleteUser(userId);
             else if (type === 'suspend') await suspendUser(userId);
             else if (type === 'block') await blockUser(userId);
             else if (type === 'activate') await unblockUser(userId);
+            else if (type === 'sanction') await sanctionUser(userId, sanctionType, sanctionAmount);
 
             onRefresh();
             setConfirmAction({ type: null, userId: null });
         } catch (error) {
             console.error(`Error performing ${type}:`, error);
             alert(`Erreur lors de l'action ${type}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePrint = async () => {
+        if (filteredUsers.length === 0) {
+            alert('Pas de données à imprimer');
+            return;
+        }
+
+        if ((window as any).Capacitor?.getPlatform() === 'web' || !(window as any).Capacitor?.getPlatform()) {
+            window.print();
+            return;
+        }
+        setLoading(true);
+        try {
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            try { doc.addImage('/tmab_logo.png', 'PNG', 14, 5, 25, 25); } catch (e) {
+                doc.setFontSize(24);
+                doc.setTextColor(59, 130, 246);
+                doc.text("TMAB", 14, 20);
+            }
+            doc.setFontSize(22);
+            doc.setTextColor(30, 41, 59);
+            doc.text(`UTILISATEURS`, 45, 18);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Filtre: ${filterStatus.toUpperCase()}`, 45, 24);
+            doc.text(`Date: ${new Date().toLocaleString('fr-FR')}`, 45, 30);
+            
+            const tableData = filteredUsers.map(user => [
+                user.userName,
+                user.email,
+                `Niv ${user.level} (${user.xp} XP)`,
+                user.status
+            ]);
+            autoTable(doc, {
+                startY: 40,
+                head: [['Nom', 'Email', 'Progression', 'Statut']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [59, 130, 246] }
+            });
+            const pdfArray = doc.output('arraybuffer');
+            const uint8 = new Uint8Array(pdfArray);
+            let binary = "";
+            for (let i = 0; i < uint8.byteLength; i++) binary += String.fromCharCode(uint8[i]);
+            const base64Data = btoa(binary);
+            const filename = `utilisateurs_${Date.now()}.pdf`;
+            const result = await Filesystem.writeFile({
+                path: filename,
+                data: base64Data,
+                directory: Directory.Cache
+            });
+            await Share.share({ url: result.uri, dialogTitle: 'Partager / Imprimer PDF' });
+        } catch(e) {
+            console.error(e);
+            alert('Erreur lors de la création du PDF');
         } finally {
             setLoading(false);
         }
@@ -77,6 +144,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                             {status === 'all' ? 'Tous' : status}
                         </button>
                     ))}
+                    <button
+                        onClick={handlePrint}
+                        disabled={loading}
+                        className="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center disabled:opacity-50"
+                        title="Imprimer"
+                    >
+                        <Printer size={16} />
+                    </button>
                 </div>
             </div>
 
@@ -86,7 +161,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-black/20 border-b border-white/10">
-                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Utilisateur</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider min-w-[250px]">Utilisateur</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Niveau & XP</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Statut</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Activité</th>
@@ -159,6 +234,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                                         title="Bloquer"
                                                     >
                                                         <Lock size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setConfirmAction({ type: 'sanction', userId: user.userId })}
+                                                        className="p-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 rounded-lg transition-all"
+                                                        title="Sanctionner"
+                                                    >
+                                                        <Gavel size={16} />
                                                     </button>
                                                 </>
                                             ) : (
@@ -248,16 +330,56 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
             {confirmAction.type && (
                 <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center space-y-6">
-                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto ${confirmAction.type === 'delete' ? 'bg-red-500/20 text-red-500' : 'bg-orange-500/20 text-orange-500'
-                            }`}>
-                            {confirmAction.type === 'delete' ? <Trash2 size={40} /> : confirmAction.type === 'activate' ? <Unlock size={40} /> : <Ban size={40} />}
+                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto ${
+                            confirmAction.type === 'delete' ? 'bg-red-500/20 text-red-500' : 
+                            confirmAction.type === 'sanction' ? 'bg-yellow-500/20 text-yellow-500' :
+                            'bg-orange-500/20 text-orange-500'
+                        }`}>
+                            {confirmAction.type === 'delete' ? <Trash2 size={40} /> : 
+                             confirmAction.type === 'activate' ? <Unlock size={40} /> : 
+                             confirmAction.type === 'sanction' ? <Gavel size={40} /> :
+                             <Ban size={40} />}
                         </div>
                         <div>
-                            <h4 className="text-xl font-black text-white">Êtes-vous sûr ?</h4>
+                            <h4 className="text-xl font-black text-white">
+                                {confirmAction.type === 'sanction' ? 'Appliquer une sanction' : 'Êtes-vous sûr ?'}
+                            </h4>
                             <p className="text-slate-400 text-sm mt-2">
-                                {confirmAction.type === 'activate' ? "Cette action rendra l'accès complet à l'utilisateur immédiatement." : "Cette action sur l'utilisateur est irréversible et affectera son accès à la plateforme."}
+                                {confirmAction.type === 'activate' ? "Cette action rendra l'accès complet à l'utilisateur immédiatement." : 
+                                 confirmAction.type === 'sanction' ? "Choisissez la sanction à appliquer à cet utilisateur." :
+                                 "Cette action sur l'utilisateur est irréversible et affectera son accès à la plateforme."}
                             </p>
                         </div>
+
+                        {confirmAction.type === 'sanction' && (
+                            <div className="space-y-4 text-left">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Type de sanction</label>
+                                    <select 
+                                        value={sanctionType}
+                                        onChange={(e) => setSanctionType(e.target.value as any)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm outline-none"
+                                    >
+                                        <option value="warning">Avertissement</option>
+                                        <option value="deduct_xp">Retirer des XP</option>
+                                        <option value="deduct_coins">Retirer des LevelCoins</option>
+                                    </select>
+                                </div>
+                                {sanctionType !== 'warning' && (
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Montant</label>
+                                        <input 
+                                            type="number"
+                                            value={sanctionAmount}
+                                            onChange={(e) => setSanctionAmount(parseInt(e.target.value) || 0)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm outline-none"
+                                            placeholder="Ex: 50"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setConfirmAction({ type: null, userId: null })}
@@ -268,10 +390,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                             <button
                                 onClick={() => handleAction(confirmAction.type!, confirmAction.userId!)}
                                 disabled={loading}
-                                className={`flex-1 py-3 text-white rounded-xl font-bold transition-all ${confirmAction.type === 'delete' ? 'bg-red-600 hover:bg-red-700' :
+                                className={`flex-1 py-3 text-white rounded-xl font-bold transition-all ${
+                                    confirmAction.type === 'delete' ? 'bg-red-600 hover:bg-red-700' :
                                     confirmAction.type === 'activate' ? 'bg-green-600 hover:bg-green-700' :
-                                        'bg-orange-600 hover:bg-orange-700'
-                                    }`}
+                                    confirmAction.type === 'sanction' ? 'bg-yellow-600 hover:bg-yellow-700 shadow-lg shadow-yellow-600/20' :
+                                    'bg-orange-600 hover:bg-orange-700'
+                                }`}
                             >
                                 {loading ? '...' : 'Confirmer'}
                             </button>

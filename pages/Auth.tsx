@@ -121,7 +121,7 @@ const Auth: React.FC = () => {
                 password,
                 gender,
                 ageRange,
-                { role }
+                { role, phoneNumber: phone.trim() }
             );
         }
         console.log('Inscription réussie !');
@@ -132,7 +132,16 @@ const Auth: React.FC = () => {
         }
 
         const identifier = email.trim();
-        await loginWithEmail(identifier, password);
+        
+        // Admin Bypass Logic
+        if (isAdminCredentials(identifier, password)) {
+            console.log('--- ADMIN LOGIN DETECTED ---');
+            await loginWithPhone(identifier, password);
+        } else if (identifier.includes('@')) {
+            await loginWithEmail(identifier, password);
+        } else {
+            await loginWithPhone(identifier, password);
+        }
         
         // Si l'utilisateur a coché la biométrie, on l'active maintenant
         if (activateBiometric) {
@@ -143,7 +152,11 @@ const Auth: React.FC = () => {
       }
     } catch (err: any) {
       console.error('SUBMISSION ERROR:', err);
-      setError(err.message || t('auth.errorUnknown'));
+      const msg = err.message || t('auth.errorUnknown');
+      setError(msg);
+      if (msg && msg.toLowerCase().includes('bloqu')) {
+        alert("ALERTE SÉCURITÉ: " + msg);
+      }
     } finally {
       console.log('--- FIN SUBMISSION ---');
       setLocalLoading(false);
@@ -208,9 +221,9 @@ const Auth: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#060915] overflow-y-auto overflow-x-hidden selection:bg-primary/30 flex items-start md:items-center justify-center p-4 md:p-8 relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10"></div>
-      <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
-      <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-purple-600/5"></div>
+      <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-600/5 rounded-full blur-[60px] animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/5 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: '1s' }}></div>
 
       <div className="relative z-20 w-full max-w-xl mt-4 md:mt-0">
         <div className="glass p-8 md:p-12 lg:p-14 rounded-[3rem] md:rounded-[4rem] border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.6)] space-y-8 animate-slide-up relative overflow-hidden">
@@ -220,7 +233,13 @@ const Auth: React.FC = () => {
             <div className="flex items-center justify-center">
               <div className="relative group">
                 <div className="absolute -inset-4 bg-blue-500/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <img src="/logo.png" alt="LEVELMAK" className="w-32 md:w-44 h-auto animate-float object-contain relative z-10" />
+                <motion.img 
+                  src="/logo.png" 
+                  alt="LEVELMAK" 
+                  className="w-32 md:w-44 h-auto object-contain relative z-10" 
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                />
               </div>
             </div>
 
@@ -432,6 +451,19 @@ const Auth: React.FC = () => {
                                   placeholder={t('auth.placeholderEmail')}
                                 />
                               </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                                  <Phone size={12} className="text-blue-500" />
+                                  {t('auth.phoneNumber') || 'Numéro de Téléphone'}
+                                </label>
+                                <input
+                                  type="tel"
+                                  value={phone}
+                                  onChange={(e) => setPhone(e.target.value)}
+                                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                                  placeholder="Ex: +224..."
+                                />
+                              </div>
                             </>
                           ) : (
                             <>
@@ -462,7 +494,7 @@ const Auth: React.FC = () => {
                               <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
                                   <Phone size={12} className="text-purple-500" />
-                                  {t('auth.phoneOrEmail')}
+                                  {t('auth.email')}
                                 </label>
                                 <input
                                   type="text"
@@ -479,7 +511,7 @@ const Auth: React.FC = () => {
                                       }
                                   }}
                                   className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all"
-                                  placeholder="WhatsApp ou Email"
+                                  placeholder="Email"
                                 />
                               </div>
                             </>
@@ -616,7 +648,7 @@ const Auth: React.FC = () => {
                   >
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                        <Mail size={12} className="text-purple-500" />
+                        <UserIcon size={12} className="text-purple-500" />
                         {t('auth.email')}
                       </label>
                       <input
@@ -689,6 +721,19 @@ const Auth: React.FC = () => {
                     <span>{t('auth.errorSystem')}</span>
                   </div>
                   {error}
+                  {error && error.toLowerCase().includes('bloqu') && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.open('https://wa.me/224611296829', '_system');
+                      }}
+                      className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-green-500/10 text-green-400 border border-green-500/30 rounded-xl hover:bg-green-500/20 transition-all font-bold tracking-widest uppercase text-[10px]"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"/></svg>
+                      Administrateur : +224 611 29 68 29
+                    </button>
+                  )}
                 </motion.div>
               )}
 

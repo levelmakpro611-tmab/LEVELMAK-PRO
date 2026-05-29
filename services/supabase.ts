@@ -1,54 +1,94 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Get environment variables with fallbacks to avoid crashes
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
-// DIAGNOSTIC LOGS (Safe)
-console.log('--- SYSTEM CHECK ---');
-console.log('VITE_SUPABASE_URL presence:', !!supabaseUrl);
-if (supabaseUrl) console.log('VITE_SUPABASE_URL length:', supabaseUrl.length);
-console.log('VITE_SUPABASE_ANON_KEY presence:', !!supabaseAnonKey);
-console.log('--------------------');
+// DIAGNOSTIC LOGS (Safe for production debugging)
+console.log('--- [SYSTEM] Supabase Configuration Check ---');
+console.log('URL present:', !!supabaseUrl);
+if (supabaseUrl) console.log('URL domain:', supabaseUrl.split('/')[2]);
+console.log('Key present:', !!supabaseAnonKey);
+console.log('Platform:', typeof window !== 'undefined' ? 'Web/Capacitor' : 'Node');
+console.log('-------------------------------------------');
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Supabase URL or Anon Key is missing in .env');
-}
-
-// Build Version: 0.1.76 - Supabase Resilience Fix
 let supabaseInstance: any;
 
-if (supabaseUrl && supabaseAnonKey) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-            storageKey: 'levelmak-auth-token',
-            flowType: 'implicit',
-            storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-            lock: async (name: string, acquireTimeout: number, fn: () => Promise<any>) => {
-                return await fn();
-            },
-        }
-    });
-} else {
-    console.error('Supabase client could not be initialized: missing URL or Key');
-    // Mock plus complet pour éviter les TypeError si les clés manquent au build
-    const mockError = () => Promise.resolve({ data: null, error: { message: 'Configuration Supabase manquante sur Vercel' } });
+if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
+    try {
+        supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true,
+                storageKey: 'levelmak-auth-token',
+                flowType: 'pkce', // PKCE is generally better for mobile
+                storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+                lock: async (name: string, acquireTimeout: number, fn: () => Promise<any>) => {
+                    return await fn();
+                },
+            }
+        });
+        console.log('✅ Supabase client initialized successfully');
+    } catch (e) {
+        console.error('❌ Supabase initialization error:', e);
+    }
+}
+
+// If initialization failed or keys are missing, use a safe mock that reports the error
+if (!supabaseInstance) {
+    console.error('⚠️ Supabase client could not be initialized: missing URL or Key. Using mock.');
+    const mockError = (method: string) => {
+        console.warn(`Supabase mock called: ${method} - Config is missing!`);
+        return Promise.resolve({ 
+            data: null, 
+            error: { 
+                message: 'Configuration Supabase manquante ou invalide. Vérifiez vos variables d\'environnement (VITE_SUPABASE_URL).',
+                code: 'MISSING_CONFIG'
+            } 
+        });
+    };
+
     supabaseInstance = {
-        from: () => ({ 
-            select: () => ({ eq: () => ({ single: mockError, order: () => ({ limit: mockError }) }) }), 
-            insert: mockError, 
-            upsert: mockError,
-            update: () => ({ eq: mockError }) 
+        from: (table: string) => ({ 
+            select: () => ({ 
+                eq: () => ({ 
+                    single: () => mockError(`from(${table}).select().eq().single()`),
+                    maybeSingle: () => mockError(`from(${table}).select().eq().maybeSingle()`),
+                    order: () => ({ limit: () => mockError(`from(${table}).select().eq().order().limit()`) }) 
+                }),
+                maybeSingle: () => mockError(`from(${table}).select().maybeSingle()`),
+            }), 
+            insert: () => mockError(`from(${table}).insert()`), 
+            upsert: () => mockError(`from(${table}).upsert()`),
+            update: () => ({ eq: () => mockError(`from(${table}).update().eq()`) }),
+            delete: () => ({ eq: () => mockError(`from(${table}).delete().eq()`) })
         }),
         auth: { 
-            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }), 
-            getSession: () => Promise.resolve({ data: { session: null } }), 
-            signOut: () => Promise.resolve(),
-            signUp: mockError,
-            signInWithPassword: mockError,
-            signInWithOtp: mockError
+            onAuthStateChange: () => {
+                console.warn('Supabase auth.onAuthStateChange called on mock');
+                return { data: { subscription: { unsubscribe: () => {} } } };
+            }, 
+            getSession: () => {
+                console.warn('Supabase auth.getSession called on mock');
+                return Promise.resolve({ data: { session: null }, error: null });
+            },
+            getUser: () => {
+                console.warn('Supabase auth.getUser called on mock');
+                return Promise.resolve({ data: { user: null }, error: null });
+            },
+            signOut: () => Promise.resolve({ error: null }),
+            signUp: () => mockError('auth.signUp'),
+            signInWithPassword: () => mockError('auth.signInWithPassword'),
+            signInWithOtp: () => mockError('auth.signInWithOtp'),
+            signInWithOAuth: () => mockError('auth.signInWithOAuth'),
+            updateUser: () => mockError('auth.updateUser')
+        },
+        storage: {
+            from: (bucket: string) => ({
+                upload: () => mockError(`storage.from(${bucket}).upload()`),
+                getPublicUrl: () => ({ data: { publicUrl: '' } })
+            })
         }
     };
 }

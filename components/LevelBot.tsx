@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { MessageCircle, X, Send, Sparkles, Loader2, Minimize2, Camera, Image as ImageIcon, History, Plus, Trash2, ChevronLeft, GraduationCap } from 'lucide-react';
-import { openrouterService } from '../services/openrouter';
+import { MessageCircle, X, Send, Sparkles, Loader2, Minimize2, Camera, Image as ImageIcon, History, Plus, Trash2, ChevronLeft, GraduationCap, RefreshCw } from 'lucide-react';
+import { aiService } from '../services/aiService';
 import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
 import { translations } from '../utils/translations';
@@ -64,7 +64,8 @@ const formatInline = (text: string) => {
 
 const LevelBot: React.FC = () => {
   const { user, coachSessions, saveCoachMessage, createCoachSession, deleteCoachSession, settings } = useStore();
-  const t = translations[settings.language].levelBot;
+  const language = settings?.language || 'fr';
+  const t = (translations[language] || translations['fr']).levelBot;
   
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'history'>('chat');
@@ -73,19 +74,10 @@ const LevelBot: React.FC = () => {
   const [input, setInput] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [lastFailedMsg, setLastFailedMsg] = useState<{ text: string; image?: string | null } | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Initialize first session if none exists
-  useEffect(() => {
-    if (coachSessions.length === 0 && user) {
-      const id = createCoachSession();
-      setActiveSessionId(id);
-    } else if (!activeSessionId && coachSessions.length > 0) {
-      setActiveSessionId(coachSessions[0].id);
-    }
-  }, [coachSessions.length, activeSessionId, user]);
 
   const currentSession = useMemo(() => 
     coachSessions.find(s => s.id === activeSessionId), 
@@ -93,6 +85,26 @@ const LevelBot: React.FC = () => {
   );
 
   const messages = currentSession?.messages || [];
+
+  // Initialize first session if none exists or if session is empty
+  useEffect(() => {
+    if (!user) return;
+
+    if (coachSessions.length === 0 && !activeSessionId) {
+      const newId = `session_${Date.now()}`;
+      createCoachSession(newId, "Nouvelle Discussion");
+      setActiveSessionId(newId);
+      
+      saveCoachMessage(newId, {
+        id: `msg_welcome`,
+        role: 'bot',
+        text: t.firstQuestion || "Bonjour ! C'est moi, ton **Elite Coach**. Je suis là pour t'accompagner dans tes études, résoudre tes problèmes complexes et booster ta productivité. Pose-moi n'importe quelle question pour commencer !",
+        timestamp: new Date().toISOString()
+      });
+    } else if (!activeSessionId && coachSessions.length > 0) {
+      setActiveSessionId(coachSessions[0].id);
+    }
+  }, [coachSessions.length, activeSessionId, user, createCoachSession, saveCoachMessage, t.firstQuestion]);
 
   const compressImage = async (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
     return new Promise((resolve) => {
@@ -151,26 +163,29 @@ const LevelBot: React.FC = () => {
     return () => document.body.classList.remove('bot-open');
   }, [isOpen]);
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent, retryMsg?: { text: string; image?: string | null }) => {
     e.preventDefault();
     if (!activeSessionId) return;
-    if ((!input.trim() && !selectedImage) || isTyping) return;
 
-    const userMsg = input.trim();
-    const currentImage = selectedImage;
-    
-    setInput('');
-    setSelectedImage(null);
-    
-    // Save user message to store
-    saveCoachMessage(activeSessionId, {
-      id: `msg_${Date.now()}`,
-      role: 'user',
-      text: userMsg || t.placeholder,
-      image: currentImage || undefined,
-      timestamp: new Date().toISOString()
-    });
-    
+    const userMsg = retryMsg ? retryMsg.text : input.trim();
+    const currentImage = retryMsg ? retryMsg.image ?? null : selectedImage;
+
+    if ((!userMsg && !currentImage) || isTyping) return;
+
+    if (!retryMsg) {
+      setInput('');
+      setSelectedImage(null);
+      // Save user message to store only on new send (not retry)
+      saveCoachMessage(activeSessionId, {
+        id: `msg_${Date.now()}`,
+        role: 'user',
+        text: userMsg || t.placeholder,
+        image: currentImage || undefined,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    setLastFailedMsg(null);
     setIsTyping(true);
 
     try {
@@ -178,30 +193,12 @@ const LevelBot: React.FC = () => {
       if (!navigator.onLine) {
         response = t.offline;
       } else {
+        // Gemini handles images natively via Vision
         let finalUserMsg = userMsg;
         let imageToSubmit = currentImage;
 
-        // OCR Integration
-        if (currentImage) {
-          try {
-            const langMap: any = { 'fr': 'fra+eng', 'en': 'eng', 'ar': 'ara' };
-            const ocrLang = langMap[settings.language] || 'fra+eng';
-            const extractedText = await ocrService.extractText(currentImage, ocrLang);
-            
-            if (extractedText && extractedText.trim().length > 10) {
-              finalUserMsg = userMsg 
-                ? `${userMsg}\n\n${t.ocrSeparator}\n${extractedText}\n================================`
-                : `${t.extractedTextPrefix}\n\n${extractedText}`;
-              
-              imageToSubmit = null; 
-            }
-          } catch (ocrErr) {
-            console.warn("OCR Error, falling back to direct vision:", ocrErr);
-          }
-        }
-
-        // Send to OpenRouter (with extracted text instead of image if OCR succeeded)
-        response = await openrouterService.coachChat(finalUserMsg, messages, "", imageToSubmit || undefined);
+        const profileContext = user ? `Élève: ${user.name}, Niveau: ${user.level}, XP: ${user.xp}, Rank: ${user.rank}, Heures apprises: ${user.stats?.hoursLearned?.toFixed(1) || 0}h` : "";
+        response = await aiService.coachChat(finalUserMsg, messages, profileContext, imageToSubmit || undefined);
       }
 
       saveCoachMessage(activeSessionId, {
@@ -211,14 +208,14 @@ const LevelBot: React.FC = () => {
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {
-      console.error("Erreur OpenRouter:", error);
-      let errorMsg = t.genericError;
-      if (error.status === 429) errorMsg = t.quotaError;
-      
+      console.error("Erreur Gemini Flash:", error);
+      // Store for retry
+      setLastFailedMsg({ text: userMsg, image: currentImage });
+
       saveCoachMessage(activeSessionId, {
         id: `msg_${Date.now() + 1}`,
         role: 'bot',
-        text: errorMsg,
+        text: error.message || t.genericError,
         timestamp: new Date().toISOString()
       });
     } finally {
@@ -229,6 +226,15 @@ const LevelBot: React.FC = () => {
   const handleNewChat = () => {
     const newId = createCoachSession();
     setActiveSessionId(newId);
+    
+    // Insère automatiquement le message de salutation initial du Coach Élite
+    saveCoachMessage(newId, {
+      id: `msg_welcome_${Date.now()}`,
+      role: 'bot',
+      text: t.firstQuestion || "Bonjour ! C'est moi, ton **Elite Coach**. Je suis là pour t'accompagner dans tes études, résoudre tes problèmes complexes et booster ta productivité. Pose-moi n'importe quelle question pour commencer !",
+      timestamp: new Date().toISOString()
+    });
+    
     setView('chat');
   };
 
@@ -249,7 +255,7 @@ const LevelBot: React.FC = () => {
         className="fixed top-1/2 -translate-y-1/2 right-4 md:right-8 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-primary to-secondary text-white rounded-xl md:rounded-2xl shadow-glow flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border border-white/20"
       >
         <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-accent rounded-full border-2 border-slate-900 flex items-center justify-center animate-pulse">
-          <Sparkles className="text-white" size={8} md:size={10} />
+          <Sparkles className="text-white w-2 h-2 md:w-2.5 md:h-2.5" />
         </div>
         <MessageCircle size={28} className="md:w-8 md:h-8 group-hover:rotate-12 transition-transform" />
       </button>
@@ -333,12 +339,6 @@ const LevelBot: React.FC = () => {
         ) : (
           <>
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 custom-scrollbar">
-              {messages.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-4 opacity-30 text-center px-8">
-                  <Sparkles size={40} className="text-accent animate-float" />
-                  <p className="text-sm font-bold">{t.firstQuestion}</p>
-                </div>
-              )}
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                   {msg.role === 'bot' && (
@@ -376,8 +376,19 @@ const LevelBot: React.FC = () => {
                   </div>
                 </div>
               )}
-              
-              {/* Assistant Littéraire : Quick Prompts removed for cleaner UI as per user request */}
+
+              {/* Retry button shown when last message failed */}
+              {lastFailedMsg && !isTyping && (
+                <div className="flex justify-start animate-fade-in">
+                  <button
+                    onClick={(e) => handleSend(e as any, lastFailedMsg)}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-2xl text-xs font-bold transition-all active:scale-95"
+                  >
+                    <RefreshCw size={13} />
+                    Réessayer la dernière réponse
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Input Area */}

@@ -26,7 +26,7 @@ export const biometricService = {
   getBiometryType: async (): Promise<string> => {
     try {
       const result = await NativeBiometric.isAvailable();
-      return result.biometryType || 'NONE';
+      return String(result.biometryType || 'NONE');
     } catch (e) {
       return 'NONE';
     }

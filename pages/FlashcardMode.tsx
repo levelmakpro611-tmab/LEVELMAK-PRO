@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFlashcardStore, LocalFlashcard } from '../services/flashcardStore';
-import { Brain, ArrowLeft, CheckCircle, XCircle, RotateCcw, ShieldCheck, Flame, BookOpen } from 'lucide-react';
+import { Brain, ArrowLeft, CheckCircle, XCircle, RotateCcw, ShieldCheck, Flame, BookOpen, ChevronRight } from 'lucide-react';
 import { HapticFeedback } from '../services/nativeAdapters';
+import { audioService } from '../services/audio';
 
 export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string }> = ({ onClose, filterTopic }) => {
   const { cards, getCardsToReview, reviewCard, markAsMastered } = useFlashcardStore();
@@ -11,13 +12,25 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
   const [cardsToReview] = useState<LocalFlashcard[]>(() => {
     const allToReview = getCardsToReview();
     if (filterTopic) {
-      return allToReview.filter(c => c.sourceQuizTitle === filterTopic);
+      const topicToReview = allToReview.filter(c => c.sourceQuizTitle === filterTopic);
+      if (topicToReview.length > 0) {
+        return topicToReview;
+      }
+      // Fallback: if no cards are strictly due, load all cards from this topic for viewing/studying
+      return cards.filter(c => c.sourceQuizTitle === filterTopic);
     }
     return allToReview;
   });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(cardsToReview.length === 0);
+
+  useEffect(() => {
+    audioService.startBackgroundPiano();
+    return () => {
+      audioService.stopBackgroundPiano();
+    };
+  }, []);
 
   if (sessionCompleted) {
     return (
@@ -64,11 +77,17 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
 
   const handleFlip = () => {
     HapticFeedback.selection();
+    audioService.playClick();
     setIsFlipped(!isFlipped);
   };
 
   const handleScore = (score: 0 | 1 | 2 | 3 | 4 | 5) => {
     HapticFeedback.action();
+    if (score >= 3) {
+        audioService.playSuccess('quiz');
+    } else {
+        audioService.playError('quiz');
+    }
     reviewCard(currentCard.id, score);
     
     // Move to next card
@@ -82,6 +101,7 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
 
   const handleMastery = () => {
     HapticFeedback.success();
+    audioService.playSuccess('quiz');
     markAsMastered(currentCard.id);
     
     if (currentIndex < cardsToReview.length - 1) {

@@ -116,6 +116,7 @@ export interface User {
   friends: string[];
   levelCoins: number;
   inventory: string[];
+  wallpaper?: string;
   onboardingCompleted?: boolean;
   streak: {
     current: number;
@@ -242,7 +243,7 @@ export interface ShopItem {
   name: string;
   description: string;
   price: number;
-  category: 'avatar' | 'badge' | 'theme' | 'potion';
+  category: 'avatar' | 'badge' | 'theme' | 'potion' | 'wallpaper';
   image?: string;
   color?: string;
   icon?: string;
@@ -266,6 +267,7 @@ export interface Story {
   id: string;
   title: string;
   content: string;
+  publishedContent?: string;
   authorId: string;
   authorName: string;
   category: string; // Added category
@@ -354,6 +356,8 @@ export interface AdminStats {
   booksToday: number;
   totalLearningHours: number;
   averageEngagementRate: number;
+  flowData?: { hour: string; activity: number }[];
+  growthData?: { date: string; users: number }[];
 }
 
 export interface UserComment {

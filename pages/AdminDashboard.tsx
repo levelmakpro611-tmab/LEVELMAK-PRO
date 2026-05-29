@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Shield, BarChart3, Users, Activity, MessageSquare, Star, Download, LogOut,
-    Home, TrendingUp, UserCheck, Settings, Menu, X, Bell, Magnet, Trophy, ShoppingBag
+    Home, TrendingUp, UserCheck, Settings, Menu, X, Bell, Magnet, Trophy, ShoppingBag, Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
@@ -13,7 +13,8 @@ import {
     getAllRatings,
     getAverageRatings,
     logAdminAction,
-    getDemographicStats
+    getDemographicStats,
+    exportUserData
 } from '../services/adminService';
 import { getPendingApplications } from '../services/tutorService';
 import {
@@ -55,6 +56,7 @@ const AdminDashboard: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [adminNotifCount, setAdminNotifCount] = useState(0);
     const [loadingStates, setLoadingStates] = useState<Record<Tab, boolean>>({
         overview: false, stats: false, users: false, comments: false, ratings: false,
@@ -192,9 +194,14 @@ const AdminDashboard: React.FC = () => {
                     } catch { setRatings([]); }
                     break;
                 case 'stats':
-                    const [statsResult, demogResult] = await Promise.allSettled([getGlobalStats(period), getDemographicStats()]);
-                    if (statsResult.status === 'fulfilled') setStats(statsResult.value);
-                    if (demogResult.status === 'fulfilled') setDemographicStats(demogResult.value);
+                    if (!demographicStats) {
+                        const [statsResult, demogResult] = await Promise.allSettled([getGlobalStats(period), getDemographicStats()]);
+                        if (statsResult.status === 'fulfilled') setStats(statsResult.value);
+                        if (demogResult.status === 'fulfilled') setDemographicStats(demogResult.value);
+                    } else {
+                        const statsData = await getGlobalStats(period);
+                        setStats(statsData);
+                    }
                     break;
                 case 'export':
                     try {
@@ -279,7 +286,7 @@ const AdminDashboard: React.FC = () => {
                 border-r border-black/5 dark:border-white/10
                 transition-transform duration-300
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-                lg:w-64 xl:w-72
+                lg:w-64 xl:w-72 print:hidden
             `}>
                 {/* Logo */}
                 <div className="p-5 border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-colors">
@@ -348,7 +355,7 @@ const AdminDashboard: React.FC = () => {
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0 relative z-10 overflow-hidden bg-background transition-colors">
                 {/* Top Bar */}
-                <div className="sticky top-0 z-20 bg-background/80 dark:bg-slate-950/80 lg:bg-white/5 backdrop-blur-xl border-b border-black/5 dark:border-white/10 shrink-0 transition-colors" style={{ paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
+                <div className="sticky top-0 z-20 bg-background/80 dark:bg-slate-950/80 lg:bg-white/5 backdrop-blur-xl border-b border-black/5 dark:border-white/10 shrink-0 transition-colors print:hidden" style={{ paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
                     <div className="px-4 md:px-6 py-3 flex items-center gap-3">
                         {/* Hamburger for mobile */}
                         <button
@@ -384,6 +391,13 @@ const AdminDashboard: React.FC = () => {
                                 title="Actualiser les données"
                             >
                                 <Activity size={18} className="text-slate-500 dark:text-slate-400" />
+                            </button>
+                            <button 
+                                onClick={() => setIsPrintModalOpen(true)}
+                                className="p-2 rounded-xl transition-all bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10"
+                                title="Imprimer un rapport"
+                            >
+                                <Printer size={18} className="text-slate-500 dark:text-slate-400" />
                             </button>
                             <button 
                                 onClick={() => { setIsNotifOpen(!isNotifOpen); setIsSettingsOpen(false); }}
@@ -457,6 +471,69 @@ const AdminDashboard: React.FC = () => {
                             </AnimatePresence>
                         </div>
                     </div>
+
+                    {/* Print Header (Only visible when printing) */}
+                    <div className="hidden print:flex w-full mb-8 border-b border-slate-200 dark:border-slate-800 pb-6 px-8 pt-8 items-center gap-6">
+                        <img src="/tmab_logo.png" alt="TMAB" className="w-24 h-24 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        <div>
+                            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-wider">Rapport Administratif</h1>
+                            <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-1">TMAB GROUP - Excellence Éducative</p>
+                            <p className="text-sm text-slate-500 mt-2">Généré par Levelmak Pro | Date : {new Date().toLocaleString('fr-FR')}</p>
+                        </div>
+                    </div>
+
+                    {/* Global Print Modal */}
+                    <AnimatePresence>
+                        {isPrintModalOpen && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="bg-slate-900 border border-white/10 rounded-[2rem] p-8 w-full max-w-md shadow-2xl"
+                                >
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-2xl font-black text-white flex items-center gap-3">
+                                            <div className="p-3 bg-blue-500/20 text-blue-400 rounded-xl">
+                                                <Printer size={24} />
+                                            </div>
+                                            Imprimer
+                                        </h3>
+                                        <button onClick={() => setIsPrintModalOpen(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 transition-colors"><X size={20}/></button>
+                                    </div>
+                                    <p className="text-sm text-slate-400 mb-6 font-medium leading-relaxed">
+                                        Sélectionnez la section que vous souhaitez afficher et imprimer :
+                                    </p>
+                                    <div className="space-y-3">
+                                        {[
+                                            { id: 'stats', label: 'Statistiques & Démographie', icon: TrendingUp },
+                                            { id: 'users', label: 'Liste des Utilisateurs', icon: Users },
+                                            { id: 'monitor', label: 'Moniteur d\'Activité', icon: Activity },
+                                            { id: 'comments', label: 'Commentaires Utilisateurs', icon: MessageSquare },
+                                        ].map(item => (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => {
+                                                    setIsPrintModalOpen(false);
+                                                    setActiveTab(item.id as Tab);
+                                                    // Add a small delay for the component to render and data to load before opening print dialog
+                                                    setTimeout(() => {
+                                                        window.print();
+                                                    }, 800);
+                                                }}
+                                                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white transition-all font-bold group"
+                                            >
+                                                <div className="p-2 bg-black/20 rounded-lg text-slate-400 group-hover:text-blue-400 transition-colors">
+                                                    <item.icon size={20} />
+                                                </div>
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
 
                 {/* Content Area */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">

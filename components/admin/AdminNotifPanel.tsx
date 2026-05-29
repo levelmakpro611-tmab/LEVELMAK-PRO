@@ -81,17 +81,17 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                         animate={{ opacity: 1, x: 0, scale: 1 }}
                         exit={{ opacity: 0, x: 40, scale: 0.97 }}
                         transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-                        className="relative w-full max-w-sm h-full md:h-auto md:mt-20 md:mr-6 bg-[#0D1526] border border-white/10 md:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden"
+                        className="relative w-full max-w-sm h-full md:h-auto md:mt-20 md:mr-6 bg-background dark:bg-[#0D1526] border border-black/10 dark:border-white/10 md:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden"
                         style={{ maxHeight: '85vh' }}
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-black/10 dark:border-white/5 bg-background dark:bg-transparent">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-blue-500/15 rounded-xl">
                                     <Bell size={20} className="text-blue-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-white text-base">Notifications Admin</h3>
+                                    <h3 className="font-black text-slate-900 dark:text-white text-base">Notifications Admin</h3>
                                     {unread > 0 && (
                                         <p className="text-xs text-blue-400 font-bold">{unread} non lue{unread > 1 ? 's' : ''}</p>
                                     )}
@@ -100,7 +100,7 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={handleRefresh}
-                                    className="p-2 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors"
+                                    className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                                     title="Actualiser"
                                 >
                                     <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
@@ -108,7 +108,7 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                                 {unread > 0 && (
                                     <button
                                         onClick={() => adminNotificationService.markAllAsRead()}
-                                        className="p-2 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors"
+                                        className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                                         title="Tout marquer comme lu"
                                     >
                                         <CheckCheck size={16} />
@@ -116,7 +116,7 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                                 )}
                                 <button
                                     onClick={onClose}
-                                    className="p-2 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors"
+                                    className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                                 >
                                     <X size={16} />
                                 </button>
@@ -124,11 +124,11 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                         </div>
 
                         {/* List */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar bg-background dark:bg-transparent">
                             {notifications.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 gap-4 text-slate-500">
+                                <div className="flex flex-col items-center justify-center py-16 gap-4 text-slate-400 dark:text-slate-500">
                                     <Bell size={40} strokeWidth={1.5} />
-                                    <p className="text-sm font-bold">Aucune notification</p>
+                                    <p className="text-sm font-bold text-slate-600 dark:text-slate-400">Aucun message détecté</p>
                                     <button
                                         onClick={handleRefresh}
                                         className="text-xs text-blue-400 font-bold hover:underline"
@@ -143,14 +143,14 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                                             key={notif.id}
                                             layoutId={notif.id}
                                             onClick={() => handleClick(notif)}
-                                            className={`w-full text-left flex items-start gap-3 p-4 rounded-2xl border transition-all hover:brightness-110 ${bgForType[notif.type]} ${!notif.read ? 'opacity-100' : 'opacity-60'}`}
+                                            className={`w-full text-left flex items-start gap-3 p-4 rounded-2xl border transition-all hover:brightness-110 ${bgForType[notif.type]} ${!notif.read ? 'opacity-100' : 'opacity-60 bg-transparent'}`}
                                         >
                                             <div className="mt-0.5 shrink-0">
                                                 <NotifIcon type={notif.type} />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <p className="font-black text-white text-sm truncate">{notif.title}</p>
+                                                    <p className="font-black text-slate-900 dark:text-white text-sm truncate">{notif.title}</p>
                                                     {!notif.read && (
                                                         <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />
                                                     )}

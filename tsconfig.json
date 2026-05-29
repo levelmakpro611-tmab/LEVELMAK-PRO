@@ -25,5 +25,26 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "App.tsx",
+    "index.tsx",
+    "constants.ts",
+    "types.ts",
+    "vite-env.d.ts",
+    "vite.config.ts",
+    "capacitor.config.ts",
+    "components/**/*",
+    "hooks/**/*",
+    "pages/**/*",
+    "services/**/*",
+    "utils/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dev-dist",
+    "android",
+    "ios"
+  ]
 }

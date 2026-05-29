@@ -1,7 +1,7 @@
 {
   "name": "levelmak-pro-v1",
   "private": true,
-  "version": "0.1.9.3",
+  "version": "0.1.9.4",
   "type": "module",
   "scripts": {
     "dev": "vite --host",

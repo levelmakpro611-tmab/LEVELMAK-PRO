@@ -46,7 +46,7 @@ const FeedView: React.FC = () => {
 
             if (selectedMedia) {
                 console.log('[Feed] Uploading media...');
-                mediaUrl = await chatService.uploadPostMedia(selectedMedia, user.id);
+                mediaUrl = await chatService.uploadMedia(selectedMedia, user.id, 'posts');
                 mediaType = selectedMedia.type.startsWith('video') ? 'video' : 'image';
             }
 

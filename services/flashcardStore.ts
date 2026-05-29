@@ -39,7 +39,7 @@ export const useFlashcardStore = create<FlashcardStore>()(
             subject,
             sourceQuizTitle: quizTitle,
             createdAt: Date.now(),
-            nextReviewDate: Date.now() + 7 * 24 * 60 * 60 * 1000, // Décalé d'une semaine comme demandé par l'utilisateur
+            nextReviewDate: Date.now(), // Disponible immédiatement pour étude
             easeFactor: 2.5,
             repetitions: 0,
           }));

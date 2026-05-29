@@ -9,47 +9,48 @@ import { OpticsLab } from '../components/visuals/OpticsLab';
 import { MechanicsLab } from '../components/visuals/MechanicsLab';
 
 export const ActiveVisual: React.FC = () => {
+  const { t } = useStore();
   const [activeExperiment, setActiveExperiment] = useState<string | null>(null);
 
   const EXPERIMENTS = [
     {
       id: 'chemistry',
-      title: 'Labo Chimie (Titrage & Précipitation)',
-      category: 'Chimie',
+      title: t('activeVisual.experiments.chemistry.title'),
+      category: t('activeVisual.experiments.chemistry.category'),
       icon: FlaskRound,
       color: 'bg-emerald-500',
       shadow: 'shadow-glow-emerald',
-      description: 'Expérimentez le titrage acide-base et la précipitation des ions. Manipulez les béchers en 3D.',
+      description: t('activeVisual.experiments.chemistry.description'),
       locked: false,
     },
     {
       id: 'electricity',
-      title: 'Électricité & Induction',
-      category: 'Physique',
+      title: t('activeVisual.experiments.electricity.title'),
+      category: t('activeVisual.experiments.electricity.category'),
       icon: Zap,
       color: 'bg-amber-500',
       shadow: 'shadow-glow-amber',
-      description: 'Construisez un circuit interactif. Visualisez le courant, la résistance et les lois de l\'électricité.',
+      description: t('activeVisual.experiments.electricity.description'),
       locked: false,
     },
     {
       id: 'optics',
-      title: 'Optique (Réfraction du Laser)',
-      category: 'Physique',
-      icon: Layers, // Placeholder for Prism
+      title: t('activeVisual.experiments.optics.title'),
+      category: t('activeVisual.experiments.optics.category'),
+      icon: Layers,
       color: 'bg-fuchsia-500',
       shadow: 'shadow-glow-fuchsia',
-      description: 'Pointez un laser vers différents milieux (Air, Eau, Verre) pour vérifier la Loi de Descartes.',
+      description: t('activeVisual.experiments.optics.description'),
       locked: false,
     },
     {
       id: 'mechanics',
-      title: 'Mécanique (Chute Libre)',
-      category: 'Physique',
+      title: t('activeVisual.experiments.mechanics.title'),
+      category: t('activeVisual.experiments.mechanics.category'),
       icon: Activity,
       color: 'bg-blue-500',
       shadow: 'shadow-glow-blue',
-      description: 'Lâchez des objets avec ou sans la résistance de l\'air. Découvrez pourquoi la gravité est universelle.',
+      description: t('activeVisual.experiments.mechanics.description'),
       locked: false,
     }
   ];
@@ -67,7 +68,7 @@ export const ActiveVisual: React.FC = () => {
           <div className="p-2 bg-white/5 rounded-lg group-hover:bg-emerald-500/20">
             <ArrowLeft size={20} />
           </div>
-          Retour au Catalogue
+          {t('activeVisual.backBtn')}
         </button>
         
         <div className="flex-1 min-h-[600px]">
@@ -90,7 +91,7 @@ export const ActiveVisual: React.FC = () => {
           <div className="p-2 bg-white/5 rounded-lg group-hover:bg-amber-500/20">
             <ArrowLeft size={20} />
           </div>
-          Retour au Catalogue
+          {t('activeVisual.backBtn')}
         </button>
         
         <div className="flex-1 min-h-[600px]">
@@ -113,7 +114,7 @@ export const ActiveVisual: React.FC = () => {
           <div className="p-2 bg-white/5 rounded-lg group-hover:bg-fuchsia-500/20">
             <ArrowLeft size={20} />
           </div>
-          Retour au Catalogue
+          {t('activeVisual.backBtn')}
         </button>
         
         <div className="flex-1 min-h-[600px]">
@@ -136,7 +137,7 @@ export const ActiveVisual: React.FC = () => {
           <div className="p-2 bg-white/5 rounded-lg group-hover:bg-blue-500/20">
             <ArrowLeft size={20} />
           </div>
-          Retour au Catalogue
+          {t('activeVisual.backBtn')}
         </button>
         
         <div className="flex-1 min-h-[600px]">
@@ -152,13 +153,13 @@ export const ActiveVisual: React.FC = () => {
       <div className="space-y-4">
         <div className="inline-flex items-center gap-3 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 font-bold text-sm tracking-widest mt-4">
           <Zap size={16} />
-          NOUVEAU
+          {t('activeVisual.badge')}
         </div>
         <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white flex items-center gap-4">
-          Active Visuel
+          {t('activeVisual.title')}
         </h1>
         <p className="text-slate-400 text-lg max-w-2xl font-medium leading-relaxed">
-          Bienvenue dans le laboratoire du futur. Manipulez, expérimentez et visualisez la théorie à travers des simulations en 3D interactives. L'apprentissage par l'action.
+          {t('activeVisual.desc')}
         </p>
       </div>
 
@@ -181,14 +182,14 @@ export const ActiveVisual: React.FC = () => {
               <FlaskRound size={40} />
             </div>
             <div>
-              <p className="text-emerald-400 font-bold tracking-widest uppercase text-sm mb-2">Expérience Recommandée</p>
-              <h2 className="text-3xl md:text-4xl font-black text-white mb-4">Labo Chimie 3D</h2>
+              <p className="text-emerald-400 font-bold tracking-widest uppercase text-sm mb-2">{t('activeVisual.recommended')}</p>
+              <h2 className="text-3xl md:text-4xl font-black text-white mb-4">{t('activeVisual.experiments.chemistry.title')}</h2>
               <p className="text-slate-300 font-medium leading-relaxed text-lg">
-                Fini la théorie abstraite. Mélangez des solutions par drag & drop, observez le changement colorimétrique du BBT et voyez la précipitation des ions se former sous vos yeux. 
+                {t('activeVisual.experiments.chemistry.description')}
               </p>
             </div>
             <button className="bg-emerald-500 text-white font-black px-8 py-4 rounded-2xl shadow-glow-emerald group-hover:scale-105 transition-transform">
-              Lancer l'expérience
+              {t('activeVisual.launchExp')}
             </button>
           </div>
           
@@ -211,7 +212,7 @@ export const ActiveVisual: React.FC = () => {
 
       {/* Grid of Other Experiments */}
       <div>
-        <h3 className="text-xl font-black text-white uppercase tracking-widest mb-6">Liste des Expériences</h3>
+        <h3 className="text-xl font-black text-white uppercase tracking-widest mb-6">{t('activeVisual.expList')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {EXPERIMENTS.filter(e => e.id !== 'chemistry').map(exp => {
             const Icon = exp.icon;

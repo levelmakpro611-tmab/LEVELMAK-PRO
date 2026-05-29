@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
-import { openrouterService } from '../services/openrouter';
+import { aiService } from '../services/aiService';
 import { fetchAllLivre21Books, Livre21Book } from '../services/livre21';
 import { getLocalBooks, formatFileSize } from '../services/localBooks';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from '../types';
@@ -71,7 +71,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                 if (isSearching) setSearchStatus(t('library.geminiAnalyze'));
             }, 1500);
 
-            const results = await openrouterService.searchBooksWithGemini(searchQuery, settings.language);
+            const results = await aiService.searchBooks(searchQuery, settings.language);
             setSearchResults(results.links);
             setSearchIntro(results.text || '');
         } catch (error) {
@@ -97,8 +97,16 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
     const handleSummarizeBook = async (book: any) => {
         setIsSummarizing(true);
         try {
-            const summary = await openrouterService.summarizeBook(book.title, book.author, book.description, settings.language);
-            setActiveSummary({ ...summary, bookTitle: book.title });
+            const summary = await aiService.summarizeMultimodal(
+                [{ type: 'text', data: book.description || (book.title + " par " + (book.author || '')) }],
+                book.title,
+                settings.language
+            );
+            setActiveSummary({ 
+                ...summary, 
+                keyTakeaways: summary.keyPoints || summary.keyTakeaways || [],
+                bookTitle: book.title 
+            });
         } catch (error) {
             alert("Erreur lors de la génération du résumé.");
         } finally {
@@ -153,7 +161,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
     const handleCreateQuizFromBook = async (book: any) => {
         setIsSearching(true);
         try {
-            const quiz = await openrouterService.generateQuiz(book.description, book.title, 'Intermédiaire', settings.language);
+            const quiz = await aiService.generateQuiz(book.description, book.title, 'Intermédiaire', settings.language);
             onQuizGenerated(quiz);
             onNavigate('quiz');
         } catch (error) {
@@ -170,7 +178,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                 ? book.description
                 : book.title + " " + (book.author || '');
 
-            const cards = await openrouterService.generateFlashcards(strDescription, book.title, settings.language);
+            const cards = await aiService.generateFlashcards(strDescription, book.title, settings.language);
 
             const deck: FlashcardDeck = {
                 id: `deck_${Date.now()}`,

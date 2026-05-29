@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
     PenTool,
@@ -24,18 +23,29 @@ import {
     CheckCircle2,
     RefreshCw,
     Languages,
-    BadgeCheck
+    BadgeCheck,
+    Bold,
+    Italic,
+    Heading1,
+    Heading2,
+    Quote,
+    List,
+    FileDown,
+    Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HapticFeedback } from '../services/nativeAdapters';
 import { useStore } from '../hooks/useStore';
-import { openrouterService } from '../services/openrouter';
+import { aiService } from '../services/aiService';
 import { Story } from '../types';
+import { jsPDF } from 'jspdf';
+import { getVerifiedStories } from './verifiedStoriesData';
+import { writingService, ExtendedStory, generateUUID } from '../services/writingService';
 
 const CATEGORY_KEYS = ['story', 'poem', 'column', 'essay', 'other'] as const;
 
 const CreativeWriting: React.FC = () => {
-    const { user, stories, saveStory, deleteStory, addXp, usePotion, t, settings } = useStore();
+        const { user, stories, saveStory, deleteStory, addXp, usePotion, t, settings } = useStore();
     const language = settings.language;
     const consumables = user?.consumables || {};
     const [activeTab, setActiveTab] = useState<'write' | 'my-stories' | 'discover'>('write');
@@ -68,49 +78,281 @@ const CreativeWriting: React.FC = () => {
     // View Modal state
     const [viewingStory, setViewingStory] = useState<Story | null>(null);
     const [coverImage, setCoverImage] = useState<string | null>(null);
+    const [discoverCategoryFilter, setDiscoverCategoryFilter] = useState<string>('all');
+    
+    // Reactions state
+    const [likedStories, setLikedStories] = useState<string[]>(() => {
+        const stored = localStorage.getItem('levelmak_liked_stories');
+        return stored ? JSON.parse(stored) : [];
+    });
+    const [storyComments, setStoryComments] = useState<{[storyId: string]: Array<{id: string, author: string, text: string, date: string}>}>(() => {
+        const stored = localStorage.getItem('levelmak_story_comments');
+        return stored ? JSON.parse(stored) : {};
+    });
+    const [commentInput, setCommentInput] = useState<string>('');
+
+    // Realtime Supabase Feed Stories State
+    const [publicDbStories, setPublicDbStories] = useState<ExtendedStory[]>([]);
+    const [isDbLoading, setIsDbLoading] = useState(false);
+
+    // Fetch and Subscribe to Supabase Feed Stories
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        
+        const initDbStories = async () => {
+            setIsDbLoading(true);
+            const dbStories = await writingService.fetchPublicStories();
+            setPublicDbStories(dbStories);
+            setIsDbLoading(false);
+            
+            // Subscribe to real-time feed updates
+            unsubscribe = writingService.subscribeToStories(async () => {
+                const updatedStories = await writingService.fetchPublicStories();
+                setPublicDbStories(updatedStories);
+            });
+        };
+
+        initDbStories();
+
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, []);
+
+    // Persist reactions
+    useEffect(() => {
+        localStorage.setItem('levelmak_liked_stories', JSON.stringify(likedStories));
+    }, [likedStories]);
+    useEffect(() => {
+        localStorage.setItem('levelmak_story_comments', JSON.stringify(storyComments));
+    }, [storyComments]);
+
+    const isStoryLiked = (story: Story) => {
+        if ('likesArray' in story) {
+            return (story as any).likesArray?.includes(user?.id || '') || likedStories.includes(story.id);
+        }
+        return likedStories.includes(story.id);
+    };
+
+    const getStoryComments = (story: Story) => {
+        if ('commentsArray' in story) {
+            return (story as any).commentsArray || [];
+        }
+        return storyComments[story.id] || [];
+    };
+
+    const handleToggleLike = async (storyId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        HapticFeedback.selection();
+        
+        const isVerified = VERIFIED_STORIES.some(vs => vs.id === storyId);
+        const dbStory = publicDbStories.find(s => s.id === storyId);
+        
+        if (dbStory) {
+            // It's a Supabase feed story
+            const currentLikes = dbStory.likesArray || [];
+            let newLikes: string[] = [];
+            
+            if (currentLikes.includes(user?.id || '')) {
+                newLikes = currentLikes.filter(id => id !== user?.id);
+                setLikedStories(prev => prev.filter(id => id !== storyId));
+            } else {
+                newLikes = [...currentLikes, user?.id || '00000000-0000-0000-0000-000000000002'];
+                setLikedStories(prev => [...prev, storyId]);
+            }
+            
+            // Sync to Supabase
+            await writingService.publishStory(dbStory, newLikes, dbStory.commentsArray || []);
+            // Update local state immediately for fast responsiveness
+            setPublicDbStories(prev => prev.map(s => s.id === storyId ? { ...s, likes: newLikes.length, likesArray: newLikes } : s));
+        } else {
+            // Local story logic
+            if (likedStories.includes(storyId)) {
+                setLikedStories(prev => prev.filter(id => id !== storyId));
+                if (!isVerified) {
+                    const targetStory = stories.find(s => s.id === storyId);
+                    if (targetStory) {
+                        saveStory({
+                            ...targetStory,
+                            likes: Math.max(0, (targetStory.likes || 0) - 1)
+                        });
+                    }
+                }
+            } else {
+                setLikedStories(prev => [...prev, storyId]);
+                if (!isVerified) {
+                    const targetStory = stories.find(s => s.id === storyId);
+                    if (targetStory) {
+                        saveStory({
+                            ...targetStory,
+                            likes: (targetStory.likes || 0) + 1
+                        });
+                    }
+                }
+            }
+        }
+    };
+
+    const getStoryLikes = (story: Story) => {
+        const isVerified = story.id.startsWith('v_') || (story as any).isVerified;
+        if (isVerified) {
+            return (story.likes || 0) + (likedStories.includes(story.id) ? 1 : 0);
+        }
+        if ('likesArray' in story) {
+            return (story as any).likesArray?.length || 0;
+        }
+        return story.likes || 0;
+    };
+
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+    const [editorMode, setEditorMode] = React.useState<'edit' | 'preview'>('edit');
+
+    const parseInlineStyles = (text: string) => {
+        let html = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>');
+        return <span dangerouslySetInnerHTML={{ __html: html }} />;
+    };
+
+    const renderMarkdown = (text: string) => {
+        if (!text.trim()) {
+            return <p className="text-slate-400 italic text-center py-10">Votre chef-d'œuvre commencera à apparaître ici au fur et à mesure de votre écriture...</p>;
+        }
+
+        const lines = text.split('\n');
+        return (
+            <div className="space-y-4 text-slate-700 dark:text-slate-300 leading-relaxed font-serif text-base md:text-lg">
+                {lines.map((line, idx) => {
+                    let trimmed = line.trim();
+                    
+                    if (trimmed.startsWith('# ')) {
+                        return <h1 key={idx} className="text-3xl font-display font-black text-slate-900 dark:text-white pt-4 pb-2 border-b border-white/10 uppercase tracking-tight">{trimmed.substring(2)}</h1>;
+                    }
+                    if (trimmed.startsWith('## ')) {
+                        return <h2 key={idx} className="text-2xl font-display font-bold text-slate-900 dark:text-white pt-3 pb-1 border-b border-white/5">{trimmed.substring(3)}</h2>;
+                    }
+                    if (trimmed.startsWith('> ')) {
+                        return <blockquote key={idx} className="border-l-4 border-secondary bg-secondary/5 pl-4 py-2 my-2 rounded-r-lg italic text-slate-400">{trimmed.substring(2)}</blockquote>;
+                    }
+                    if (trimmed.startsWith('- ')) {
+                        return <li key={idx} className="list-disc list-inside pl-2 text-slate-600 dark:text-slate-400">{parseInlineStyles(trimmed.substring(2))}</li>;
+                    }
+                    if (trimmed === '') {
+                        return <div key={idx} className="h-2" />;
+                    }
+                    return <p key={idx} className="text-justify leading-loose tracking-wide">{parseInlineStyles(line)}</p>;
+                })}
+            </div>
+        );
+    };
+
+    const insertFormat = (type: 'bold' | 'italic' | 'h1' | 'h2' | 'quote' | 'list') => {
+        HapticFeedback.selection();
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        const selectedText = text.substring(start, end);
+
+        let replacement = '';
+        switch (type) {
+            case 'bold':
+                replacement = `**${selectedText || 'texte_gras'}**`;
+                break;
+            case 'italic':
+                replacement = `*${selectedText || 'texte_italique'}*`;
+                break;
+            case 'h1':
+                replacement = `\n# ${selectedText || 'Titre 1'}\n`;
+                break;
+            case 'h2':
+                replacement = `\n## ${selectedText || 'Titre 2'}\n`;
+                break;
+            case 'quote':
+                replacement = `\n> ${selectedText || 'Citation'}\n`;
+                break;
+            case 'list':
+                replacement = `\n- ${selectedText || 'Élément'}\n`;
+                break;
+        }
+
+        const newContent = text.substring(0, start) + replacement + text.substring(end);
+        setContent(newContent);
+
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + replacement.length, start + replacement.length);
+        }, 50);
+    };
+
+    const exportToPDF = () => {
+        if (!content.trim()) return;
+        HapticFeedback.success();
+        
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        const maxLineWidth = pageWidth - (margin * 2);
+        
+        // 1. Header background and title
+        doc.setFillColor(30, 41, 59); // Slate-800
+        doc.rect(0, 0, pageWidth, 45, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text(title || "Mon Chef-d'œuvre", margin, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'oblique');
+        doc.text(`Rédigé sur LEVELMAK Pro par ${user?.name || 'Étudiant Élite'} - le ${new Date().toLocaleDateString()}`, margin, 32);
+        
+        // 2. Body Text
+        doc.setTextColor(51, 65, 85); // Slate-700
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(12);
+        
+        const lines = doc.splitTextToSize(content, maxLineWidth);
+        let y = 60;
+        
+        lines.forEach((line: string) => {
+            if (y > pageHeight - margin) {
+                doc.addPage();
+                doc.setFillColor(30, 41, 59);
+                doc.rect(0, 0, pageWidth, 15, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                doc.text(title || "Mon Chef-d'œuvre", margin, 10);
+                
+                doc.setTextColor(51, 65, 85);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(12);
+                y = 30;
+            }
+            doc.text(line, margin, y);
+            y += 8; // Line spacing
+        });
+        
+        doc.save(`${title || 'mon_histoire'}.pdf`);
+    };
 
     // Discovery state - Filter real public stories from the store + Verified Community Stories
-    const VERIFIED_STORIES: Story[] = [
-        {
-            id: 'v_story_1',
-            title: 'L\'Odyssée du Petit Robot',
-            content: 'Dans un futur lointain, un petit robot nommé Sparky découvre une fleur au milieu d\'une cité de métal...',
-            authorId: 'system',
-            authorName: 'Élite Écrivain',
-            category: 'story',
-            isPublic: true,
-            likes: 1250,
-            createdAt: new Date().toISOString(),
-            isVerified: true
-        } as any,
-        {
-            id: 'v_story_2',
-            title: 'Le Secret de la Forêt Bleue',
-            content: 'Les arbres murmuraient des secrets anciens que seul le vent pouvait comprendre...',
-            authorId: 'system',
-            authorName: 'Plume d\'Or',
-            category: 'poem',
-            isPublic: true,
-            likes: 840,
-            createdAt: new Date().toISOString(),
-            isVerified: true
-        } as any,
-        {
-            id: 'v_story_3',
-            title: 'L\'Intelligence Artificielle et l\'Éducation',
-            content: 'Une réflexion profonde sur l\'impact des nouvelles technologies dans l\'apprentissage moderne...',
-            authorId: 'system',
-            authorName: 'Prof. Sagesse',
-            category: 'essay',
-            isPublic: true,
-            likes: 2100,
-            createdAt: new Date().toISOString(),
-            isVerified: true
-        } as any
-    ];
+    const VERIFIED_STORIES: Story[] = getVerifiedStories(language);
 
-    const discoverStories = [...VERIFIED_STORIES, ...stories.filter(s => s.isPublic && !VERIFIED_STORIES.find(vs => vs.id === s.id))];
+    const discoverStories = [...VERIFIED_STORIES, ...publicDbStories.filter(s => !VERIFIED_STORIES.some(vs => vs.id === s.id))];
+    const filteredDiscoverStories = discoverStories.filter(story => 
+        discoverCategoryFilter === 'all' ? true : story.category === discoverCategoryFilter
+    );
 
     // Auto-save logic
     useEffect(() => {
@@ -122,27 +364,66 @@ const CreativeWriting: React.FC = () => {
         }
     }, [content, title]);
 
-    const handleSave = async (isAuto = false) => {
+    const handleSave = async (isAuto = false, isPublishAction = false) => {
         if (!title || !content || !user) return;
         if (!isAuto) setIsSaving(true);
 
+        const currentStory = editingId ? stories.find(s => s.id === editingId) : null;
+        
+        // If it's a publish action, we set isPublic = true, and update publishedContent
+        // If it's just a save, we keep the previous values of isPublic and publishedContent
+        const newIsPublic = isPublishAction ? true : (currentStory ? currentStory.isPublic : isPublic);
+        const newPublishedContent = isPublishAction ? content : (currentStory ? (currentStory.publishedContent || '') : '');
+
+        let storyId = editingId || `story_${Date.now()}`;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (isPublishAction && !uuidRegex.test(storyId)) {
+            // Delete the old non-UUID local story if editing an existing local story
+            if (editingId) {
+                deleteStory(editingId);
+            }
+            storyId = generateUUID();
+        }
+
         const story: Story = {
-            id: editingId || `story_${Date.now()}`,
+            id: storyId,
             title,
             content,
+            publishedContent: newPublishedContent,
             authorId: user.id,
             authorName: user.name,
             category,
-            isPublic,
-            likes: 0,
+            isPublic: newIsPublic,
+            likes: currentStory ? (currentStory.likes || 0) : 0,
             createdAt: lastSaved?.toISOString() || new Date().toISOString(),
             coverImage: coverImage || undefined
         };
 
-        if (!editingId) setEditingId(story.id);
+        if (editingId !== storyId) setEditingId(storyId);
+        setIsPublic(newIsPublic); // Keep UI state in sync
 
         saveStory(story);
         setLastSaved(new Date());
+
+        if (isPublishAction) {
+            const dbStory = publicDbStories.find(s => s.id === storyId);
+            const likesArray = dbStory ? dbStory.likesArray : [];
+            const commentsArray = dbStory ? dbStory.commentsArray : [];
+            
+            const published = await writingService.publishStory(story, likesArray, commentsArray);
+            if (published) {
+                console.log('[CreativeWriting] Story published successfully to Supabase:', published);
+                setPublicDbStories(prev => {
+                    const exists = prev.some(p => p.id === published.id);
+                    if (exists) {
+                        return prev.map(p => p.id === published.id ? published : p);
+                    } else {
+                        return [published, ...prev];
+                    }
+                });
+            }
+        }
+
         if (!isAuto) {
             HapticFeedback.success();
             setTimeout(() => setIsSaving(true), 100); // Trigger saving animation
@@ -156,18 +437,25 @@ const CreativeWriting: React.FC = () => {
         setContent(story.content);
         setCategory(story.category);
         setIsPublic(story.isPublic);
+        setCoverImage(story.coverImage || null);
         setLastSaved(new Date(story.createdAt));
         setActiveTab('write');
     };
 
-    const handleDelete = (id: string, e: React.MouseEvent) => {
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (window.confirm(t('creativeWriting.list.deleteConfirm'))) {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (uuidRegex.test(id)) {
+                await writingService.deleteStory(id);
+                setPublicDbStories(prev => prev.filter(s => s.id !== id));
+            }
             deleteStory(id);
             if (editingId === id) {
                 setEditingId(null);
                 setTitle('');
                 setContent('');
+                setCoverImage(null);
             }
         }
     };
@@ -178,6 +466,7 @@ const CreativeWriting: React.FC = () => {
         setContent('');
         setCategory(CATEGORY_KEYS[0]);
         setIsPublic(false);
+        setCoverImage(null);
         setLastSaved(null);
         setActiveTab('write');
     };
@@ -187,19 +476,16 @@ const CreativeWriting: React.FC = () => {
         setIsAiLoading(true);
         setAiError(null);
         try {
-            let prompt = "";
+            let response = "";
             if (mode === 'write') {
-                prompt = `Agis comme un écrivain expérimenté. Voici un début de texte ("${title}"): "${content.substring(content.length - 1500)}". Propose-moi une suite créative d'environ 100-150 mots qui s'intègre parfaitement à ce style. Sois inspirant. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
-            } else if (mode === 'review') {
-                prompt = `Agis comme un critique littéraire bienveillant d'élite. Analyse ce texte ("${title}"): "${content}". Donne ton avis honnête : ce que tu aimes, ce qui pourrait être amélioré (style, rythme, vocabulaire). Sois constructif, professionnel et encourageant. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
-            } else if (mode === 'help') {
-                prompt = `Agis comme un coach d'écriture créative. L'élève manque d'inspiration. Propose 3 sujets ou thèmes originaux et percutants pour un nouveau texte (histoire, poème ou essai). Sois très créatif et varié. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
+                const prompt = `Agis comme un écrivain expérimenté. Voici un début de texte ("${title}"): "${content.substring(content.length - 1500)}". Propose-moi une suite créative d'environ 100-150 mots qui s'intègre parfaitement à ce style. Sois inspirant. Réponds en ${language === 'ar' ? 'arabe' : (language === 'en' ? 'anglais' : 'français')}.`;
+                response = await aiService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
+            } else {
+                response = await aiService.writingCoachChat(mode, content, title, language);
             }
 
-            const response = await openrouterService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
-
             setAiSuggestions(prev => [
-                { id: `ai_${Date.now()}`, text: response, type: mode === 'write' ? 'suggestion' : 'review' },
+                { id: `ai_${Date.now()}`, text: response, type: (mode === 'write' || mode === 'help') ? 'suggestion' : 'review' },
                 ...prev
             ]);
             addXp(mode === 'help' ? 5 : 10);
@@ -226,7 +512,7 @@ const CreativeWriting: React.FC = () => {
             "content": Un premier paragraphe (environ 100 mots) immersif qui lance l'intrigue.
             Sois très créatif, évite les clichés.`;
 
-            const response = await openrouterService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
+            const response = await aiService.coachChat(prompt, [], `Utilisateur: ${user?.name}, Niveau: ${user?.level}`);
 
             // Extract JSON from response if possible, simplified for now
             let data = { title: "Nouvelle Idée", content: response };
@@ -263,7 +549,7 @@ const CreativeWriting: React.FC = () => {
         setIsLabLoading(true);
         setAiError(null);
         try {
-            const analysis = await openrouterService.analyzeWriting(content, title, language);
+            const analysis = await aiService.analyzeWriting(content, title, language);
             
             // Safety: Ensure all required fields exist to prevent crashes
             const safeAnalysis = {
@@ -370,24 +656,128 @@ const CreativeWriting: React.FC = () => {
                                             <label className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t('creativeWriting.form.contentLabel')}</label>
                                             <div className="flex items-center gap-3 md:gap-6">
                                                 <div className="flex items-center gap-1.5 md:gap-2">
-                                                    <Type size={12} md:size={14} className="text-secondary" />
+                                                    <Type className="w-3 h-3 md:w-3.5 md:h-3.5 text-secondary" />
                                                     <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">{content.length} {t('creativeWriting.form.characters')}</span>
                                                 </div>
                                                 {lastSaved && (
                                                     <div className="flex items-center gap-1.5 md:gap-2">
-                                                        <Clock size={12} md:size={14} className="text-success" />
+                                                        <Clock className="w-3 h-3 md:w-3.5 md:h-3.5 text-success" />
                                                         <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">{lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <textarea
-                                            value={content}
-                                            onChange={(e) => setContent(e.target.value)}
-                                            placeholder={t('creativeWriting.form.contentPlaceholder')}
-                                            className="w-full h-[300px] md:h-[600px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-4 md:p-12 text-sm md:text-xl leading-relaxed text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:border-secondary/50 outline-none transition-all resize-none custom-scrollbar"
-                                        />
+                                        {/* Rich Editing Toolbar & PDF Export */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-slate-950/60 backdrop-blur-xl rounded-2xl border border-white/10 mx-1">
+                                            <div className="flex flex-wrap items-center gap-4">
+                                                {/* Modes: Edition & Apercu */}
+                                                <div className="flex bg-black/30 p-1 rounded-xl border border-white/5 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { HapticFeedback.selection(); setEditorMode('edit'); }}
+                                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                                                            editorMode === 'edit'
+                                                                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-glow shadow-primary/20'
+                                                                : 'text-slate-400 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        Édition
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { HapticFeedback.selection(); setEditorMode('preview'); }}
+                                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                                                            editorMode === 'preview'
+                                                                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-glow shadow-primary/20'
+                                                                : 'text-slate-400 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        Aperçu Réel 👁️
+                                                    </button>
+                                                </div>
+                                                
+                                                {editorMode === 'edit' && (
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => insertFormat('bold')}
+                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                                            title="Gras (**)"
+                                                        >
+                                                            <Bold size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => insertFormat('italic')}
+                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                                            title="Italique (*)"
+                                                        >
+                                                            <Italic size={16} />
+                                                        </button>
+                                                        <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => insertFormat('h1')}
+                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all flex items-center"
+                                                            title="Titre 1 (#)"
+                                                        >
+                                                            <Heading1 size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => insertFormat('h2')}
+                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all flex items-center"
+                                                            title="Titre 2 (##)"
+                                                        >
+                                                            <Heading2 size={16} />
+                                                        </button>
+                                                        <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => insertFormat('quote')}
+                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                                            title="Citation (>)"
+                                                        >
+                                                            <Quote size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => insertFormat('list')}
+                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                                            title="Liste à puces (-)"
+                                                        >
+                                                            <List size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {content.trim() && (
+                                                <button
+                                                    type="button"
+                                                    onClick={exportToPDF}
+                                                    className="px-3 py-1.5 bg-gradient-to-r from-primary to-secondary hover:scale-[1.03] active:scale-95 text-white text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center gap-2 transition-all shadow-glow shadow-primary/20"
+                                                    title="Exporter mon manuscrit en PDF"
+                                                >
+                                                    <FileDown size={14} /> PDF
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {editorMode === 'edit' ? (
+                                            <textarea
+                                                ref={textareaRef}
+                                                value={content}
+                                                onChange={(e) => setContent(e.target.value)}
+                                                placeholder={t('creativeWriting.form.contentPlaceholder')}
+                                                className="w-full h-[300px] md:h-[600px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-4 md:p-12 text-sm md:text-xl leading-relaxed text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:border-secondary/50 outline-none transition-all resize-none custom-scrollbar"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-[300px] md:h-[600px] bg-slate-950/20 border border-black/5 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-6 md:p-12 overflow-y-auto custom-scrollbar">
+                                                {renderMarkdown(content)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -438,6 +828,30 @@ const CreativeWriting: React.FC = () => {
                                             </button>
                                         )}
                                     </div>
+
+                                    {aiSuggestions.length > 0 && (
+                                        <div className="space-y-3 mt-4 overflow-y-auto max-h-[300px] custom-scrollbar pr-2">
+                                            {aiSuggestions.map(sugg => (
+                                                <div key={sugg.id} className="p-4 bg-white/5 border border-white/10 rounded-2xl relative group">
+                                                    <button onClick={() => setAiSuggestions(prev => prev.filter(s => s.id !== sugg.id))} className="absolute top-3 right-3 p-1.5 bg-black/20 rounded-lg text-slate-500 hover:text-white transition-colors">
+                                                        <X size={14} />
+                                                    </button>
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        {sugg.type === 'suggestion' ? <Zap size={14} className="text-secondary" /> : <Sparkles size={14} className="text-primary" />}
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                            {sugg.type === 'suggestion' ? 'Idée' : 'Avis du Coach'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-slate-200 font-medium leading-relaxed mb-3 whitespace-pre-wrap">{sugg.text}</p>
+                                                    {sugg.type === 'suggestion' && (
+                                                        <button onClick={() => applySuggestion(sugg.text)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-light transition-colors flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">
+                                                            <Plus size={12} /> Ajouter au texte
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -647,14 +1061,24 @@ const CreativeWriting: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    <button
-                                        onClick={() => handleSave()}
-                                        disabled={isSaving || !title || !content}
-                                        className="w-full py-6 bg-gradient-to-r from-primary to-secondary text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-glow flex items-center justify-center gap-3 hover:scale-[1.03] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
-                                    >
-                                        {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                                        {isSaving ? t('creativeWriting.form.saving') : t('creativeWriting.form.saveBtn')}
-                                    </button>
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            onClick={() => handleSave(false, false)}
+                                            disabled={isSaving || !title || !content}
+                                            className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-[1.2rem] font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                                        >
+                                            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                            SAUVEGARDER LE BROUILLON
+                                        </button>
+                                        <button
+                                            onClick={() => handleSave(false, true)}
+                                            disabled={isSaving || !title || !content}
+                                            className="w-full py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-[1.2rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-glow flex items-center justify-center gap-3 hover:scale-[1.03] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                                        >
+                                            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                                            PUBLIER MAINTENANT
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -695,11 +1119,11 @@ const CreativeWriting: React.FC = () => {
                                         {/* Cover Image Background */}
                                         <div className="absolute inset-0 z-0">
                                             {story.coverImage ? (
-                                                <img src={story.coverImage} className="w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-700" />
+                                                <img src={story.coverImage} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-700" />
                                             ) : (
                                                 <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-950" />
                                             )}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/20" />
                                         </div>
 
                                         <div className="relative z-10 flex flex-col h-full">
@@ -720,10 +1144,25 @@ const CreativeWriting: React.FC = () => {
                                                     </button>
                                                 </div>
                                             </div>
-                                            <h4 className="text-xl font-display font-black text-white leading-tight mb-3 group-hover:text-secondary-light transition-colors line-clamp-2">{story.title}</h4>
-                                            <p className="text-xs text-slate-400 line-clamp-4 mb-6 flex-1 transition-colors leading-relaxed font-medium">{story.content}</p>
+                                            <h4 className="text-xl font-display font-black text-white leading-tight mb-3 group-hover:text-secondary-light transition-colors line-clamp-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{story.title}</h4>
+                                            <p className="text-xs text-slate-300 line-clamp-4 mb-6 flex-1 transition-colors leading-relaxed font-medium">{story.content}</p>
                                             <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{new Date(story.createdAt).toLocaleDateString()}</span>
+                                                <div className="flex items-center gap-4">
+                                                    <button
+                                                        onClick={(e) => handleToggleLike(story.id, e)}
+                                                        className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-danger hover:scale-105 active:scale-95 transition-all"
+                                                    >
+                                                        <Heart size={12} className={isStoryLiked(story) ? "fill-danger text-danger" : "text-slate-400"} />
+                                                        <span>{getStoryLikes(story)}</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setViewingStory(story); }}
+                                                        className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                                                    >
+                                                        <MessageSquare size={12} />
+                                                        <span>{getStoryComments(story).length}</span>
+                                                    </button>
+                                                </div>
                                                 <button
                                                     onClick={() => handleEdit(story)}
                                                     className="text-primary-light font-black uppercase tracking-widest text-[9px] flex items-center gap-1 group/btn hover:text-white transition-all"
@@ -746,33 +1185,95 @@ const CreativeWriting: React.FC = () => {
                         animate={{ opacity: 1 }}
                         className="grid grid-cols-1 md:grid-cols-2 gap-8"
                     >
-                        {discoverStories.map(story => (
-                            <div key={story.id} className="bg-slate-900/40 rounded-[3rem] border border-white/5 p-10 space-y-6 hover:border-primary/30 transition-all cursor-pointer group">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-black/5 dark:bg-white/5 rounded-2xl overflow-hidden border border-black/5 dark:border-white/10">
-                                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-1.5">
-                                            <p className="text-slate-900 dark:text-white font-bold text-sm tracking-tight transition-colors">{story.authorName}</p>
-                                            {(story as any).isVerified && (
-                                                <BadgeCheck size={14} className="text-secondary fill-secondary/20" />
-                                            )}
-                                        </div>
-                                        <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t(`creativeWriting.categories.${story.category as any}`)}</p>
-                                    </div>
-                                </div>
-                                <h3 className="text-3xl font-display font-black text-slate-900 dark:text-white leading-tight group-hover:text-primary-light transition-colors">{story.title}</h3>
-                                <div className="flex items-center gap-6 pt-4 border-t border-white/5">
-                                    <div className="flex items-center gap-2 text-[10px] font-black text-danger uppercase tracking-widest">
-                                        <Heart size={14} className="fill-danger" /> {story.likes}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                        <MessageSquare size={14} /> 24
-                                    </div>
-                                </div>
+                        {/* Category Selector Filter Bar */}
+                        <div className="col-span-full flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                            <button
+                                onClick={() => setDiscoverCategoryFilter('all')}
+                                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${discoverCategoryFilter === 'all' ? 'bg-primary text-white border-primary shadow-glow shadow-primary/20' : 'bg-white/5 border-white/5 text-slate-400 hover:text-slate-200'}`}
+                            >
+                                Tout
+                            </button>
+                            {CATEGORY_KEYS.map(catKey => (
+                                <button
+                                    key={catKey}
+                                    onClick={() => setDiscoverCategoryFilter(catKey)}
+                                    className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all whitespace-nowrap ${discoverCategoryFilter === catKey ? 'bg-primary text-white border-primary shadow-glow shadow-primary/20' : 'bg-white/5 border-white/5 text-slate-400 hover:text-slate-200'}`}
+                                >
+                                    {t(`creativeWriting.categories.${catKey}`)}
+                                </button>
+                            ))}
+                        </div>
+
+                        {filteredDiscoverStories.length === 0 ? (
+                            <div className="col-span-full py-20 text-center text-slate-400 italic font-medium">
+                                Aucun texte de cette catégorie n'est encore disponible.
                             </div>
-                        ))}
+                        ) : (
+                            filteredDiscoverStories.map(story => (
+                                <div 
+                                    key={story.id} 
+                                    onClick={() => setViewingStory(story)}
+                                    className="glass rounded-[2.5rem] border border-white/5 hover:border-primary/30 hover:scale-[1.01] transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between min-h-[300px] p-8 md:p-10"
+                                >
+                                    {/* Cover Image Background */}
+                                    <div className="absolute inset-0 z-0">
+                                        {story.coverImage ? (
+                                            <img src={story.coverImage} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-700" alt="" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-950" />
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/20" />
+                                    </div>
+
+                                    <div className="relative z-10 flex flex-col justify-between h-full space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-black/30 rounded-xl overflow-hidden border border-white/10 shrink-0">
+                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-1">
+                                                        <p className="text-white font-bold text-xs tracking-tight">{story.authorName}</p>
+                                                        {(story as any).isVerified && (
+                                                            <BadgeCheck size={12} className="text-secondary fill-secondary/20" />
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">{t(`creativeWriting.categories.${story.category as any}`)}</p>
+                                                </div>
+                                            </div>
+                                            <span className="px-3 py-1 bg-primary/20 backdrop-blur-xl border border-primary/20 text-primary-light text-[8px] font-black uppercase tracking-widest rounded-full">{t(`creativeWriting.categories.${story.category as any}`)}</span>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <h3 className="text-xl md:text-2xl font-display font-black text-white leading-tight group-hover:text-primary-light transition-colors line-clamp-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{story.title}</h3>
+                                            <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed font-medium">
+                                                {story.publishedContent || story.content}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-4 border-t border-white/5 relative z-20">
+                                            <div className="flex items-center gap-4">
+                                                <button
+                                                    onClick={(e) => handleToggleLike(story.id, e)}
+                                                    className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-danger hover:scale-105 active:scale-95 transition-all"
+                                                >
+                                                    <Heart size={12} className={isStoryLiked(story) ? "fill-danger text-danger" : "text-slate-400"} />
+                                                    <span>{getStoryLikes(story)}</span>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setViewingStory(story); }}
+                                                    className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                                                >
+                                                    <MessageSquare size={12} />
+                                                    <span>{getStoryComments(story).length}</span>
+                                                </button>
+                                            </div>
+                                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{new Date(story.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </motion.div>
                 )}
 
@@ -793,35 +1294,128 @@ const CreativeWriting: React.FC = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-4xl bg-slate-900 border border-white/10 rounded-[3rem] p-12 max-h-[80vh] overflow-y-auto custom-scrollbar shadow-2xl"
+                            className="relative w-full max-w-4xl bg-slate-900/95 border border-white/10 rounded-[3rem] h-[80vh] flex flex-col shadow-2xl overflow-hidden"
                         >
+                            {/* Cover Image Background */}
+                            <div className="absolute inset-0 z-0 pointer-events-none select-none">
+                                {viewingStory.coverImage ? (
+                                    <img src={viewingStory.coverImage} className="w-full h-full object-cover opacity-75" alt="" />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-950" />
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/20" />
+                            </div>
+
                             <button
                                 onClick={() => setViewingStory(null)}
-                                className="absolute top-8 right-8 p-3 bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors"
+                                className="absolute top-8 right-8 p-3 bg-white/10 backdrop-blur-md rounded-full text-slate-400 hover:text-white transition-colors z-30"
                             >
                                 <X size={20} />
                             </button>
-                            <div className="space-y-8">
+                            
+                            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12 space-y-8">
                                 <div className="space-y-4">
                                     <span className="px-4 py-1.5 bg-secondary/20 text-secondary-light text-[10px] font-black uppercase tracking-widest rounded-full border border-secondary/20">{t(`creativeWriting.categories.${viewingStory.category as any}`)}</span>
-                                    <h2 className="text-5xl font-display font-black text-slate-900 dark:text-white leading-none transition-colors">{viewingStory.title}</h2>
-                                    <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest transition-colors">
+                                    <h2 className="text-5xl font-display font-black text-white dark:text-white leading-none transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{viewingStory.title}</h2>
+                                    <div className="flex items-center gap-4 text-slate-200 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                                         <span>{t('creativeWriting.list.by')} {viewingStory.authorName}</span>
                                         <span>•</span>
                                         <span>{new Date(viewingStory.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                                     </div>
                                 </div>
-                                <p className="text-xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium transition-colors">
-                                    {viewingStory.content}
-                                </p>
-                                <div className="pt-8 border-t border-white/5 flex justify-end">
-                                    <button
-                                        onClick={() => { handleEdit(viewingStory); setViewingStory(null); }}
-                                        className="px-10 py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow hover:scale-[1.05] active:scale-95 transition-all"
-                                    >
-                                        {t('creativeWriting.list.modified')}
-                                    </button>
+                                <div className="w-full bg-slate-950/70 backdrop-blur-md border border-white/15 rounded-[1.2rem] md:rounded-[2.5rem] p-6 md:p-12 shadow-2xl text-slate-100 dark:text-slate-100 [&_h1]:!text-white [&_h1]:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] [&_h2]:!text-white [&_h2]:drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] [&_p]:!text-slate-100 [&_p]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] [&_li]:!text-slate-200 [&_blockquote]:!text-slate-200 [&_strong]:!text-white">
+                                    {renderMarkdown(viewingStory.authorId === user?.id ? viewingStory.content : (viewingStory.publishedContent || viewingStory.content))}
+                                    
+                                    {/* Comments Section */}
+                                    <div className="pt-8 border-t border-white/5 space-y-6">
+                                        <h3 className="text-lg font-display font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                            <MessageSquare size={18} className="text-primary-light" />
+                                            Commentaires ({getStoryComments(viewingStory).length})
+                                        </h3>
+                                        
+                                        {/* Add Comment Input */}
+                                        <div className="flex gap-4 items-start bg-white/5 border border-white/10 rounded-2xl p-4">
+                                            <div className="w-10 h-10 bg-primary/20 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Visiteur'}`} alt="avatar" />
+                                            </div>
+                                            <div className="flex-1 space-y-3">
+                                                <textarea
+                                                    value={commentInput}
+                                                    onChange={(e) => setCommentInput(e.target.value)}
+                                                    placeholder="Laissez votre point de vue sur cet écrit..."
+                                                    className="w-full bg-transparent border-0 resize-none text-sm text-slate-200 placeholder-slate-500 focus:ring-0 focus:outline-none min-h-[60px]"
+                                                />
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!commentInput.trim()) return;
+                                                            const newComment = {
+                                                                id: `comment_${Date.now()}`,
+                                                                author: user?.name || "Écrivain TMAB",
+                                                                text: commentInput.trim(),
+                                                                date: new Date().toLocaleDateString()
+                                                            };
+                                                            
+                                                            const dbStory = publicDbStories.find(s => s.id === viewingStory.id);
+                                                            if (dbStory) {
+                                                                const updatedComments = [...(dbStory.commentsArray || []), newComment];
+                                                                await writingService.publishStory(dbStory, dbStory.likesArray || [], updatedComments);
+                                                                setPublicDbStories(prev => prev.map(s => s.id === viewingStory.id ? { ...s, commentsArray: updatedComments } : s));
+                                                                setViewingStory(prev => prev ? { ...prev, commentsArray: updatedComments } as any : null);
+                                                            } else {
+                                                                setStoryComments(prev => ({
+                                                                    ...prev,
+                                                                    [viewingStory.id]: [...(prev[viewingStory.id] || []), newComment]
+                                                                }));
+                                                            }
+                                                            
+                                                            setCommentInput('');
+                                                            HapticFeedback.success();
+                                                        }}
+                                                        className="px-6 py-2.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-glow shadow-primary/20"
+                                                    >
+                                                        Commenter
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Comments List */}
+                                        <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+
+                                            
+                                            {getStoryComments(viewingStory).map((comment: any) => (
+                                                <div key={comment.id} className="flex gap-4 items-start bg-slate-900/30 p-4 rounded-2xl border border-white/5">
+                                                    <div className="w-8 h-8 bg-primary/20 rounded-lg overflow-hidden shrink-0">
+                                                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author}`} alt="avatar" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-bold text-white">{comment.author}</span>
+                                                            <span className="text-[8px] text-slate-500 uppercase tracking-widest">{comment.date}</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-300 mt-1">{comment.text}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {(!viewingStory.id.startsWith('v_') && getStoryComments(viewingStory).length === 0) && (
+                                                <p className="text-center text-xs text-slate-500 py-6 italic font-medium">Aucun commentaire pour le moment. Soyez le premier à donner votre avis !</p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {viewingStory.authorId === user?.id && (
+                                    <div className="pt-8 border-t border-white/5 flex justify-end">
+                                        <button
+                                            onClick={() => { handleEdit(viewingStory); setViewingStory(null); }}
+                                            className="px-10 py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow hover:scale-[1.05] active:scale-95 transition-all"
+                                        >
+                                            {t('creativeWriting.list.modified')}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>
