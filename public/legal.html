@@ -12,13 +12,13 @@
     <style>
         :root {
             --bg-base: #060913;
-            --bg-card: rgba(15, 23, 42, 0.45);
-            --border-color: rgba(255, 255, 255, 0.08);
+            --bg-card: rgba(15, 23, 42, 0.4);
+            --border-color: rgba(255, 255, 255, 0.06);
             --text-main: #94a3b8;
             --text-light: #cbd5e1;
             --text-title: #ffffff;
             --primary: #3b82f6;
-            --primary-glow: rgba(59, 130, 246, 0.15);
+            --primary-glow: rgba(59, 130, 246, 0.1);
             --secondary: #8b5cf6;
             --danger: #ef4444;
             --font-display: 'Outfit', sans-serif;
@@ -37,7 +37,7 @@
             background-color: var(--bg-base);
             color: var(--text-main);
             font-family: var(--font-sans);
-            line-height: 1.625;
+            line-height: 1.75;
             min-height: 100vh;
             overflow-x: hidden;
             display: flex;
@@ -54,7 +54,7 @@
             border-radius: 50%;
             filter: blur(130px);
             z-index: -1;
-            opacity: 0.15;
+            opacity: 0.12;
             pointer-events: none;
         }
 
@@ -87,10 +87,10 @@
 
         /* Container */
         .doc-container {
-            max-width: 800px;
+            max-width: 780px;
             width: 100%;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 24px;
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -98,21 +98,21 @@
 
         /* Header Layout (Clean like WhatsApp/Facebook) */
         header {
-            padding: 40px 0 25px;
+            padding: 60px 0 30px;
             text-align: center;
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
         .logo-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .logo-img {
-            max-height: 60px;
+            max-height: 55px;
             width: auto;
             object-fit: contain;
         }
@@ -120,7 +120,7 @@
         h1 {
             font-family: var(--font-display);
             font-weight: 900;
-            font-size: 26px;
+            font-size: 28px;
             color: var(--text-title);
             letter-spacing: -0.02em;
             margin-bottom: 8px;
@@ -130,16 +130,17 @@
             font-size: 13px;
             color: var(--text-main);
             font-weight: 500;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
 
-        /* Quick Links Table of Contents (Single column or clean grid) */
+        /* Quick Links Table of Contents */
         .toc-box {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 18px;
-            padding: 20px;
-            margin-bottom: 35px;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 45px;
         }
 
         .toc-title {
@@ -149,7 +150,7 @@
             text-transform: uppercase;
             letter-spacing: 0.08em;
             color: var(--text-title);
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -158,7 +159,7 @@
         .toc-grid {
             display: grid;
             grid-template-cols: 1fr 1fr;
-            gap: 8px;
+            gap: 10px;
         }
 
         @media (max-width: 600px) {
@@ -170,7 +171,7 @@
         .toc-link {
             color: var(--text-main);
             text-decoration: none;
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: 600;
             transition: color 0.15s ease;
             display: flex;
@@ -186,102 +187,123 @@
             grid-column: 1 / -1;
             height: 1px;
             background: var(--border-color);
-            margin: 6px 0;
+            margin: 8px 0;
         }
 
         /* Document Flow */
         .legal-flow {
             display: flex;
             flex-direction: column;
-            gap: 40px;
-            padding-bottom: 60px;
+            gap: 50px;
+            padding-bottom: 80px;
         }
 
         .doc-section-header {
             font-family: var(--font-display);
             font-weight: 900;
-            font-size: 18px;
+            font-size: 20px;
             color: var(--text-title);
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 24px;
             text-transform: uppercase;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.04em;
         }
 
         /* Article / Sub-section Card */
         .article-card {
             scroll-margin-top: 24px;
-            margin-bottom: 10px;
+            margin-bottom: 24px;
         }
 
         .article-title {
             font-family: var(--font-display);
             font-weight: 800;
-            font-size: 14px;
+            font-size: 15px;
             color: var(--text-title);
-            margin-bottom: 10px;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .article-body {
-            font-size: 13.5px;
+            font-size: 14px;
             color: var(--text-light);
             text-align: justify;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 16px;
         }
 
         .article-body p {
-            opacity: 0.9;
+            opacity: 0.95;
+            text-indent: 12px;
         }
 
         .article-body ul {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            padding-left: 4px;
-            margin: 4px 0;
+            gap: 10px;
+            padding-left: 6px;
+            margin: 6px 0;
         }
 
         .article-body li {
             position: relative;
-            padding-left: 18px;
-            opacity: 0.9;
+            padding-left: 20px;
+            opacity: 0.95;
+            text-indent: 0;
         }
 
         .article-body li::before {
             content: "•";
             color: var(--primary);
             position: absolute;
-            left: 2px;
+            left: 4px;
             font-weight: bold;
+        }
+
+        .article-body ol {
+            margin-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-left: 6px;
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+
+        .article-body ol li {
+            padding-left: 4px;
+            list-style-type: decimal;
+        }
+
+        .article-body ol li::before {
+            content: none;
         }
 
         /* Clean highlight blocks */
         .alert-block {
             background: rgba(239, 68, 68, 0.06);
             border-left: 3px solid var(--danger);
-            padding: 12px 16px;
-            border-radius: 0 12px 12px 0;
+            padding: 14px 18px;
+            border-radius: 0 14px 14px 0;
             color: #fca5a5 !important;
             font-weight: 500;
-            font-size: 12.5px;
-            margin: 8px 0;
+            font-size: 13px;
+            margin: 10px 0;
         }
 
         /* Footer */
         footer {
             border-top: 1px solid var(--border-color);
-            padding: 24px 0;
+            padding: 30px 0;
             text-align: center;
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text-main);
-            opacity: 0.7;
+            opacity: 0.8;
             margin-top: auto;
         }
 
@@ -353,7 +375,7 @@
             
             <!-- SECTION I: PRIVACY POLICY -->
             <div id="privacy-header" style="scroll-margin-top: 24px;">
-                <h2 class="doc-section-header" style="color: var(--primary); border-bottom-color: rgba(59, 130, 246, 0.2);">I. Politique de Confidentialité</h2>
+                <h2 class="doc-section-header" style="color: var(--primary); border-bottom-color: rgba(59, 130, 246, 0.25);">I. Politique de Confidentialité</h2>
             </div>
 
             <article id="p-sec-1" class="article-card">
@@ -400,12 +422,12 @@
                     <ul>
                         <li><strong>Exécution des services contractuels :</strong> Permettre la création, la personnalisation et la gestion technique de votre Compte Élite, enregistrer vos scores de progression, structurer le classement général des élèves et afficher vos écrits littéraires.</li>
                         <li><strong>Contrôle, modération et statistiques par l'administration :</strong> Les administrateurs de TMAB GROUP disposent d'outils d'administration sécurisés leur donnant accès aux données des utilisateurs (pseudos, noms, prénoms, adresses e-mail et numéros de téléphone). Cet accès sert exclusivement à :
-                            <ul>
+                            <ol>
                                 <li>Contacter un utilisateur en cas d'anomalie grave sur son compte ou pour répondre à une demande de support technique.</li>
                                 <li>Effectuer la vérification manuelle et la certification obligatoire des dossiers des enseignants avant de leur ouvrir l'accès aux outils de gestion de classe.</li>
-                                <li>Générer des statistiques d'usage internes et globales pour orienter le développement pédagogique de la plateforme.</li>
+                                <li>Générer des statistiques d'usage internes et globales (nombre d'utilisateurs actifs, répartition par niveau scolaire, score de réussite moyen par matière) pour orienter le développement pédagogique de la plateforme.</li>
                                 <li>Détecter et bloquer les comportements de triche, les tentatives de piratage, l'utilisation de scripts ou le spamming.</li>
-                            </ul>
+                            </ol>
                         </li>
                         <li><strong>Amélioration pédagogique par l'IA :</strong> Analyse de vos lacunes académiques pour que LevelBot et Quiz IA puissent vous proposer des exercices de remédiation sur-mesure (base légale : consentement et intérêt légitime).</li>
                         <li><strong>Sécurité publique et conformité légale :</strong> Conservation des logs de connexion conformément aux exigences législatives de lutte contre la cybercriminalité et collaboration avec les autorités judiciaires compétentes.</li>
@@ -419,8 +441,8 @@
                     <p>TMAB GROUP met en œuvre des mesures de sécurité techniques et organisationnelles d'un niveau exceptionnel pour prévenir la perte, l'altération, la divulgation non autorisée ou l'accès illicite à vos données à caractère personnel.</p>
                     <p>L'architecture de LEVELMAK s'appuie sur une base de données PostgreSQL gérée via les protocoles de Supabase. Pour garantir l'étanchéité absolue de vos informations privées, nous avons mis en œuvre de manière systématique la technologie de sécurité au niveau des lignes (Row Level Security - RLS) :</p>
                     <ul>
-                        <li><strong>Principe de l'isolation des données :</strong> Chaque table de la base de données est soumise à des politiques RLS strictes appliquées directement par le moteur de base de données.</li>
-                        <li><strong>Interdiction d'accès transversal :</strong> Ces politiques RLS garantissent qu'un utilisateur authentifié ne peut, sous aucun prétexte, lire, modifier ou supprimer les données appartenant à un autre utilisateur. Même en cas de tentative d'injection de scripts ou de falsification des requêtes du client, la base de données rejette automatiquement tout accès n'appartenant pas à l'identifiant unique (UUID) de l'utilisateur connecté.</li>
+                        <li><strong>Principe de l'isolation des données :</strong> Chaque table de la base de données (contenant vos scores, vos messages privés, vos brouillons littéraires, vos coordonnées de contact) est soumise à des politiques RLS strictes appliquées directement par le moteur de base de données.</li>
+                        <li><strong>Interdiction d'accès transversal :</strong> Ces politiques RLS garantissent qu'un utilisateur authentifié ne peut, sous aucun prétexte, lire, modifier ou supprimer les données appartenant à un autre utilisateur. Même en cas de tentative d'injection de scripts ou de falsification des requêtes du client, la base de données réjette automatiquement tout accès n'appartenant pas à l'identifiant unique (UUID) de l'utilisateur connecté.</li>
                         <li><strong>Cryptage et protection du réseau :</strong> Tous les flux de données entre les navigateurs des utilisateurs, nos serveurs de calcul et nos serveurs de stockage Supabase sont intégralement chiffrés à l'aide des protocoles de sécurité de transport TLS/SSL (HTTPS). Les mots de passe sont hachés de manière irréversible à l'aide d'algorithmes cryptographiques de pointe avant d'être inscrits en base.</li>
                         <li><strong>Audits et sauvegardes :</strong> Des sauvegardes quotidiennes chiffrées sont effectuées pour parer à toute perte accidentelle. Des audits de sécurité sont périodiquement menés par l'équipe technique de TMAB GROUP pour détecter et corriger d'éventuelles vulnérabilités applicatives.</li>
                     </ul>
@@ -431,12 +453,13 @@
                 <h3 class="article-title">6. Hébergement, Destinataires et Non-Partage des Données</h3>
                 <div class="article-body">
                     <p>TMAB GROUP adopte une charte éthique absolue concernant l'exploitation de vos données personnelles : nous ne vendons, ne louons, n'échangeons et ne cédons jamais vos données personnelles ou scolaires à des tiers à des fins publicitaires, commerciales ou marketing.</p>
-                    <p>Vos données sont uniquement accessibles à nos personnels internes dûment habilités dans le cadre de leurs fonctions de support et d'administration, ainsi qu'aux prestataires techniques de confiance indispensables au fonctionnement de la plateforme :</p>
+                    <p>Vos données sont uniquement accessibles à nos personnels internes dûment habilités dans le cadre de leurs fonctions de support et d'administration, ainsi qu'aux prestataires techniques de confiance indispensables à l'hébergement et au fonctionnement de la plateforme :</p>
                     <ul>
                         <li><strong>Supabase, Inc. (États-Unis/Europe) :</strong> Fournisseur de notre base de données PostgreSQL sécurisée et de notre système d'authentification utilisateur avec chiffrement au repos.</li>
                         <li><strong>Vercel, Inc. (États-Unis/Europe) :</strong> Fournisseur de l'infrastructure d'hébergement web et de routage de l'application cliente.</li>
                         <li><strong>Fournisseurs d'API d'Intelligence Artificielle :</strong> Les invites textuelles soumises à LevelBot peuvent être traitées de manière anonyme par des serveurs d'API tiers sécurisés (tels que OpenAI ou DeepSeek). Nous exigeons contractuellement que ces requêtes ne soient pas utilisées par ces intermédiaires pour entraîner leurs propres modèles d'IA publics.</li>
                     </ul>
+                    <p>En dehors de ces sous-traitants techniques soumis à des obligations de confidentialité drastiques, vos données ne seront transmises qu'aux autorités administratives ou judiciaires si la loi guinéenne ou internationale l'exige expressément.</p>
                 </div>
             </article>
 
@@ -446,32 +469,32 @@
                     <p>Nous conservons vos données à caractère personnel uniquement pendant la durée nécessaire à la réalisation des finalités pour lesquelles elles ont été collectées :</p>
                     <ul>
                         <li><strong>Compte Élite Actif :</strong> L'ensemble de vos données de profil, de progression, de LevelCoins et d'écrits littéraires est conservé sans limite de durée tant que votre compte reste actif.</li>
-                        <li><strong>Inactivité prolongée :</strong> En cas d'inactivité complète et ininterrompue de votre part pendant 24 mois, votre compte sera qualifié d'inactif. En l'absence de réponse dans un délai de 30 jours suite à notre notification, le compte sera définitivement supprimé ou rendu totalement anonyme.</li>
-                        <li><strong>Suppression immédiate des pièces d'enseignants :</strong> TMAB GROUP s'engage fermement à supprimer définitivement et de façon irréversible tous les justificatifs transmis par un enseignant immédiatement après la validation manuelle de son profil. Aucune copie de ces pièces n'est conservée.</li>
-                        <li><strong>Données supprimées à la demande :</strong> Si vous demandez la suppression de votre compte, toutes les données associées seront définitivement effacées sous 14 jours.</li>
+                        <li><strong>Inactivité prolongée :</strong> En cas d'inactivité complète et ininterrompue de votre part pendant une période de vingt-quatre (24) mois consécutifs, votre compte sera qualifié d'inactif. TMAB GROUP vous enverra une notification de rappel à l'adresse e-mail associée. En l'absence de réponse ou de reconnexion dans un délai de trente (30) jours, votre compte sera définitivement supprimé ou rendu totalement anonyme à des fins statistiques pures.</li>
+                        <li><strong>Suppression immédiate des pièces d'enseignants :</strong> TMAB GROUP s'engage fermement à supprimer définitivement et de façon irréversible de ses serveurs et de ses espaces de stockage de fichiers tous les justificatifs (diplômes, CV, badges professionnels) transmis par un enseignant immédiatement après la validation manuelle de son profil. Aucune copie de ces pièces d'identité académiques n'est conservée à long terme afin d'éviter toute fuite de documents sensibles.</li>
+                        <li><strong>Données supprimées à la demande :</strong> Si vous demandez la suppression de votre compte, toutes les données associées (y compris vos écrits de l'Atelier non partagés publiquement) seront définitivement effacées de nos bases de données de production sous quatorze (14) jours, sous réserve du maintien temporaire dans nos sauvegardes sécurisées (restaurées uniquement en cas de sinistre technique).</li>
                     </ul>
                 </div>
             </article>
 
             <article id="p-sec-8" class="article-card">
-                <h3 class="article-title">8. Vos Droits en tant qu'Utilisateur et DPO</h3>
+                <h3 class="article-title">8. Vos Droits en tant qu'Utilisateur et Modalités d'Exercice</h3>
                 <div class="article-body">
-                    <p>Conformément aux législations relatives à la protection de la vie privée et des données personnelles, vous disposez d'un contrôle total sur vos données à caractère personnel :</p>
+                    <p>Conformément aux législations relatives à la protection de la vie privée et des données personnelles, vous disposez d'un contrôle total sur vos données à caractère personnel. Vos droits incluent :</p>
                     <ul>
-                        <li>Droit d'information et d'accès.</li>
-                        <li>Droit de rectification.</li>
-                        <li>Droit à l'effacement ("Droit à l'oubli").</li>
-                        <li>Droit d'opposition et de retrait du consentement.</li>
-                        <li>Droit à la limitation du traitement.</li>
+                        <li><strong>Droit d'information et d'accès :</strong> Le droit d'obtenir la confirmation que vos données sont traitées, d'accéder à l'ensemble de ces données et d'obtenir une copie dans un format lisible.</li>
+                        <li><strong>Droit de rectification :</strong> Le droit de demander la mise à jour, la correction ou la complétion de vos données personnelles si elles s'avèrent inexactes ou incomplètes (ce que vous pouvez également faire directement depuis votre écran de profil dans LEVELMAK).</li>
+                        <li><strong>Droit à l'effacement ('Droit à l'oubli') :</strong> Le droit d'exiger la suppression complète et définitive de votre Compte Élite et de toutes les données associées de nos bases opérationnelles.</li>
+                        <li><strong>Droit d'opposition et de retrait :</strong> Le droit de retirer à tout moment votre consentement au traitement de vos données (par exemple pour l'analyse par l'IA), étant entendu que cela peut rendre impossible la fourniture de la majorité des outils interactifs de LEVELMAK.</li>
+                        <li><strong>Droit à la limitation du traitement :</strong> Le droit de demander que vos données cessent d'être traitées temporairement tout en étant conservées, le temps de mener une vérification.</li>
                     </ul>
-                    <p>Pour exercer l'un quelconque de vos droits, ou pour soumettre une question concernant notre politique de confidentialité, veuillez envoyer un message clair précisant votre pseudo et vos coordonnées à : <strong>Tmab6544@gmail.com</strong>. Nous prendrons contact avec vous afin de vérifier votre identité avant d'exécuter la demande, protégeant ainsi votre compte contre toute usurpation ou manipulation malveillante.</p>
+                    <p>Pour exercer l'un quelconque de vos droits, ou pour soumettre une question concernant notre politique de confidentialité, veuillez envoyer un message clair précisant votre pseudo et vos coordonnées à : Tmab6544@gmail.com. Nous prendrons contact avec vous afin de vérifier votre identité avant d'exécuter la demande, protégeant ainsi votre compte contre toute usurpation ou manipulation malveillante.</p>
                 </div>
             </article>
 
 
             <!-- SECTION II: TERMS OF SERVICE (CGU) -->
             <div id="terms-header" style="scroll-margin-top: 24px;">
-                <h2 class="doc-section-header" style="color: var(--secondary); border-bottom-color: rgba(139, 92, 246, 0.2);">II. Conditions d'Utilisation (CGU)</h2>
+                <h2 class="doc-section-header" style="color: var(--secondary); border-bottom-color: rgba(139, 92, 246, 0.25);">II. Conditions d'Utilisation (CGU)</h2>
             </div>
 
             <article id="t-sec-1" class="article-card">
@@ -480,16 +503,17 @@
                     <p>Les présentes Conditions Générales d'Utilisation (ci-après désignées 'CGU') constituent un contrat synallagmatique et juridiquement contraignant conclu entre la société TMAB GROUP (l'éditeur de LEVELMAK) et toute personne physique ou morale accédant, naviguant ou utilisant les services de la plateforme LEVELMAK (ci-après désignée 'l'Utilisateur').</p>
                     <p>Les CGU ont pour objet de définir de façon exhaustive le cadre contractuel régissant la mise à disposition de la plateforme, les droits et obligations réciproques des parties, les règles de conduite applicables aux apprenants et enseignants, ainsi que les limites de responsabilité de TMAB GROUP.</p>
                     <p>L'accès, l'inscription, la navigation ou l'utilisation de LEVELMAK emportent l'acceptation expresse, entière, préalable et sans aucune réserve des présentes CGU par l'Utilisateur. Cette acceptation est matérialisée par le fait de cocher la case d'acceptation lors de la soumission du formulaire d'inscription. Si l'Utilisateur n'accepte pas l'une quelconque des clauses figurant dans ce document, il doit immédiatement cesser d'utiliser la plateforme, fermer son navigateur et s'abstenir de toute inscription ou connexion.</p>
+                    <p>TMAB GROUP se réserve le droit de modifier unilatéralement les présentes CGU à tout moment afin de les adapter aux évolutions techniques de la plateforme, aux changements de fonctionnalités ou aux modifications législatives. La version en vigueur des CGU est accessible en permanence sur la plateforme. L'utilisation continue des services après publication des modifications vaut acceptation tacite de la nouvelle version des CGU.</p>
                 </div>
             </article>
 
             <article id="t-sec-2" class="article-card">
                 <h3 class="article-title">2. Inscription, Authentification et Sécurité du Compte Élite</h3>
                 <div class="article-body">
-                    <p>L'accès complet aux outils pédagogiques de LEVELMAK nécessite la création obligatoire d'un espace personnel sécurisé appelé 'Compte Élite'. L'Utilisateur s'engage à fournir des informations réelles, exactes, complètes et à jour au moment de son inscription (notamment son nom, son prénom, un numéro de téléphone mobile actif et une adresse e-mail fonctionnelle). L'Utilisateur s'interdit d'utiliser des pseudonymes à caractère injurieux, couplé à une vulgarité obscène, provocateur, xénophobe ou portant atteinte à l'ordre public.</p>
+                    <p>L'accès complet aux outils pédagogiques de LEVELMAK nécessite la création obligatoire d'un espace personnel sécurisé appelé 'Compte Élite'. L'Utilisateur s'engage à fournir des informations réelles, exactes, complètes et à jour au moment de son inscription (notamment son nom, son prénom, un numéro de téléphone mobile actif et une adresse e-mail fonctionnelle). L'Utilisateur s'interdit d'utiliser des pseudonymes à caractère injurieux, obscène, provocateur, xénophobe ou portant atteinte à l'ordre public.</p>
                     <p>Chaque Utilisateur ne peut créer et posséder qu'un seul et unique Compte Élite. L'utilisation d'adresses e-mail jetables, de numéros de téléphone virtuels ou de fausses identités pour créer plusieurs comptes est strictement prohibée et constitue un motif de suppression immédiate.</p>
-                    <p>L'authentification sur LEVELMAK repose sur des identifiants d'accès (e-mail/téléphone et mot de passe). L'Utilisateur est seul et unique responsable de la préservation de la confidentialité de ses identifiants de connexion. Il s'engage à ne jamais céder, prêter, vendre ou partager son compte ou ses mots de passe avec un tiers.</p>
-                    <p>Toute action réalisée depuis un Compte Élite est réputée avoir été effectuée personnellement par l'Utilisateur titulaire du compte. En cas de perte, de vol ou de suspicion d'utilisation frauduleuse de ses identifiants, l'Utilisateur doit immédiatement utiliser la procédure de réinitialisation de mot de passe ou contacter sans délai notre support technique à l'adresse <strong>Tmab6544@gmail.com</strong>.</p>
+                    <p>L'authentification sur LEVELMAK repose sur des identifiants d'accès (e-mail/téléphone et mot de passe). Le mot de passe choisi doit respecter les critères de complexité requis par le système. L'Utilisateur est seul et unique responsable de la préservation de la confidentialité de ses identifiants de connexion. Il s'engage à ne jamais céder, prêter, vendre ou partager son compte ou ses mots de passe avec un tiers, y compris avec d'autres élèves de sa classe.</p>
+                    <p>Toute action, réponse de quiz, publication d'écrit ou commentaire réalisé depuis un Compte Élite est réputé avoir été effectué personnellement par l'Utilisateur titulaire du compte. En cas de perte, de vol ou de suspicion d'utilisation frauduleuse de ses identifiants, l'Utilisateur doit immédiatement utiliser la procédure de réinitialisation de mot de passe ou contacter sans délai notre support technique à l'adresse Tmab6544@gmail.com.</p>
                 </div>
             </article>
 
@@ -504,7 +528,7 @@
                         <li><strong>L'Atelier d'Écriture :</strong> Un atelier littéraire collaboratif permettant de rédiger des manuscrits, de soumettre ses écrits à l'évaluation par l'IA et de publier des œuvres à destination de la communauté.</li>
                         <li><strong>L'Espace Professeur :</strong> Un panneau d'outils administratifs réservé aux enseignants vérifiés pour suivre les progressions scolaires, assigner des devoirs et analyser les performances de leurs classes.</li>
                     </ul>
-                    <p>TMAB GROUP s'efforce d'assurer une disponibilité continue de la plateforme 24 heures sur 24 et 7 jours sur 7. Toutefois, l'accès peut être suspendu temporairement et sans préavis pour des raisons techniques, des opérations de maintenance programmée des serveurs, des mises à jour applicatives, des surcharges réseau ou des pannes imputables à nos hébergeurs tiers. TMAB GROUP exclut toute responsabilité quant aux conséquences d'une indisponibilité technique de la plateforme.</p>
+                    <p>TMAB GROUP s'efforce d'assurer une disponibilité continue de la plateforme 24 heures sur 24 et 7 jours sur 7. Toutefois, l'Utilisateur est averti que l'accès peut être suspendu temporairement et sans préavis pour des raisons techniques, des opérations de maintenance programmée des serveurs, des mises à jour applicatives, des surcharges réseau ou des pannes imputables à nos hébergeurs tiers. TMAB GROUP exclut toute responsabilité quant aux conséquences d'une indisponibilité technique de la plateforme, d'une perte temporaire de connexion internet de l'Utilisateur ou d'un bug système empêchant la validation d'un quiz.</p>
                 </div>
             </article>
 
@@ -514,7 +538,7 @@
                     <p>LEVELMAK valorise l'excellence académique, l'effort personnel et l'intégrité morale. L'esprit de triche ou de fraude est en contradiction directe avec les valeurs de la plateforme. En conséquence, chaque Utilisateur s'engage formellement à respecter les règles d'intégrité suivantes :</p>
                     <ul>
                         <li><strong>Interdiction absolue de tricher :</strong> L'Utilisateur doit résoudre les quiz par ses propres moyens intellectuels. Il est strictement interdit d'utiliser des scripts informatiques, des extensions de navigateur, des bots automatisés ou des méthodes de triche pour valider artificiellement des quiz, accumuler des points d'expérience (XP) ou générer frauduleusement de la monnaie virtuelle (LevelCoins).</li>
-                        <li><strong>Exploitation de failles :</strong> L'exploitation de failles techniques, de bugs applicatifs ou d'anomalies logicielles pour obtenir des récompenses ou modifier son score dans le classement général est strictement interdite.</li>
+                        <li><strong>Exploitation de failles :</strong> L'exploitation de failles techniques, de bugs applicatifs ou d'anomalies logicielles pour obtenir des récompenses ou modifier son score dans le classement général est strictement interdite. Tout Utilisateur découvrant une faille s'engage à la signaler immédiatement à l'administration de LEVELMAK.</li>
                         <li><strong>Plagiat littéraire :</strong> Dans l'Atelier d'Écriture, l'Utilisateur s'engage à ne publier que des textes dont il est le véritable auteur original. Le plagiat de livres, d'articles, de textes d'autres élèves ou de contenus générés en masse par des intelligences artificielles externes sans apport créatif personnel est prohibé.</li>
                         <li><strong>Respect du code source :</strong> L'Utilisateur s'interdit de procéder à toute opération de reverse engineering, décompilation, extraction massive de base de données (scraping), introduction de virus, vers ou logiciels malveillants sur la plateforme.</li>
                     </ul>
@@ -522,7 +546,7 @@
             </article>
 
             <article id="t-sec-5" class="article-card">
-                <h3 class="article-title">5. Charte de Conduite Communautaire et Respect Mutuel</h3>
+                <h3 class="article-title">5. Charte de Conduite Communautaire, Respect Mutuel et Signalement</h3>
                 <div class="article-body">
                     <p>LEVELMAK est un espace d'apprentissage bienveillant, sécurisé et stimulant pour tous. Pour préserver cette atmosphère d'entraide, l'Utilisateur s'engage à respecter les règles de politesse et de respect d'autrui lors de la rédaction de commentaires, de critiques littéraires dans l'Atelier d'Écriture, ou de messages d'entraide.</p>
                     <p>Sont strictement interdits sur l'intégralité de la plateforme sous peine de sanctions immédiates :</p>
@@ -533,6 +557,7 @@
                         <li>La publication d'informations privées appartenant à un tiers (numéros de téléphone, adresses e-mail réelles, photos) sans son accord écrit préalable.</li>
                         <li>Le spamming, la publicité non sollicitée, la promotion d'autres applications ou sites concurrents.</li>
                     </ul>
+                    <p>LEVELMAK intègre un système de signalement des abus. Tout Utilisateur constatant un contenu inapproprié, un écrit plagié ou un comportement abusif peut le signaler en cliquant sur le bouton de signalement approprié ou en écrivant directement au support. TMAB GROUP s'engage à examiner chaque signalement avec diligence et à prendre les mesures qui s'imposent sous 24 heures.</p>
                 </div>
             </article>
 
@@ -543,11 +568,12 @@
                     <p>En cas de triche avérée, de plagiat, de propos haineux ou de contournement des systèmes de sécurité, les administrateurs se réservent le droit exclusif, de manière unilatérale et sans préavis, d'appliquer la gradation de sanctions administratives suivantes :</p>
                     <ol>
                         <li><strong>Avertissement formel :</strong> Notification envoyée par e-mail ou sur le compte de l'élève lui rappelant ses obligations.</li>
-                        <li><strong>Réinitialisation des statistiques :</strong> Remise à zéro de ses points d'expérience (XP), de son historique de scores ou retrait de ses LevelCoins mal acquis.</li>
+                        <li><strong>Réinitialisation des statistiques pédagogiques :</strong> Remise à zéro totale ou partielle de ses points d'expérience (XP), de son niveau d'entraînement, de son historique de scores ou retrait immédiat de ses LevelCoins mal acquis.</li>
                         <li><strong>Suppression de contenu :</strong> Retrait immédiat de la plateforme de tout commentaire inapproprié, de tout avis offensant ou de tout manuscrit plagié ou non conforme de l'Atelier d'Écriture.</li>
-                        <li><strong>Suspension temporaire :</strong> Blocage de l'accès au Compte Élite pour une durée déterminée (allant de 24 heures à 30 jours).</li>
+                        <li><strong>Suspension temporaire :</strong> Blocage de l'accès au Compte Élite pour une durée déterminée (allant de 24 heures à 30 jours selon la gravité de la faute).</li>
                         <li class="alert-block"><strong>Bannissement définitif et clôture de compte :</strong> Résiliation immédiate de son Compte Élite avec interdiction formelle et définitive de se réinscrire sur LEVELMAK, sans recours possible et sans compensation d'aucune sorte.</li>
                     </ol>
+                    <p>Toutes les décisions administratives prises par l'équipe de TMAB GROUP sont souveraines, exécutoires et sans appel. L'Utilisateur reconnaît et accepte qu'aucune indemnisation, remboursement ou dédommagement ne pourra être réclamé suite à l'application d'une sanction administrative légitime.</p>
                 </div>
             </article>
 
@@ -555,10 +581,10 @@
                 <h3 class="article-title">7. Droits de Propriété Intellectuelle et Licences</h3>
                 <div class="article-body">
                     <ul>
-                        <li><strong>Propriété exclusive de LEVELMAK :</strong> L'intégralité de la plateforme LEVELMAK, incluant sans s'y limiter les codes sources, l'architecture logicielle, les bases de données, les algorithmes de l'IA LevelBot, les interfaces graphiques, le design, la charte graphique, les logos, les illustrations, l'atlas de cours, les questions de quiz et les explications académiques rédigées par nos experts pédagogiques, est la propriété exclusive et inaliénable de la société TMAB GROUP.</li>
-                        <li><strong>Propriété des écrits littéraires de l'Utilisateur :</strong> L'Utilisateur qui rédige et stocke des textes originaux (histoires, poèmes, récits, chroniques) dans l'Atelier d'Écriture reste le propriétaire intellectuel exclusif de ses créations.</li>
-                        <li><strong>Licence d'hébergement et de diffusion :</strong> Afin de permettre le fonctionnement technique du service, l'Utilisateur accorde à TMAB GROUP une licence mondiale, gratuite, non exclusive, de stocker, reproduire, adapter, et afficher ses écrits sur la plateforme.</li>
-                        <li><strong>Licence en cas de publication publique :</strong> Lorsque l'Utilisateur choisit délibérément de publier un de ses écrits littéraires en mode 'public', il accorde expressément à tous les autres utilisateurs enregistrés de la plateforme une licence non exclusive, gratuite et perpétuelle de lire, consulter et commenter son œuvre.</li>
+                        <li><strong>Propriété exclusive de LEVELMAK :</strong> L'intégralité de la plateforme LEVELMAK, incluant sans s'y limiter les codes sources, l'architecture logicielle, les bases de données, les algorithmes de l'IA LevelBot, les interfaces graphiques, le design, la charte graphique, les logos, les illustrations, l'atlas de cours, les questions de quiz et les explications académiques rédigées par nos experts pédagogiques, est la propriété exclusive et inaliénable de la société TMAB GROUP. Toute reproduction, copie, distribution, retransmission, extraction commerciale ou utilisation non autorisée de ces éléments, en tout ou en partie, est strictement interdite et constitue un délit de contrefaçon passible de poursuites judiciaires.</li>
+                        <li><strong>Propriété des écrits littéraires de l'Utilisateur :</strong> L'Utilisateur qui rédigerait et stockerait des textes originaux (histoires, poèmes, récits, chroniques) dans l'Atelier d'Écriture reste le propriétaire intellectuel exclusif de ses créations. TMAB GROUP ne revendique aucun droit de propriété sur le contenu créatif original de ses élèves.</li>
+                        <li><strong>Licence d'hébergement et de diffusion :</strong> Afin de permettre le fonctionnement technique du service, l'Utilisateur accorde à TMAB GROUP une licence mondiale, gratuite, non exclusive, transférable et sous-licenciable d'héberger, stocker, reproduire, adapter, indexer et afficher ses écrits littéraires sur les serveurs de la plateforme.</li>
+                        <li><strong>Licence en cas de publication publique :</strong> Lorsque l'Utilisateur choisit délibérément de publier un de ses écrits littéraires en mode 'public' sur LEVELMAK, il accorde expressément à TMAB GROUP et à tous les autres utilisateurs enregistrés de la plateforme une licence non exclusive, gratuite et perpétuelle de lire, consulter, commenter, partager et référencer son œuvre à l'intérieur des espaces applicatifs de LEVELMAK. Cette licence prend fin si l'Utilisateur décide de repasser son écrit en mode 'privé' ou de le supprimer définitivement de l'Atelier d'Écriture (hors temps nécessaire à l'effacement complet des caches et sauvegardes).</li>
                     </ul>
                 </div>
             </article>
@@ -569,9 +595,10 @@
                     <p>TMAB GROUP met en œuvre son expertise pour proposer un contenu pédagogique de qualité et des outils d'IA performants. Cependant, LEVELMAK est fourni à l'Utilisateur 'en l'état' et 'selon disponibilité'.</p>
                     <p>TMAB GROUP ne saurait en aucun cas être tenu responsable de :</p>
                     <ul>
-                        <li>L'inexactitude, des erreurs, des fautes d'orthographe ou d'éventuelles omissions dans les cours, l'atlas ou les questions de quiz.</li>
-                        <li>Les réponses fournies par l'assistant IA LevelBot (les modèles d'IA peuvent parfois générer des hallucinations d'IA). Il incombe à l'élève de recouper ces informations avec ses cours officiels.</li>
+                        <li>L'inexactitude, des erreurs, des fautes d'orthographe ou d'éventuelles omissions dans les cours, l'atlas ou les questions de quiz rédigés ou générés par l'IA.</li>
+                        <li>Les réponses fournies par l'assistant IA LevelBot : les modèles d'IA peuvent parfois générer des informations incorrectes ou des réponses inappropriées (hallucinations d'IA). Il incombe à l'élève de recouper ces informations avec ses cours officiels.</li>
                         <li>Les dommages indirects subis par l'Utilisateur, notamment la perte d'une opportunité scolaire, la baisse de ses notes lors d'examens officiels réels, ou les conséquences d'un échec académique.</li>
+                        <li>Les interruptions de service, les bugs bloquants, les déconnections intempestives ou les pertes de données de progression résultant de cas de force majeure (perturbations des télécommunications nationales, coupures de courant généralisées, restrictions étatiques d'accès à internet, piratage d'envergure).</li>
                     </ul>
                 </div>
             </article>
@@ -580,10 +607,10 @@
                 <h3 class="article-title">9. Loi Applicable, Juridiction Compétente et Autonomie des Clauses</h3>
                 <div class="article-body">
                     <ul>
-                        <li><strong>Loi applicable :</strong> Les présentes CGU, ainsi que toute relation contractuelle en découlant, sont régies et interprétées exclusivement sous les lois de la République de Guinée.</li>
-                        <li><strong>Règlement amiable obligatoire :</strong> En cas de litige, les parties s'engagent impérativement à tenter de trouver une solution amiable (en écrivant à Tmab6544@gmail.com) avant de saisir les tribunaux.</li>
-                        <li><strong>Juridiction compétente :</strong> À défaut de résolution amiable dans un délai de 30 jours, les tribunaux de la ville de Conakry (République de Guinée) seront seuls compétents pour connaître du différend.</li>
-                        <li><strong>Autonomie des clauses :</strong> Si une clause est déclarée nulle ou inapplicable, cette nullité n'affectera en rien la validité et la force exécutoire des autres clauses qui conserveront leur plein effet.</li>
+                        <li><strong>Loi applicable :</strong> Les présentes CGU, ainsi que toute relation contractuelle ou extra-contractuelle en découlant, sont régies, interprétées et soumises exclusivement aux lois en vigueur de la République de Guinée.</li>
+                        <li><strong>Règlement amiable obligatoire :</strong> En cas de litige ou de désaccord relatif à l'interprétation, la validité, l'exécution ou la résiliation des présentes CGU, les parties s'engagent impérativement à tenter de trouver une solution amiable avant de saisir les tribunaux. L'Utilisateur devra soumettre ses griefs par écrit à l'adresse Tmab6544@gmail.com en vue d'ouvrir une procédure de médiation amiable.</li>
+                        <li><strong>Juridiction compétente :</strong> À défaut de résolution amiable dans un délai de trente (30) jours calendaires à compter de la notification du litige, les tribunaux de la ville de Conakry (République de Guinée) seront seuls et exclusivement compétents pour connaître du différend, y compris en cas de référé, d'appel en garantie ou de pluralité de défendeurs.</li>
+                        <li><strong>Autonomie des clauses (Divisibilité) :</strong> Si une ou plusieurs clauses des présentes CGU devaient être déclarées nulles, inapplicables ou déclarées comme telles en application d'une loi, d'un règlement ou à la suite d'une décision définitive d'une juridiction compétente, cette nullité n'affectera en rien la validité et la force exécutoire des autres clauses qui conserveront leur plein effet.</li>
                     </ul>
                 </div>
             </article>
