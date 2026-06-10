@@ -5,6 +5,7 @@ import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
 import { supabase } from '../services/supabase';
 import { BattleState } from '../types';
+import { audioService } from '../services/audio';
 
 const GRID_SIZE = 16;
 
@@ -38,6 +39,18 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
   const HOST_COLOR = '#FF3B3B'; // Vivid Neon Red
   const GUEST_COLOR = '#00D1FF'; // Vivid Neon Blue
   const myColor = isHost ? HOST_COLOR : GUEST_COLOR;
+
+  // Start background music when battle is active, stop on unmount/finished
+  useEffect(() => {
+    if (battle && battle.status === 'active' && !abandonedByOpponent) {
+      audioService.startBackgroundPiano();
+    } else {
+      audioService.stopBackgroundPiano();
+    }
+    return () => {
+      audioService.stopBackgroundPiano();
+    };
+  }, [battle?.status, abandonedByOpponent]);
 
   // Turn logic
   const placedPixelsCount = grid.filter(c => c !== '#ffffff').length;
@@ -152,7 +165,12 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
         setResolved(true);
         const isDraw = !battle.winnerId;
         resolveBattle(battle.winnerId || '', isDraw);
-        if (battle.winnerId === user.id) HapticFeedback.levelUp();
+        if (battle.winnerId === user.id) {
+            HapticFeedback.levelUp();
+            audioService.playSuccess('quiz');
+        } else if (battle.winnerId) {
+            audioService.playError('quiz');
+        }
     }
   }, [battle?.status, battle?.winnerId, resolved, user, resolveBattle, abandonedByOpponent]);
 
@@ -232,6 +250,7 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
 
     setGrid(newGrid);
     setScores(newScores);
+    audioService.playClick();
 
     // Broadcast update
     channel?.send({

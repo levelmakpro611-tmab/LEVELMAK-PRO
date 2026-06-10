@@ -25,7 +25,8 @@ import {
   Download,
   Layers,
   Play,
-  GraduationCap
+  GraduationCap,
+  Target
 } from 'lucide-react';
 import {
   LineChart,
@@ -62,7 +63,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const { user, missions, quizzes, flashcards, decks, dailyVocab, dailyMotivation, rollDice, isOnline, t, settings } = useStore();
+  const { user, missions, quizzes, flashcards, decks, dailyVocab, dailyMotivation, rollDice, isOnline, t, settings, updateProfile } = useStore();
   const [showHistory, setShowHistory] = React.useState(false);
 
   if (!user) {
@@ -83,6 +84,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     AVATAR_LEVELS.find(l => l.level === (user.avatar?.currentLevel || 1)) || AVATAR_LEVELS[0],
     [user.avatar?.currentLevel]
   );
+
+  const handleToggleGoal = React.useCallback((goalId: string) => {
+    if (!user) return;
+    const currentAnalytics = user.analytics || {
+      studyTimeBySubject: {},
+      studyTimeByDay: [],
+      quizPerformance: [],
+      weeklyGoals: { target: 120, achieved: 0 },
+      examPredictions: []
+    };
+    const updatedGoals = (currentAnalytics.customGoals || []).map(g =>
+      g.id === goalId ? { ...g, completed: !g.completed } : g
+    );
+    updateProfile(user.name, user.phoneNumber, {
+      analytics: {
+        ...currentAnalytics,
+        customGoals: updatedGoals
+      }
+    });
+  }, [user, updateProfile]);
 
   const xpPercentage = React.useMemo(() => {
     const xpNeeded = getXpForNextLevel(user.avatar?.currentLevel || 1);
@@ -476,6 +497,86 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           <React.Suspense fallback={<WidgetLoader label="Culture de l'Esprit" />}>
             <MindGarden />
           </React.Suspense>
+
+          {/* Goals Checklist Widget */}
+          <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 shadow-premium">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg md:text-xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                <Target size={20} className="text-secondary" />
+                {settings.language === 'fr' ? 'Mes Objectifs' : 'My Goals'}
+              </h3>
+              <button
+                onClick={() => onNavigate('analytics')}
+                className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-primary-light transition-colors animate-pulse"
+              >
+                {settings.language === 'fr' ? 'Ajuster' : 'Adjust'}
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {(() => {
+                const analytics = user.analytics || {
+                  weeklyGoals: { target: 120, achieved: 0 },
+                  customGoals: []
+                };
+                return (
+                  <>
+                    {/* Weekly study time progress */}
+                    <div className="space-y-2 pb-4 border-b border-white/5">
+                      <div className="flex justify-between items-end text-xs">
+                        <span className="font-semibold text-slate-400">{settings.language === 'fr' ? 'Cette semaine' : 'This week'}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{analytics.weeklyGoals.achieved} / {analytics.weeklyGoals.target}m</span>
+                      </div>
+                      <div className="h-2 bg-black/20 rounded-full overflow-hidden p-0.5 border border-white/5">
+                        <div
+                          className="h-full rounded-full bg-secondary shadow-[0_0_12px_rgba(245,158,11,0.25)] transition-all duration-500"
+                          style={{ width: `${analytics.weeklyGoals.target > 0 ? Math.min((analytics.weeklyGoals.achieved / analytics.weeklyGoals.target) * 100, 100) : 0}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Checklist of custom goals */}
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                      {analytics.customGoals && analytics.customGoals.length > 0 ? (
+                        analytics.customGoals.map((goal) => (
+                          <button
+                            key={goal.id}
+                            onClick={() => handleToggleGoal(goal.id)}
+                            className={`w-full p-3 rounded-2xl border flex items-center gap-3 transition-all ${
+                              goal.completed
+                                ? 'bg-green-500/10 border-green-500/20 text-green-400 line-through'
+                                : 'bg-black/10 border-white/5 text-slate-300 hover:bg-black/25'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                              goal.completed
+                                ? 'bg-green-500 border-green-500 text-slate-950'
+                                : 'border-white/30 text-transparent'
+                            }`}>
+                              {goal.completed && <CheckCircle2 size={10} className="text-white" />}
+                            </div>
+                            <span className="text-[11px] font-bold text-left leading-tight truncate">{goal.text}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-center py-6">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
+                            {settings.language === 'fr' ? 'Aucun objectif défini' : 'No goals defined'}
+                          </p>
+                          <button
+                            onClick={() => onNavigate('analytics')}
+                            className="mt-2 text-[9px] font-black uppercase tracking-widest text-primary hover:underline"
+                          >
+                            {settings.language === 'fr' ? '+ Ajouter un objectif' : '+ Add a goal'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
 
           {/* Mission Widgets */}
           <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 shadow-premium">

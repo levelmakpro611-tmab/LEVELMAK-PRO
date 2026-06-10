@@ -132,7 +132,7 @@ const CommentManagement: React.FC<CommentManagementProps> = ({ comments, onRefre
     return (
         <div className="space-y-6">
             {/* Filters Bar */}
-            <div className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10">
+            <div className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 print:hidden">
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <span className="text-xs text-slate-400 font-bold uppercase flex items-center gap-2">
                         <Filter size={14} className="text-blue-400" /> Statut

@@ -125,7 +125,6 @@ export const translations: Record<string, any> = {
             "ailab": "Laboratoire IA",
             "ailabShort": "Lab IA",
             "atlas": "Atlas Géo",
-            "activeVisual": "Active Visuel",
             "aiCalculator": "Calculatrice IA",
             "feedback": "Commentaire",
             "rating": "Note App",
@@ -138,7 +137,6 @@ export const translations: Record<string, any> = {
                 "flashcards": "Flash",
                 "ranking": "Rank",
                 "atlas": "Atlas",
-                "activeVisual": "Visuel",
                 "aiCalculator": "Calc IA",
                 "shop": "Shop",
                 "planner": "Planif",
@@ -542,8 +540,6 @@ export const translations: Record<string, any> = {
                 "settingsDesc": "L'interface de LEVELMAK s'adapte à vous, et non l'inverse. Ajustez chaque détail pour optimiser votre concentration.\n\n<b>Fonctionnalités :</b> Modifier le thème sombre/clair pour protéger vos yeux. Régler la taille du texte si vous lisez de longs résumés. Le paramétrage sonore vous permet d'activer ou désactiver les BGM (musiques d'ambiance) selon que vous souhaitiez du silence lors de vos travaux intensifs.",
                 "planner": "Planificateur Stratégique",
                 "plannerDesc": "Le Planificateur (Planif IA) est l'outil ultime pour organiser vos journées de révision sans stress. Dites à l'IA la date de votre examen et vos objectifs de la semaine, et elle calculera les temps d'étude parfaits.\n\n<b>Mode d'emploi :</b> Rendez-vous sur Planif IA, renseignez les heures où vous êtes disponible, et la machine segmentera votre charge de travail avec la méthode Pomodoro intégrée (25 min de travail, 5 min de pause) pour une productivité décuplée.",
-                "activeVisual": "Science & Visuel Actif",
-                "activeVisualDesc": "L'Apprentissage Actif et Visuel transforme la science théorique en expérience palpable. Marre d'imaginer ? Visualisez et interagissez.\n\n<b>Action :</b> Entrez dans le Labo Chimique ou Électrique. Ajustez les pipettes virtuelles, branchez les circuits et observez les réactions (précipitation, redox) de vos propres yeux. C'est le TP ultime, sans danger pour vos sourcils.",
                 "missions": "Missions & Récompenses",
                 "missionsDesc": "Les missions quotidiennes sont renouvelées chaque jour. Elles vous imposent de sortir de votre zone de confort (ex: Réussir 2 Quiz avec 100%, Utiliser l'Atelier d'Écriture).\n\n<b>Récompenses :</b> Compléter des missions rapporte des LevelCoins, utilisables dans la Boutique pour personnaliser votre avatar et déverrouiller du contenu premium caché.",
                 "mySettings": "Mes Paramètres"
@@ -701,7 +697,20 @@ export const translations: Record<string, any> = {
             "tabs": {
                 "write": "Écrire",
                 "myStories": "Mes écrits",
-                "discover": "Découvrir"
+                "discover": "Découvrir",
+                "saved": "Mon Panier"
+            },
+            "reader": {
+                "autoScroll": "Défilement",
+                "scrollSpeed": {
+                    "off": "Off",
+                    "slow": "Lent",
+                    "medium": "Moyen",
+                    "fast": "Rapide"
+                },
+                "addToCart": "Ajouter au panier",
+                "removeFromCart": "Retirer du panier",
+                "emptyCart": "Votre panier est vide. Ajoutez-y des livres à lire plus tard !"
             },
             "categories": {
                 "story": "Histoire",
@@ -810,6 +819,7 @@ export const translations: Record<string, any> = {
                 "avatar": "Avatars",
                 "badge": "Badges",
                 "theme": "Thèmes",
+                "wallpaper": "Fonds",
                 "potion": "Fioles"
             },
             "success": "Achat réussi : ",
@@ -1315,37 +1325,6 @@ export const translations: Record<string, any> = {
                 "title": "Conseils",
                 "desc": "Formats supportés : PDF, Word (.docx) et photos de tes cours. Assure-toi que le texte est lisible."
             }
-        },
-        "activeVisual": {
-            "badge": "NOUVEAU",
-            "title": "Active Visuel",
-            "desc": "Bienvenue dans le laboratoire du futur. Manipulez, expérimentez et visualisez la théorie à travers des simulations en 3D interactives. L'apprentissage par l'action.",
-            "recommended": "Expérience Recommandée",
-            "launchExp": "Lancer l'expérience",
-            "expList": "Liste des Expériences",
-            "backBtn": "Retour au Catalogue",
-            "experiments": {
-                "chemistry": {
-                    "title": "Labo Chimie (Titrage & Précipitation)",
-                    "category": "Chimie",
-                    "description": "Expérimentez le titrage acide-base et la précipitation des ions. Manipulez les béchers en 3D."
-                },
-                "electricity": {
-                    "title": "Électricité & Induction",
-                    "category": "Physique",
-                    "description": "Construisez un circuit interactif. Visualisez le courant, la résistance et les lois de l'électricité."
-                },
-                "optics": {
-                    "title": "Optique (Réfraction du Laser)",
-                    "category": "Physique",
-                    "description": "Pointez un laser vers différents milieux (Air, Eau, Verre) pour vérifier la Loi de Descartes."
-                },
-                "mechanics": {
-                    "title": "Mécanique (Chute Libre)",
-                    "category": "Physique",
-                    "description": "Lâchez des objets avec ou sans la résistance de l'air. Découvrez pourquoi la gravité est universelle."
-                }
-            }
         }
     },
     "en": {
@@ -1457,7 +1436,6 @@ export const translations: Record<string, any> = {
             "ailab": "AI Lab",
             "ailabShort": "AI Lab",
             "atlas": "Geo Atlas",
-            "activeVisual": "Active Visual",
             "aiCalculator": "AI Calculator",
             "feedback": "Feedback",
             "rating": "App Rating",
@@ -1473,7 +1451,6 @@ export const translations: Record<string, any> = {
                 "planner": "Planner",
                 "social": "Social",
                 "atlas": "Atlas",
-                "activeVisual": "Visual",
                 "aiCalculator": "AI Calc",
                 "feedback": "Feedback",
                 "rating": "Rating"
@@ -1914,8 +1891,6 @@ export const translations: Record<string, any> = {
                 "settingsDesc": "The LEVELMAK interface adapts to you, not the other way around. Adjust every detail to optimize your focus.\n\n<b>Features:</b> Change the dark/light theme to protect your eyes. Adjust the text size if you read long summaries. Sound settings let you enable or disable BGM (background music) depending on whether you want silence during intensive work.",
                 "planner": "Strategic Planner",
                 "plannerDesc": "The Planner (AI Planner) is the ultimate tool to organize your revision days without stress. Tell the AI your exam date and your weekly goals, and it will calculate the perfect study times.\n\n<b>How to use:</b> Go to AI Planner, enter your available hours, and the machine will segment your workload using the built-in Pomodoro method (25 mins work, 5 mins break) for unbridled productivity.",
-                "activeVisual": "Active Visual Science",
-                "activeVisualDesc": "Active and Visual Learning transforms theoretical science into a tangible experience. Tired of imagining? Visualize and interact.\n\n<b>Action:</b> Enter the Chemical or Electrical Lab. Adjust virtual pipettes, connect circuits, and observe reactions (precipitation, redox) with your own eyes. It's the ultimate practical work, safe for your eyebrows.",
                 "missions": "Missions & Rewards",
                 "missionsDesc": "Daily missions are refreshed every day. They push you out of your comfort zone (e.g., Get 100% on 2 Quizzes, Use the Writing Lab).\n\n<b>Rewards:</b> Completing missions earns you LevelCoins, usable in the Shop to customize your avatar and unlock hidden premium content.",
                 "mySettings": "My Settings"
@@ -2111,7 +2086,20 @@ export const translations: Record<string, any> = {
             "tabs": {
                 "write": "Write",
                 "myStories": "My Stories",
-                "discover": "Discover"
+                "discover": "Discover",
+                "saved": "My Cart"
+            },
+            "reader": {
+                "autoScroll": "Scroll",
+                "scrollSpeed": {
+                    "off": "Off",
+                    "slow": "Slow",
+                    "medium": "Medium",
+                    "fast": "Fast"
+                },
+                "addToCart": "Add to cart",
+                "removeFromCart": "Remove from cart",
+                "emptyCart": "Your cart is empty. Add books to read later!"
             },
             "categories": {
                 "story": "Story",
@@ -2220,6 +2208,7 @@ export const translations: Record<string, any> = {
                 "avatar": "Avatars",
                 "badge": "Badges",
                 "theme": "Themes",
+                "wallpaper": "Wallpapers",
                 "potion": "Potions"
             },
             "success": "Purchase successful: ",
@@ -2591,37 +2580,6 @@ export const translations: Record<string, any> = {
                 "title": "Tips",
                 "desc": "Supported formats: PDF, Word (.docx) and photos of your courses. Make sure the text is readable."
             }
-        },
-        "activeVisual": {
-            "badge": "NEW",
-            "title": "Active Visual",
-            "desc": "Welcome to the laboratory of the future. Manipulate, experiment, and visualize theory through interactive 3D simulations. Learning by doing.",
-            "recommended": "Recommended Experiment",
-            "launchExp": "Launch Experiment",
-            "expList": "List of Experiments",
-            "backBtn": "Back to Catalog",
-            "experiments": {
-                "chemistry": {
-                    "title": "Chemistry Lab (Titration & Precipitation)",
-                    "category": "Chemistry",
-                    "description": "Experiment with acid-base titration and ion precipitation. Manipulate beakers in 3D."
-                },
-                "electricity": {
-                    "title": "Electricity & Induction",
-                    "category": "Physics",
-                    "description": "Build an interactive circuit. Visualize current, resistance, and the laws of electricity."
-                },
-                "optics": {
-                    "title": "Optics (Laser Refraction)",
-                    "category": "Physics",
-                    "description": "Point a laser at different mediums (Air, Water, Glass) to verify Descartes' Law."
-                },
-                "mechanics": {
-                    "title": "Mechanics (Free Fall)",
-                    "category": "Physics",
-                    "description": "Drop objects with or without air resistance. Find out why gravity is universal."
-                }
-            }
         }
     },
     "ar": {
@@ -2731,7 +2689,6 @@ export const translations: Record<string, any> = {
             "ailab": "مختبر الذكاء الاصطناعي",
             "ailabShort": "مختبر الذكاء الاصطناعي",
             "atlas": "الأطلس الجغرافي",
-            "activeVisual": "البصري النشط",
             "feedback": "الآراء",
             "rating": "تقييم التطبيق",
             "short": {
@@ -2742,8 +2699,7 @@ export const translations: Record<string, any> = {
                 "writing": "ورشة",
                 "flashcards": "بطاقات",
                 "ranking": "ترتيب",
-                "atlas": "أطلس",
-                "activeVisual": "بصري",
+                "atlas": "أملس",
                 "shop": "متجر",
                 "planner": "تخطيط",
                 "social": "مجتمع",
@@ -3092,8 +3048,6 @@ export const translations: Record<string, any> = {
                 "settingsDesc": "واجهة LEVELMAK تتكيف معك، وليس العكس. اضبط كل التفاصيل لتحسين تركيزك.\n\n<b>الميزات:</b> قم بتغيير السمة المظلمة/الفاتحة لحماية عينيك. اضبط حجم النص إذا كنت تقرأ ملخصات طويلة. تتيح لك إعدادات الصوت تمكين أو تعطيل موسيقى الخلفية (BGM) بناءً على ما إذا كنت تريد الصمت أثناء العمل المكثف.",
                 "planner": "مخطط استراتيجي",
                 "plannerDesc": "المخطط (مخطط الذكاء الاصطناعي) هو الأداة المثلى لتنظيم أيام المراجعة الخاصة بك دون ضغوط. أخبر الذكاء الاصطناعي بتاريخ امتحانك وأهدافك الأسبوعية، وسيحسب أوقات الدراسة المثالية.\n\n<b>طريقة الاستخدام:</b> انتقل إلى مخطط الذكاء الاصطناعي، أدخل الساعات المتاحة لك، وستقوم الآلة بتقسيم عبء العمل الخاص بك باستخدام طريقة بومودورو المدمجة (25 دقيقة عمل، 5 دقائق راحة) لإنتاجية مضاعفة.",
-                "activeVisual": "العلوم المرئية النشطة",
-                "activeVisualDesc": "التعلم النشط والمرئي يحول العلوم النظرية إلى تجربة ملموسة. هل سئمت من التخيل؟ تصور وتفاعل.\n\n<b>الإجراء:</b> ادخل إلى المختبر الكيميائي أو الكهربائي. اضبط الماصات الافتراضية، وقم بتوصيل الدوائر واشهد التفاعلات (الترسيب، الأكسدة والاختزال) بأم عينيك. إنها التجربة العملية الفائقة، آمنة لحاجبيك.",
                 "missions": "المهمات والمكافآت",
                 "missionsDesc": "المهمات اليومية تتجدد كل يوم. تفرض عليك الخروج من منطقة الراحة الخاصة بك (مثل: اجتياز اختبارين بنسبة 100٪، استخدام ورشة الكتابة).\n\n<b>المكافآت:</b> إكمال المهمات يمنحك عملات المستويات (LevelCoins)، والتي يمكن استخدامها في المتجر لتخصيص صورتك الرمزية وفتح محتوى متميز مخفي.",
                 "mySettings": "إعداداتي"
@@ -3189,7 +3143,20 @@ export const translations: Record<string, any> = {
             "tabs": {
                 "write": "كتابة",
                 "myStories": "كتاباتي",
-                "discover": "اكتشف"
+                "discover": "اكتشف",
+                "saved": "سلتي"
+            },
+            "reader": {
+                "autoScroll": "التمرير التلقائي",
+                "scrollSpeed": {
+                    "off": "إيقاف",
+                    "slow": "بطيء",
+                    "medium": "متوسط",
+                    "fast": "سريع"
+                },
+                "addToCart": "إضافة إلى السلة",
+                "removeFromCart": "إزالة من السلة",
+                "emptyCart": "سلتك فارغة. أضف كتبًا لقراءتها لاحقًا!"
             },
             "categories": {
                 "story": "قصة",
@@ -3298,6 +3265,7 @@ export const translations: Record<string, any> = {
                 "avatar": "أفاتار",
                 "badge": "شارات",
                 "theme": "سمات",
+                "wallpaper": "خلفيات",
                 "potion": "جرعات"
             },
             "success": "تم الشراء بنجاح: ",
@@ -3668,37 +3636,6 @@ export const translations: Record<string, any> = {
             "tips": {
                 "title": "نصائح",
                 "desc": "الصيغ المدعومة: PDF وWord (.docx) وصور دروسك. تأكد من أن النص مقروء."
-            }
-        },
-        "activeVisual": {
-            "badge": "جديد",
-            "title": "البصري النشط",
-            "desc": "مرحبًا بك في مختبر المستقبل. تلاعب، جرب، وتصور النظرية من خلال محاكاة ثلاثية الأبعاد تفاعلية. التعلم بالممارسة.",
-            "recommended": "التجربة الموصى بها",
-            "launchExp": "بدء التجربة",
-            "expList": "قائمة التجارب",
-            "backBtn": "العودة إلى الكتالوج",
-            "experiments": {
-                "chemistry": {
-                    "title": "مختبر الكيمياء (المعايرة والترسيب)",
-                    "category": "كيمياء",
-                    "description": "جرب المعايرة الحمضية القاعدية وترسيب الأيونات. تلاعب بالأكواب في 3D."
-                },
-                "electricity": {
-                    "title": "الكهرباء والحث",
-                    "category": "فيزياء",
-                    "description": "قم ببناء دائرة تفاعلية. تصور التيار والمقاومة وقوانين الكهرباء."
-                },
-                "optics": {
-                    "title": "البصريات (انكسار الليزر)",
-                    "category": "فيزياء",
-                    "description": "وجّه ليزرًا نحو أوساط مختلفة (الهواء، الماء، الزجاج) للتحقق من قانون ديكارت."
-                },
-                "mechanics": {
-                    "title": "الميكانيكا (السقوط الحر)",
-                    "category": "فيزياء",
-                    "description": "أسقط أجسامًا مع أو بدون مقاومة الهواء. اكتشف لماذا الجاذبية عالمية."
-                }
             }
         }
     }

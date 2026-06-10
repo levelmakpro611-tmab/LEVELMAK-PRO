@@ -13,6 +13,39 @@ const phoneToEmail = (phone: string): string => {
 // Convert Supabase User to App User (with profile creation)
 // Optimized with a short-lived deduplication cache to prevent redundant DB calls
 // ======================================================
+export const mapProfileToUser = (profile: any): User => {
+    return {
+        ...profile,
+        education: profile.stats?.education || profile.education || '',
+        phoneNumber: profile.phone_number,
+        totalXp: profile.total_xp || 0,
+        levelCoins: profile.level_coins || 50,
+        onboardingCompleted: profile.onboarding_completed || false,
+        level: profile.level as SchoolLevel,
+        avatar: profile.avatar_config || {
+            baseColor: '#3B82F6',
+            accessory: 'none',
+            aura: 'none',
+            currentLevel: 1
+        },
+        stats: profile.stats || {
+            quizzesCompleted: 0,
+            hoursLearned: 0,
+            booksRead: 0,
+            storiesWritten: 0,
+            flashcardsStudied: 0
+        },
+        coachSessions: profile.coach_sessions || [],
+        status: profile.status || 'active',
+        badges: profile.badges || [],
+        favorites: profile.favorites || [],
+        friends: profile.friends || [],
+        inventory: profile.inventory || [],
+        activities: profile.activities || [],
+        progression: profile.progression || [],
+    } as User;
+};
+
 const convertCache = new Map<string, Promise<User | null>>();
 
 export const convertSupabaseUser = async (supabaseUser: any): Promise<User | null> => {
@@ -55,34 +88,7 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
                 }).eq('id', supabaseUser.id);
             }
 
-            const appUser: User = {
-                ...profile,
-                phoneNumber: profile.phone_number,
-                totalXp: profile.total_xp || 0,
-                levelCoins: profile.level_coins || 50,
-                onboardingCompleted: profile.onboarding_completed || false,
-                level: profile.level as SchoolLevel,
-                avatar: profile.avatar_config || {
-                    baseColor: '#3B82F6',
-                    accessory: 'none',
-                    aura: 'none',
-                    currentLevel: 1
-                },
-                stats: profile.stats || {
-                    quizzesCompleted: 0,
-                    hoursLearned: 0,
-                    booksRead: 0,
-                    storiesWritten: 0,
-                    flashcardsStudied: 0
-                },
-                status: profile.status || 'active',
-                badges: profile.badges || [],
-                favorites: profile.favorites || [],
-                friends: profile.friends || [],
-                inventory: profile.inventory || [],
-                activities: profile.activities || [],
-                progression: profile.progression || [],
-            } as User;
+            const appUser = mapProfileToUser(profile);
             return appUser;
         }
 
@@ -533,6 +539,45 @@ export const changeUserPassword = async (oldPassword: string, newPassword: strin
         console.log('Password updated successfully');
     } catch (error: any) {
         console.error('Change password error:', error);
+        throw new Error(error.message);
+    }
+};
+
+// ======================================================
+// Delete Current User Account with verification
+// ======================================================
+export const deleteCurrentUserAccount = async (password: string): Promise<void> => {
+    try {
+        // 1. Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !user.email) throw new Error('Utilisateur non connecté.');
+
+        // 2. Re-authenticate to verify password
+        const { error: reauthError } = await supabase.auth.signInWithPassword({
+            email: user.email,
+            password
+        });
+
+        if (reauthError) {
+            throw new Error('Le mot de passe actuel est incorrect.');
+        }
+
+        const userId = user.id;
+
+        // 3. Clear user-generated contents
+        await supabase.from('user_comments').delete().eq('user_id', userId);
+        await supabase.from('user_ratings').delete().eq('user_id', userId);
+        await supabase.from('messages').delete().eq('sender_id', userId);
+        await supabase.from('user_activities').delete().eq('user_id', userId);
+
+        // 4. Delete profile
+        const { error: profileError } = await supabase.from('profiles').delete().eq('id', userId);
+        if (profileError) throw profileError;
+
+        // 5. Sign out / Delete Auth Account session
+        await supabase.auth.signOut();
+    } catch (error: any) {
+        console.error('Delete account error:', error);
         throw new Error(error.message);
     }
 };

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { TrendingUp, Users, BookOpen, Zap, Award, Clock, Activity, Sparkles, Download, Loader } from 'lucide-react';
+import { TrendingUp, Users, BookOpen, Zap, Award, Clock, Activity, Sparkles, Download, Loader, Printer, RefreshCw } from 'lucide-react';
 import { AdminStats } from '../../types';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -221,9 +221,7 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                             className="flex-1 md:flex-none flex justify-center items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-slate-700 disabled:opacity-50"
                             title="Imprimer"
                         >
-                            {isExportingPDF ? <Loader className="animate-spin" size={14} /> : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                            )}
+                            {isExportingPDF ? <Loader className="animate-spin" size={14} /> : <Printer size={14} />}
                             Print
                         </button>
                         <button

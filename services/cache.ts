@@ -122,6 +122,15 @@ class CacheService {
                     updated_at: new Date().toISOString()
                 });
 
+            await supabase
+                .from('daily_content')
+                .upsert({
+                    id: `${cacheKey}_${today}`,
+                    data,
+                    date_string: today,
+                    updated_at: new Date().toISOString()
+                });
+
             return data;
         } catch (error) {
             console.error('❌ Erreur sync vocabulaire:', error);
@@ -181,6 +190,15 @@ class CacheService {
                 .from('daily_content')
                 .upsert({
                     id: cacheKey,
+                    data,
+                    date_string: today,
+                    updated_at: new Date().toISOString()
+                });
+
+            await supabase
+                .from('daily_content')
+                .upsert({
+                    id: `${cacheKey}_${today}`,
                     data,
                     date_string: today,
                     updated_at: new Date().toISOString()

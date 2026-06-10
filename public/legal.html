@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEVELMAK - Conditions et Confidentialité</title>
+    <meta name="description" content="Conditions Générales d'Utilisation (CGU) et Politique de Confidentialité de la plateforme éducative LEVELMAK d'élite.">
+    <!-- Google Fonts: Outfit and Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #020617;
+            --bg-card: rgba(15, 23, 42, 0.6);
+            --bg-card-hover: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #cbd5e1;
+            --text-title: #ffffff;
+            --text-muted: #64748b;
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-glow: rgba(99, 102, 241, 0.15);
+            --secondary: #a855f7;
+            --secondary-glow: rgba(168, 85, 247, 0.15);
+            --success: #22c55e;
+            --success-glow: rgba(34, 197, 94, 0.15);
+            --danger: #ef4444;
+            --font-display: 'Outfit', sans-serif;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --sidebar-width: 280px;
+        }
+
+        /* Basic Reset */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Glowing Background Accents */
+        body::before, body::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            filter: blur(150px);
+            z-index: -1;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        body::before {
+            top: 10%;
+            left: -100px;
+            background: var(--primary);
+        }
+
+        body::after {
+            bottom: 15%;
+            right: -100px;
+            background: var(--secondary);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Wrapper & Layout */
+        .app-container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            padding: 40px 0 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 900;
+            font-size: 22px;
+            color: #fff;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .logo-text {
+            font-family: var(--font-display);
+            font-weight: 900;
+            font-size: 24px;
+            letter-spacing: -0.03em;
+            color: var(--text-title);
+        }
+
+        .logo-text span {
+            background: linear-gradient(to right, var(--primary-light), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .title-section {
+            max-width: 800px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            background: var(--primary-glow);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: var(--primary-light);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-weight: 900;
+            font-size: 38px;
+            line-height: 1.1;
+            color: var(--text-title);
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Sticky Controls */
+        .controls-bar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Tabs UI */
+        .tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 6px;
+            border-radius: 16px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            padding: 10px 24px;
+            border-radius: 11px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .tab-btn:not(.active):hover {
+            color: var(--text-title);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Action Buttons (Search, print, etc) */
+        .action-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .search-container {
+            position: relative;
+            width: 260px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 16px 10px 38px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-title);
+            font-size: 13px;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--primary-light);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+            width: 14px;
+            height: 14px;
+        }
+
+        .icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: var(--text-title);
+        }
+
+        /* Documentation Layout */
+        .doc-layout {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+            flex: 1;
+            padding-bottom: 80px;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: var(--sidebar-width);
+            position: sticky;
+            top: 85px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            padding-right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .nav-item:hover {
+            color: var(--text-title);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-item.active {
+            color: var(--primary-light);
+            background: var(--primary-glow);
+            border-color: rgba(99, 102, 241, 0.15);
+            font-weight: 700;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .doc-pane {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .doc-pane.active {
+            display: flex;
+        }
+
+        .intro-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .intro-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+        }
+
+        .intro-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-title);
+            margin-bottom: 8px;
+        }
+
+        .intro-text {
+            font-size: 13px;
+            color: var(--text-main);
+            opacity: 0.9;
+        }
+
+        /* Section Card Styles */
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 30px;
+            transition: all 0.25s ease;
+            scroll-margin-top: 100px;
+        }
+
+        .section-card:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 14px;
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 18px;
+            color: var(--text-title);
+            line-height: 1.3;
+        }
+
+        .copy-sec-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .copy-sec-btn:hover {
+            color: var(--primary-light);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .card-body p {
+            font-size: 14px;
+            color: var(--text-main);
+            opacity: 0.95;
+            text-align: justify;
+        }
+
+        .card-body ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .card-body li {
+            font-size: 14px;
+            position: relative;
+            padding-left: 20px;
+            color: var(--text-main);
+            opacity: 0.95;
+        }
+
+        .card-body li::before {
+            content: "•";
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 18px;
+            position: absolute;
+            left: 4px;
+            top: -2px;
+        }
+
+        .card-body li strong {
+            color: var(--text-title);
+        }
+
+        /* Danger Accent in CGU */
+        .danger-text {
+            color: #fca5a5 !important;
+            font-weight: 600;
+            background: rgba(239, 68, 68, 0.08);
+            border-left: 3px solid var(--danger);
+            padding: 10px 14px;
+            border-radius: 0 10px 10px 0;
+            margin: 6px 0;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding: 30px 0;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--primary-light);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Search highlights */
+        mark {
+            background: rgba(234, 179, 8, 0.3);
+            color: #fff;
+            padding: 2px 4px;
+            border-radius: 4px;
+            border-bottom: 2px solid #eab308;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--success);
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 999;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                display: none; /* Hide sidebar list on tablets/mobile */
+            }
+            .controls-bar {
+                position: relative;
+                top: 0;
+                background: transparent;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                border-bottom: none;
+                padding-bottom: 0;
+            }
+            .doc-layout {
+                gap: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            header {
+                padding: 30px 0 20px;
+            }
+            h1 {
+                font-size: 28px;
+            }
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .tabs {
+                width: 100%;
+            }
+            .tab-btn {
+                flex: 1;
+                padding: 10px 12px;
+                font-size: 11px;
+            }
+            .search-container {
+                width: 100%;
+            }
+            .section-card {
+                padding: 20px;
+            }
+            .card-title {
+                font-size: 16px;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .sidebar, .controls-bar, .back-btn, .copy-sec-btn, footer {
+                display: none !important;
+            }
+            .doc-pane {
+                display: block !important;
+            }
+            .section-card {
+                border: none;
+                background: transparent;
+                box-shadow: none;
+                page-break-inside: avoid;
+            }
+            .card-title {
+                color: black;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="header-top">
+                <div class="logo-area">
+                    <div class="logo-icon">L</div>
+                    <div class="logo-text">LEVELMAK<span>.PRO</span></div>
+                </div>
+                <button onclick="window.close();" class="back-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    Fermer
+                </button>
+            </div>
+            <div class="title-section">
+                <div class="badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Espace Légal et Sécurité
+                </div>
+                <h1>Conditions Générales & Confidentialité</h1>
+                <p class="subtitle">Documents juridiques contractuels de la plateforme éducative LEVELMAK de TMAB GROUP.</p>
+            </div>
+        </header>
+
+        <div class="controls-bar">
+            <div class="tabs">
+                <button onclick="switchTab('privacy')" id="tab-btn-privacy" class="tab-btn active">Politique de Confidentialité</button>
+                <button onclick="switchTab('terms')" id="tab-btn-terms" class="tab-btn">Conditions d'Utilisation (CGU)</button>
+            </div>
+            
+            <div class="action-group">
+                <div class="search-container">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="search" oninput="handleSearch()" class="search-input" placeholder="Rechercher un terme...">
+                </div>
+                <button onclick="window.print()" class="icon-btn" title="Imprimer le document">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="doc-layout">
+            <!-- Sidebar links for quick jumping (Desktop only) -->
+            <aside class="sidebar" id="sidebar-privacy">
+                <a href="#p-sec-1" class="nav-item active">1. Préambule</a>
+                <a href="#p-sec-2" class="nav-item">2. Responsable du Traitement</a>
+                <a href="#p-sec-3" class="nav-item">3. Données Collectées</a>
+                <a href="#p-sec-4" class="nav-item">4. Finalités & Bases Légales</a>
+                <a href="#p-sec-5" class="nav-item">5. PostgreSQL RLS & Sécurité</a>
+                <a href="#p-sec-6" class="nav-item">6. Hébergement & Destinataires</a>
+                <a href="#p-sec-7" class="nav-item">7. Durée de Conservation</a>
+                <a href="#p-sec-8" class="nav-item">8. Vos Droits & Exercice</a>
+            </aside>
+
+            <aside class="sidebar" id="sidebar-terms" style="display: none;">
+                <a href="#t-sec-1" class="nav-item">1. Objet & Acceptation</a>
+                <a href="#t-sec-2" class="nav-item">2. Compte Élite & Sécurité</a>
+                <a href="#t-sec-3" class="nav-item">3. Services & Disponibilité</a>
+                <a href="#t-sec-4" class="nav-item">4. Intégrité & Anti-Triche</a>
+                <a href="#t-sec-5" class="nav-item">5. Conduite Communautaire</a>
+                <a href="#t-sec-6" class="nav-item">6. Pouvoirs & Sanctions</a>
+                <a href="#t-sec-7" class="nav-item">7. Propriété Intellectuelle</a>
+                <a href="#t-sec-8" class="nav-item">8. Limitation de Responsabilité</a>
+                <a href="#t-sec-9" class="nav-item">9. Loi Applicable & Juridiction</a>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="content">
+                
+                <!-- PRIVACY POLICY PANE -->
+                <div id="pane-privacy" class="doc-pane active">
+                    <div class="intro-box">
+                        <div class="intro-title">Engagement de TMAB GROUP</div>
+                        <p class="intro-text">Chez LEVELMAK, la protection des données de nos élèves et enseignants est une priorité absolue. Ce document détaille en toute transparence la collecte et l'usage de vos données personnelles.</p>
+                    </div>
+
+                    <!-- Sections -->
+                    <section id="p-sec-1" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">1. Préambule et Champ d'Application</h2>
+                            <button onclick="copySectionLink('p-sec-1')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>La présente Politique de Confidentialité a pour objet d'informer de manière complète, transparente et rigoureuse tous les utilisateurs de la plateforme LEVELMAK sur les modalités de collecte, d'utilisation, de stockage, de traitement et de protection de leurs données à caractère personnel. LEVELMAK est une plateforme éducative d'élite conçue, développée, exploitée et éditée par la société TMAB GROUP. Nous accordons une importance absolue au respect de la vie privée de nos utilisateurs et à la confidentialité de leurs données pédagogiques et personnelles.</p>
+                            <p>Cette politique s'applique sans exception à l'ensemble des services, fonctionnalités et applications fournis sous la marque LEVELMAK, incluant de manière non exhaustive la plateforme web (levelmak.app et ses sous-domaines), les applications mobiles associées, les modules d'apprentissage guidés par l'intelligence artificielle (LevelBot, Quiz IA, Générateur de Résumés, Atlas Interactif), l'Atelier d'Écriture Créative, l'Espace Professeur, ainsi que l'ensemble des serveurs et interfaces d'administration gérés par TMAB GROUP.</p>
+                            <p>En cochant la case d'acceptation lors de votre inscription ou en continuant à utiliser les services de LEVELMAK, vous déclarez avoir pris connaissance de la présente Politique de Confidentialité et vous consentez expressément au traitement de vos données personnelles conformément aux modalités décrites ci-dessous. Les mineurs d'âge scolaire accédant à la plateforme déclarent le faire avec le consentement préalable et sous la surveillance active de leurs parents ou représentants légaux.</p>
+                        </div>
+                    </section>
+
+                    <section id="p-sec-2" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">2. Responsable du Traitement des Données et Contact</h2>
+                            <button onclick="copySectionLink('p-sec-2')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>Le traitement des données à caractère personnel collectées sur la plateforme LEVELMAK est réalisé sous la responsabilité de la société TMAB GROUP, société par actions simplifiée au capital social en vigueur, ayant son siège social situé à Conakry, République de Guinée.</p>
+                            <p>Pour garantir la conformité de nos traitements avec les réglementations en vigueur et veiller à la sécurité de vos informations privées, TMAB GROUP a désigné un Délégué à la Protection des Données (DPO). Vous pouvez le contacter directement pour toute question relative à vos données, pour faire valoir vos droits d'accès ou demander une suppression de compte :</p>
+                            <ul>
+                                <li><strong>Par courrier électronique :</strong> Tmab6544@gmail.com (en indiquant comme objet 'Protection des Données - DPO').</li>
+                                <li><strong>Par courrier postal :</strong> TMAB GROUP, Direction des Affaires Juridiques et du Numérique, Conakry, République de Guinée.</li>
+                            </ul>
+                            <p>Nous nous engageons à répondre à toute demande écrite relative à l'exercice de vos droits dans un délai maximum de soixante-douze (72) heures à compter de la réception de votre courriel.</p>
+                        </div>
+                    </section>
+
+                    <section id="p-sec-3" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">3. Catégories de Données Personnelles Collectées</h2>
+                            <button onclick="copySectionLink('p-sec-3')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>TMAB GROUP applique le principe de minimisation des données : nous ne collectons que les informations strictement nécessaires à la fourniture de nos services éducatifs, à la sécurité du système et à l'amélioration de votre expérience utilisateur. Les données collectées se répartissent comme suit :</p>
+                            <ul>
+                                <li><strong>Données d'identification et de profil :</strong> Lors de la création de votre Compte Élite, vous devez obligatoirement fournir votre nom de famille, votre prénom, un pseudonyme (pseudo unique) et votre niveau scolaire (classe). Les enseignants doivent également indiquer leur établissement scolaire de rattachement. Les utilisateurs peuvent facultativement téléverser une photo de profil (avatar).</li>
+                                <li><strong>Données de contact et de sécurité :</strong> L'inscription requiert une adresse e-mail valide et fonctionnelle ainsi qu'un numéro de téléphone portable actif. Ces informations sont cruciales pour authentifier l'utilisateur, valider la création du compte, envoyer des notifications d'activité importantes et permettre la récupération sécurisée des identifiants d'accès.</li>
+                                <li><strong>Pièces justificatives administratives (Enseignants) :</strong> Afin de garantir l'intégrité de la plateforme et d'empêcher les usurpations de fonction, les personnes s'inscrivant en tant qu'enseignants doivent soumettre des documents officiels attestant de leur statut (diplômes d'enseignement, carte professionnelle, attestation de service ou CV détaillé). Ces documents font l'objet d'une validation manuelle rigoureuse par nos administrateurs.</li>
+                                <li><strong>Données de progression pédagogique et d'activité :</strong> Nous enregistrons vos scores aux quiz, les réponses correctes et incorrectes, le temps de réponse moyen, votre avancement dans les modules de l'Atlas, votre solde de monnaie virtuelle (LevelCoins), vos points d'expérience (XP) cumulés, vos badges et trophées débloqués, l'historique des flashcards révisées, ainsi que l'ensemble des brouillons et œuvres littéraires rédigés et stockés dans l'Atelier d'Écriture.</li>
+                                <li><strong>Historique des interactions avec l'IA :</strong> Les requêtes formulées auprès de l'assistant pédagogique LevelBot, ainsi que les réponses générées par ce dernier, sont conservées de manière sécurisée afin de personnaliser le soutien scolaire et de corriger les erreurs de contextualisation de l'intelligence artificielle.</li>
+                                <li><strong>Données techniques de connexion et de navigation :</strong> À chaque connexion, nos serveurs collectent automatiquement des métadonnées techniques, notamment l'adresse IP de votre appareil, le type et la version du navigateur internet utilisé, le système d'exploitation de la machine, les identifiants d'appareil uniques, ainsi que les logs techniques détaillant vos actions et parcours sur la plateforme.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section id="p-sec-4" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">4. Finalités du Traitement et Bases Légales</h2>
+                            <button onclick="copySectionLink('p-sec-4')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>Le traitement de vos données personnelles repose sur différentes bases légales (exécution contractuelle, intérêt légitime, consentement explicite et obligations légales) et poursuit des finalités précises :</p>
+                            <ul>
+                                <li><strong>Exécution des services contractuels :</strong> Permettre la création, la personnalisation et la gestion technique de votre Compte Élite, enregistrer vos scores de progression, structurer le classement général des élèves et afficher vos écrits littéraires.</li>
+                                <li><strong>Contrôle, modération et statistiques par l'administration :</strong> Les administrateurs de TMAB GROUP disposent d'outils d'administration sécurisés leur donnant accès aux données des utilisateurs (pseudos, noms, prénoms, adresses e-mail et numéros de téléphone). Cet accès sert exclusivement à :
+                                    <ol style="margin: 10px 0 10px 20px; list-style-type: decimal; display: flex; flex-direction: column; gap: 6px;">
+                                        <li style="padding-left: 5px; list-style: decimal; opacity: 0.9;">Contacter un utilisateur en cas d'anomalie grave sur son compte ou pour répondre à une demande de support technique.</li>
+                                        <li style="padding-left: 5px; list-style: decimal; opacity: 0.9;">Effectuer la vérification manuelle et la certification obligatoire des dossiers des enseignants avant de leur ouvrir l'accès aux outils de gestion de classe.</li>
+                                        <li style="padding-left: 5px; list-style: decimal; opacity: 0.9;">Générer des statistiques d'usage internes et globales (nombre d'utilisateurs actifs, répartition par niveau scolaire, score de réussite moyen par matière) pour orienter le développement pédagogique de la plateforme.</li>
+                                        <li style="padding-left: 5px; list-style: decimal; opacity: 0.9;">Détecter et bloquer les comportements de triche, les tentatives de piratage, l'utilisation de scripts ou le spamming.</li>
+                                    </ol>
+                                </li>
+                                <li><strong>Amélioration pédagogique par l'IA :</strong> Analyse de vos lacunes académiques pour que LevelBot et Quiz IA puissent vous proposer des exercices de remédiation sur-mesure (base légale : consentement et intérêt légitime).</li>
+                                <li><strong>Sécurité publique et conformité légale :</strong> Conservation des logs de connexion conformément aux exigences législatives de lutte contre la cybercriminalité et collaboration avec les autorités judiciaires compétentes.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section id="p-sec-5" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">5. Sécurité et Protection des Données : PostgreSQL Row Level Security (RLS)</h2>
+                            <button onclick="copySectionLink('p-sec-5')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>TMAB GROUP met en œuvre des mesures de sécurité techniques et organisationnelles d'un niveau exceptionnel pour prévenir la perte, l'altération, la divulgation non autorisée ou l'accès illicite à vos données à caractère personnel.</p>
+                            <p>L'architecture de LEVELMAK s'appuie sur une base de données PostgreSQL gérée via les protocoles de Supabase. Pour garantir l'étanchéité absolue de vos informations privées, nous avons mis en œuvre de manière systématique la technologie de sécurité au niveau des lignes (Row Level Security - RLS) :</p>
+                            <ul>
+                                <li><strong>Principe de l'isolation des données :</strong> Chaque table de la base de données (contenant vos scores, vos messages privés, vos brouillons littéraires, vos coordonnées de contact) est soumise à des politiques RLS strictes appliquées directement par le moteur de base de données.</li>
+                                <li><strong>Interdiction d'accès transversal :</strong> Ces politiques RLS garantissent qu'un utilisateur authentifié ne peut, sous aucun prétexte, lire, modifier ou supprimer les données appartenant à un autre utilisateur. Même en cas de tentative d'injection de scripts ou de falsification des requêtes du client, la base de données rejette automatiquement tout accès n'appartenant pas à l'identifiant unique (UUID) de l'utilisateur connecté.</li>
+                                <li><strong>Cryptage et protection du réseau :</strong> Tous les flux de données entre les navigateurs des utilisateurs, nos serveurs de calcul et nos serveurs de stockage Supabase sont intégralement chiffrés à l'aide des protocoles de sécurité de transport TLS/SSL (HTTPS). Les mots de passe sont hachés de manière irréversible à l'aide d'algorithmes cryptographiques de pointe avant d'être inscrits en base.</li>
+                                <li><strong>Audits et sauvegardes :</strong> Des sauvegardes quotidiennes chiffrées sont effectuées pour parer à toute perte accidentelle. Des audits de sécurité sont périodiquement menés par l'équipe technique de TMAB GROUP pour détecter et corriger d'éventuelles vulnérabilités applicatives.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section id="p-sec-6" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">6. Hébergement, Destinataires et Non-Partage des Données</h2>
+                            <button onclick="copySectionLink('p-sec-6')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>TMAB GROUP adopte une charte éthique absolue concernant l'exploitation de vos données personnelles : nous ne vendons, ne louons, n'échangeons et ne cédons jamais vos données personnelles ou scolaires à des tiers à des fins publicitaires, commerciales ou marketing.</p>
+                            <p>Vos données sont uniquement accessibles à nos personnels internes dûment habilités dans le cadre strict de leurs fonctions de support et d'administration, ainsi qu'aux prestataires techniques de confiance indispensables à l'hébergement et au fonctionnement de la plateforme :</p>
+                            <ul>
+                                <li><strong>Supabase, Inc. (États-Unis/Europe) :</strong> Fournisseur de notre base de données PostgreSQL sécurisée et de notre système d'authentification utilisateur avec chiffrement au repos.</li>
+                                <li><strong>Vercel, Inc. (États-Unis/Europe) :</strong> Fournisseur de l'infrastructure d'hébergement web et de routage de l'application cliente.</li>
+                                <li><strong>Fournisseurs d'API d'Intelligence Artificielle :</strong> Les invites textuelles soumises à LevelBot peuvent être traitées de manière anonyme par des serveurs d'API tiers sécurisés (tels que OpenAI ou DeepSeek). Nous exigeons contractuellement que ces requêtes ne soient pas utilisées par ces intermédiaires pour entraîner leurs propres modèles d'IA publics.</li>
+                            </ul>
+                            <p>En dehors de ces sous-traitants techniques soumis à des obligations de confidentialité drastiques, vos données ne seront transmises qu'aux autorités administratives ou judiciaires si la loi guinéenne ou internationale l'exige expressément.</p>
+                        </div>
+                    </section>
+
+                    <section id="p-sec-7" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">7. Durée de Conservation des Données et Archivage</h2>
+                            <button onclick="copySectionLink('p-sec-7')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>Nous conservons vos données à caractère personnel uniquement pendant la durée nécessaire à la réalisation des finalités pour lesquelles elles ont été collectées :</p>
+                            <ul>
+                                <li><strong>Compte Élite Actif :</strong> L'ensemble de vos données de profil, de progression, de LevelCoins et d'écrits littéraires est conservé sans limite de durée tant que votre compte reste actif.</li>
+                                <li><strong>Inactivité prolongée :</strong> En cas d'inactivité complète et ininterrompue de votre part pendant une période de vingt-quatre (24) mois consécutifs, votre compte sera qualifié d'inactif. TMAB GROUP vous enverra une notification de rappel à l'adresse e-mail associée. En l'absence de réponse ou de reconnexion dans un délai de trente (30) jours, votre compte sera définitivement supprimé ou rendu totalement anonyme à des fins statistiques pures.</li>
+                                <li><strong>Suppression immédiate des pièces d'enseignants :</strong> TMAB GROUP s'engage fermement à supprimer définitivement et de façon irréversible de ses serveurs et de ses espaces de stockage de fichiers tous les justificatifs (diplômes, CV, badges professionnels) transmis par un enseignant immédiatement après la validation manuelle de son profil. Aucune copie de ces pièces d'identité académiques n'est conservée à long terme afin d'éviter toute fuite de documents sensibles.</li>
+                                <li><strong>Données supprimées à la demande :</strong> Si vous demandez la suppression de votre compte, toutes les données associées (y compris vos écrits de l'Atelier non partagés publiquement) seront définitivement effacées de nos bases de données de production sous quatorze (14) jours, sous réserve du maintien temporaire dans nos sauvegardes sécurisées (restaurées uniquement en cas de sinistre technique).</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section id="p-sec-8" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">8. Vos Droits en tant qu'Utilisateur et Modalités d'Exercice</h2>
+                            <button onclick="copySectionLink('p-sec-8')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>Conformément aux législations relatives à la protection de la vie privée et des données personnelles, vous disposez d'un contrôle total sur vos données à caractère personnel. Vos droits incluent :</p>
+                            <ul>
+                                <li><strong>Droit d'information et d'accès :</strong> Le droit d'obtenir la confirmation que vos données sont traitées, d'accéder à l'ensemble de ces données et d'obtenir une copie dans un format lisible.</li>
+                                <li><strong>Droit de rectification :</strong> Le droit de demander la mise à jour, la correction ou la complétion de vos données personnelles si elles s'avèrent inexactes ou incomplètes (ce que vous pouvez également faire directement depuis votre écran de profil dans LEVELMAK).</li>
+                                <li><strong>Droit à l'effacement ("Droit à l'oubli") :</strong> Le droit d'exiger la suppression complète et définitive de votre Compte Élite et de toutes les données associées de nos bases opérationnelles.</li>
+                                <li><strong>Droit d'opposition et de retrait :</strong> Le droit de retirer à tout moment votre consentement au traitement de vos données (par exemple pour l'analyse par l'IA), étant entendu que cela peut rendre impossible la fourniture de la majorité des outils interactifs de LEVELMAK.</li>
+                                <li><strong>Droit à la limitation du traitement :</strong> Le droit de demander que vos données cessent d'être traitées temporairement tout en étant conservées, le temps de mener une vérification.</li>
+                            </ul>
+                            <p>Pour exercer l'un quelconque de vos droits, ou pour soumettre une question concernant notre politique de confidentialité, veuillez envoyer un message clair précisant votre pseudo et vos coordonnées à : <strong>Tmab6544@gmail.com</strong>. Nous prendrons contact avec vous afin de vérifier votre identité avant d'exécuter la demande, protégeant ainsi votre compte contre toute usurpation ou manipulation malveillante.</p>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- TERMS OF SERVICE PANE -->
+                <div id="pane-terms" class="doc-pane">
+                    <div class="intro-box">
+                        <div class="intro-title">Charte de l'Elite Student</div>
+                        <p class="intro-text">En accédant à LEVELMAK, vous rejoignez une communauté d'apprentissage axée sur l'excellence et le mérite. Ces règles de conduite assurent la sécurité et le respect de tous.</p>
+                    </div>
+
+                    <!-- Sections -->
+                    <section id="t-sec-1" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">1. Objet et Acceptation des Conditions Générales d'Utilisation (CGU)</h2>
+                            <button onclick="copySectionLink('t-sec-1')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>Les présentes Conditions Générales d'Utilisation (ci-après désignées 'CGU') constituent un contrat synallagmatique et juridiquement contraignant conclu entre la société TMAB GROUP (l'éditeur de LEVELMAK) et toute personne physique ou morale accédant, naviguant ou utilisant les services de la plateforme LEVELMAK (ci-après désignée 'l'Utilisateur').</p>
+                            <p>Les CGU ont pour objet de définir de façon exhaustive le cadre contractuel régissant la mise à disposition de la plateforme, les droits et obligations réciproques des parties, les règles de conduite applicables aux apprenants et enseignants, ainsi que les limites de responsabilité de TMAB GROUP.</p>
+                            <p>L'accès, l'inscription, la navigation ou l'utilisation de LEVELMAK emportent l'acceptation expresse, entière, préalable et sans aucune réserve des présentes CGU par l'Utilisateur. Cette acceptation est matérialisée par le fait de cocher la case d'acceptation lors de la soumission du formulaire d'inscription. Si l'Utilisateur n'accepte pas l'une quelconque des clauses figurant dans ce document, il doit immédiatement cesser d'utiliser la plateforme, fermer son navigateur et s'abstenir de toute inscription ou connexion.</p>
+                            <p>TMAB GROUP se réserve le droit de modifier unilatéralement les présentes CGU à tout moment afin de les adapter aux évolutions techniques de la plateforme, aux changements de fonctionnalités ou aux modifications législatives. La version en vigueur des CGU est accessible en permanence sur la plateforme. L'utilisation continue des services après publication des modifications vaut acceptation tacite de la nouvelle version des CGU.</p>
+                        </div>
+                    </section>
+
+                    <section id="t-sec-2" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">2. Inscription, Authentification et Sécurité du Compte Élite</h2>
+                            <button onclick="copySectionLink('t-sec-2')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>L'accès complet aux outils pédagogiques de LEVELMAK nécessite la création obligatoire d'un espace personnel sécurisé appelé 'Compte Élite'. L'Utilisateur s'engage à fournir des informations réelles, exactes, complètes et à jour au moment de son inscription (notamment son nom, son prénom, un numéro de téléphone mobile actif et une adresse e-mail fonctionnelle). L'Utilisateur s'interdit d'utiliser des pseudonymes à caractère injurieux, couplé à une vulgarité obscène, provocateur, xénophobe ou portant atteinte à l'ordre public.</p>
+                            <p>Chaque Utilisateur ne peut créer et posséder qu'un seul et unique Compte Élite. L'utilisation d'adresses e-mail jetables, de numéros de téléphone virtuels ou de fausses identités pour créer plusieurs comptes est strictement prohibée et constitue un motif de suppression immédiate.</p>
+                            <p>L'authentification sur LEVELMAK repose sur des identifiants d'accès (e-mail/téléphone et mot de passe). Le mot de passe choisi doit respecter les critères de complexité requis par le système. L'Utilisateur est seul et unique responsable de la préservation de la confidentialité de ses identifiants de connexion. Il s'engage à ne jamais céder, prêter, vendre ou partager son compte ou ses mots de passe avec un tiers, y compris avec d'autres élèves de sa classe.</p>
+                            <p>Toute action, réponse de quiz, publication d'écrit ou commentaire réalisé depuis un Compte Élite est réputé avoir été effectué personnellement par l'Utilisateur titulaire du compte. En cas de perte, de vol ou de suspicion d'utilisation frauduleuse de ses identifiants, l'Utilisateur doit immédiatement utiliser la procédure de réinitialisation de mot de passe ou contacter sans délai notre support technique à l'adresse <strong>Tmab6544@gmail.com</strong>.</p>
+                        </div>
+                    </section>
+
+                    <section id="t-sec-3" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">3. Description Générale des Services et Disponibilité de la Plateforme</h2>
+                            <button onclick="copySectionLink('t-sec-3')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>LEVELMAK est un environnement d'apprentissage de haute performance conçu pour maximiser les résultats scolaires et stimuler l'écriture créative. La plateforme intègre notamment :</p>
+                            <ul>
+                                <li><strong>L'Atlas :</strong> Un espace regroupant des résumés de cours, des fiches de synthèse structurées et des flashcards d'apprentissage espacé.</li>
+                                <li><strong>Le Quiz IA :</strong> Un module d'entraînement interactif générant des questions adaptées au niveau de l'apprenant pour consolider les connaissances.</li>
+                                <li><strong>LevelBot :</strong> Un assistant pédagogique virtuel exploitant l'intelligence artificielle pour répondre aux questions scolaires des élèves et leur proposer des explications pas-à-pas.</li>
+                                <li><strong>L'Atelier d'Écriture :</strong> Un atelier littéraire collaboratif permettant de rédiger des manuscrits, de soumettre ses écrits à l'évaluation par l'IA et de publier des œuvres à destination de la communauté.</li>
+                                <li><strong>L'Espace Professeur :</strong> Un panneau d'outils administratifs réservé aux enseignants vérifiés pour suivre les progressions scolaires, assigner des devoirs et analyser les performances de leurs classes.</li>
+                            </ul>
+                            <p>TMAB GROUP s'efforce d'assurer une disponibilité continue de la plateforme 24 heures sur 24 et 7 jours sur 7. Toutefois, l'Utilisateur est averti que l'accès peut être suspendu temporairement et sans préavis pour des raisons techniques, des opérations de maintenance programmée des serveurs, des mises à jour applicatives, des surcharges réseau ou des pannes imputables à nos hébergeurs tiers. TMAB GROUP exclut toute responsabilité quant aux conséquences d'une indisponibilité technique de la plateforme, d'une perte temporaire de connexion internet de l'Utilisateur ou d'un bug système empêchant la validation d'un quiz.</p>
+                        </div>
+                    </section>
+
+                    <section id="t-sec-4" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">4. Règles d'Or de l'Intégrité Pédagogique et Anti-Triche</h2>
+                            <button onclick="copySectionLink('t-sec-4')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>LEVELMAK valorise l'excellence académique, l'effort personnel et l'intégrité morale. L'esprit de triche ou de fraude est en contradiction directe avec les valeurs de la plateforme. En conséquence, chaque Utilisateur s'engage formellement à respecter les règles d'intégrité suivantes :</p>
+                            <ul>
+                                <li><strong>Interdiction absolue de tricher :</strong> L'Utilisateur doit résoudre les quiz par ses propres moyens intellectuels. Il est strictement interdit d'utiliser des scripts informatiques, des extensions de navigateur, des bots automatisés ou des méthodes de triche pour valider artificiellement des quiz, accumuler des points d'expérience (XP) ou générer frauduleusement de la monnaie virtuelle (LevelCoins).</li>
+                                <li><strong>Exploitation de failles :</strong> L'exploitation de failles techniques, de bugs applicatifs ou d'anomalies logicielles pour obtenir des récompenses ou modifier son score dans le classement général est strictement interdite. Tout Utilisateur découvrant une faille s'engage à la signaler immédiatement à l'administration de LEVELMAK.</li>
+                                <li><strong>Plagiat littéraire :</strong> Dans l'Atelier d'Écriture, l'Utilisateur s'engage à ne publier que des textes dont il est le véritable auteur original. Le plagiat de livres, d'articles, de textes d'autres élèves ou de contenus générés en masse par des intelligences artificielles externes sans apport créatif personnel est prohibé.</li>
+                                <li><strong>Respect du code source :</strong> L'Utilisateur s'interdit de procéder à toute opération de reverse engineering, décompilation, extraction massive de base de données (scraping), introduction de virus, vers ou logiciels malveillants sur la plateforme.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section id="t-sec-5" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">5. Charte de Conduite Communautaire, Respect Mutuel et Signalement</h2>
+                            <button onclick="copySectionLink('t-sec-5')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>LEVELMAK est un espace d'apprentissage bienveillant, sécurisé et stimulant pour tous. Pour préserver cette atmosphère d'entraide, l'Utilisateur s'engage à respecter les règles de politesse et de respect d'autrui lors de la rédaction de commentaires, de critiques littéraires dans l'Atelier d'Écriture, ou de messages d'entraide.</p>
+                            <p>Sont strictement interdits sur l'intégralité de la plateforme sous peine de sanctions immédiates :</p>
+                            <ul>
+                                <li>Tout commentaire ou écrit injurieux, vulgaire, offensant, obscène, diffamatoire ou menaçant.</li>
+                                <li>Les propos à caractère raciste, sexophobe, homophobe, xénophobe, harcelant, incitant à la haine ou faisant l'apologie de la violence ou de crimes.</li>
+                                <li>Les détails font la perfection, et la perfection n'est pas un détail.</li>
+                                <li>La publication d'informations privées appartenant à un tiers (numéros de téléphone, adresses e-mail réelles, photos) sans son accord écrit préalable.</li>
+                                <li>Le spamming, la publicité non sollicitée, la promotion d'autres applications ou sites concurrents.</li>
+                            </ul>
+                            <p>LEVELMAK intègre un système de signalement des abus. Tout Utilisateur constatant un contenu inapproprié, un écrit plagié ou un comportement abusif peut le signaler en cliquant sur le bouton de signalement approprié ou en écrivant directement au support. TMAB GROUP s'engage à examiner chaque signalement avec diligence et à prendre les mesures qui s'imposent sous 24 heures.</p>
+                        </div>
+                    </section>
+
+                    <section id="t-sec-6" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">6. Pouvoirs et Sanctions Administratives de l'Équipe TMAB GROUP</h2>
+                            <button onclick="copySectionLink('t-sec-6')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>L'équipe administrative de TMAB GROUP assure le contrôle opérationnel de la plateforme et le respect de la charte de bonne conduite. Pour maintenir la sécurité et l'intégrité de la communauté, les administrateurs disposent de pouvoirs étendus pour sanctionner les dérives pédagogiques ou comportementales.</p>
+                            <p>En cas de triche avérée, de plagiat, de propos haineux ou de contournement des systèmes de sécurité, les administrateurs se réservent le droit exclusif, de manière unilatérale et sans préavis, d'appliquer la gradation de sanctions administratives suivantes :</p>
+                            <ol style="margin-left: 20px; list-style-type: decimal; display: flex; flex-direction: column; gap: 8px;">
+                                <li style="opacity: 0.95;"><strong>Avertissement formel :</strong> Notification envoyée par e-mail ou sur le compte de l'élève lui rappelant ses obligations.</li>
+                                <li style="opacity: 0.95;"><strong>Réinitialisation des statistiques pédagogiques :</strong> Remise à zéro totale ou partielle de ses points d'expérience (XP), de son niveau d'entraînement, de son historique de scores ou retrait immédiat de ses LevelCoins mal acquis.</li>
+                                <li style="opacity: 0.95;"><strong>Suppression de contenu :</strong> Retrait immédiat de la plateforme de tout commentaire inapproprié, de tout avis offensant ou de tout manuscrit plagié ou non conforme de l'Atelier d'Écriture.</li>
+                                <li style="opacity: 0.95;"><strong>Suspension temporaire :</strong> Blocage de l'accès au Compte Élite pour une durée déterminée (allant de 24 heures à 30 jours selon la gravité de la faute).</li>
+                                <li class="danger-text"><strong>Bannissement définitif et clôture de compte :</strong> Résiliation immédiate de son Compte Élite avec interdiction formelle et définitive de se réinscrire sur LEVELMAK, sans recours possible et sans compensation d'aucune sorte.</li>
+                            </ol>
+                            <p style="margin-top: 10px;">Toutes les décisions administratives prises par l'équipe de TMAB GROUP sont souveraines, exécutoires et sans appel. L'Utilisateur reconnaît et accepte qu'aucune indemnisation, remboursement ou dédommagement ne pourra être réclamé suite à l'application d'une sanction administrative légitime.</p>
+                        </div>
+                    </section>
+
+                    <section id="t-sec-7" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">7. Droits de Propriété Intellectuelle et Licences</h2>
+                            <button onclick="copySectionLink('t-sec-7')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <ul>
+                                <li><strong>Propriété exclusive de LEVELMAK :</strong> L'intégralité de la plateforme LEVELMAK, incluant sans s'y limiter les codes sources, l'architecture logicielle, les bases de données, les algorithmes de l'IA LevelBot, les interfaces graphiques, le design, la charte graphique, les logos, les illustrations, l'atlas de cours, les questions de quiz et les explications académiques rédigées par nos experts pédagogiques, est la propriété exclusive et inaliénable de la société TMAB GROUP. Toute reproduction, copie, distribution, retransmission, extraction commerciale ou utilisation non autorisée de ces éléments, en tout ou en partie, est strictement interdite et constitue un délit de contrefaçon passible de poursuites judiciaires.</li>
+                                <li><strong>Propriété des écrits littéraires de l'Utilisateur :</strong> L'Utilisateur qui rédige et stocke des textes originaux (histoires, poèmes, récits, chroniques) dans l'Atelier d'Écriture reste le propriétaire intellectuel exclusif de ses créations. TMAB GROUP ne revendique aucun droit de propriété sur le contenu créatif original de ses élèves.</li>
+                                <li><strong>Licence d'hébergement et de diffusion :</strong> Afin de permettre le fonctionnement technique du service, l'Utilisateur accorde à TMAB GROUP une licence mondiale, gratuite, non exclusive, transférable et sous-licenciable d'héberger, stocker, reproduire, adapter, indexer et afficher ses écrits littéraires sur les serveurs de la plateforme.</li>
+                                <li><strong>Licence en cas de publication publique :</strong> Lorsque l'Utilisateur choisit délibérément de publier un de ses écrits littéraires en mode 'public' sur LEVELMAK, il accorde expressément à TMAB GROUP et à tous les autres utilisateurs enregistrés de la plateforme une licence non exclusive, gratuite et perpétuelle de lire, consulter, commenter, partager et référencer son œuvre à l'intérieur des espaces applicatifs de LEVELMAK. Cette licence prend fin si l'Utilisateur décide de repasser son écrit en mode 'privé' ou de le supprimer définitivement de l'Atelier d'Écriture (hors temps nécessaire à l'effacement complet des caches et sauvegardes).</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section id="t-sec-8" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">8. Limitation de Responsabilité de l'Éditeur</h2>
+                            <button onclick="copySectionLink('t-sec-8')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p>TMAB GROUP met en œuvre son expertise pour proposer un contenu pédagogique de qualité et des outils d'IA performants. Cependant, LEVELMAK est fourni à l'Utilisateur 'en l'état' et 'selon disponibilité'.</p>
+                            <p>TMAB GROUP ne saurait en aucun cas être tenu responsable de :</p>
+                            <ul>
+                                <li>L'inexactitude, des erreurs, des fautes d'orthographe ou d'éventuelles omissions dans les cours, l'atlas ou les questions de quiz rédigés ou générés par l'IA.</li>
+                                <li>Les réponses fournies par l'assistant IA LevelBot : les modèles d'IA peuvent parfois générer des informations incorrectes ou des réponses inappropriées (hallucinations d'IA). Il incombe à l'élève de recouper ces informations avec ses cours officiels.</li>
+                                <li>Les dommages indirects subis par l'Utilisateur, notamment la perte d'une opportunité scolaire, la baisse de ses notes lors d'examens officiels réels, ou les conséquences d'un échec académique.</li>
+                                <li>Les interruptions de service, les bugs bloquants, les déconnections intempestives ou les pertes de données de progression résultant de cas de force majeure (perturbations des télécommunications nationales, coupures de courant généralisées, restrictions étatiques d'accès à internet, piratage d'envergure).</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section id="t-sec-9" class="section-card">
+                        <div class="card-header">
+                            <h2 class="card-title">9. Loi Applicable, Juridiction Compétente et Autonomie des Clauses</h2>
+                            <button onclick="copySectionLink('t-sec-9')" class="copy-sec-btn" title="Copier le lien de cette section">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <ul>
+                                <li><strong>Loi applicable :</strong> Les présentes CGU, ainsi que toute relation contractuelle ou extra-contractuelle en découlant, sont régies, interprétées et soumises exclusivement aux lois en vigueur de la République de Guinée.</li>
+                                <li><strong>Règlement amiable obligatoire :</strong> En cas de litige ou de désaccord relatif à l'interprétation, la validité, l'exécution ou la résiliation des présentes CGU, les parties s'engagent impérativement à tenter de trouver une solution amiable avant de saisir les tribunaux. L'Utilisateur devra soumettre ses griefs par écrit à l'adresse <strong>Tmab6544@gmail.com</strong> en vue d'ouvrir une procédure de médiation amiable.</li>
+                                <li><strong>Juridiction compétente :</strong> À défaut de résolution amiable dans un délai de trente (30) jours calendaires à compter de la notification du litige, les tribunaux de la ville de Conakry (République de Guinée) seront seuls et exclusivement compétents pour connaître du différend, y compris en cas de référé, d'appel en garantie ou de pluralité de défendeurs.</li>
+                                <li><strong>Autonomie des clauses (Divisibilité) :</strong> Si une ou plusieurs clauses des présentes CGU devaient être déclarées nulles, inapplicables ou déclarées comme telles en application d'une loi, d'un règlement ou à la suite d'une décision définitive d'une juridiction compétente, cette nullité n'affectera en rien la validité et la force exécutoire des autres clauses qui conserveront leur plein effet.</li>
+                            </ul>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+
+        <footer>
+            <p>&copy; 2026 LEVELMAK Pro. Tous droits réservés. Édité par <a href="mailto:Tmab6544@gmail.com">TMAB GROUP</a>, Conakry, République de Guinée.</p>
+        </footer>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        Lien copié dans le presse-papiers !
+    </div>
+
+    <script>
+        // Tab switching logic
+        function switchTab(tabId) {
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tab-btn-' + tabId).classList.add('active');
+
+            // Update panes
+            document.querySelectorAll('.doc-pane').forEach(pane => pane.classList.remove('active'));
+            document.getElementById('pane-' + tabId).classList.add('active');
+
+            // Update sidebars
+            document.querySelectorAll('.sidebar').forEach(sidebar => sidebar.style.display = 'none');
+            document.getElementById('sidebar-' + tabId).style.display = 'flex';
+
+            // Reset active link and scroll to top
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            const firstLink = document.querySelector('#sidebar-' + tabId + ' .nav-item');
+            if (firstLink) firstLink.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+
+        // Active sidebar link scrolling tracking
+        window.addEventListener('scroll', () => {
+            const activeTab = document.getElementById('tab-btn-privacy').classList.contains('active') ? 'privacy' : 'terms';
+            const prefix = activeTab === 'privacy' ? 'p-sec' : 't-sec';
+            const sidebar = document.getElementById('sidebar-' + activeTab);
+            
+            const sections = document.querySelectorAll('#pane-' + activeTab + ' .section-card');
+            let currentActiveId = "";
+
+            sections.forEach(sec => {
+                const rect = sec.getBoundingClientRect();
+                // If the section top is close to the top of screen
+                if (rect.top <= 150) {
+                    currentActiveId = sec.id;
+                }
+            });
+
+            if (currentActiveId) {
+                sidebar.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('href') === '#' + currentActiveId) {
+                        item.classList.add('active');
+                    }
+                });
+            }
+        });
+
+        // Search logic
+        function handleSearch() {
+            const query = document.getElementById('search').value.toLowerCase().trim();
+            const activeTab = document.getElementById('tab-btn-privacy').classList.contains('active') ? 'privacy' : 'terms';
+            const pane = document.getElementById('pane-' + activeTab);
+            
+            // Remove previous highlights
+            removeHighlights(pane);
+
+            if (!query) return;
+
+            // Highlight new terms
+            highlightText(pane, query);
+        }
+
+        function removeHighlights(element) {
+            const marks = element.querySelectorAll('mark');
+            marks.forEach(mark => {
+                const parent = mark.parentNode;
+                parent.replaceChild(document.createTextNode(mark.textContent), mark);
+                parent.normalize(); // Merges adjacent text nodes
+            });
+        }
+
+        function highlightText(element, query) {
+            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+            const nodesToReplace = [];
+
+            let node;
+            while (node = walker.nextNode()) {
+                const text = node.nodeValue;
+                const lowerText = text.toLowerCase();
+                if (lowerText.includes(query)) {
+                    nodesToReplace.push(node);
+                }
+            }
+
+            nodesToReplace.forEach(node => {
+                const parent = node.parentNode;
+                if (parent.tagName === 'MARK' || parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') return;
+
+                const text = node.nodeValue;
+                const fragment = document.createDocumentFragment();
+                let lastIdx = 0;
+                
+                // Case-insensitive replacement
+                const regex = new RegExp('(' + escapeRegExp(query) + ')', 'gi');
+                let match;
+
+                while (match = regex.exec(text)) {
+                    const matchIdx = match.index;
+                    // Append text before match
+                    if (matchIdx > lastIdx) {
+                        fragment.appendChild(document.createTextNode(text.substring(lastIdx, matchIdx)));
+                    }
+                    // Append highlighted mark
+                    const mark = document.createElement('mark');
+                    mark.textContent = match[0];
+                    fragment.appendChild(mark);
+                    
+                    lastIdx = regex.lastIndex;
+                }
+
+                // Append text after last match
+                if (lastIdx < text.length) {
+                    fragment.appendChild(document.createTextNode(text.substring(lastIdx)));
+                }
+
+                parent.replaceChild(fragment, node);
+            });
+        }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Copy section link
+        function copySectionLink(id) {
+            const currentUrl = window.location.href.split('#')[0];
+            const link = currentUrl + '#' + id;
+            navigator.clipboard.writeText(link).then(() => {
+                const toast = document.getElementById('toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2500);
+            });
+        }
+
+        // Support direct linking on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash;
+            if (hash) {
+                if (hash.startsWith('#t-sec')) {
+                    switchTab('terms');
+                } else if (hash.startsWith('#p-sec')) {
+                    switchTab('privacy');
+                }
+                
+                // Let the browser handle scroll, but add active link
+                setTimeout(() => {
+                    const target = document.querySelector('a[href="' + hash + '"]');
+                    if (target) {
+                        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+                        target.classList.add('active');
+                        const element = document.getElementById(hash.substring(1));
+                        if (element) element.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }, 300);
+            }
+        });
+    </script>
+</body>
+</html>

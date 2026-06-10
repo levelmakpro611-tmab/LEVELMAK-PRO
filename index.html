@@ -204,6 +204,150 @@
             padding: 4px !important;
             color: #94a3b8 !important;
         }
+
+        /* Overrides for clean, high-fidelity PDF-like document printing */
+        @media print {
+            html, body, #root, main, .overflow-y-auto {
+                overflow: visible !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                background: white !important;
+                color: #0f172a !important;
+                -ms-overflow-style: auto !important;
+                scrollbar-width: auto !important;
+            }
+
+            *::-webkit-scrollbar, * {
+                scrollbar-width: auto !important;
+            }
+
+            body > div:first-child,
+            .fixed.inset-0.overflow-hidden {
+                display: none !important;
+            }
+
+            aside, 
+            header,
+            .sticky, 
+            button, 
+            .flex.gap-2.bg-black\/20, 
+            .flex-col.md\:flex-row.gap-4.bg-white\/5, 
+            .flex-col.md\:flex-row.gap-6.bg-white\/5, 
+            .grid.grid-cols-1.md\:grid-cols-3.gap-4, 
+            th:last-child, td:last-child, 
+            .print\:hidden {
+                display: none !important;
+            }
+
+            .hidden.print\:flex {
+                display: flex !important;
+                color: #0f172a !important;
+                border-bottom: 2px solid #3b82f6 !important;
+                padding-bottom: 15px !important;
+                margin-bottom: 30px !important;
+                align-items: center !important;
+                gap: 24px !important;
+            }
+            .hidden.print\:flex h1 {
+                color: #1e293b !important;
+                font-size: 24px !important;
+                margin: 0 !important;
+            }
+            .hidden.print\:flex p {
+                color: #64748b !important;
+                margin: 2px 0 0 0 !important;
+            }
+
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                background: white !important;
+                color: #1e293b !important;
+                font-size: 11px !important;
+                margin-top: 20px !important;
+            }
+            tr {
+                background: transparent !important;
+            }
+            thead tr {
+                background-color: #3b82f6 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            th {
+                background-color: #3b82f6 !important;
+                color: white !important;
+                font-weight: 700 !important;
+                font-size: 11px !important;
+                padding: 10px 8px !important;
+                border: none !important;
+                text-align: left !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            td {
+                color: #334155 !important;
+                padding: 10px 8px !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+                background: transparent !important;
+                word-break: break-word !important;
+            }
+            tbody tr:nth-child(even) {
+                background-color: #f8fafc !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            table *, td *, td p, td span {
+                color: #1e293b !important;
+            }
+            td .text-slate-500 {
+                color: #64748b !important;
+            }
+            .w-24.h-1.bg-white\/10 {
+                display: none !important;
+            }
+            td span.px-3.py-1.rounded-full {
+                background: transparent !important;
+                border: none !important;
+                padding: 0 !important;
+                font-weight: bold !important;
+            }
+            
+            .bg-black\/40.backdrop-blur-md,
+            .bg-white\/5.backdrop-blur-xl {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            .custom-scrollbar > div {
+                background: transparent !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+                padding: 10px 0 !important;
+                color: #1e293b !important;
+            }
+            .custom-scrollbar > div * {
+                color: #1e293b !important;
+            }
+            .p-2.rounded-lg {
+                background: transparent !important;
+                border: none !important;
+                padding: 0 !important;
+            }
+
+            /* Override Recharts SVG text elements on print to be dark */
+            .recharts-text, 
+            .recharts-legend-item-text,
+            .recharts-default-tooltip,
+            .recharts-tooltip-item,
+            text,
+            tspan {
+                fill: #1e293b !important;
+                color: #1e293b !important;
+            }
+        }
     </style>
 </head>
 

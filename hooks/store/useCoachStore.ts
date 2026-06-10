@@ -1,32 +1,65 @@
-import { useState, useEffect, useCallback } from 'react';
-import { CoachSession, CoachMessage, AILabSession } from '../../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { CoachSession, CoachMessage, AILabSession, User } from '../../types';
 
-export const useCoachStore = () => {
+export const useCoachStore = (
+    user?: User | null,
+    setUser?: React.Dispatch<React.SetStateAction<User | null>>
+) => {
+    const userId = user?.id;
     const [coachSessions, setCoachSessions] = useState<CoachSession[]>([]);
     const [aiLabHistory, setAiLabHistory] = useState<AILabSession[]>([]);
 
     useEffect(() => {
-        const storedCoach = localStorage.getItem('levelmak_coach_sessions');
+        const coachKey = userId ? `levelmak_${userId}_coach_sessions` : 'levelmak_coach_sessions';
+        const labKey = userId ? `levelmak_${userId}_ailab_history` : 'levelmak_ailab_history';
+
+        // Cloud recovery: if local storage is empty and cloud has backup, restore it
+        if (!localStorage.getItem(coachKey) && user?.coachSessions) {
+            localStorage.setItem(coachKey, JSON.stringify(user.coachSessions));
+        }
+        if (!localStorage.getItem(labKey) && user?.stats?.aiLabHistory) {
+            localStorage.setItem(labKey, JSON.stringify(user.stats.aiLabHistory));
+        }
+
+        const storedCoach = localStorage.getItem(coachKey);
         if (storedCoach) {
-            try { setCoachSessions(JSON.parse(storedCoach)); } catch (e) {}
+            try { setCoachSessions(JSON.parse(storedCoach)); } catch (e) { console.error(e); }
+        } else {
+            setCoachSessions([]); // Reset if new user has no sessions
         }
-        const storedLab = localStorage.getItem('levelmak_ailab_history');
+        
+        const storedLab = localStorage.getItem(labKey);
         if (storedLab) {
-            try { setAiLabHistory(JSON.parse(storedLab)); } catch (e) {}
+            try { setAiLabHistory(JSON.parse(storedLab)); } catch (e) { console.error(e); }
+        } else {
+            setAiLabHistory([]); // Reset if new user has no lab history
         }
-    }, []);
+    }, [user]);
 
     const saveCoachMessage = useCallback((sessionId: string, message: CoachMessage) => {
+        let updatedSessions: CoachSession[] = [];
         setCoachSessions(prev => {
             const updated = prev.map(s => 
                 s.id === sessionId 
                 ? { ...s, messages: [...s.messages, message], lastMessageAt: new Date().toISOString() } 
                 : s
             );
-            localStorage.setItem('levelmak_coach_sessions', JSON.stringify(updated));
+            const coachKey = userId ? `levelmak_${userId}_coach_sessions` : 'levelmak_coach_sessions';
+            localStorage.setItem(coachKey, JSON.stringify(updated));
+            updatedSessions = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    coachSessions: updatedSessions
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const createCoachSession = useCallback((firstMessage?: string) => {
         const id = `session_${Date.now()}`;
@@ -36,15 +69,29 @@ export const useCoachStore = () => {
             messages: [],
             lastUpdated: new Date().toISOString()
         };
+        let updatedSessions: CoachSession[] = [];
         setCoachSessions(prev => {
             const updated = [newSession, ...prev];
-            localStorage.setItem('levelmak_coach_sessions', JSON.stringify(updated));
+            const coachKey = userId ? `levelmak_${userId}_coach_sessions` : 'levelmak_coach_sessions';
+            localStorage.setItem(coachKey, JSON.stringify(updated));
+            updatedSessions = updated;
             return updated;
         });
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    coachSessions: updatedSessions
+                };
+            });
+        }
         return id;
-    }, []);
+    }, [userId, setUser]);
 
     const saveAILabSession = useCallback((session: AILabSession) => {
+        let updatedHistory: AILabSession[] = [];
         setAiLabHistory(prev => {
             const index = prev.findIndex(s => s.id === session.id);
             let updated;
@@ -53,26 +100,70 @@ export const useCoachStore = () => {
             } else {
                 updated = [session, ...prev];
             }
-            localStorage.setItem('levelmak_ailab_history', JSON.stringify(updated));
+            const labKey = userId ? `levelmak_${userId}_ailab_history` : 'levelmak_ailab_history';
+            localStorage.setItem(labKey, JSON.stringify(updated));
+            updatedHistory = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        aiLabHistory: updatedHistory
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const deleteAILabSession = useCallback((id: string) => {
+        let updatedHistory: AILabSession[] = [];
         setAiLabHistory(prev => {
             const updated = prev.filter(s => s.id !== id);
-            localStorage.setItem('levelmak_ailab_history', JSON.stringify(updated));
+            const labKey = userId ? `levelmak_${userId}_ailab_history` : 'levelmak_ailab_history';
+            localStorage.setItem(labKey, JSON.stringify(updated));
+            updatedHistory = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        aiLabHistory: updatedHistory
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const deleteCoachSession = useCallback((id: string) => {
+        let updatedSessions: CoachSession[] = [];
         setCoachSessions(prev => {
             const updated = prev.filter(s => s.id !== id);
-            localStorage.setItem('levelmak_coach_sessions', JSON.stringify(updated));
+            const coachKey = userId ? `levelmak_${userId}_coach_sessions` : 'levelmak_coach_sessions';
+            localStorage.setItem(coachKey, JSON.stringify(updated));
+            updatedSessions = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    coachSessions: updatedSessions
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     return {
         coachSessions,

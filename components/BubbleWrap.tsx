@@ -24,6 +24,19 @@ export const BubbleWrap: React.FC<BubbleWrapProps> = ({ onClose }) => {
   const [bubbles, setBubbles] = useState<boolean[]>(Array(GRID_SIZE).fill(false));
   const [bubbleStyles, setBubbleStyles] = useState<number[]>([]);
   const [poppedCount, setPoppedCount] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(60);
+
+  // Minuteur de détente de 1 minute (60 secondes)
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      onClose();
+      return;
+    }
+    const timer = setTimeout(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [timeLeft, onClose]);
 
   // Initialize bubble colors
   useEffect(() => {
@@ -105,6 +118,22 @@ export const BubbleWrap: React.FC<BubbleWrapProps> = ({ onClose }) => {
         <div className="text-center mb-6">
           <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Lâcher-Prise 🌈</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Éclate les bulles pour te détendre quelques instants.</p>
+        </div>
+
+        {/* Countdown Timer */}
+        <div className="mb-6 bg-slate-100 dark:bg-slate-800 p-4 rounded-3xl">
+          <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">
+            <span>Temps restant de détente</span>
+            <span className="font-mono text-primary dark:text-primary-light text-sm">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+          </div>
+          <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <motion.div 
+              className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+              initial={{ width: '100%' }}
+              animate={{ width: `${(timeLeft / 60) * 100}%` }}
+              transition={{ duration: 1, ease: 'linear' }}
+            />
+          </div>
         </div>
 
         <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-3xl mb-6">

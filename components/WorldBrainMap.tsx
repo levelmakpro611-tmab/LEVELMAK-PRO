@@ -96,6 +96,17 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [myLocation, setMyLocation] = useState<{lat: number, lng: number} | null>(null);
   const [map, setMap] = useState<L.Map | null>(null);
+
+  const isMountedRef = useRef(true);
+  const mapRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      mapRef.current = null;
+    };
+  }, []);
   const [activeBattle, setActiveBattle] = useState<any>(null);
   const [sessionScore, setSessionScore] = useState({ host: 0, guest: 0 });
   const [incomingInvite, setIncomingInvite] = useState<BattleRequest | null>(null);
@@ -108,7 +119,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUsersListOpen, setIsUsersListOpen] = useState(false);
   const channelRef = useRef<any>(null);
-  const hasCentered = useRef(false);
+  const hasCentered = useRef(!!mapFocusFeatureId);
 
   // Device-specific session ID
   const deviceSessionId = useMemo(() => `device_${Math.random().toString(36).substring(2, 12)}`, []);
@@ -156,9 +167,17 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           if (pos) {
               const { latitude, longitude } = pos.coords;
               console.log(`📍 [Map] Initial Pos: ${latitude}, ${longitude}`);
-              setMyLocation({ lat: latitude, lng: longitude });
-              setGpsStatus('locked');
-              if (map) map.flyTo([latitude, longitude], 13);
+              if (isMountedRef.current) {
+                  setMyLocation({ lat: latitude, lng: longitude });
+                  setGpsStatus('locked');
+                  if (mapRef.current && !mapFocusFeatureId) {
+                      try {
+                          mapRef.current.flyTo([latitude, longitude], 13);
+                      } catch (err) {
+                          console.warn("flyTo failed:", err);
+                      }
+                  }
+              }
           }
       } catch (e) {
           console.warn("📍 [Map] High accuracy initial fetch failed, trying fallback...", e);
@@ -166,8 +185,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               const fallbackPos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 5000 });
               if (fallbackPos) {
                   const { latitude, longitude } = fallbackPos.coords;
-                  setMyLocation({ lat: latitude, lng: longitude });
-                  setGpsStatus('locked');
+                  if (isMountedRef.current) {
+                      setMyLocation({ lat: latitude, lng: longitude });
+                      setGpsStatus('locked');
+                  }
               }
           } catch (innerE) {
               console.error("📍 [Map] All initial fetch attempts failed", innerE);
@@ -184,12 +205,17 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         if (pos) {
           const { latitude, longitude } = pos.coords;
           console.log(`📍 [Map] Watch Update: ${latitude}, ${longitude}`);
+          if (!isMountedRef.current) return;
           setMyLocation({ lat: latitude, lng: longitude });
           setGpsStatus('locked');
           
-          if (!hasCentered.current && map) {
-              map.flyTo([latitude, longitude], 13);
-              hasCentered.current = true;
+          if (!hasCentered.current && mapRef.current) {
+              try {
+                  mapRef.current.flyTo([latitude, longitude], 13);
+                  hasCentered.current = true;
+              } catch (err) {
+                  console.warn("flyTo failed in watch:", err);
+              }
           }
         }
       });
@@ -202,9 +228,9 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
 
   useEffect(() => {
     let watchId: string | null = null;
-    requestGps().then(id => { if (id) watchId = id; });
+    requestGps().then(id => { if (id && isMountedRef.current) watchId = id; });
     return () => { if (watchId) Geolocation.clearWatch({ id: watchId }); };
-  }, [map]);
+  }, []);
 
   // Presence & Database Fallback
   useEffect(() => {
@@ -313,7 +339,16 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         setActiveAtlasCategory(f.type as any);
         const coords = Array.isArray(f.coords[0]) ? (f.coords as any)[0] : f.coords;
         if (typeof coords[0] === 'number') {
-            setTimeout(() => { map.flyTo(coords, 10, { animate: true }); setMapFocusFeatureId(null); }, 500);
+            setTimeout(() => {
+                if (isMountedRef.current && mapRef.current) {
+                    try {
+                        mapRef.current.flyTo(coords, 10, { animate: true });
+                    } catch (err) {
+                        console.warn("flyTo failed in focus logic:", err);
+                    }
+                }
+                setMapFocusFeatureId(null);
+            }, 500);
         }
       }
     }
@@ -334,19 +369,15 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   };
 
   const finalUsers = useMemo(() => {
-      // Filter out ghost users and admins from presence
-      const visibleActive = activeUsers.filter(u => !u.is_ghost && !isAdminUser(u));
-      const activeIds = new Set(visibleActive.map(u => u.user_id));
+      // Filter out current user, ghost users, and admins from presence
+      const visibleActive = activeUsers.filter(u => u.user_id !== user?.id && !u.is_ghost && !isAdminUser(u));
       
       // Merge presence data with profile data (to get phone numbers etc)
-      const mergedActive = visibleActive.map(u => {
+      return visibleActive.map(u => {
           const profile = allProfiles.find(p => p.user_id === u.user_id);
           return { ...u, ...profile };
       });
-
-      const offline = allProfiles.filter(p => !activeIds.has(p.user_id) && typeof p.lat === 'number');
-      return [...mergedActive, ...offline];
-  }, [activeUsers, allProfiles]);
+  }, [activeUsers, allProfiles, user?.id]);
 
   const filteredUsers = useMemo(() => {
       const q = searchQuery.toLowerCase().trim();
@@ -413,7 +444,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               👻 Invisible
             </div>
           )}
-          <button onClick={() => { setActiveAtlasCategory('none'); setIsAtlasMenuOpen(false); setHighlightedFeatureId(null); map?.setView([10.5, -11], 6); }} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${activeAtlasCategory === 'none' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900/80 text-slate-400 border-white/10 hover:bg-slate-800'}`}><Globe size={18} /></button>
+          <button onClick={() => { setActiveAtlasCategory('none'); setIsAtlasMenuOpen(false); setHighlightedFeatureId(null); mapRef.current?.setView([10.5, -11], 6); }} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${activeAtlasCategory === 'none' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900/80 text-slate-400 border-white/10 hover:bg-slate-800'}`}><Globe size={18} /></button>
           <button onClick={() => setIsAtlasMenuOpen(!isAtlasMenuOpen)} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${isAtlasMenuOpen ? 'bg-orange-600 text-white border-orange-500' : 'bg-slate-900/80 text-slate-400 border-white/10 hover:bg-slate-800'}`}><Menu size={18} /></button>
           {isAtlasMenuOpen && (
               <div className="flex flex-col gap-2 mt-1">
@@ -423,7 +454,20 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               </div>
           )}
         </div>
-        <MapContainer center={myLocation ? [myLocation.lat, myLocation.lng] : [10.5, -11]} zoom={6} scrollWheelZoom={false} className="w-full h-full" ref={setMap as any}>
+        <MapContainer 
+            center={myLocation ? [myLocation.lat, myLocation.lng] : [10.5, -11]} 
+            zoom={6} 
+            scrollWheelZoom={false} 
+            zoomAnimation={false}
+            markerZoomAnimation={false}
+            className="w-full h-full" 
+            ref={(mapInstance) => {
+                if (mapInstance) {
+                    setMap(mapInstance);
+                    mapRef.current = mapInstance;
+                }
+            }}
+        >
             <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
             
             {activeAtlasCategory !== 'none' && ATLAS_DATA.filter(f => f.type === activeAtlasCategory).map(f => {
@@ -475,7 +519,11 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   eventHandlers={{
                     click: () => {
                         HapticFeedback.selection();
-                        map?.flyTo([u.lat, u.lng], 14);
+                        if (mapRef.current) {
+                            try {
+                                mapRef.current.flyTo([u.lat, u.lng], 14);
+                            } catch (_) {}
+                        }
                     }
                   }}
                 >
@@ -536,7 +584,11 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                     <div 
                       key={`${u.user_id}-${idx}`}
                       onClick={() => {
-                        map?.flyTo([u.lat, u.lng], 15);
+                        if (mapRef.current) {
+                            try {
+                                mapRef.current.flyTo([u.lat, u.lng], 15);
+                            } catch (_) {}
+                        }
                         HapticFeedback.selection();
                         if (window.innerWidth < 640) setIsUsersListOpen(false);
                       }}

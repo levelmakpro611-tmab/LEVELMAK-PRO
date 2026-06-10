@@ -31,7 +31,8 @@ import {
     Quote,
     List,
     FileDown,
-    Plus
+    Plus,
+    ShoppingBag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HapticFeedback } from '../services/nativeAdapters';
@@ -41,14 +42,15 @@ import { Story } from '../types';
 import { jsPDF } from 'jspdf';
 import { getVerifiedStories } from './verifiedStoriesData';
 import { writingService, ExtendedStory, generateUUID } from '../services/writingService';
+import { supabase } from '../services/supabase';
 
 const CATEGORY_KEYS = ['story', 'poem', 'column', 'essay', 'other'] as const;
 
 const CreativeWriting: React.FC = () => {
-        const { user, stories, saveStory, deleteStory, addXp, usePotion, t, settings } = useStore();
+        const { user, stories, saveStory, deleteStory, addXp, usePotion, t, settings, addNotification } = useStore();
     const language = settings.language;
     const consumables = user?.consumables || {};
-    const [activeTab, setActiveTab] = useState<'write' | 'my-stories' | 'discover'>('write');
+    const [activeTab, setActiveTab] = useState<'write' | 'my-stories' | 'discover' | 'saved'>('write');
 
     // Form State
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -80,20 +82,74 @@ const CreativeWriting: React.FC = () => {
     const [coverImage, setCoverImage] = useState<string | null>(null);
     const [discoverCategoryFilter, setDiscoverCategoryFilter] = useState<string>('all');
     
-    // Reactions state
-    const [likedStories, setLikedStories] = useState<string[]>(() => {
-        const stored = localStorage.getItem('levelmak_liked_stories');
-        return stored ? JSON.parse(stored) : [];
-    });
-    const [storyComments, setStoryComments] = useState<{[storyId: string]: Array<{id: string, author: string, text: string, date: string}>}>(() => {
-        const stored = localStorage.getItem('levelmak_story_comments');
-        return stored ? JSON.parse(stored) : {};
-    });
+    // Reactions & Saved stories state
+    const [likedStories, setLikedStories] = useState<string[]>([]);
+    const [storyComments, setStoryComments] = useState<{[storyId: string]: Array<{id: string, author: string, text: string, date: string}>}>({});
     const [commentInput, setCommentInput] = useState<string>('');
+    const [savedStoryIds, setSavedStoryIds] = useState<string[]>([]);
+    const [autoScrollSpeed, setAutoScrollSpeed] = useState<number>(0);
+    const [showScrollSpeedMenu, setShowScrollSpeedMenu] = useState<boolean>(false);
+    const readerScrollRef = React.useRef<HTMLDivElement>(null);
+
+    // Load reactions and saved stories per user
+    useEffect(() => {
+        const likedKey = user?.id ? `levelmak_${user.id}_liked_stories` : 'levelmak_liked_stories';
+        const commentsKey = user?.id ? `levelmak_${user.id}_story_comments` : 'levelmak_story_comments';
+        const savedKey = user?.id ? `levelmak_${user.id}_saved_stories` : 'levelmak_saved_stories';
+        
+        const storedLiked = localStorage.getItem(likedKey);
+        setLikedStories(storedLiked ? JSON.parse(storedLiked) : []);
+
+        const storedComments = localStorage.getItem(commentsKey);
+        setStoryComments(storedComments ? JSON.parse(storedComments) : {});
+
+        const storedSaved = localStorage.getItem(savedKey);
+        setSavedStoryIds(storedSaved ? JSON.parse(storedSaved) : []);
+    }, [user?.id]);
 
     // Realtime Supabase Feed Stories State
     const [publicDbStories, setPublicDbStories] = useState<ExtendedStory[]>([]);
     const [isDbLoading, setIsDbLoading] = useState(false);
+
+    // Auto-Scroll effect inside reading modal
+    useEffect(() => {
+        if (autoScrollSpeed === 0 || !viewingStory) return;
+        
+        let scrollAmount = 0.25; // slow (2x slower than original 0.5)
+        if (autoScrollSpeed === 2) scrollAmount = 0.6; // medium (2x slower than original 1.2)
+        if (autoScrollSpeed === 3) scrollAmount = 1.25; // fast (2x slower than original 2.5)
+
+        let animationFrameId: number;
+        let currentScroll = readerScrollRef.current ? readerScrollRef.current.scrollTop : 0;
+
+        const scroll = () => {
+            if (readerScrollRef.current) {
+                const actualScroll = readerScrollRef.current.scrollTop;
+                // If user scrolls manually, update our internal tracker
+                if (Math.abs(actualScroll - currentScroll) > 2) {
+                    currentScroll = actualScroll;
+                }
+                currentScroll += scrollAmount;
+                readerScrollRef.current.scrollTop = currentScroll;
+            }
+            animationFrameId = requestAnimationFrame(scroll);
+        };
+        
+        animationFrameId = requestAnimationFrame(scroll);
+        return () => cancelAnimationFrame(animationFrameId);
+    }, [autoScrollSpeed, viewingStory]);
+
+    const handleToggleSaveStory = (storyId: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        HapticFeedback.selection();
+        const savedKey = user?.id ? `levelmak_${user.id}_saved_stories` : 'levelmak_saved_stories';
+        setSavedStoryIds(prev => {
+            const isSaved = prev.includes(storyId);
+            const next = isSaved ? prev.filter(id => id !== storyId) : [...prev, storyId];
+            localStorage.setItem(savedKey, JSON.stringify(next));
+            return next;
+        });
+    };
 
     // Fetch and Subscribe to Supabase Feed Stories
     useEffect(() => {
@@ -121,13 +177,7 @@ const CreativeWriting: React.FC = () => {
         };
     }, []);
 
-    // Persist reactions
-    useEffect(() => {
-        localStorage.setItem('levelmak_liked_stories', JSON.stringify(likedStories));
-    }, [likedStories]);
-    useEffect(() => {
-        localStorage.setItem('levelmak_story_comments', JSON.stringify(storyComments));
-    }, [storyComments]);
+    // Reactions are persisted directly in their respective handler functions to prevent user overlap race conditions
 
     const isStoryLiked = (story: Story) => {
         if ('likesArray' in story) {
@@ -157,10 +207,20 @@ const CreativeWriting: React.FC = () => {
             
             if (currentLikes.includes(user?.id || '')) {
                 newLikes = currentLikes.filter(id => id !== user?.id);
-                setLikedStories(prev => prev.filter(id => id !== storyId));
+                setLikedStories(prev => {
+                    const next = prev.filter(id => id !== storyId);
+                    const likedKey = user?.id ? `levelmak_${user.id}_liked_stories` : 'levelmak_liked_stories';
+                    localStorage.setItem(likedKey, JSON.stringify(next));
+                    return next;
+                });
             } else {
                 newLikes = [...currentLikes, user?.id || '00000000-0000-0000-0000-000000000002'];
-                setLikedStories(prev => [...prev, storyId]);
+                setLikedStories(prev => {
+                    const next = [...prev, storyId];
+                    const likedKey = user?.id ? `levelmak_${user.id}_liked_stories` : 'levelmak_liked_stories';
+                    localStorage.setItem(likedKey, JSON.stringify(next));
+                    return next;
+                });
             }
             
             // Sync to Supabase
@@ -170,7 +230,12 @@ const CreativeWriting: React.FC = () => {
         } else {
             // Local story logic
             if (likedStories.includes(storyId)) {
-                setLikedStories(prev => prev.filter(id => id !== storyId));
+                setLikedStories(prev => {
+                    const next = prev.filter(id => id !== storyId);
+                    const likedKey = user?.id ? `levelmak_${user.id}_liked_stories` : 'levelmak_liked_stories';
+                    localStorage.setItem(likedKey, JSON.stringify(next));
+                    return next;
+                });
                 if (!isVerified) {
                     const targetStory = stories.find(s => s.id === storyId);
                     if (targetStory) {
@@ -181,7 +246,12 @@ const CreativeWriting: React.FC = () => {
                     }
                 }
             } else {
-                setLikedStories(prev => [...prev, storyId]);
+                setLikedStories(prev => {
+                    const next = [...prev, storyId];
+                    const likedKey = user?.id ? `levelmak_${user.id}_liked_stories` : 'levelmak_liked_stories';
+                    localStorage.setItem(likedKey, JSON.stringify(next));
+                    return next;
+                });
                 if (!isVerified) {
                     const targetStory = stories.find(s => s.id === storyId);
                     if (targetStory) {
@@ -424,6 +494,32 @@ const CreativeWriting: React.FC = () => {
             }
         }
 
+        // AI/Plagiarism check (not on auto-saves)
+        if (!isAuto) {
+            const existingTitles = discoverStories.map(s => s.title).filter(t => t !== title);
+            aiService.checkWritingPlagiarismAndAI(content, title, existingTitles).then(async (detection) => {
+                if (detection.isPlagiarizedOrAI) {
+                    addNotification('streak_risk', 'Alerte Plagiat / IA ⚠️', detection.reason);
+                    
+                    try {
+                        const { error: reportError } = await supabase.from('reports').insert({
+                            reporter_id: 'system',
+                            target_id: storyId,
+                            target_type: 'story',
+                            reason: `[DÉTECTION IA/PLAGIAT] Titre: "${title}". Raison: ${detection.reason}. Confiance IA: ${detection.aiConfidence}%, Plagiat: ${detection.plagiarismConfidence}%`,
+                            status: 'pending',
+                            timestamp: new Date().toISOString()
+                        });
+                        if (reportError) console.error('Error reporting plagiarized story:', reportError);
+                    } catch (reportErr) {
+                        console.error('Failed to auto-report plagiarized story:', reportErr);
+                    }
+                }
+            }).catch(err => {
+                console.error('Plagiarism detection process failed:', err);
+            });
+        }
+
         if (!isAuto) {
             HapticFeedback.success();
             setTimeout(() => setIsSaving(true), 100); // Trigger saving animation
@@ -432,6 +528,10 @@ const CreativeWriting: React.FC = () => {
     };
 
     const handleEdit = (story: Story) => {
+        if (story.authorId !== user?.id) {
+            alert("Vous n'êtes pas l'auteur de ce livre.");
+            return;
+        }
         setEditingId(story.id);
         setTitle(story.title);
         setContent(story.content);
@@ -444,6 +544,11 @@ const CreativeWriting: React.FC = () => {
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
+        const storyToDelete = stories.find(s => s.id === id) || publicDbStories.find(s => s.id === id);
+        if (storyToDelete && storyToDelete.authorId !== user?.id) {
+            alert("Vous n'êtes pas l'auteur de ce livre.");
+            return;
+        }
         if (window.confirm(t('creativeWriting.list.deleteConfirm'))) {
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             if (uuidRegex.test(id)) {
@@ -612,14 +717,14 @@ const CreativeWriting: React.FC = () => {
 
                 {/* Tab Switcher */}
                 <div className="glass p-1 rounded-xl md:rounded-[2rem] border border-white/5 flex flex-nowrap gap-1 shadow-2xl shrink-0 overflow-x-auto scrollbar-hide">
-                    {(['write', 'my-stories', 'discover'] as const).map((tab) => (
+                    {(['write', 'my-stories', 'discover', 'saved'] as const).map((tab) => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 md:flex-none px-3 md:px-8 py-2.5 md:py-3.5 rounded-lg md:rounded-[1.5rem] font-black uppercase tracking-widest text-[8px] md:text-[10px] transition-all duration-500 flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${activeTab === tab ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-glow' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
+                            onClick={() => { HapticFeedback.selection(); setActiveTab(tab); }}
+                            className={`flex-1 md:flex-none px-3 md:px-6 py-2.5 md:py-3.5 rounded-lg md:rounded-[1.5rem] font-black uppercase tracking-widest text-[8px] md:text-[10px] transition-all duration-500 flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${activeTab === tab ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-glow' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
                         >
-                            {tab === 'write' ? <PenTool className="w-3 h-3 md:w-4 md:h-4" /> : tab === 'my-stories' ? <Layout className="w-3 h-3 md:w-4 md:h-4" /> : <Globe className="w-3 h-3 md:w-4 md:h-4" />}
-                            <span>{tab === 'write' ? t('creativeWriting.tabs.write') : tab === 'my-stories' ? t('creativeWriting.tabs.myStories') : t('creativeWriting.tabs.discover')}</span>
+                            {tab === 'write' ? <PenTool className="w-3 h-3 md:w-4 md:h-4" /> : tab === 'my-stories' ? <Layout className="w-3 h-3 md:w-4 md:h-4" /> : tab === 'discover' ? <Globe className="w-3 h-3 md:w-4 md:h-4" /> : <ShoppingBag className="w-3 h-3 md:w-4 md:h-4" />}
+                            <span>{tab === 'write' ? t('creativeWriting.tabs.write') : tab === 'my-stories' ? t('creativeWriting.tabs.myStories') : tab === 'discover' ? t('creativeWriting.tabs.discover') : t('creativeWriting.tabs.saved')}</span>
                         </button>
                     ))}
                 </div>
@@ -1131,6 +1236,13 @@ const CreativeWriting: React.FC = () => {
                                                 <span className="px-3 py-1 bg-secondary/20 backdrop-blur-xl border border-secondary/20 text-secondary-light text-[8px] font-black uppercase tracking-widest rounded-full">{t(`creativeWriting.categories.${story.category as any}`)}</span>
                                                 <div className="flex gap-2">
                                                     <button
+                                                        onClick={(e) => handleToggleSaveStory(story.id, e)}
+                                                        className="p-2 bg-white/10 backdrop-blur-xl rounded-lg text-slate-300 hover:text-white transition-all hover:scale-110"
+                                                        title={savedStoryIds.includes(story.id) ? t('creativeWriting.reader.removeFromCart') : t('creativeWriting.reader.addToCart')}
+                                                    >
+                                                        <ShoppingBag size={14} className={savedStoryIds.includes(story.id) ? "fill-secondary-light text-secondary-light" : ""} />
+                                                    </button>
+                                                    <button
                                                         onClick={() => setViewingStory(story)}
                                                         className="p-2 bg-white/10 backdrop-blur-xl rounded-lg text-slate-300 hover:text-white transition-all hover:scale-110"
                                                     >
@@ -1241,7 +1353,16 @@ const CreativeWriting: React.FC = () => {
                                                     <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">{t(`creativeWriting.categories.${story.category as any}`)}</p>
                                                 </div>
                                             </div>
-                                            <span className="px-3 py-1 bg-primary/20 backdrop-blur-xl border border-primary/20 text-primary-light text-[8px] font-black uppercase tracking-widest rounded-full">{t(`creativeWriting.categories.${story.category as any}`)}</span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={(e) => handleToggleSaveStory(story.id, e)}
+                                                    className="p-2 bg-white/10 backdrop-blur-xl rounded-lg text-slate-300 hover:text-white transition-all hover:scale-110"
+                                                    title={savedStoryIds.includes(story.id) ? t('creativeWriting.reader.removeFromCart') : t('creativeWriting.reader.addToCart')}
+                                                >
+                                                    <ShoppingBag size={14} className={savedStoryIds.includes(story.id) ? "fill-secondary-light text-secondary-light" : ""} />
+                                                </button>
+                                                <span className="px-3 py-1 bg-primary/20 backdrop-blur-xl border border-primary/20 text-primary-light text-[8px] font-black uppercase tracking-widest rounded-full">{t(`creativeWriting.categories.${story.category as any}`)}</span>
+                                            </div>
                                         </div>
 
                                         <div className="space-y-3">
@@ -1277,6 +1398,104 @@ const CreativeWriting: React.FC = () => {
                     </motion.div>
                 )}
 
+                {activeTab === 'saved' && (
+                    <motion.div
+                        key="saved-tab"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                    >
+                        {(() => {
+                            const VERIFIED_STORIES: Story[] = getVerifiedStories(language);
+                            const discoverStories = [...VERIFIED_STORIES, ...publicDbStories.filter(s => !VERIFIED_STORIES.some(vs => vs.id === s.id))];
+                            const savedStories = [...stories, ...discoverStories].filter(
+                                (story, index, self) => 
+                                    savedStoryIds.includes(story.id) && self.findIndex(s => s.id === story.id) === index
+                            );
+                            if (savedStories.length === 0) {
+                                return (
+                                    <div className="col-span-full py-20 text-center text-slate-400 italic font-medium">
+                                        {t('creativeWriting.reader.emptyCart')}
+                                    </div>
+                                );
+                            }
+                            return savedStories.map(story => (
+                                <div 
+                                    key={story.id} 
+                                    onClick={() => setViewingStory(story)}
+                                    className="glass rounded-[2.5rem] border border-white/5 hover:border-primary/30 hover:scale-[1.01] transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between min-h-[300px] p-8 md:p-10"
+                                >
+                                    {/* Cover Image Background */}
+                                    <div className="absolute inset-0 z-0">
+                                        {story.coverImage ? (
+                                            <img src={story.coverImage} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-700" alt="" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-950" />
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/20" />
+                                    </div>
+
+                                    <div className="relative z-10 flex flex-col justify-between h-full space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-black/30 rounded-xl overflow-hidden border border-white/10 shrink-0">
+                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-1">
+                                                        <p className="text-white font-bold text-xs tracking-tight">{story.authorName}</p>
+                                                        {(story as any).isVerified && (
+                                                            <BadgeCheck size={12} className="text-secondary fill-secondary/20" />
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">{t(`creativeWriting.categories.${story.category as any}`)}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={(e) => handleToggleSaveStory(story.id, e)}
+                                                    className="p-2 bg-white/10 backdrop-blur-xl rounded-lg text-secondary-light hover:scale-110 active:scale-95 transition-all"
+                                                    title={t('creativeWriting.reader.removeFromCart')}
+                                                >
+                                                    <ShoppingBag size={14} className="fill-secondary-light text-secondary-light" />
+                                                </button>
+                                                <span className="px-3 py-1 bg-primary/20 backdrop-blur-xl border border-primary/20 text-primary-light text-[8px] font-black uppercase tracking-widest rounded-full">{t(`creativeWriting.categories.${story.category as any}`)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <h3 className="text-xl md:text-2xl font-display font-black text-white leading-tight group-hover:text-primary-light transition-colors line-clamp-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{story.title}</h3>
+                                            <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed font-medium">
+                                                {story.publishedContent || story.content}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-4 border-t border-white/5 relative z-20">
+                                            <div className="flex items-center gap-4">
+                                                <button
+                                                    onClick={(e) => handleToggleLike(story.id, e)}
+                                                    className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-danger hover:scale-105 active:scale-95 transition-all"
+                                                >
+                                                    <Heart size={12} className={isStoryLiked(story) ? "fill-danger text-danger" : "text-slate-400"} />
+                                                    <span>{getStoryLikes(story)}</span>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setViewingStory(story); }}
+                                                    className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                                                >
+                                                    <MessageSquare size={12} />
+                                                    <span>{getStoryComments(story).length}</span>
+                                                </button>
+                                            </div>
+                                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{new Date(story.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ));
+                        })()}
+                    </motion.div>
+                )}
+
             </AnimatePresence>
 
             {/* View Story Modal */}
@@ -1287,7 +1506,7 @@ const CreativeWriting: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setViewingStory(null)}
+                            onClick={() => { setViewingStory(null); setAutoScrollSpeed(0); setShowScrollSpeedMenu(false); }}
                             className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
                         />
                         <motion.div
@@ -1307,20 +1526,48 @@ const CreativeWriting: React.FC = () => {
                             </div>
 
                             <button
-                                onClick={() => setViewingStory(null)}
+                                onClick={() => { setViewingStory(null); setAutoScrollSpeed(0); setShowScrollSpeedMenu(false); }}
                                 className="absolute top-8 right-8 p-3 bg-white/10 backdrop-blur-md rounded-full text-slate-400 hover:text-white transition-colors z-30"
                             >
                                 <X size={20} />
                             </button>
                             
-                            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12 space-y-8">
-                                <div className="space-y-4">
-                                    <span className="px-4 py-1.5 bg-secondary/20 text-secondary-light text-[10px] font-black uppercase tracking-widest rounded-full border border-secondary/20">{t(`creativeWriting.categories.${viewingStory.category as any}`)}</span>
-                                    <h2 className="text-5xl font-display font-black text-white dark:text-white leading-none transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{viewingStory.title}</h2>
-                                    <div className="flex items-center gap-4 text-slate-200 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                                        <span>{t('creativeWriting.list.by')} {viewingStory.authorName}</span>
-                                        <span>•</span>
-                                        <span>{new Date(viewingStory.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            <div ref={readerScrollRef} className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12 space-y-8">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                                    <div className="space-y-4 flex-1">
+                                        <span className="px-4 py-1.5 bg-secondary/20 text-secondary-light text-[10px] font-black uppercase tracking-widest rounded-full border border-secondary/20">{t(`creativeWriting.categories.${viewingStory.category as any}`)}</span>
+                                        <h2 className="text-3xl md:text-5xl font-display font-black text-white dark:text-white leading-none transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{viewingStory.title}</h2>
+                                        <div className="flex items-center gap-4 text-slate-200 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                                            <span>{t('creativeWriting.list.by')} {viewingStory.authorName}</span>
+                                            <span>•</span>
+                                            <span>{new Date(viewingStory.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-3 relative z-30">
+                                        {/* Panier Button */}
+                                        <button
+                                            onClick={() => handleToggleSaveStory(viewingStory.id)}
+                                            className="px-4 py-2.5 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/10 rounded-xl text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                                        >
+                                            <ShoppingBag size={14} className={savedStoryIds.includes(viewingStory.id) ? "fill-secondary-light text-secondary-light" : ""} />
+                                            <span>{savedStoryIds.includes(viewingStory.id) ? t('creativeWriting.reader.removeFromCart') : t('creativeWriting.reader.addToCart')}</span>
+                                        </button>
+                                        
+                                        {/* AutoScroll Button */}
+                                        <button
+                                            onClick={() => { HapticFeedback.selection(); setShowScrollSpeedMenu(true); }}
+                                            className={`px-4 py-2.5 border rounded-xl text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${autoScrollSpeed > 0 ? 'bg-secondary border-secondary shadow-glow shadow-secondary/20' : 'bg-white/10 border-white/10 hover:bg-white/20'}`}
+                                        >
+                                            <Zap size={14} className={autoScrollSpeed > 0 ? "animate-pulse text-white" : "text-slate-300"} />
+                                            <span>
+                                                {t('creativeWriting.reader.autoScroll')} : {
+                                                    autoScrollSpeed === 0 ? t('creativeWriting.reader.scrollSpeed.off') :
+                                                    autoScrollSpeed === 1 ? t('creativeWriting.reader.scrollSpeed.slow') :
+                                                    autoScrollSpeed === 2 ? t('creativeWriting.reader.scrollSpeed.medium') :
+                                                    t('creativeWriting.reader.scrollSpeed.fast')
+                                                }
+                                            </span>
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="w-full bg-slate-950/70 backdrop-blur-md border border-white/15 rounded-[1.2rem] md:rounded-[2.5rem] p-6 md:p-12 shadow-2xl text-slate-100 dark:text-slate-100 [&_h1]:!text-white [&_h1]:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] [&_h2]:!text-white [&_h2]:drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] [&_p]:!text-slate-100 [&_p]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] [&_li]:!text-slate-200 [&_blockquote]:!text-slate-200 [&_strong]:!text-white">
@@ -1363,10 +1610,15 @@ const CreativeWriting: React.FC = () => {
                                                                 setPublicDbStories(prev => prev.map(s => s.id === viewingStory.id ? { ...s, commentsArray: updatedComments } : s));
                                                                 setViewingStory(prev => prev ? { ...prev, commentsArray: updatedComments } as any : null);
                                                             } else {
-                                                                setStoryComments(prev => ({
-                                                                    ...prev,
-                                                                    [viewingStory.id]: [...(prev[viewingStory.id] || []), newComment]
-                                                                }));
+                                                                setStoryComments(prev => {
+                                                                    const next = {
+                                                                        ...prev,
+                                                                        [viewingStory.id]: [...(prev[viewingStory.id] || []), newComment]
+                                                                    };
+                                                                    const commentsKey = user?.id ? `levelmak_${user.id}_story_comments` : 'levelmak_story_comments';
+                                                                    localStorage.setItem(commentsKey, JSON.stringify(next));
+                                                                    return next;
+                                                                });
                                                             }
                                                             
                                                             setCommentInput('');
@@ -1407,7 +1659,13 @@ const CreativeWriting: React.FC = () => {
                                 </div>
 
                                 {viewingStory.authorId === user?.id && (
-                                    <div className="pt-8 border-t border-white/5 flex justify-end">
+                                    <div className="pt-8 border-t border-white/5 flex justify-end gap-4 relative z-30">
+                                        <button
+                                            onClick={(e) => { handleDelete(viewingStory.id, e); setViewingStory(null); }}
+                                            className="px-8 py-5 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-red-500 hover:text-white transition-all"
+                                        >
+                                            Supprimer
+                                        </button>
                                         <button
                                             onClick={() => { handleEdit(viewingStory); setViewingStory(null); }}
                                             className="px-10 py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow hover:scale-[1.05] active:scale-95 transition-all"
@@ -1417,6 +1675,71 @@ const CreativeWriting: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* Centered Scroll Speed Selector Modal */}
+                            <AnimatePresence>
+                                {showScrollSpeedMenu && (
+                                    <div className="absolute inset-0 z-50 flex items-center justify-center p-4">
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            onClick={() => setShowScrollSpeedMenu(false)}
+                                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                                        />
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                            className="relative w-full max-w-md bg-slate-900/95 border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-2xl z-10 flex flex-col gap-5 text-center"
+                                        >
+                                            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                                                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                                    <Zap className="w-4 h-4 text-secondary-light" />
+                                                    Vitesse de défilement
+                                                </h3>
+                                                <button
+                                                    onClick={() => setShowScrollSpeedMenu(false)}
+                                                    className="p-1.5 bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                            
+                                            <p className="text-xs text-slate-400 font-medium leading-relaxed text-left">
+                                                Choisissez la vitesse à laquelle vous souhaitez que le texte défile automatiquement pendant votre lecture.
+                                            </p>
+
+                                            <div className="flex flex-col gap-2.5 mt-2">
+                                                {[
+                                                    { speed: 0, label: t('creativeWriting.reader.scrollSpeed.off'), desc: "Désactiver le défilement automatique", color: 'hover:bg-red-500/10 border-red-500/20 text-red-400' },
+                                                    { speed: 1, label: t('creativeWriting.reader.scrollSpeed.slow'), desc: "Idéal pour une lecture tranquille", color: 'hover:bg-white/5 border-white/10 text-slate-200' },
+                                                    { speed: 2, label: t('creativeWriting.reader.scrollSpeed.medium'), desc: "Vitesse de lecture standard", color: 'hover:bg-white/5 border-white/10 text-slate-200' },
+                                                    { speed: 3, label: t('creativeWriting.reader.scrollSpeed.fast'), desc: "Pour les lecteurs rapides", color: 'hover:bg-white/5 border-white/10 text-slate-200' }
+                                                ].map(opt => (
+                                                    <button
+                                                        key={opt.speed}
+                                                        onClick={() => {
+                                                            HapticFeedback.selection();
+                                                            setAutoScrollSpeed(opt.speed);
+                                                            setShowScrollSpeedMenu(false);
+                                                        }}
+                                                        className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group ${opt.color} ${autoScrollSpeed === opt.speed ? 'bg-secondary/20 border-secondary text-secondary-light font-bold' : 'bg-white/5'}`}
+                                                    >
+                                                        <div className="flex flex-col text-left">
+                                                            <span className="text-xs font-black uppercase tracking-wider">{opt.label}</span>
+                                                            <span className="text-[10px] text-slate-400 font-medium mt-0.5">{opt.desc}</span>
+                                                        </div>
+                                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${autoScrollSpeed === opt.speed ? 'border-secondary bg-secondary text-white' : 'border-slate-600'}`}>
+                                                            {autoScrollSpeed === opt.speed && <CheckCircle2 size={12} className="text-white" />}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    </div>
+                                )}
+                            </AnimatePresence>
                         </motion.div>
                     </div>
                 )}

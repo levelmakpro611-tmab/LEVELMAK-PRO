@@ -1,8 +1,36 @@
 import React, { useState } from 'react';
-import { Search, MoreVertical, Shield, Ban, Trash2, CheckCircle, XCircle, Filter, ChevronDown, User, UserX, Lock, Unlock, Mail, Phone, Calendar, GraduationCap, Award, Zap, Printer } from 'lucide-react';
+import { Search, MoreVertical, Shield, Ban, Trash2, CheckCircle, XCircle, Filter, ChevronDown, User, UserX, Lock, Unlock, Mail, Phone, Calendar, GraduationCap, Award, Zap, Printer, Bell } from 'lucide-react';
 import { UserAnalytics } from '../../types';
-import { deleteUser, suspendUser, blockUser, unblockUser, sanctionUser } from '../../services/adminService';
+import { deleteUser, suspendUser, blockUser, unblockUser, sanctionUser, deleteUserContentAndResetPoints, sendUserNotification, sendBulkNotification } from '../../services/adminService';
 import { Gavel, AlertTriangle } from 'lucide-react';
+
+const NOTIFICATION_TEMPLATES = [
+    { id: 'custom', label: 'Message personnalisé...', title: '', message: '' },
+    { 
+        id: 'plagiarism', 
+        label: 'Avertissement Plagiat', 
+        title: 'Avertissement pour Plagiat', 
+        message: 'Notre système a détecté du plagiat dans vos récents écrits. Merci de soumettre uniquement des textes originaux sous peine de suspension.' 
+    },
+    { 
+        id: 'inappropriate', 
+        label: 'Contenu inapproprié', 
+        title: 'Contenu signalé', 
+        message: 'Certains de vos écrits ont été signalés comme inappropriés. Merci de respecter notre charte communautaire.' 
+    },
+    { 
+        id: 'tasks', 
+        label: 'Travaux à faire', 
+        title: 'Devoirs et Travaux en attente', 
+        message: 'Tu as des exercices et des activités pédagogiques en attente. Ne laisse pas ton streak expirer !' 
+    },
+    { 
+        id: 'congratulations', 
+        label: 'Félicitations', 
+        title: 'Félicitations', 
+        message: 'Excellent travail sur Levelmak ! Tes efforts portent leurs fruits. Continue ainsi pour briller dans le classement !' 
+    }
+];
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import jsPDF from 'jspdf';
@@ -17,10 +45,56 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended' | 'blocked'>('all');
     const [selectedUser, setSelectedUser] = useState<UserAnalytics | null>(null);
-    const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction' | null; userId: string | null }>({ type: null, userId: null });
+    const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction' | 'reset_all' | null; userId: string | null }>({ type: null, userId: null });
     const [sanctionType, setSanctionType] = useState<'deduct_xp' | 'deduct_coins' | 'warning'>('warning');
     const [sanctionAmount, setSanctionAmount] = useState(0);
     const [loading, setLoading] = useState(false);
+
+    // Notification sending state
+    const [notifTitle, setNotifTitle] = useState('');
+    const [notifMessage, setNotifMessage] = useState('');
+    const [notifSending, setNotifSending] = useState(false);
+
+    // Bulk actions state
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+    const [bulkNotifOpen, setBulkNotifOpen] = useState(false);
+    const [bulkTitle, setBulkTitle] = useState('');
+    const [bulkMessage, setBulkMessage] = useState('');
+    const [bulkSending, setBulkSending] = useState(false);
+
+    const handleSendBulkNotif = async () => {
+        if (selectedUserIds.length === 0 || !bulkTitle || !bulkMessage) return;
+        setBulkSending(true);
+        try {
+            await sendBulkNotification(selectedUserIds, bulkTitle, bulkMessage);
+            alert(`Notification groupée envoyée à ${selectedUserIds.length} utilisateurs !`);
+            setBulkTitle('');
+            setBulkMessage('');
+            setSelectedUserIds([]);
+            setBulkNotifOpen(false);
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de l'envoi groupé de la notification");
+        } finally {
+            setBulkSending(false);
+        }
+    };
+
+    const handleSendNotif = async () => {
+        if (!selectedUser || !notifTitle || !notifMessage) return;
+        setNotifSending(true);
+        try {
+            await sendUserNotification(selectedUser.userId, notifTitle, notifMessage);
+            alert("Notification envoyée avec succès !");
+            setNotifTitle('');
+            setNotifMessage('');
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de l'envoi de la notification");
+        } finally {
+            setNotifSending(false);
+        }
+    };
 
     const filteredUsers = users.filter(user => {
         const matchesSearch = user.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -30,7 +104,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
         return matchesSearch && matchesStatus;
     });
 
-    const handleAction = async (type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction', userId: string) => {
+    const handleAction = async (type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction' | 'reset_all', userId: string) => {
         setLoading(true);
         try {
             if (type === 'delete') await deleteUser(userId);
@@ -38,6 +112,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
             else if (type === 'block') await blockUser(userId);
             else if (type === 'activate') await unblockUser(userId);
             else if (type === 'sanction') await sanctionUser(userId, sanctionType, sanctionAmount);
+            else if (type === 'reset_all') await deleteUserContentAndResetPoints(userId);
 
             onRefresh();
             setConfirmAction({ type: null, userId: null });
@@ -78,12 +153,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
             const tableData = filteredUsers.map(user => [
                 user.userName,
                 user.email,
+                user.education || 'N/A',
                 `Niv ${user.level} (${user.xp} XP)`,
                 user.status
             ]);
             autoTable(doc, {
                 startY: 40,
-                head: [['Nom', 'Email', 'Progression', 'Statut']],
+                head: [['Nom', 'Email', 'Classe', 'Progression', 'Statut']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246] }
@@ -111,7 +187,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Stats Overview */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
                 <StatCard label="Total" value={users.length} color="blue" />
                 <StatCard label="Actifs" value={users.filter(u => u.status === 'active').length} color="green" />
                 <StatCard label="Suspendus" value={users.filter(u => u.status === 'suspended').length} color="orange" />
@@ -119,7 +195,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
             </div>
 
             {/* Controls */}
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 print:hidden">
                 <div className="relative w-full md:w-96 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18} />
                     <input
@@ -161,6 +237,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-black/20 border-b border-white/10">
+                                <th className="px-4 py-4 text-center w-12">
+                                    <input 
+                                        type="checkbox"
+                                        checked={filteredUsers.length > 0 && selectedUserIds.length === filteredUsers.length}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedUserIds(filteredUsers.map(u => u.userId));
+                                            } else {
+                                                setSelectedUserIds([]);
+                                            }
+                                        }}
+                                        className="w-4 h-4 rounded border-white/10 bg-black/20 text-blue-600 focus:ring-0 outline-none cursor-pointer"
+                                    />
+                                </th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider min-w-[250px]">Utilisateur</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Niveau & XP</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Statut</th>
@@ -171,6 +261,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                         <tbody className="divide-y divide-white/5">
                             {filteredUsers.map((user) => (
                                 <tr key={user.userId} className="hover:bg-white/5 transition-colors group">
+                                    <td className="px-4 py-4 text-center">
+                                        <input 
+                                            type="checkbox"
+                                            checked={selectedUserIds.includes(user.userId)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedUserIds(prev => [...prev, user.userId]);
+                                                } else {
+                                                    setSelectedUserIds(prev => prev.filter(id => id !== user.userId));
+                                                }
+                                            }}
+                                            className="w-4 h-4 rounded border-white/10 bg-black/20 text-blue-600 focus:ring-0 outline-none cursor-pointer"
+                                        />
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black shadow-lg">
@@ -279,45 +383,102 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
 
             {/* Detail Modal */}
             {selectedUser && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedUser(null)}>
-                    <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-2xl w-full shadow-2xl space-y-8 animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-6">
-                            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-4xl text-white font-black shadow-2xl">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 overflow-y-auto flex items-start justify-center p-4 md:py-8" onClick={() => setSelectedUser(null)}>
+                    <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl space-y-6 md:space-y-8 animate-in zoom-in-95 duration-300 my-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 text-center sm:text-left">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-3xl sm:text-4xl text-white font-black shadow-2xl shrink-0">
                                 {selectedUser.userName.substring(0, 2).toUpperCase()}
                             </div>
-                            <div>
-                                <h3 className="text-3xl font-black text-white">{selectedUser.userName}</h3>
-                                <p className="text-slate-400 flex items-center gap-2 mt-1">
-                                    <Mail size={14} /> {selectedUser.email}
+                            <div className="min-w-0 w-full">
+                                <h3 className="text-2xl sm:text-3xl font-black text-white break-words">{selectedUser.userName}</h3>
+                                <p className="text-slate-400 flex items-center justify-center sm:justify-start gap-2 mt-1 truncate">
+                                    <Mail size={14} className="shrink-0" /> <span className="truncate">{selectedUser.email}</span>
                                 </p>
-                                <p className="text-slate-400 flex items-center gap-2">
-                                    <Phone size={14} /> {selectedUser.phoneNumber || 'Non renseigné'}
+                                <p className="text-slate-400 flex items-center justify-center sm:justify-start gap-2 mt-0.5">
+                                    <Phone size={14} className="shrink-0" /> {selectedUser.phoneNumber || 'Non renseigné'}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
                             <DetailItem icon={<Calendar />} label="Âge" value={selectedUser.ageRange || 'N/A'} />
                             <DetailItem icon={<User />} label="Genre" value={selectedUser.gender || 'N/A'} />
-                            <DetailItem icon={<GraduationCap />} label="Éducation" value={selectedUser.education || 'N/A'} />
+                            <DetailItem icon={<GraduationCap />} label="Classe" value={selectedUser.education || 'N/A'} />
                             <DetailItem icon={<Award />} label="Niveau" value={`Niveau ${selectedUser.level}`} />
                             <DetailItem icon={<Zap />} label="XP" value={`${selectedUser.xp} XP`} />
                             <DetailItem icon={<CheckCircle />} label="Quiz" value={`${selectedUser.quizzesCompleted} complétés`} />
                         </div>
 
-                        <div className="pt-6 border-t border-white/5 flex gap-4">
+                        {/* Custom Notification form */}
+                        <div className="pt-6 border-t border-white/5 space-y-4">
+                            <h4 className="text-sm font-black text-slate-300 uppercase tracking-wider">Envoyer une Notification Personnalisée</h4>
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Modèle de notification</label>
+                                    <select
+                                        onChange={(e) => {
+                                            const template = NOTIFICATION_TEMPLATES.find(t => t.id === e.target.value);
+                                            if (template && template.id !== 'custom') {
+                                                setNotifTitle(template.title);
+                                                setNotifMessage(template.message);
+                                            } else {
+                                                setNotifTitle('');
+                                                setNotifMessage('');
+                                            }
+                                        }}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500/50"
+                                    >
+                                        {NOTIFICATION_TEMPLATES.map(t => (
+                                            <option key={t.id} value={t.id} className="bg-slate-900 text-white">{t.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Titre de la notification (ex: Félicitations !)"
+                                    value={notifTitle}
+                                    onChange={(e) => setNotifTitle(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/50"
+                                />
+                                <textarea
+                                    placeholder="Message à envoyer..."
+                                    value={notifMessage}
+                                    onChange={(e) => setNotifMessage(e.target.value)}
+                                    rows={3}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/50 resize-none"
+                                />
+                                <button
+                                    onClick={handleSendNotif}
+                                    disabled={notifSending || !notifTitle || !notifMessage}
+                                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-600/20"
+                                >
+                                    {notifSending ? "Envoi..." : "Envoyer la notification"}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="pt-6 border-t border-white/5 flex gap-4 flex-wrap">
                             <button
                                 onClick={() => setSelectedUser(null)}
-                                className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black transition-all"
+                                className="flex-1 min-w-[120px] py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black transition-all"
                             >
                                 Fermer
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setConfirmAction({ type: 'reset_all', userId: selectedUser.userId });
+                                    setSelectedUser(null);
+                                }}
+                                className="flex-1 min-w-[120px] py-4 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/20 rounded-2xl font-black transition-all"
+                            >
+                                Sanction Totale
                             </button>
                             <button
                                 onClick={() => {
                                     setConfirmAction({ type: 'suspend', userId: selectedUser.userId });
                                     setSelectedUser(null);
                                 }}
-                                className="flex-1 py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black transition-all shadow-lg shadow-orange-600/20"
+                                className="flex-1 min-w-[120px] py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black transition-all shadow-lg shadow-orange-600/20"
                             >
                                 Suspendre
                             </button>
@@ -331,22 +492,24 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                 <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center space-y-6">
                         <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto ${
-                            confirmAction.type === 'delete' ? 'bg-red-500/20 text-red-500' : 
+                            confirmAction.type === 'delete' || confirmAction.type === 'reset_all' ? 'bg-red-500/20 text-red-500' : 
                             confirmAction.type === 'sanction' ? 'bg-yellow-500/20 text-yellow-500' :
                             'bg-orange-500/20 text-orange-500'
                         }`}>
                             {confirmAction.type === 'delete' ? <Trash2 size={40} /> : 
                              confirmAction.type === 'activate' ? <Unlock size={40} /> : 
-                             confirmAction.type === 'sanction' ? <Gavel size={40} /> :
+                             confirmAction.type === 'sanction' || confirmAction.type === 'reset_all' ? <Gavel size={40} /> :
                              <Ban size={40} />}
                         </div>
                         <div>
                             <h4 className="text-xl font-black text-white">
-                                {confirmAction.type === 'sanction' ? 'Appliquer une sanction' : 'Êtes-vous sûr ?'}
+                                {confirmAction.type === 'sanction' ? 'Appliquer une sanction' : 
+                                 confirmAction.type === 'reset_all' ? 'Sanction Totale (Vider & Réinitialiser)' : 'Êtes-vous sûr ?'}
                             </h4>
                             <p className="text-slate-400 text-sm mt-2">
                                 {confirmAction.type === 'activate' ? "Cette action rendra l'accès complet à l'utilisateur immédiatement." : 
                                  confirmAction.type === 'sanction' ? "Choisissez la sanction à appliquer à cet utilisateur." :
+                                 confirmAction.type === 'reset_all' ? "Attention : cela va supprimer TOUT le contenu généré par l'élève (commentaires, avis, histoires/messages, activités) et remettre ses XP et LevelCoins à 0." :
                                  "Cette action sur l'utilisateur est irréversible et affectera son accès à la plateforme."}
                             </p>
                         </div>
@@ -360,9 +523,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                         onChange={(e) => setSanctionType(e.target.value as any)}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm outline-none"
                                     >
-                                        <option value="warning">Avertissement</option>
-                                        <option value="deduct_xp">Retirer des XP</option>
-                                        <option value="deduct_coins">Retirer des LevelCoins</option>
+                                        <option value="warning" className="bg-slate-900 text-white">Avertissement</option>
+                                        <option value="deduct_xp" className="bg-slate-900 text-white">Retirer des XP</option>
+                                        <option value="deduct_coins" className="bg-slate-900 text-white">Retirer des LevelCoins</option>
                                     </select>
                                 </div>
                                 {sanctionType !== 'warning' && (
@@ -391,13 +554,118 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                 onClick={() => handleAction(confirmAction.type!, confirmAction.userId!)}
                                 disabled={loading}
                                 className={`flex-1 py-3 text-white rounded-xl font-bold transition-all ${
-                                    confirmAction.type === 'delete' ? 'bg-red-600 hover:bg-red-700' :
+                                    confirmAction.type === 'delete' || confirmAction.type === 'reset_all' ? 'bg-red-600 hover:bg-red-700' :
                                     confirmAction.type === 'activate' ? 'bg-green-600 hover:bg-green-700' :
                                     confirmAction.type === 'sanction' ? 'bg-yellow-600 hover:bg-yellow-700 shadow-lg shadow-yellow-600/20' :
                                     'bg-orange-600 hover:bg-orange-700'
                                 }`}
                             >
                                 {loading ? '...' : 'Confirmer'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Actions Floating Bar */}
+            {selectedUserIds.length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-white/15 px-6 py-4 rounded-2xl shadow-2xl z-40 flex items-center gap-6 animate-in slide-in-from-bottom-5 duration-300">
+                    <span className="text-sm font-bold text-white">
+                        {selectedUserIds.length} utilisateur{selectedUserIds.length > 1 ? 's' : ''} sélectionné{selectedUserIds.length > 1 ? 's' : ''}
+                    </span>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => {
+                                setBulkTitle('');
+                                setBulkMessage('');
+                                setBulkNotifOpen(true);
+                            }}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                        >
+                            <Bell size={14} /> Envoyer notification
+                        </button>
+                        <button
+                            onClick={() => setSelectedUserIds([])}
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all"
+                        >
+                            Désélectionner
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Notification Modal */}
+            {bulkNotifOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 overflow-y-auto flex items-start justify-center p-4 md:py-8" onClick={() => setBulkNotifOpen(false)}>
+                    <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 animate-in zoom-in-95 duration-300 my-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shadow-lg">
+                                <Bell size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-white">Envoi Groupé de Notification</h3>
+                                <p className="text-slate-400 text-xs mt-0.5">Envoi à {selectedUserIds.length} utilisateurs sélectionnés</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Modèle de notification</label>
+                                <select
+                                    onChange={(e) => {
+                                        const template = NOTIFICATION_TEMPLATES.find(t => t.id === e.target.value);
+                                        if (template && template.id !== 'custom') {
+                                            setBulkTitle(template.title);
+                                            setBulkMessage(template.message);
+                                        } else {
+                                            setBulkTitle('');
+                                            setBulkMessage('');
+                                        }
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500/50"
+                                >
+                                    {NOTIFICATION_TEMPLATES.map(t => (
+                                        <option key={t.id} value={t.id} className="bg-slate-900 text-white">{t.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Titre</label>
+                                <input
+                                    type="text"
+                                    placeholder="Titre de la notification"
+                                    value={bulkTitle}
+                                    onChange={(e) => setBulkTitle(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/50"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Message</label>
+                                <textarea
+                                    placeholder="Message à envoyer..."
+                                    value={bulkMessage}
+                                    onChange={(e) => setBulkMessage(e.target.value)}
+                                    rows={4}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/50 resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-4 border-t border-white/5">
+                            <button
+                                onClick={() => setBulkNotifOpen(false)}
+                                className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all text-xs uppercase"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={handleSendBulkNotif}
+                                disabled={bulkSending || !bulkTitle || !bulkMessage}
+                                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold transition-all text-xs uppercase shadow-lg shadow-blue-600/20"
+                            >
+                                {bulkSending ? "Envoi..." : "Confirmer l'envoi"}
                             </button>
                         </div>
                     </div>

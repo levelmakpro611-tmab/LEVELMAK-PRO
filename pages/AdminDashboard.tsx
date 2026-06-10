@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Shield, BarChart3, Users, Activity, MessageSquare, Star, Download, LogOut,
-    Home, TrendingUp, UserCheck, Settings, Menu, X, Bell, Magnet, Trophy, ShoppingBag, Printer
+    Home, TrendingUp, UserCheck, Settings, Menu, X, Bell, Magnet, Trophy, ShoppingBag, Printer, RefreshCw, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
@@ -14,7 +14,8 @@ import {
     getAverageRatings,
     logAdminAction,
     getDemographicStats,
-    exportUserData
+    exportUserData,
+    resetAllRatings
 } from '../services/adminService';
 import { getPendingApplications } from '../services/tutorService';
 import {
@@ -42,7 +43,7 @@ const TeacherModeration = React.lazy(() => import('../components/admin/TeacherMo
 type Tab = 'overview' | 'stats' | 'users' | 'comments' | 'ratings' | 'export' | 'monitor' | 'retention' | 'gamification' | 'security' | 'shop' | 'teachers';
 
 const AdminDashboard: React.FC = () => {
-    const { user, logout } = useStore();
+    const { user, logout, changePassword, updateProfile } = useStore();
     const [activeTab, setActiveTab] = useState<Tab>('overview');
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [users, setUsers] = useState<AdminUserAnalytics[]>([]);
@@ -63,6 +64,58 @@ const AdminDashboard: React.FC = () => {
         export: false, monitor: false, retention: false, gamification: false, security: false, shop: false, teachers: false
     });
     const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
+
+    // Profile & Password settings modal state
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [profileName, setProfileName] = useState(user?.name || '');
+    const [profilePhone, setProfilePhone] = useState(user?.phoneNumber || '');
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [profileLoading, setProfileLoading] = useState(false);
+    const [profileError, setProfileError] = useState('');
+    const [profileSuccess, setProfileSuccess] = useState('');
+
+    const openProfileModal = () => {
+        setProfileName(user?.name || '');
+        setProfilePhone(user?.phoneNumber || '');
+        setOldPassword('');
+        setNewPassword('');
+        setProfileError('');
+        setProfileSuccess('');
+        setIsProfileModalOpen(true);
+        setIsSettingsOpen(false);
+    };
+
+    const handleUpdateProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setProfileLoading(true);
+        setProfileError('');
+        setProfileSuccess('');
+
+        try {
+            // 1. Update Name/Phone in Profiles table
+            if (profileName.trim() !== (user?.name || '') || profilePhone.trim() !== (user?.phoneNumber || '')) {
+                await updateProfile(profileName, profilePhone);
+                setProfileSuccess('Profil mis à jour avec succès !');
+            }
+
+            // 2. Change password if requested
+            if (newPassword) {
+                if (oldPassword.length < 6 || newPassword.length < 6) {
+                    throw new Error('Les mots de passe doivent comporter au moins 6 caractères.');
+                }
+                await changePassword(oldPassword, newPassword);
+                setProfileSuccess(prev => prev ? prev + ' et mot de passe mis à jour !' : 'Mot de passe mis à jour avec succès !');
+                setOldPassword('');
+                setNewPassword('');
+            }
+        } catch (error: any) {
+            console.error('Error updating admin profile:', error);
+            setProfileError(error.message || 'Une erreur est survenue lors de la mise à jour.');
+        } finally {
+            setProfileLoading(false);
+        }
+    };
 
     const DEFAULT_STATS: AdminStats = {
         totalUsers: 0, activeUsers: 0, newUsersToday: 0, newUsersWeek: 0, newUsersMonth: 0, newUsersYear: 0,
@@ -243,6 +296,22 @@ const AdminDashboard: React.FC = () => {
         adminNotificationService.markAllAsRead();
     };
 
+    const handleResetRatings = async () => {
+        if (!window.confirm("Êtes-vous sûr de vouloir supprimer TOUTES les évaluations de la plateforme ? Cette action est irréversible et ramènera la note à zéro.")) return;
+        setLoading(true);
+        try {
+            await resetAllRatings();
+            localStorage.removeItem('admin_cache_overview');
+            await loadTab('ratings');
+            alert("Toutes les évaluations ont été réinitialisées à zéro.");
+        } catch (error: any) {
+            console.error("Error resetting ratings:", error);
+            alert("Erreur lors de la réinitialisation : " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Initial loading is now handled inside the content area with skeletons
     // to allow the sidebar and header to be interactive immediately.
 
@@ -255,6 +324,7 @@ const AdminDashboard: React.FC = () => {
         { id: 'stats' as Tab, icon: TrendingUp, label: 'Statistiques', badge: null },
         { id: 'users' as Tab, icon: Users, label: 'Utilisateurs', badge: users.length },
         { id: 'comments' as Tab, icon: MessageSquare, label: 'Commentaires', badge: comments.filter(c => c.status === 'pending').length },
+        { id: 'ratings' as Tab, icon: Star, label: 'Évaluations', badge: null },
         { id: 'export' as Tab, icon: Download, label: 'Exports', badge: null },
         { id: 'shop' as Tab, icon: ShoppingBag, label: 'Boutique', badge: null },
         { id: 'teachers' as Tab, icon: Shield, label: 'Enseignants', badge: null },
@@ -291,7 +361,17 @@ const AdminDashboard: React.FC = () => {
                 {/* Logo */}
                 <div className="p-5 border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-colors">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/50 shrink-0">
+                        <img 
+                            src="/logo.png" 
+                            alt="Levelmak Logo" 
+                            className="w-10 h-10 object-contain shrink-0" 
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fb = document.getElementById('sidebar-logo-fallback');
+                                if (fb) fb.style.display = 'flex';
+                            }}
+                        />
+                        <div id="sidebar-logo-fallback" style={{ display: 'none' }} className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl items-center justify-center shadow-lg shadow-blue-500/50 shrink-0">
                             <Shield className="text-white" size={20} />
                         </div>
                         <div>
@@ -390,7 +470,7 @@ const AdminDashboard: React.FC = () => {
                                 className={`p-2 rounded-xl transition-all bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 ${loadingStates[activeTab] ? 'animate-spin' : ''}`}
                                 title="Actualiser les données"
                             >
-                                <Activity size={18} className="text-slate-500 dark:text-slate-400" />
+                                <RefreshCw size={18} className="text-slate-500 dark:text-slate-400" />
                             </button>
                             <button 
                                 onClick={() => setIsPrintModalOpen(true)}
@@ -399,6 +479,15 @@ const AdminDashboard: React.FC = () => {
                             >
                                 <Printer size={18} className="text-slate-500 dark:text-slate-400" />
                             </button>
+                            {activeTab === 'ratings' && (
+                                <button 
+                                    onClick={handleResetRatings}
+                                    className="p-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl text-rose-500 hover:text-rose-600 transition-colors border border-rose-500/20"
+                                    title="Réinitialiser toutes les évaluations"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
                             <button 
                                 onClick={() => { setIsNotifOpen(!isNotifOpen); setIsSettingsOpen(false); }}
                                 className={`p-2 rounded-xl transition-all relative ${isNotifOpen ? 'bg-blue-600 text-white shadow-lg' : 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
@@ -449,10 +538,16 @@ const AdminDashboard: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="space-y-1">
-                                                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-[11px] font-bold">
+                                                <button 
+                                                    onClick={openProfileModal}
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-[11px] font-bold"
+                                                >
                                                     <Settings size={14} /> Modifier Profil
                                                 </button>
-                                                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-[11px] font-bold">
+                                                <button 
+                                                    onClick={() => { setActiveTab('security'); setIsSettingsOpen(false); }}
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-[11px] font-bold"
+                                                >
                                                     <Shield size={14} /> Sécurité Table
                                                 </button>
                                             </div>
@@ -476,7 +571,13 @@ const AdminDashboard: React.FC = () => {
                     <div className="hidden print:flex w-full mb-8 border-b border-slate-200 dark:border-slate-800 pb-6 px-8 pt-8 items-center gap-6">
                         <img src="/tmab_logo.png" alt="TMAB" className="w-24 h-24 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                         <div>
-                            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-wider">Rapport Administratif</h1>
+                            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                {activeTab === 'users' && "Rapport : Liste des Utilisateurs"}
+                                {activeTab === 'comments' && "Rapport : Commentaires Utilisateurs"}
+                                {activeTab === 'monitor' && "Rapport : Moniteur d'Activité (Spy Mode)"}
+                                {activeTab === 'stats' && "Rapport : Statistiques & Démographie"}
+                                {activeTab !== 'users' && activeTab !== 'comments' && activeTab !== 'monitor' && activeTab !== 'stats' && "Rapport Administratif"}
+                            </h1>
                             <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-1">TMAB GROUP - Excellence Éducative</p>
                             <p className="text-sm text-slate-500 mt-2">Généré par Levelmak Pro | Date : {new Date().toLocaleString('fr-FR')}</p>
                         </div>
@@ -530,6 +631,121 @@ const AdminDashboard: React.FC = () => {
                                             </button>
                                         ))}
                                     </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Modal de Modification de Profil */}
+                    <AnimatePresence>
+                        {isProfileModalOpen && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)}>
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="bg-slate-900 border border-white/10 rounded-[2rem] p-6 md:p-8 w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh]"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-3">
+                                            <div className="p-3 bg-blue-500/20 text-blue-400 rounded-xl">
+                                                <Settings size={24} />
+                                            </div>
+                                            Modifier Profil & Sécurité
+                                        </h3>
+                                        <button 
+                                            onClick={() => setIsProfileModalOpen(false)} 
+                                            className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors"
+                                        >
+                                            <X size={20}/>
+                                        </button>
+                                    </div>
+
+                                    <form onSubmit={handleUpdateProfile} className="space-y-5">
+                                        {/* Alerts */}
+                                        {profileError && (
+                                            <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 text-xs font-bold">
+                                                {profileError}
+                                            </div>
+                                        )}
+                                        {profileSuccess && (
+                                            <div className="p-3 bg-green-500/20 border border-green-500/30 rounded-xl text-green-400 text-xs font-bold">
+                                                {profileSuccess}
+                                            </div>
+                                        )}
+
+                                        {/* Profile info */}
+                                        <div className="space-y-4">
+                                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-500">Informations de Profil</h4>
+                                            <div className="space-y-2">
+                                                <label className="text-xs text-slate-400 font-bold">Nom Complet</label>
+                                                <input
+                                                    type="text"
+                                                    value={profileName}
+                                                    onChange={(e) => setProfileName(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 outline-none text-sm font-medium"
+                                                    placeholder="Nom complet"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs text-slate-400 font-bold">Téléphone / Identifiant</label>
+                                                <input
+                                                    type="text"
+                                                    value={profilePhone}
+                                                    onChange={(e) => setProfilePhone(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 outline-none text-sm font-medium"
+                                                    placeholder="Identifiant de connexion"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full h-px bg-white/10 my-4" />
+
+                                        {/* Password change */}
+                                        <div className="space-y-4">
+                                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-500">Changer de mot de passe (Optionnel)</h4>
+                                            <div className="space-y-2">
+                                                <label className="text-xs text-slate-400 font-bold">Ancien mot de passe</label>
+                                                <input
+                                                    type="password"
+                                                    value={oldPassword}
+                                                    onChange={(e) => setOldPassword(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 outline-none text-sm font-medium"
+                                                    placeholder="Entrez votre ancien mot de passe"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs text-slate-400 font-bold">Nouveau mot de passe</label>
+                                                <input
+                                                    type="password"
+                                                    value={newPassword}
+                                                    onChange={(e) => setNewPassword(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 outline-none text-sm font-medium"
+                                                    placeholder="Entrez le nouveau mot de passe"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 pt-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsProfileModalOpen(false)}
+                                                className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold uppercase text-xs transition-all active:scale-95"
+                                                disabled={profileLoading}
+                                            >
+                                                Fermer
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={profileLoading}
+                                                className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl font-bold uppercase text-xs flex items-center justify-center gap-2 hover:scale-102 transition-all shadow-glow disabled:opacity-50"
+                                            >
+                                                {profileLoading ? 'Mise à jour...' : 'Sauvegarder'}
+                                            </button>
+                                        </div>
+                                    </form>
                                 </motion.div>
                             </div>
                         )}
@@ -665,7 +881,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, avera
         </div>
 
         {/* Platform Rating */}
-        <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-600/20 dark:to-purple-600/20 backdrop-blur-xl rounded-2xl border border-blue-500/10 dark:border-blue-500/20 p-6 text-center shadow-sm transition-colors">
+        <div 
+            onClick={() => onNavigate('ratings')}
+            className="cursor-pointer hover:scale-[1.02] active:scale-95 transition-all bg-gradient-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-600/20 dark:to-purple-600/20 backdrop-blur-xl rounded-2xl border border-blue-500/10 dark:border-blue-500/20 p-6 text-center shadow-sm"
+        >
             <Star size={36} className="text-yellow-400 mx-auto mb-3" />
             <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-1 transition-colors">
                 {(averageRatings?.overall || 0).toFixed(1)} / 5.0
@@ -727,7 +946,7 @@ const RatingsTab: React.FC<RatingsTabProps> = ({ ratings, averageRatings, totalU
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 dark:from-yellow-600/20 dark:to-orange-600/20 backdrop-blur-xl rounded-2xl border border-yellow-500/10 dark:border-yellow-500/20 p-6 text-center transition-colors shadow-sm">
                 <Star size={48} className="text-yellow-400 mx-auto mb-3" />
-                <h3 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white mb-2 transition-colors">{averageRatings?.overall.toFixed(1) || '0.0'}</h3>
+                <h3 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white mb-2 transition-colors">{(averageRatings?.overall || 0).toFixed(1)}</h3>
                 <div className="flex items-center justify-center gap-1 mb-3">
                     {[1, 2, 3, 4, 5].map((star) => (
                         <Star key={star} size={20} className={star <= Math.round(averageRatings?.overall || 0) ? "text-yellow-400 fill-yellow-400" : "text-slate-300 dark:text-slate-700"} />

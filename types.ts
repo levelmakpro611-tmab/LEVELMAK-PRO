@@ -110,6 +110,14 @@ export interface User {
     booksRead: number;
     storiesWritten: number;
     flashcardsStudied: number;
+    customQuizzes?: Quiz[];
+    customDecks?: FlashcardDeck[];
+    customFlashcards?: Flashcard[];
+    customStories?: Story[];
+    customBooks?: Book[];
+    audioNotes?: any[];
+    aiLabHistory?: any[];
+    notifications?: any[];
   };
   badges: string[];
   favorites: string[];
@@ -124,6 +132,7 @@ export interface User {
   };
   lastDiceRoll?: string;
   activities?: Activity[];
+  customSubjects?: string[];
   progression?: { date: string; xp: number }[];
   seenWords?: string[];
   seenMotivations?: string[];
@@ -330,6 +339,11 @@ export interface UserAnalytics {
     target: number; // minutes
     achieved: number;
   };
+  customGoals?: {
+    id: string;
+    text: string;
+    completed: boolean;
+  }[];
   examPredictions: {
     subject: string;
     predictedScore: number;
@@ -367,7 +381,7 @@ export interface UserComment {
   userPhone?: string;
   content: string;
   rating: number; // 1-5 stars
-  category: 'quiz' | 'flashcards' | 'library' | 'coach' | 'general';
+  category: 'quiz' | 'flashcards' | 'library' | 'coach' | 'general' | 'support';
   timestamp: string;
   status: 'pending' | 'approved' | 'rejected';
   adminResponse?: string;

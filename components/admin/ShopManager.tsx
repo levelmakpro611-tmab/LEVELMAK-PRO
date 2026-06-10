@@ -9,25 +9,19 @@ import {
     Loader2,
     ShoppingBag,
     Coins,
-    Save
+    Save,
+    Gem,
+    UserCircle,
+    BadgeCheck,
+    Image as ImageIcon,
+    FlaskConical,
+    Palette
 } from 'lucide-react';
 import { getAllShopItems, addShopItem, updateShopItem, deleteShopItem } from '../../services/adminService';
 import { ShopItem } from '../../types';
-import { POTIONS } from '../../constants';
+import { POTIONS, HARDCODED_SHOP_ITEMS } from '../../constants';
 
-// Copying HARDCODED_ITEMS from Shop.tsx for the manager view
-const HARDCODED_ITEMS: Partial<ShopItem>[] = [
-    { id: 'onepiece_1', name: 'Rookie Pirate', description: 'Le début de ta légende commence ici.', price: 20, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.03.53.jpeg' },
-    { id: 'onepiece_2', name: 'Marine Cadet', description: 'Justice et honneur guident tes pas.', price: 25, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.12.jpeg' },
-    { id: 'onepiece_3', name: 'Apprenti Navigateur', description: 'Trace ta route vers Grand Line.', price: 30, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.20.jpeg' },
-    { id: 'onepiece_4', name: 'Cuisinier Débutant', description: 'Nourris tes rêves avec passion.', price: 35, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.33.jpeg' },
-    { id: 'onepiece_5', name: 'Combattant Rookie', description: 'Forge ton style de combat unique.', price: 40, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.39.jpeg' },
-    { id: 'onepiece_11', name: 'Escrimeur Confirmé', description: 'La voie du sabre te révèle.', price: 60, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.59.jpeg' },
-    { id: 'onepiece_26', name: 'Roi des Mers', description: 'Domine les océans par ta force.', price: 150, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.19.jpeg' },
-    { id: 'onepiece_49', name: 'Dieu du Soleil', description: 'Illumine le monde de ta puissance.', price: 800, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.40.jpeg' },
-    { id: 'onepiece_53', name: 'Roi des Pirates', description: 'Le One Piece t\'attend au bout du voyage.', price: 1000, category: 'avatar', image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.44.jpeg' },
-    { id: 'badge_elite', name: 'Badge Élite', description: 'Affiche ton statut d\'étudiant exceptionnel.', price: 300, category: 'badge', color: '#F59E0B' },
-];
+const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
 
 const ShopManager: React.FC = () => {
     const [items, setItems] = useState<ShopItem[]>([]);
@@ -37,6 +31,7 @@ const ShopManager: React.FC = () => {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string>('');
     const [saving, setSaving] = useState(false);
+    const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'potion' | 'wallpaper' | 'theme'>('all');
 
     const [formData, setFormData] = useState<Partial<ShopItem>>({
         name: '',
@@ -56,19 +51,30 @@ const ShopManager: React.FC = () => {
         try {
             const dbItems = await getAllShopItems();
             
+            // Map hardcoded POTIONS to force their category to 'potion', matching Shop.tsx student logic
+            const potionIds = new Set(POTIONS.map(p => p.id));
+            const potionItems: ShopItem[] = POTIONS.map(p => ({
+                ...p,
+                category: 'potion' as const
+            }));
+
             // Merge with hardcoded to show everything
             const dbIds = new Set(dbItems.map(i => i.id));
             const merged = [
                 ...dbItems,
                 ...HARDCODED_ITEMS.filter(i => !dbIds.has(i.id!)) as ShopItem[],
-                ...POTIONS.filter(i => !dbIds.has(i.id)) as any[]
+                ...potionItems.filter(i => !dbIds.has(i.id)) as ShopItem[]
             ];
             
             setItems(merged);
         } catch (error) {
             console.error('Error loading shop items:', error);
             // Fallback to hardcoded if DB fails
-            setItems([...HARDCODED_ITEMS, ...POTIONS] as any);
+            const potionItems: ShopItem[] = POTIONS.map(p => ({
+                ...p,
+                category: 'potion' as const
+            }));
+            setItems([...HARDCODED_ITEMS, ...potionItems] as any);
         } finally {
             setLoading(false);
         }
@@ -175,18 +181,66 @@ const ShopManager: React.FC = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {items.map((item) => (
-                    <motion.div
-                        key={item.id}
-                        layout
-                        className="bg-slate-900 border border-white/10 rounded-2xl p-6 space-y-4 hover:border-primary/50 transition-all group"
+            {/* Tabs */}
+            <div className="flex flex-wrap gap-2 md:gap-3 pb-2 overflow-x-auto">
+                {[
+                    { id: 'all', label: 'Tout', icon: Gem },
+                    { id: 'avatar', label: 'Avatars', icon: UserCircle },
+                    { id: 'badge', label: 'Badges', icon: BadgeCheck },
+                    { id: 'wallpaper', label: 'Fonds / Thèmes', icon: ImageIcon },
+                    { id: 'potion', label: 'Fioles', icon: FlaskConical },
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id
+                            ? 'bg-primary text-white shadow-glow'
+                            : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                            }`}
                     >
-                        <div className="aspect-square rounded-xl bg-white/5 overflow-hidden flex items-center justify-center">
-                            {item.image ? (
-                                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        <tab.icon size={14} />
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {items
+                    .filter(item => {
+                        if (activeTab === 'all') return true;
+                        if (activeTab === 'wallpaper') return item.category === 'wallpaper' || item.category === 'theme';
+                        return item.category === activeTab;
+                    })
+                    .map((item) => (
+                        <motion.div
+                            key={item.id}
+                            layout
+                            className="bg-slate-900 border border-white/10 rounded-2xl p-6 space-y-4 hover:border-primary/50 transition-all group"
+                        >
+                        <div className="aspect-square rounded-xl bg-white/5 overflow-hidden flex items-center justify-center relative">
+                            {item.category === 'avatar' || item.category === 'wallpaper' ? (
+                                item.image ? (
+                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <ShoppingBag size={48} className="text-slate-600" />
+                                )
+                            ) : item.category === 'badge' ? (
+                                <div className="relative">
+                                    <div className="absolute inset-0 blur-2xl opacity-20" style={{ backgroundColor: item.color }} />
+                                    <BadgeCheck size={80} style={{ color: item.color || '#F59E0B' }} className="relative" />
+                                </div>
+                            ) : item.category === 'potion' ? (
+                                <div className="relative w-full h-full flex items-center justify-center">
+                                    {item.image ? (
+                                        <img src={item.image} alt={item.name} className="w-full h-full object-contain p-4" />
+                                    ) : (
+                                        <FlaskConical size={64} style={{ color: item.color || '#EC4899' }} />
+                                    )}
+                                </div>
                             ) : (
-                                <ShoppingBag size={48} className="text-slate-600" />
+                                <div className="p-8 w-full h-full flex items-center justify-center" style={{ backgroundColor: `${item.color || '#3B82F6'}10` }}>
+                                    <Palette size={80} style={{ color: item.color || '#3B82F6' }} />
+                                </div>
                             )}
                         </div>
 
@@ -325,10 +379,11 @@ const ShopManager: React.FC = () => {
                                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary/50 outline-none"
                                             disabled={saving}
                                         >
-                                            <option value="avatar">Avatar</option>
-                                            <option value="badge">Badge</option>
-                                            <option value="theme">Thème</option>
-                                            <option value="potion">Potion</option>
+                                            <option value="avatar" className="bg-slate-900 text-white">Avatar</option>
+                                            <option value="badge" className="bg-slate-900 text-white">Badge</option>
+                                            <option value="wallpaper" className="bg-slate-900 text-white">Fonds (Wallpaper)</option>
+                                            <option value="theme" className="bg-slate-900 text-white">Thème</option>
+                                            <option value="potion" className="bg-slate-900 text-white">Potion</option>
                                         </select>
                                     </div>
                                 </div>

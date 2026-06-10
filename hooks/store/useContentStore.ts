@@ -1,7 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Quiz, Story, Book, Flashcard, FlashcardDeck } from '../../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Quiz, Story, Book, Flashcard, FlashcardDeck, User } from '../../types';
 
-export const useContentStore = (language: 'fr' | 'en' | 'ar' = 'fr') => {
+export const useContentStore = (
+    language: 'fr' | 'en' | 'ar' = 'fr',
+    user?: User | null,
+    setUser?: React.Dispatch<React.SetStateAction<User | null>>
+) => {
+    const userId = user?.id;
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [stories, setStories] = useState<Story[]>([]);
     const [books, setBooks] = useState<Book[]>([]);
@@ -632,11 +637,21 @@ export const useContentStore = (language: 'fr' | 'en' | 'ar' = 'fr') => {
       ];
     }, [language]);
 
-    // Load and intelligently merge content from LocalStorage on mount and language changes
+    // Load and intelligently merge content from LocalStorage on mount, language changes, and userId changes
     useEffect(() => {
+        const quizKey = userId ? `levelmak_${userId}_quizzes` : 'levelmak_quizzes';
+        const deckKey = userId ? `levelmak_${userId}_decks` : 'levelmak_decks';
+        const fcKey = userId ? `levelmak_${userId}_flashcards` : 'levelmak_flashcards';
+        const storiesKey = userId ? `levelmak_${userId}_stories` : 'levelmak_stories';
+        const booksKey = userId ? `levelmak_${userId}_books` : 'levelmak_books';
+
         // --- 1. QUIZZES MERGING ---
         const defaultQuizzes = getDefaultQuizzes();
-        const quizData = localStorage.getItem('levelmak_quizzes');
+        let quizData = localStorage.getItem(quizKey);
+        // Cloud recovery: if local storage is empty and cloud has backup, restore it
+        if (!quizData && user?.stats?.customQuizzes) {
+            quizData = JSON.stringify(user.stats.customQuizzes);
+        }
         let currentQuizzes: Quiz[] = [];
         if (quizData) {
             try { currentQuizzes = JSON.parse(quizData); } catch (e) { console.error(e); }
@@ -645,11 +660,15 @@ export const useContentStore = (language: 'fr' | 'en' | 'ar' = 'fr') => {
         const customQuizzes = currentQuizzes.filter(q => !defaultQuizzes.some(dq => dq.id === q.id));
         const mergedQuizzes = [...defaultQuizzes, ...customQuizzes];
         setQuizzes(mergedQuizzes);
-        localStorage.setItem('levelmak_quizzes', JSON.stringify(mergedQuizzes));
+        localStorage.setItem(quizKey, JSON.stringify(mergedQuizzes));
 
         // --- 2. DECK MERGING ---
         const defaultDecks = getDefaultDecks();
-        const deckData = localStorage.getItem('levelmak_decks');
+        let deckData = localStorage.getItem(deckKey);
+        // Cloud recovery
+        if (!deckData && user?.stats?.customDecks) {
+            deckData = JSON.stringify(user.stats.customDecks);
+        }
         let currentDecks: FlashcardDeck[] = [];
         if (deckData) {
             try { currentDecks = JSON.parse(deckData); } catch (e) { console.error(e); }
@@ -657,11 +676,15 @@ export const useContentStore = (language: 'fr' | 'en' | 'ar' = 'fr') => {
         const customDecks = currentDecks.filter(d => !defaultDecks.some(dd => dd.id === d.id));
         const mergedDecks = [...defaultDecks, ...customDecks];
         setDecks(mergedDecks);
-        localStorage.setItem('levelmak_decks', JSON.stringify(mergedDecks));
+        localStorage.setItem(deckKey, JSON.stringify(mergedDecks));
 
         // --- 3. FLASHCARDS MERGING ---
         const defaultFlashcards = getDefaultFlashcards();
-        const fcData = localStorage.getItem('levelmak_flashcards');
+        let fcData = localStorage.getItem(fcKey);
+        // Cloud recovery
+        if (!fcData && user?.stats?.customFlashcards) {
+            fcData = JSON.stringify(user.stats.customFlashcards);
+        }
         let currentFlashcards: Flashcard[] = [];
         if (fcData) {
             try { currentFlashcards = JSON.parse(fcData); } catch (e) { console.error(e); }
@@ -669,93 +692,248 @@ export const useContentStore = (language: 'fr' | 'en' | 'ar' = 'fr') => {
         const customFlashcards = currentFlashcards.filter(f => !defaultFlashcards.some(df => df.id === f.id));
         const mergedFlashcards = [...defaultFlashcards, ...customFlashcards];
         setFlashcards(mergedFlashcards);
-        localStorage.setItem('levelmak_flashcards', JSON.stringify(mergedFlashcards));
+        localStorage.setItem(fcKey, JSON.stringify(mergedFlashcards));
 
         // --- 4. STORIES AND BOOKS LOADING ---
+        // Cloud recovery for stories/books prior to load
+        if (!localStorage.getItem(storiesKey) && user?.stats?.customStories) {
+            localStorage.setItem(storiesKey, JSON.stringify(user.stats.customStories));
+        }
+        if (!localStorage.getItem(booksKey) && user?.stats?.customBooks) {
+            localStorage.setItem(booksKey, JSON.stringify(user.stats.customBooks));
+        }
+
         const load = (key: string, setter: (val: any) => void) => {
             const data = localStorage.getItem(key);
             if (data) {
                 try { setter(JSON.parse(data)); } catch (e) { console.error(`Error loading ${key}`, e); }
+            } else {
+                setter([]); // Reset to empty list for new/other users
             }
         };
-        load('levelmak_stories', setStories);
-        load('levelmak_books', setBooks);
-    }, [language, getDefaultQuizzes, getDefaultDecks, getDefaultFlashcards]);
+        load(storiesKey, setStories);
+        load(booksKey, setBooks);
+    }, [language, user, getDefaultQuizzes, getDefaultDecks, getDefaultFlashcards]);
 
     const saveQuiz = useCallback((quiz: Quiz) => {
+        let updatedQuizzes: Quiz[] = [];
         setQuizzes(prev => {
             const updated = [quiz, ...prev.filter(q => q.id !== quiz.id)];
-            localStorage.setItem('levelmak_quizzes', JSON.stringify(updated));
+            const quizKey = userId ? `levelmak_${userId}_quizzes` : 'levelmak_quizzes';
+            localStorage.setItem(quizKey, JSON.stringify(updated));
+            updatedQuizzes = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                const customQuizzesOnly = updatedQuizzes.filter(q => !q.id.startsWith('quiz_default_'));
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        customQuizzes: customQuizzesOnly
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const deleteQuiz = useCallback((id: string) => {
+        let updatedQuizzes: Quiz[] = [];
         setQuizzes(prev => {
             const updated = prev.filter(q => q.id !== id);
-            localStorage.setItem('levelmak_quizzes', JSON.stringify(updated));
+            const quizKey = userId ? `levelmak_${userId}_quizzes` : 'levelmak_quizzes';
+            localStorage.setItem(quizKey, JSON.stringify(updated));
+            updatedQuizzes = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                const customQuizzesOnly = updatedQuizzes.filter(q => !q.id.startsWith('quiz_default_'));
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        customQuizzes: customQuizzesOnly
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const saveStory = useCallback((story: Story) => {
+        let updatedStories: Story[] = [];
         setStories(prev => {
             const updated = [story, ...prev.filter(s => s.id !== story.id)];
-            localStorage.setItem('levelmak_stories', JSON.stringify(updated));
+            const storiesKey = userId ? `levelmak_${userId}_stories` : 'levelmak_stories';
+            localStorage.setItem(storiesKey, JSON.stringify(updated));
+            updatedStories = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        customStories: updatedStories
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const deleteStory = useCallback((id: string) => {
+        let updatedStories: Story[] = [];
         setStories(prev => {
             const updated = prev.filter(s => s.id !== id);
-            localStorage.setItem('levelmak_stories', JSON.stringify(updated));
+            const storiesKey = userId ? `levelmak_${userId}_stories` : 'levelmak_stories';
+            localStorage.setItem(storiesKey, JSON.stringify(updated));
+            updatedStories = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        customStories: updatedStories
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const saveBook = useCallback((book: Book) => {
+        let updatedBooks: Book[] = [];
         setBooks(prev => {
-            if (prev.some(b => b.title === book.title)) return prev;
+            if (prev.some(b => b.title === book.title)) {
+                updatedBooks = prev;
+                return prev;
+            }
             const updated = [book, ...prev];
-            localStorage.setItem('levelmak_books', JSON.stringify(updated));
+            const booksKey = userId ? `levelmak_${userId}_books` : 'levelmak_books';
+            localStorage.setItem(booksKey, JSON.stringify(updated));
+            updatedBooks = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        customBooks: updatedBooks
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const deleteBook = useCallback((id: string) => {
+        let updatedBooks: Book[] = [];
         setBooks(prev => {
             const updated = prev.filter(b => b.id !== id);
-            localStorage.setItem('levelmak_books', JSON.stringify(updated));
+            const booksKey = userId ? `levelmak_${userId}_books` : 'levelmak_books';
+            localStorage.setItem(booksKey, JSON.stringify(updated));
+            updatedBooks = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        customBooks: updatedBooks
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const saveFlashcardDeck = useCallback((deck: FlashcardDeck, cards: Flashcard[]) => {
+        let updatedDecks: FlashcardDeck[] = [];
+        let updatedCards: Flashcard[] = [];
         setDecks(prev => {
             const updated = [deck, ...prev.filter(d => d.id !== deck.id)];
-            localStorage.setItem('levelmak_decks', JSON.stringify(updated));
+            const deckKey = userId ? `levelmak_${userId}_decks` : 'levelmak_decks';
+            localStorage.setItem(deckKey, JSON.stringify(updated));
+            updatedDecks = updated;
             return updated;
         });
         setFlashcards(prev => {
             const updated = [...cards, ...prev.filter(c => !cards.find(nc => nc.id === c.id))];
-            localStorage.setItem('levelmak_flashcards', JSON.stringify(updated));
+            const fcKey = userId ? `levelmak_${userId}_flashcards` : 'levelmak_flashcards';
+            localStorage.setItem(fcKey, JSON.stringify(updated));
+            updatedCards = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                const customDecksOnly = updatedDecks.filter(d => !d.id.startsWith('deck_default_'));
+                const customCardsOnly = updatedCards.filter(c => !c.id.startsWith('fc_'));
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        customDecks: customDecksOnly,
+                        customFlashcards: customCardsOnly
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     const deleteFlashcardDeck = useCallback((id: string) => {
+        let updatedDecks: FlashcardDeck[] = [];
+        let updatedCards: Flashcard[] = [];
         setDecks(prev => {
             const updated = prev.filter(d => d.id !== id);
-            localStorage.setItem('levelmak_decks', JSON.stringify(updated));
+            const deckKey = userId ? `levelmak_${userId}_decks` : 'levelmak_decks';
+            localStorage.setItem(deckKey, JSON.stringify(updated));
+            updatedDecks = updated;
             return updated;
         });
         setFlashcards(prev => {
             const updated = prev.filter(c => c.deckId !== id);
-            localStorage.setItem('levelmak_flashcards', JSON.stringify(updated));
+            const fcKey = userId ? `levelmak_${userId}_flashcards` : 'levelmak_flashcards';
+            localStorage.setItem(fcKey, JSON.stringify(updated));
+            updatedCards = updated;
             return updated;
         });
-    }, []);
+
+        if (setUser) {
+            setUser(prev => {
+                if (!prev) return prev;
+                const customDecksOnly = updatedDecks.filter(d => !d.id.startsWith('deck_default_'));
+                const customCardsOnly = updatedCards.filter(c => !c.id.startsWith('fc_'));
+                return {
+                    ...prev,
+                    stats: {
+                        ...prev.stats,
+                        customDecks: customDecksOnly,
+                        customFlashcards: customCardsOnly
+                    }
+                };
+            });
+        }
+    }, [userId, setUser]);
 
     return {
         quizzes,

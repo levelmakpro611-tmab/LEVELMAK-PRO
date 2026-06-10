@@ -3,7 +3,9 @@ export type NotificationType =
     | 'mission_available'
     | 'exam_approaching'
     | 'streak_risk'
-    | 'achievement';
+    | 'achievement'
+    | 'admin'
+    | 'info';
 
 export interface AppNotification {
     id: string;

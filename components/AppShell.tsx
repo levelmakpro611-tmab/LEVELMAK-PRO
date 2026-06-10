@@ -60,7 +60,8 @@ import {
   Target,
   Clock,
   Headphones,
-  GraduationCap
+  GraduationCap,
+  Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
@@ -68,7 +69,7 @@ import { Keyboard } from '@capacitor/keyboard';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
 import NotificationCenter from './NotificationCenter';
-import { submitComment, submitRating } from '../services/adminService';
+import { submitComment, submitRating, getSupportEmail } from '../services/adminService';
 import OfflineIndicator from './OfflineIndicator';
 import { BubbleWrap } from './BubbleWrap';
 import { FloatingBubble } from './FloatingBubble';
@@ -84,7 +85,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
   const { 
     user, logout, updateProfile, addActivity, trackTime, grantBadge, 
-    notifications, addNotification, t, showBubbleWrap, setShowBubbleWrap, continuousStudyTime 
+    notifications, addNotification, t, showBubbleWrap, setShowBubbleWrap, continuousStudyTime, resetContinuousStudyTime 
   } = useStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -94,6 +95,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const [isRatingOpen, setIsRatingOpen] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const hasUnread = unreadCount > 0;
   const [userRating, setUserRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -103,6 +106,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  
+  // Support state hooks
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [supportEmail, setSupportEmail] = useState('Tmab6544@gmail.com');
+
+  React.useEffect(() => {
+    if (isHelpOpen) {
+      getSupportEmail().then(email => {
+        setSupportEmail(email);
+      }).catch(e => console.error("Could not fetch support email", e));
+    }
+  }, [isHelpOpen]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -205,8 +224,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'flashcards', label: t('nav.flashcards'), shortLabel: t('nav.short.flashcards'), icon: Layers },
     { id: 'ailab', label: t('nav.ailab'), shortLabel: t('nav.ailabShort'), icon: FlaskRound },
     { id: 'atlas', label: t('nav.atlas'), shortLabel: t('nav.short.atlas'), icon: Globe },
-    { id: 'audio_lab', label: 'Audio Lab', shortLabel: 'Audio', icon: Mic },
-    { id: 'active_visual', label: t('nav.activeVisual'), shortLabel: t('nav.short.activeVisual'), icon: Zap, hideOnMobile: true },
     { id: 'ranking', label: t('nav.ranking'), shortLabel: t('nav.short.ranking'), icon: Trophy },
     { id: 'shop', label: t('nav.shop'), shortLabel: t('nav.short.shop'), icon: ShoppingBag },
     { id: 'planner', label: t('nav.planner'), shortLabel: t('nav.short.planner'), icon: Calendar, hideOnMobile: true },
@@ -218,7 +235,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !Capacitor.isNativePlatform();
   const navItems = isLocal
     ? navItemsRaw
-    : navItemsRaw.filter(item => !['tutor_hub', 'active_visual', 'planner', 'audio_lab', 'library'].includes(item.id));
+    : navItemsRaw.filter(item => !['tutor_hub', 'planner', 'library'].includes(item.id));
 
   if (!user) return <>{children}</>;
 
@@ -238,10 +255,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             </button>
           )}
           <button onClick={() => { HapticFeedback.selection(); setIsNotifOpen(true); }} className="p-3 text-slate-600 dark:text-slate-300 relative active:scale-95 transition-all bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
-            <Bell size={22} />
-            {notifications.filter(n => !n.read).length > 0 && (
+            <Bell size={22} fill={(hasUnread && !isNotifOpen) ? "currentColor" : "none"} className={(hasUnread && !isNotifOpen) ? "animate-pulse" : ""} />
+            {hasUnread && (
               <span className="absolute top-2.5 right-2.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-black flex items-center justify-center text-white border-2 border-white dark:border-slate-900 shadow-glow animate-pulse">
-                {notifications.filter(n => !n.read).length}
+                {unreadCount}
               </span>
             )}
           </button>
@@ -340,8 +357,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               </button>
             )}
             <button onClick={() => { HapticFeedback.selection(); setIsNotifOpen(true); }} className="relative p-3 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-all group border border-transparent hover:border-black/5 dark:hover:border-white/10">
-              <Bell size={28} className="group-hover:rotate-12 transition-transform" />
-              <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#060915] animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"></span>
+              <Bell size={28} fill={(hasUnread && !isNotifOpen) ? "currentColor" : "none"} className={`group-hover:rotate-12 transition-transform ${(hasUnread && !isNotifOpen) ? "animate-pulse" : ""}`} />
+              {hasUnread && (
+                <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#060915] animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"></span>
+              )}
             </button>
             <div className="flex items-center gap-5 pl-8 border-l border-black/5 dark:border-white/10">
               <div className="flex items-center gap-4">
@@ -625,6 +644,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                       { id: 'discovery', label: t('help.categories.discovery'), icon: Globe },
                       { id: 'progression', label: t('help.categories.progression'), icon: Trophy },
                       { id: 'settings', label: t('help.categories.settings'), icon: Settings },
+                      { id: 'support', label: 'Support & FAQ', icon: Mail },
                     ].map(cat => (
                       <button key={cat.id} onClick={() => { setActiveHelpCategory(cat.id); }} className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap md:whitespace-normal ${activeHelpCategory === cat.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}>
                         <cat.icon size={18} />
@@ -658,7 +678,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                         {activeHelpCategory === 'discovery' && (
                           <>
                             <HelpItem title={t('help.topics.atlas')} desc={t('help.topics.atlasDesc')} icon={<Map className="text-green-400" />} />
-                            <HelpItem title={t('help.topics.activeVisual')} desc={t('help.topics.activeVisualDesc')} icon={<FlaskConical className="text-red-400" />} />
                           </>
                         )}
                         {activeHelpCategory === 'progression' && (
@@ -671,6 +690,150 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                           <>
                             <HelpItem title={t('help.topics.mySettings')} desc={t('help.topics.settingsDesc')} icon={<Settings className="text-slate-400" />} />
                           </>
+                        )}
+                        {activeHelpCategory === 'support' && (
+                          <div className="space-y-8">
+                            <div className="space-y-4">
+                              <h4 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                                <HelpCircle className="text-blue-400" size={20} />
+                                Foire Aux Questions (FAQ)
+                              </h4>
+                              <div className="space-y-3">
+                                {[
+                                  {
+                                    question: "Comment fonctionne le système d'XP et de niveaux ?",
+                                    answer: "Chaque fois que vous complétez un quiz, lisez un cours ou réalisez des objectifs quotidiens, vous gagnez des points d'XP. Ces points vous permettent de monter de niveau et de devenir une Légende Elite."
+                                  },
+                                  {
+                                    question: "Comment obtenir plus de LevelCoins ?",
+                                    answer: "Les LevelCoins sont offerts en récompense de vos sessions d'étude, de la réussite de vos quiz et de l'accomplissement des missions quotidiennes. Vous pouvez les dépenser dans la boutique pour débloquer de nouveaux avatars."
+                                  },
+                                  {
+                                    question: "Qu'est-ce que le mode Détente (BubbleWrap) ?",
+                                    answer: "Le BubbleWrap est un mini-jeu anti-stress accessible après avoir accumulé au moins 30 minutes de temps d'étude. Chaque session de détente dure 1 minute, après quoi le minuteur d'étude recommence à zéro."
+                                  },
+                                  {
+                                    question: "Mes données personnelles sont-elles sécurisées ?",
+                                    answer: "Oui, vos données et votre progression sont cryptées et stockées de manière sécurisée par TMAB GROUP. Vous pouvez également supprimer définitivement votre compte à tout moment depuis vos Paramètres."
+                                  },
+                                  {
+                                    question: "Comment activer le mode sombre ou changer la langue ?",
+                                    answer: "Rendez-vous dans les Paramètres (icône d'engrenage), où vous pouvez activer le mode sombre par défaut, changer de langue ou ajuster la taille de la police pour un meilleur confort visuel."
+                                  }
+                                ].map((faq, i) => (
+                                  <div key={i} className="border border-white/5 bg-white/5 rounded-2xl overflow-hidden">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        HapticFeedback.selection();
+                                        setExpandedFaq(expandedFaq === i ? null : i);
+                                      }}
+                                      className="w-full flex items-center justify-between p-5 text-left text-white font-bold text-sm hover:bg-white/[0.03] transition-colors"
+                                    >
+                                      <span>{faq.question}</span>
+                                      <motion.div
+                                        animate={{ rotate: expandedFaq === i ? 90 : 0 }}
+                                        transition={{ duration: 0.2 }}
+                                      >
+                                        <ChevronRight size={18} className="text-slate-400" />
+                                      </motion.div>
+                                    </button>
+                                    <AnimatePresence initial={false}>
+                                      {expandedFaq === i && (
+                                        <motion.div
+                                          initial={{ height: 0, opacity: 0 }}
+                                          animate={{ height: 'auto', opacity: 1 }}
+                                          exit={{ height: 0, opacity: 0 }}
+                                          transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                          className="overflow-hidden"
+                                        >
+                                          <div className="p-5 pt-0 text-slate-400 text-sm leading-relaxed border-t border-white/5 bg-black/10">
+                                            {faq.answer}
+                                          </div>
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-6 pt-6 border-t border-white/5">
+                              <h4 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                                <Mail className="text-blue-400" size={20} />
+                                Contacter le Support
+                              </h4>
+                              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                                Vous rencontrez un problème technique ou avez une question spécifique ? Remplissez ce formulaire pour envoyer un ticket d'assistance à l'adresse <span className="text-blue-400 font-bold">{supportEmail}</span>. Notre équipe vous répondra dans les plus brefs délais.
+                              </p>
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black text-white uppercase tracking-wider block">Sujet</label>
+                                  <input
+                                    type="text"
+                                    value={supportSubject}
+                                    onChange={(e) => setSupportSubject(e.target.value)}
+                                    placeholder="Ex: Problème d'achat de LevelCoins..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder-slate-500 outline-none focus:border-blue-500/50 transition-colors"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black text-white uppercase tracking-wider block">Votre Message</label>
+                                  <textarea
+                                    value={supportMessage}
+                                    onChange={(e) => setSupportMessage(e.target.value)}
+                                    placeholder="Expliquez en détail votre situation..."
+                                    className="w-full h-36 bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder-slate-500 outline-none focus:border-blue-500/50 resize-none transition-colors"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!supportSubject.trim() || !supportMessage.trim() || isSubmittingSupport || !user) return;
+                                    setIsSubmittingSupport(true);
+                                    try {
+                                      await submitComment({
+                                        userId: user.id,
+                                        userName: user.name,
+                                        userPhone: user.phoneNumber,
+                                        content: `[SUPPORT TICKET] Sujet: ${supportSubject.trim()}\n\n${supportMessage.trim()}`,
+                                        category: 'support',
+                                        rating: 0
+                                      });
+                                      const emailSubject = encodeURIComponent(`[SUPPORT TICKET] ${supportSubject.trim()}`);
+                                      const emailBody = encodeURIComponent(`Bonjour,\n\nVoici mon message de support :\n\n${supportMessage.trim()}\n\n---\nUtilisateur: ${user.name}\nTéléphone: ${user.phoneNumber || 'Non renseigné'}`);
+
+                                      setSupportSubject('');
+                                      setSupportMessage('');
+                                      addNotification('success', 'Ticket Envoyé', `Votre message a bien été envoyé au support (${supportEmail}).`);
+
+                                      // Ouvrir le client mail natif
+                                      window.open(`mailto:${supportEmail}?subject=${emailSubject}&body=${emailBody}`, '_system');
+                                    } catch (error) {
+                                      console.error("Error submitting support comment:", error);
+                                      addNotification('error', 'Erreur', "Impossible d'envoyer votre ticket. Réessayez.");
+                                    } finally {
+                                      setIsSubmittingSupport(false);
+                                    }
+                                  }}
+                                  disabled={!supportSubject.trim() || !supportMessage.trim() || isSubmittingSupport}
+                                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                  {isSubmittingSupport ? (
+                                    <>
+                                      <RefreshCw className="animate-spin" size={20} />
+                                      Envoi en cours...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Mail size={18} />
+                                      Envoyer le Ticket
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </motion.div>
                     </AnimatePresence>
@@ -689,7 +852,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       </AnimatePresence>
       <NotificationCenter isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
       
-      <AnimatePresence>{showBubbleWrap && <BubbleWrap onClose={() => setShowBubbleWrap(false)} />}</AnimatePresence>
+      <AnimatePresence>{showBubbleWrap && <BubbleWrap onClose={() => { setShowBubbleWrap(false); resetContinuousStudyTime(); }} />}</AnimatePresence>
 
       <FloatingBubble 
         progress={continuousStudyTime}

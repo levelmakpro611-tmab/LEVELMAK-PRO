@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Bell, X, MessageSquare, GraduationCap, Users, Star, RefreshCw, CheckCheck, AlertCircle
+    Bell, X, MessageSquare, GraduationCap, Users, Star, RefreshCw, CheckCheck, AlertCircle, Trash2
 } from 'lucide-react';
 import { adminNotificationService, AdminNotification } from '../../services/adminNotificationService';
 
@@ -114,6 +114,19 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                                         <CheckCheck size={16} />
                                     </button>
                                 )}
+                                {notifications.length > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm("Voulez-vous supprimer toutes les notifications ?")) {
+                                                adminNotificationService.clearAllNotifications();
+                                            }
+                                        }}
+                                        className="p-2 hover:bg-rose-500/10 rounded-xl text-rose-500 hover:text-rose-600 transition-colors"
+                                        title="Tout supprimer"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
                                 <button
                                     onClick={onClose}
                                     className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -143,6 +156,10 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                                             key={notif.id}
                                             layoutId={notif.id}
                                             onClick={() => handleClick(notif)}
+                                            onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                adminNotificationService.deleteNotification(notif.id);
+                                            }}
                                             className={`w-full text-left flex items-start gap-3 p-4 rounded-2xl border transition-all hover:brightness-110 ${bgForType[notif.type]} ${!notif.read ? 'opacity-100' : 'opacity-60 bg-transparent'}`}
                                         >
                                             <div className="mt-0.5 shrink-0">
@@ -158,11 +175,23 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                                                 <p className="text-xs text-slate-400 mt-0.5 leading-relaxed line-clamp-2">{notif.message}</p>
                                                 <p className="text-[10px] text-slate-600 mt-1 font-bold uppercase tracking-wider">{timeAgo(notif.timestamp)}</p>
                                             </div>
-                                            {notif.actionTab && (
-                                                <div className="shrink-0 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white/5 px-2 py-1 rounded-lg mt-0.5">
-                                                    Voir →
-                                                </div>
-                                            )}
+                                            <div className="flex flex-col items-end justify-between self-stretch shrink-0 gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        adminNotificationService.deleteNotification(notif.id);
+                                                    }}
+                                                    className="p-1.5 hover:bg-rose-500/10 rounded-lg text-slate-400 hover:text-rose-500 transition-colors shrink-0"
+                                                    title="Supprimer"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                                {notif.actionTab && (
+                                                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white/5 px-2 py-1 rounded-lg">
+                                                        Voir →
+                                                    </div>
+                                                )}
+                                            </div>
                                         </motion.button>
                                     ))}
                                 </div>

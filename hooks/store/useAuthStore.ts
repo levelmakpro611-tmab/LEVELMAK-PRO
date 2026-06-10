@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Activity } from '../../types';
 import { supabase } from '../../services/supabase';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { audioService } from '../../services/audio';
 import { 
     signUpWithPhone, 
     signInWithPhone,
@@ -8,7 +10,8 @@ import {
     signInWithEmail,
     signInWithGoogle,
     convertSupabaseUser, 
-    signOutUser 
+    signOutUser,
+    mapProfileToUser
 } from '../../services/authService';
 
 export const useAuthStore = () => {
@@ -31,20 +34,25 @@ export const useAuthStore = () => {
                 const storedUser = localStorage.getItem('levelmak_user');
 
                 if (session && storedUser) {
-                    // ... existing logic ...
                     const parsedUser = JSON.parse(storedUser);
                     setUser(parsedUser);
                     
-                    // Background verify profile status
-                    supabase.from('profiles').select('status').eq('id', session.user.id).single()
+                    // Background fetch and verify latest profile status & details
+                    supabase.from('profiles').select('*').eq('id', session.user.id).single()
                         .then(({ data }) => {
-                            if (data && (data.status === 'blocked' || data.status === 'suspended')) {
-                                signOutUser().then(() => {
-                                    setUser(null);
-                                    localStorage.removeItem('levelmak_user');
-                                    alert("ALERTE SÉCURITÉ: Ton compte a été bloqué.");
-                                    window.location.reload();
-                                });
+                            if (data) {
+                                if (data.status === 'blocked' || data.status === 'suspended') {
+                                    signOutUser().then(() => {
+                                        setUser(null);
+                                        localStorage.removeItem('levelmak_user');
+                                        alert("ALERTE SÉCURITÉ: Ton compte a été bloqué.");
+                                        window.location.reload();
+                                    });
+                                } else {
+                                    const appUser = mapProfileToUser(data);
+                                    setUser(appUser);
+                                    localStorage.setItem('levelmak_user', JSON.stringify(appUser));
+                                }
                             }
                         }).catch(e => console.warn("Background check skipped", e));
 
@@ -197,6 +205,17 @@ export const useAuthStore = () => {
         });
     }, []);
 
+    // Sync with LocalStorage on state changes
+    useEffect(() => {
+        if (!loading) {
+            if (user) {
+                localStorage.setItem('levelmak_user', JSON.stringify(user));
+            } else {
+                localStorage.removeItem('levelmak_user');
+            }
+        }
+    }, [user, loading]);
+
     // Sync with Supabase on changes
     useEffect(() => {
         if (!user || !user.id || user.id.includes('anon')) return;
@@ -204,15 +223,21 @@ export const useAuthStore = () => {
         const timer = setTimeout(async () => {
             try {
                 await supabase.from('profiles').update({
+                    name: user.name,
+                    phone_number: user.phoneNumber,
                     xp: user.xp,
                     total_xp: user.totalXp,
                     level_coins: user.levelCoins,
-                    stats: user.stats,
+                    stats: {
+                        ...user.stats,
+                        education: user.education
+                    },
                     badges: user.badges,
                     streak: user.streak,
                     inventory: user.inventory,
                     wallpaper: user.wallpaper,
-                    avatar_config: user.avatar
+                    avatar_config: user.avatar,
+                    coach_sessions: user.coachSessions
                 }).eq('id', user.id);
                 
                 localStorage.setItem('levelmak_last_sync', Date.now().toString());
@@ -223,6 +248,85 @@ export const useAuthStore = () => {
 
         return () => clearTimeout(timer);
     }, [user]);
+
+    // Real-time listener for profile updates (admin notifications, block/suspend, or resource adjustments)
+    useEffect(() => {
+        if (!user || !user.id || user.id.includes('anon')) return;
+
+        const channel = supabase
+            .channel(`profile-realtime-${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${user.id}`
+                },
+                (payload) => {
+                    console.log('Realtime profile updated in DB:', payload.new);
+                    const dbProfile = payload.new;
+                    if (dbProfile) {
+                        // Check if block/suspend happened
+                        if (dbProfile.status === 'blocked' || dbProfile.status === 'suspended') {
+                            signOutUser().then(() => {
+                                setUser(null);
+                                localStorage.removeItem('levelmak_user');
+                                alert("ALERTE SÉCURITÉ: Ton compte a été bloqué.");
+                                window.location.reload();
+                            });
+                            return;
+                        }
+
+                        // Map database row to App User
+                        const mappedUser = mapProfileToUser(dbProfile);
+
+                        // Compare key values to prevent infinite update loop
+                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'badges'];
+                        const hasChanges = keysToCompare.some(key => {
+                            const val1 = JSON.stringify((user as any)[key]);
+                            const val2 = JSON.stringify((mappedUser as any)[key]);
+                            return val1 !== val2;
+                        });
+
+                        if (hasChanges) {
+                            console.log('Applying remote database updates to local state');
+
+                            // Detect if there are new notifications to trigger local Capacitor notifications
+                            const currentNotifs = user.stats?.notifications || [];
+                            const newNotifs = mappedUser.stats?.notifications || [];
+
+                            if (newNotifs.length > currentNotifs.length) {
+                                const currentIds = new Set(currentNotifs.map((n: any) => n.id));
+                                const newlyAdded = newNotifs.filter((n: any) => !currentIds.has(n.id));
+
+                                newlyAdded.forEach((notif: any) => {
+                                    LocalNotifications.schedule({
+                                        notifications: [{
+                                            title: notif.title || 'Nouvelle notification',
+                                            body: notif.message || '',
+                                            id: Math.floor(Math.random() * 100000),
+                                            schedule: { at: new Date(Date.now() + 100) }
+                                        }]
+                                    }).catch(e => console.warn('Local notification failed:', e));
+                                });
+                                
+                                // Play notification sound
+                                audioService.playNotification();
+                            }
+
+                            setUser(mappedUser);
+                            localStorage.setItem('levelmak_user', JSON.stringify(mappedUser));
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id, user]);
 
     return {
         user,

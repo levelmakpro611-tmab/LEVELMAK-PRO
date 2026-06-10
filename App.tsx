@@ -28,8 +28,6 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const BookReader = lazy(() => import('./components/BookReader'));
 const AILab = lazy(() => import('./components/AILab').then(m => ({ default: m.AILab })));
 const WorldBrainMap = lazy(() => import('./components/WorldBrainMap').then(m => ({ default: m.WorldBrainMap })));
-const ActiveVisual = lazy(() => import('./pages/ActiveVisual').then(m => ({ default: m.ActiveVisual })));
-const AudioLab = lazy(() => import('./pages/AudioLab'));
 const TutorRegistration = lazy(() => import('./pages/TutorRegistration'));
 const TutorHub = lazy(() => import('./pages/TutorHub'));
 const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
@@ -306,15 +304,8 @@ const AppContent: React.FC = () => {
       case 'atlas': return <AtlasLibrary onNavigate={setActiveTab} />;
       case 'map': return <WorldBrainMap onCloseMap={() => setActiveTab('atlas')} onNavigate={setActiveTab} />;
       case 'flashcard_mode': return <FlashcardMode onClose={() => setActiveTab('dashboard')} />;
-      case 'active_visual': return <ActiveVisual />;
       case 'tutor_registration': return <TutorRegistration onComplete={() => setActiveTab('settings')} />;
       case 'tutor_hub': return <TutorHub />;
-      case 'audio_lab': return (
-        <AudioLab 
-          onQuizGenerated={(quiz) => { setCurrentQuiz(quiz); setActiveTab('quiz'); }}
-          onFlashcardsGenerated={(deck, cards) => { setCurrentDeck({ deck, cards }); setActiveTab('flashcards'); }}
-        />
-      );
       default: return <Dashboard onNavigate={setActiveTab} />;
     }
   };
@@ -330,11 +321,11 @@ const AppContent: React.FC = () => {
               alt="Ambient Background" 
               className={`w-full h-full object-cover transition-opacity duration-1000 ${
                 user.wallpaper 
-                  ? 'opacity-55 dark:opacity-35 blur-[8px] scale-105' 
-                  : 'opacity-65 dark:opacity-45 blur-[12px] scale-105'
+                  ? 'opacity-70 dark:opacity-50 blur-[4px] scale-105' 
+                  : 'opacity-75 dark:opacity-55 blur-[6px] scale-105'
               }`}
             />
-            <div className="absolute inset-0 bg-white/30 dark:bg-[#050b18]/55" />
+            <div className="absolute inset-0 bg-white/20 dark:bg-[#050b18]/40" />
           </div>
         ) : (
           <>

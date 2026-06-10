@@ -43,7 +43,7 @@ export const submitComment = async (comment: Partial<UserComment>): Promise<void
         // Fire-and-forget notification to avoid hanging the UI
         LocalNotifications.schedule({
             notifications: [{
-                title: 'Merci ! 💬',
+                title: 'Merci !',
                 body: 'Votre commentaire a été reçu. Levelmak est fier de vous !',
                 id: Math.floor(Math.random() * 10000),
                 schedule: { at: new Date(Date.now() + 500) }
@@ -75,7 +75,7 @@ export const submitRating = async (rating: Omit<PlatformRating, 'id'>): Promise<
 
         LocalNotifications.schedule({
             notifications: [{
-                title: 'Évaluation Reçue ⭐',
+                title: 'Évaluation Reçue',
                 body: "Merci d'avoir noté cette application ! Levelmak est fier de vous.",
                 id: Math.floor(Math.random() * 10000),
                 schedule: { at: new Date(Date.now() + 500) }
@@ -193,20 +193,27 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const { data: recentActivities } = await supabase
-            .from('user_activities')
+            .from('admin_logs')
             .select('timestamp')
+            .eq('action', 'user_activity')
             .gt('timestamp', yesterday.toISOString());
             
         const flowMap: Record<string, number> = {};
+
         for(let i=23; i>=0; i--) {
             const d = new Date();
             d.setHours(d.getHours() - i);
-            flowMap[`${d.getHours()}h`] = 0;
+            const hour = d.getHours();
+            flowMap[`${hour}h`] = 0;
         }
-        (recentActivities || []).forEach(act => {
-            const h = new Date(act.timestamp).getHours();
-            if (flowMap[`${h}h`] !== undefined) flowMap[`${h}h`]++;
-        });
+
+        if (recentActivities && recentActivities.length > 0) {
+            recentActivities.forEach(act => {
+                const h = new Date(act.timestamp).getHours();
+                if (flowMap[`${h}h`] !== undefined) flowMap[`${h}h`]++;
+            });
+        }
+
         const flowData = Object.keys(flowMap).map(hour => ({ hour, activity: flowMap[hour] }));
 
         // Compute real growthData (last 7 days registrations)
@@ -228,7 +235,8 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
         });
         
         // Calculate base cumulative users from before 7 days
-        let cumulative = totalUsersClean - (data.filter(u => new Date(u.created_at) >= sevenDaysAgo).length);
+        const recentRegCount = data.filter(u => u.created_at && new Date(u.created_at) >= sevenDaysAgo).length;
+        let cumulative = Math.max(0, totalUsersClean - recentRegCount);
         const growthData = Object.keys(growthMap).map(date => {
             cumulative += growthMap[date];
             return { date, users: cumulative };
@@ -302,8 +310,8 @@ export const getUserAnalytics = async (limitCount: number = 50): Promise<AdminUs
             phoneNumber: user.phone_number,
             ageRange: user.age_range,
             gender: user.gender,
-            education: user.education,
-            isEmployed: user.is_employed,
+            education: user.stats?.education || 'N/A',
+            isEmployed: undefined,
             country: undefined,
             registrationDate: user.created_at,
             lastActive: user.last_active || user.created_at,
@@ -477,6 +485,20 @@ export const getAverageRatings = async (existingRatings?: PlatformRating[]): Pro
             features: { quiz: 0, coach: 0, flashcards: 0, library: 0, interface: 0, offline: 0 },
             totalRatings: 0
         };
+    }
+};
+
+export const resetAllRatings = async (): Promise<void> => {
+    try {
+        const { error } = await supabase
+            .from('user_ratings')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) throw error;
+        await logAdminAction('system', 'System', 'user_activity', { type: 'reset_all_ratings' });
+    } catch (error) {
+        console.error('Error resetting ratings:', error);
+        throw error;
     }
 };
 
@@ -794,7 +816,7 @@ export const exportUserData = async (): Promise<any[]> => {
         // Fetch ALL users for export, not just a small sample
         const { data: users, error } = await supabase
             .from('profiles')
-            .select('id, name, email, phone_number, age_range, gender, status, level, total_xp, created_at, last_active')
+            .select('id, name, email, phone_number, age_range, gender, status, level, total_xp, stats, created_at, last_active')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -803,6 +825,7 @@ export const exportUserData = async (): Promise<any[]> => {
             "ID Utilisateur": u.id,
             "Nom": u.name,
             "Email": u.email,
+            "Classe": u.stats?.education || 'N/A',
             "Téléphone": u.phone_number || 'N/A',
             "Âge": u.age_range || 'N/A',
             "Genre": u.gender || 'Inconnu',
@@ -1092,6 +1115,194 @@ export const deleteShopItem = async (id: string, imageUrl?: string): Promise<voi
         if (error) throw error;
     } catch (error) {
         console.error('Error deleting shop item:', error);
+        throw error;
+    }
+};
+
+// ======================================================
+// Sanctions & Support Email Settings & Notification Admin
+// ======================================================
+
+export const deleteUserContentAndResetPoints = async (userId: string): Promise<void> => {
+    try {
+        // 1. Delete user-generated contents
+        await supabase.from('user_comments').delete().eq('user_id', userId);
+        await supabase.from('user_ratings').delete().eq('user_id', userId);
+        await supabase.from('messages').delete().eq('sender_id', userId);
+        await supabase.from('user_activities').delete().eq('user_id', userId);
+
+        // 2. Reset profile XP, LevelCoins, Level
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+                xp: 0,
+                total_xp: 0,
+                level_coins: 0,
+                level: 1
+            })
+            .eq('id', userId);
+
+        if (profileError) throw profileError;
+
+        // 3. Log the action
+        await logAdminAction('system', 'System', 'user_activity', { type: 'reset_user_content_points' }, userId);
+    } catch (error) {
+        console.error('Error deleting user content and resetting points:', error);
+        throw error;
+    }
+};
+
+export const getSupportEmail = async (): Promise<string> => {
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('stats')
+            .or(`phone_number.eq.${ADMIN_USERNAME},name.ilike.administrateur principal,email.eq.admin@levelmak.com`)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Error fetching support email:', error);
+        }
+
+        if (data?.stats?.support_email) {
+            return data.stats.support_email;
+        }
+
+        const localEmail = localStorage.getItem('support_email');
+        return localEmail || 'Tmab6544@gmail.com';
+    } catch (e) {
+        console.error('getSupportEmail crashed:', e);
+        return 'Tmab6544@gmail.com';
+    }
+};
+
+export const updateSupportEmail = async (newEmail: string): Promise<void> => {
+    try {
+        localStorage.setItem('support_email', newEmail);
+
+        const { data: adminProfile, error: findError } = await supabase
+            .from('profiles')
+            .select('id, stats')
+            .or(`phone_number.eq.${ADMIN_USERNAME},name.ilike.administrateur principal,email.eq.admin@levelmak.com`)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (adminProfile) {
+            const currentStats = adminProfile.stats || {};
+            const updatedStats = {
+                ...currentStats,
+                support_email: newEmail
+            };
+
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ stats: updatedStats })
+                .eq('id', adminProfile.id);
+
+            if (updateError) throw updateError;
+        } else {
+            console.warn('Admin profile not found in profiles table when updating support email.');
+        }
+    } catch (error) {
+        console.error('Error updating support email:', error);
+        throw error;
+    }
+};
+
+export const sendUserNotification = async (userId: string, title: string, message: string): Promise<void> => {
+    try {
+        const { data: userData, error: fetchError } = await supabase
+            .from('profiles')
+            .select('stats')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const currentStats = userData.stats || {};
+        const notifications = currentStats.notifications || [];
+
+        const newNotification = {
+            id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            type: 'admin',
+            title,
+            message,
+            timestamp: new Date().toISOString(),
+            read: false
+        };
+
+        const updatedStats = {
+            ...currentStats,
+            notifications: [newNotification, ...notifications]
+        };
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ stats: updatedStats })
+            .eq('id', userId);
+
+        if (updateError) throw updateError;
+
+        await logAdminAction('system', 'System', 'user_activity', { type: 'send_notification', title }, userId);
+    } catch (error) {
+        console.error('Error sending user notification:', error);
+        throw error;
+    }
+};
+
+export const sendBulkNotification = async (userIds: string[], title: string, message: string): Promise<void> => {
+    try {
+        console.log(`Sending bulk notification to ${userIds.length} users`);
+        
+        // Fetch stats of all target users in a single query
+        const { data: usersData, error: fetchError } = await supabase
+            .from('profiles')
+            .select('id, stats')
+            .in('id', userIds);
+            
+        if (fetchError) throw fetchError;
+        if (!usersData || usersData.length === 0) return;
+        
+        const userStatsMap = new Map<string, any>();
+        usersData.forEach(u => userStatsMap.set(u.id, u.stats || {}));
+        
+        // Define batch size to run updates in parallel chunks
+        const BATCH_SIZE = 30;
+        for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+            const batchUserIds = userIds.slice(i, i + BATCH_SIZE);
+            
+            await Promise.all(batchUserIds.map(async (userId) => {
+                const currentStats = userStatsMap.get(userId) || {};
+                const notifications = currentStats.notifications || [];
+                
+                const newNotification = {
+                    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'admin',
+                    title,
+                    message,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                };
+                
+                const updatedStats = {
+                    ...currentStats,
+                    notifications: [newNotification, ...notifications]
+                };
+                
+                await supabase
+                    .from('profiles')
+                    .update({ stats: updatedStats })
+                    .eq('id', userId);
+            }));
+            
+            // Short delay between batches to protect DB load
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        await logAdminAction('system', 'System', 'user_activity', { type: 'send_bulk_notification', title, count: userIds.length });
+    } catch (error) {
+        console.error('Error in sendBulkNotification:', error);
         throw error;
     }
 };

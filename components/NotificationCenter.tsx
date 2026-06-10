@@ -32,6 +32,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
             case 'study_reminder': return <Clock className="text-primary" size={18} />;
             case 'streak_risk': return <AlertCircle className="text-red-500" size={18} />;
             case 'exam_approaching': return <Info className="text-blue-500" size={18} />;
+            case 'admin':
+            case 'info':
+                return <img src="/logo.png" className="w-5 h-5 object-contain" alt="Admin" />;
             default: return <Bell size={18} />;
         }
     };

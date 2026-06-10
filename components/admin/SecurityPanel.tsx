@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, UserX, Unlock, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Shield, AlertTriangle, UserX, Unlock, CheckCircle, XCircle, Eye, Mail } from 'lucide-react';
 import { Report, User } from '../../types';
-import { getReports, resolveReport, getBlockedUsers, unblockUser } from '../../services/adminService';
+import { getReports, resolveReport, getBlockedUsers, unblockUser, getSupportEmail, updateSupportEmail } from '../../services/adminService';
 import { motion } from 'framer-motion';
 
 const SecurityPanel: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'reports' | 'bans'>('reports');
+    const [activeTab, setActiveTab] = useState<'reports' | 'bans' | 'support'>('reports');
     const [reports, setReports] = useState<Report[]>([]);
     const [blockedUsers, setBlockedUsers] = useState<User[]>([]);
+    const [supportEmail, setSupportEmail] = useState('Tmab6544@gmail.com');
+    const [isSavingEmail, setIsSavingEmail] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -20,9 +22,12 @@ const SecurityPanel: React.FC = () => {
             if (activeTab === 'reports') {
                 const data = await getReports();
                 setReports(data || []);
-            } else {
+            } else if (activeTab === 'bans') {
                 const data = await getBlockedUsers();
                 setBlockedUsers(data);
+            } else if (activeTab === 'support') {
+                const email = await getSupportEmail();
+                setSupportEmail(email);
             }
         } catch (e) {
             console.error(e);
@@ -66,6 +71,12 @@ const SecurityPanel: React.FC = () => {
                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'bans' ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-400 hover:bg-white/5'}`}
                 >
                     <UserX size={16} /> Utilisateurs Bloqués
+                </button>
+                <button
+                    onClick={() => setActiveTab('support')}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'support' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white/5'}`}
+                >
+                    <Mail size={16} /> Paramètres Support
                 </button>
             </div>
 
@@ -139,6 +150,48 @@ const SecurityPanel: React.FC = () => {
                                         </div>
                                     ))
                                 )}
+                            </div>
+                        )}
+
+                        {activeTab === 'support' && (
+                            <div className="space-y-6 max-w-md bg-white/5 border border-white/10 rounded-2xl p-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-white mb-2">Configuration de l'E-mail de Support</h3>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        Configurez l'adresse de réception pour tous les tickets de support envoyés par les élèves de la plateforme. Cette adresse sera synchronisée sur Supabase.
+                                    </p>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Adresse E-mail de réception</label>
+                                        <input
+                                            type="email"
+                                            value={supportEmail}
+                                            onChange={(e) => setSupportEmail(e.target.value)}
+                                            placeholder="Tmab6544@gmail.com"
+                                            className="w-full bg-black/20 border border-white/10 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500/50"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (!supportEmail.trim()) return;
+                                            setIsSavingEmail(true);
+                                            try {
+                                                await updateSupportEmail(supportEmail.trim());
+                                                alert("Adresse e-mail de support mise à jour avec succès !");
+                                            } catch (err) {
+                                                console.error(err);
+                                                alert("Erreur lors de la mise à jour");
+                                            } finally {
+                                                setIsSavingEmail(false);
+                                            }
+                                        }}
+                                        disabled={isSavingEmail || !supportEmail.trim()}
+                                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/20"
+                                    >
+                                        {isSavingEmail ? "Enregistrement..." : "Sauvegarder les paramètres"}
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </>

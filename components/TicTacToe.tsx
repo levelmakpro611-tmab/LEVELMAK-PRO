@@ -4,6 +4,7 @@ import { X, Circle, Trophy, RefreshCw, LogOut, Coins, Swords } from 'lucide-reac
 import { HapticFeedback } from '../services/nativeAdapters';
 import { useStore } from '../hooks/useStore';
 import { supabase } from '../services/supabase';
+import { audioService } from '../services/audio';
 
 interface TicTacToeProps {
     battleId: string;
@@ -40,6 +41,18 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
 
     // Ref to prevent stale closures
     const isMyTurnRef = useRef(isMyTurn);
+    // Start background music when game is active, stop on unmount/finished
+    useEffect(() => {
+        if (!winner && !abandonedByOpponent) {
+            audioService.startBackgroundPiano();
+        } else {
+            audioService.stopBackgroundPiano();
+        }
+        return () => {
+            audioService.stopBackgroundPiano();
+        };
+    }, [winner, abandonedByOpponent]);
+
     isMyTurnRef.current = isMyTurn;
 
     useEffect(() => {
@@ -55,6 +68,7 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
             });
             setIsMyTurn(true);
             HapticFeedback.selection();
+            audioService.playClick();
         };
 
         const handleAbandonBroadcast = ({ payload }: any) => {
@@ -120,6 +134,12 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                 setWinner(targetWinner);
                 setWinningLine([a, b, c]);
                 onEnd(targetWinner);
+
+                if (targetWinner === currentUser.id) {
+                    audioService.playSuccess('quiz');
+                } else {
+                    audioService.playError('quiz');
+                }
                 return;
             }
         }
@@ -157,6 +177,7 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
         setBoard(newBoard);
         setIsMyTurn(false);
         HapticFeedback.selection();
+        audioService.playClick();
 
         gameChannel?.send({
             type: 'broadcast',

@@ -6,7 +6,7 @@ import { exportUserData, exportSystemLogs, exportDemographicData } from '../../s
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { Document, Packer, Paragraph, Table as DocTable, TableRow, TableCell, WidthType, TextRun } from 'docx';
+import { Document, Packer, Paragraph, Table as DocTable, TableRow, TableCell, WidthType, TextRun, ImageRun, PageOrientation, BorderStyle, AlignmentType } from 'docx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ExportToolsProps {
@@ -50,7 +50,7 @@ const ExportTools: React.FC<ExportToolsProps> = ({ demographicStats }) => {
             }
 
             const filename = `${type}_export_${new Date().toISOString().split('T')[0]}.${format}`;
-            await processExport(data, filename, format, shareMethod);
+            await processExport(data, filename, format, shareMethod, type);
         } catch (error: any) {
             console.error('Export error:', error);
             alert('Erreur lors de l\'exportation: ' + error.message);
@@ -63,7 +63,8 @@ const ExportTools: React.FC<ExportToolsProps> = ({ demographicStats }) => {
         data: any,
         filename: string,
         format: 'xlsx' | 'pdf' | 'docx',
-        shareMethod: 'download' | 'share' | 'print'
+        shareMethod: 'download' | 'share' | 'print',
+        type: 'users' | 'logs' | 'demographics'
     ) => {
         const items = Array.isArray(data) ? data : [data];
         const isWeb = (window as any).Capacitor?.getPlatform() === 'web';
@@ -133,22 +134,30 @@ const ExportTools: React.FC<ExportToolsProps> = ({ demographicStats }) => {
                             border-collapse: collapse;
                             font-size: 11px;
                         }
+                        th, td {
+                            white-space: nowrap;
+                            text-overflow: ellipsis;
+                            overflow: hidden;
+                        }
                         th {
-                            background-color: #3b82f6;
-                            color: white;
+                            background-color: #3b82f6 !important;
+                            color: white !important;
                             font-weight: 600;
                             text-align: left;
-                            padding: 12px 10px;
-                            font-size: 11px;
+                            padding: 8px 6px;
+                            font-size: 10px;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
                         }
                         td {
-                            padding: 12px 10px;
+                            padding: 8px 6px;
                             border-bottom: 1px solid #f1f5f9;
                             color: #334155;
-                            word-break: break-word;
                         }
                         tr:nth-child(even) {
-                            background-color: #f8fafc;
+                            background-color: #f8fafc !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
                         }
                         @media print {
                             @page {
@@ -240,6 +249,43 @@ const ExportTools: React.FC<ExportToolsProps> = ({ demographicStats }) => {
                     typeof v === 'object' ? JSON.stringify(v) : String(v)
                 ));
 
+                let columnStylesConfig: any = {};
+                if (type === 'users') {
+                    columnStylesConfig = {
+                        0: { cellWidth: 42, fontSize: 5.5 }, // ID Utilisateur
+                        1: { cellWidth: 25 }, // Nom
+                        2: { cellWidth: 46, fontSize: 6.5 }, // Email
+                        3: { cellWidth: 20 }, // Classe
+                        4: { cellWidth: 26 }, // Téléphone
+                        5: { cellWidth: 15 }, // Âge
+                        6: { cellWidth: 16 }, // Genre
+                        7: { cellWidth: 20 }, // Niveau
+                        8: { cellWidth: 12 }, // XP
+                        9: { cellWidth: 25 }, // Date Inscription
+                        10: { cellWidth: 25 }, // Dernière Activité
+                        11: { cellWidth: 15 } // Statut
+                    };
+                } else if (type === 'logs') {
+                    columnStylesConfig = {
+                        0: { cellWidth: 35, fontSize: 6.5 }, // ID Log
+                        1: { cellWidth: 35 }, // Admin
+                        2: { cellWidth: 45 }, // Action
+                        3: { cellWidth: 30 }, // Date
+                        4: { cellWidth: 112, fontSize: 7 }, // Détails
+                        5: { cellWidth: 30 } // Cible
+                    };
+                } else { // demographics
+                    columnStylesConfig = {
+                        0: { cellWidth: 45, fontSize: 5.5 }, // ID Utilisateur
+                        1: { cellWidth: 40 }, // Nom
+                        2: { cellWidth: 25 }, // Genre
+                        3: { cellWidth: 32 }, // Tranche d'âge
+                        4: { cellWidth: 45 }, // Ville
+                        5: { cellWidth: 55 }, // Quartier
+                        6: { cellWidth: 45 } // Date Inscription
+                    };
+                }
+
                 autoTable(doc, {
                     startY: 45,
                     head: [headers],
@@ -247,31 +293,18 @@ const ExportTools: React.FC<ExportToolsProps> = ({ demographicStats }) => {
                     theme: 'striped',
                     headStyles: {
                         fillColor: [59, 130, 246],
-                        fontSize: 9,
+                        fontSize: 8,
                         fontStyle: 'bold',
                         halign: 'center'
                     },
                     styles: {
-                        fontSize: 8.5,
-                        cellPadding: 4,
-                        overflow: 'linebreak',
+                        fontSize: 7,
+                        cellPadding: 1.5,
+                        overflow: 'ellipsize',
                         valign: 'middle',
-                        halign: 'left',
-                        cellWidth: 'auto'
+                        halign: 'left'
                     },
-                    columnStyles: {
-                        0: { cellWidth: 40 }, // ID Utilisateur / Clé
-                        1: { cellWidth: 25 },
-                        2: { cellWidth: 45 },
-                        3: { cellWidth: 25 },
-                        4: { cellWidth: 12 },
-                        5: { cellWidth: 15 },
-                        6: { cellWidth: 15 },
-                        7: { cellWidth: 15 },
-                        8: { cellWidth: 32 },
-                        9: { cellWidth: 32 },
-                        10: { cellWidth: 18 }
-                    },
+                    columnStyles: columnStylesConfig,
                     margin: { top: 45, left: 5, right: 5 },
                     tableWidth: 'auto'
                 });
@@ -305,31 +338,191 @@ const ExportTools: React.FC<ExportToolsProps> = ({ demographicStats }) => {
             mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
         } else if (format === 'docx') {
             console.log(`Generating Word with ${items.length} items`);
+            
+            // Try fetching the TMAB logo image
+            let logoArrayBuffer: ArrayBuffer | null = null;
+            try {
+                const logoResponse = await fetch('/tmab_logo.png');
+                if (logoResponse.ok) {
+                    logoArrayBuffer = await logoResponse.arrayBuffer();
+                    console.log("[EXPORT] TMAB Logo fetched successfully for DOCX");
+                }
+            } catch (e) {
+                console.warn("[EXPORT] Failed to fetch TMAB logo for DOCX", e);
+            }
+
             const headers = Object.keys(items[0] || {});
-            const table = new DocTable({
+
+            // Helper to create styled table cells in docx
+            const createCell = (text: string, isHeader: boolean, isEven: boolean) => {
+                return new TableCell({
+                    children: [
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: text === null || text === undefined ? '' : String(text),
+                                    bold: isHeader,
+                                    color: isHeader ? "FFFFFF" : "1E293B",
+                                    size: isHeader ? 18 : 16 // half-points: 9pt for header, 8pt for body
+                                })
+                            ],
+                            alignment: AlignmentType.LEFT,
+                        })
+                    ],
+                    shading: {
+                        fill: isHeader ? "3B82F6" : (isEven ? "F8FAFC" : "FFFFFF")
+                    },
+                    margins: {
+                        top: 140, // 7pt
+                        bottom: 140,
+                        left: 160, // 8pt
+                        right: 160
+                    },
+                    borders: {
+                        top: { style: BorderStyle.NONE },
+                        left: { style: BorderStyle.NONE },
+                        right: { style: BorderStyle.NONE },
+                        bottom: { 
+                            style: isHeader ? BorderStyle.NONE : BorderStyle.SINGLE, 
+                            size: 4, // 0.5pt
+                            color: "E2E8F0" 
+                        }
+                    }
+                });
+            };
+
+            const docTable = new DocTable({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [
                     new TableRow({
-                        children: headers.map(h => new TableCell({
-                            children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })],
-                            shading: { fill: "3B82F6", color: "FFFFFF" }
-                        }))
+                        children: headers.map(h => createCell(h, true, false))
                     }),
-                    ...items.map(item => new TableRow({
-                        children: Object.values(item).map(v => new TableCell({
-                            children: [new Paragraph({ text: String(v === null || v === undefined ? '' : v) })]
-                        }))
+                    ...items.map((item, index) => new TableRow({
+                        children: Object.values(item).map(v => createCell(v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v), false, index % 2 === 0))
                     }))
                 ]
             });
 
+            // Layout elements
+            const headerCells = [];
+            if (logoArrayBuffer) {
+                headerCells.push(new TableCell({
+                    width: { size: 15, type: WidthType.PERCENTAGE },
+                    children: [
+                        new Paragraph({
+                            children: [
+                                new ImageRun({
+                                    data: logoArrayBuffer,
+                                    transformation: {
+                                        width: 60,
+                                        height: 60
+                                    }
+                                } as any)
+                            ],
+                            alignment: AlignmentType.CENTER
+                        })
+                    ],
+                    borders: {
+                        top: { style: BorderStyle.NONE },
+                        bottom: { style: BorderStyle.NONE },
+                        left: { style: BorderStyle.NONE },
+                        right: { style: BorderStyle.NONE }
+                    }
+                }));
+            }
+
+            headerCells.push(new TableCell({
+                width: { size: logoArrayBuffer ? 85 : 100, type: WidthType.PERCENTAGE },
+                children: [
+                    new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: `RAPPORT : ${filename.split('_')[0].toUpperCase()}`,
+                                bold: true,
+                                color: "1E293B",
+                                size: 36 // 18pt
+                            })
+                        ],
+                        alignment: AlignmentType.LEFT
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: `TMAB GROUP - Excellence Éducative`,
+                                bold: true,
+                                color: "3B82F6",
+                                size: 24 // 12pt
+                            })
+                        ],
+                        alignment: AlignmentType.LEFT
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: `Généré par Levelmak Pro | Date: ${new Date().toLocaleString('fr-FR')}`,
+                                color: "64748B",
+                                size: 18 // 9pt
+                            })
+                        ],
+                        alignment: AlignmentType.LEFT
+                    })
+                ],
+                borders: {
+                    top: { style: BorderStyle.NONE },
+                    bottom: { style: BorderStyle.NONE },
+                    left: { style: BorderStyle.NONE },
+                    right: { style: BorderStyle.NONE }
+                }
+            }));
+
+            const docHeaderTable = new DocTable({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: headerCells
+                    })
+                ],
+                borders: {
+                    top: { style: BorderStyle.NONE },
+                    bottom: { style: BorderStyle.NONE },
+                    left: { style: BorderStyle.NONE },
+                    right: { style: BorderStyle.NONE }
+                }
+            });
+
+            const divider = new Paragraph({
+                border: {
+                    bottom: {
+                        color: "3B82F6",
+                        space: 12,
+                        style: BorderStyle.SINGLE,
+                        size: 12 // 1.5pt
+                    }
+                }
+            });
+
             const doc = new Document({
                 sections: [{
+                    properties: {
+                        page: {
+                            size: {
+                                orientation: PageOrientation.LANDSCAPE,
+                                width: 16838, // A4 Landscape width
+                                height: 11906, // A4 Landscape height
+                            },
+                            margin: {
+                                top: 1000,
+                                right: 1000,
+                                bottom: 1000,
+                                left: 1000,
+                            }
+                        },
+                    },
                     children: [
-                        new Paragraph({ text: `Rapport Administratif Levelmak`, heading: 'Title' }),
-                        new Paragraph({ text: `Type: ${filename.split('_')[0]} | Date: ${new Date().toLocaleDateString()}` }),
-                        new Paragraph({ text: "" }),
-                        table
+                        docHeaderTable,
+                        divider,
+                        new Paragraph({ text: "" }), // Space
+                        docTable
                     ]
                 }]
             });

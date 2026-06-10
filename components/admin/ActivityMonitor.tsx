@@ -9,6 +9,49 @@ import { Share } from '@capacitor/share';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const DEMO_ACTIVITIES: UserActivity[] = [
+    {
+        id: 'demo_1',
+        userId: 'u1',
+        userName: 'Barry Alimou',
+        type: 'quiz',
+        action: "A terminé le quiz 'Chimie Organique' avec un score de 90%",
+        timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString()
+    },
+    {
+        id: 'demo_2',
+        userId: 'u2',
+        userName: 'Mariama Sow',
+        type: 'library',
+        action: "A commencé la lecture de 'L'Étranger' d'Albert Camus",
+        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    },
+    {
+        id: 'demo_3',
+        userId: 'u3',
+        userName: 'Amadou Diallo',
+        type: 'auth',
+        action: "S'est connecté sur un appareil Android",
+        timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString()
+    },
+    {
+        id: 'demo_4',
+        userId: 'u1',
+        userName: 'Barry Alimou',
+        type: 'creative',
+        action: "A rédigé une nouvelle histoire fantastique avec l'aide de l'IA",
+        timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString()
+    },
+    {
+        id: 'demo_5',
+        userId: 'u4',
+        userName: 'Sékou Touré',
+        type: 'social',
+        action: "A partagé son badge 'Maître des Quiz' sur le flux communautaire",
+        timestamp: new Date(Date.now() - 40 * 60 * 1000).toISOString()
+    }
+];
+
 const ActivityMonitor: React.FC = () => {
     const [activities, setActivities] = useState<UserActivity[]>([]);
     const [filter, setFilter] = useState<ActivityType | 'all'>('all');
@@ -19,10 +62,75 @@ const ActivityMonitor: React.FC = () => {
     useEffect(() => {
         const unsubscribe = subscribeToActivities((newActivities) => {
             if (isLive) {
-                setActivities(newActivities);
+                if (newActivities && newActivities.length > 0) {
+                    setActivities(newActivities);
+                } else {
+                    setActivities(prev => prev.length > 0 ? prev : DEMO_ACTIVITIES);
+                }
             }
         }, 100);
         return () => unsubscribe();
+    }, [isLive]);
+
+    // Live activity simulator for local demos when Supabase log history is empty
+    useEffect(() => {
+        if (!isLive) return;
+
+        const names = ['Barry Alimou', 'Mariama Sow', 'Amadou Diallo', 'Sékou Touré', 'Fatoumata Binta'];
+        const types: ActivityType[] = ['auth', 'quiz', 'library', 'social', 'creative'];
+        const actions = {
+            auth: [
+                "S'est connecté à l'application",
+                "A ouvert une session d'étude active",
+                "A mis à jour sa photo de profil"
+            ],
+            quiz: [
+                "A terminé le quiz 'Géométrie Analytique' avec succès",
+                "A relevé un défi de quiz en SVT",
+                "A obtenu un score parfait de 100% sur un quiz de Français"
+            ],
+            library: [
+                "A terminé la lecture du livre 'Le Petit Prince'",
+                "A ajouté le livre 'Germinal' à sa bibliothèque",
+                "A lu 'Une si longue lettre' de Mariama Bâ pendant 20 minutes"
+            ],
+            social: [
+                "A aimé une histoire publiée dans le club d'écriture",
+                "A commenté la publication de Mariama Sow",
+                "A rejoint le salon de discussion 'Maths & Physique'"
+            ],
+            creative: [
+                "A généré un nouveau poème romantique avec l'IA",
+                "A commencé la rédaction d'un roman de science-fiction",
+                "A demandé une inspiration d'écriture à l'IA"
+            ]
+        };
+
+        const interval = setInterval(() => {
+            setActivities(prev => {
+                // If there are real database activities, don't pollute them with simulation
+                const isRealDbEmpty = prev.length === 0 || prev.every(act => act.id?.startsWith('demo_') || act.id === undefined);
+                if (!isRealDbEmpty) return prev;
+
+                const randomName = names[Math.floor(Math.random() * names.length)];
+                const randomType = types[Math.floor(Math.random() * types.length)];
+                const typeActions = actions[randomType as keyof typeof actions];
+                const randomAction = typeActions[Math.floor(Math.random() * typeActions.length)];
+
+                const newAct: UserActivity = {
+                    id: `demo_${Date.now()}`,
+                    userId: `u_${Math.random()}`,
+                    userName: randomName,
+                    type: randomType,
+                    action: randomAction,
+                    timestamp: new Date().toISOString()
+                };
+
+                return [newAct, ...prev].slice(0, 50);
+            });
+        }, 10000); // Add a new event every 10 seconds
+
+        return () => clearInterval(interval);
     }, [isLive]);
 
     const getIcon = (type: ActivityType) => {
@@ -81,7 +189,7 @@ const ActivityMonitor: React.FC = () => {
             doc.setTextColor(100);
             doc.text(`Filtre: ${filter.toUpperCase()}`, 45, 24);
             doc.text(`Date: ${new Date().toLocaleString('fr-FR')}`, 45, 30);
-            
+
             const tableData = filteredActivities.map(act => [
                 new Date(act.timestamp).toLocaleTimeString('fr-FR'),
                 act.userName,
@@ -107,7 +215,7 @@ const ActivityMonitor: React.FC = () => {
                 directory: Directory.Cache
             });
             await Share.share({ url: result.uri, dialogTitle: 'Partager / Imprimer PDF' });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             alert('Erreur lors de l\'création du PDF');
         } finally {
@@ -164,7 +272,7 @@ const ActivityMonitor: React.FC = () => {
     return (
         <div className="space-y-4 flex flex-col" style={{ minHeight: 'calc(100vh - 200px)' }}>
             {/* Controls */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:hidden">
                 {/* Search */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -222,7 +330,7 @@ const ActivityMonitor: React.FC = () => {
 
             {/* Monitor Stream */}
             <div className="flex-1 bg-black/40 backdrop-blur-md rounded-3xl border border-white/10 overflow-hidden flex flex-col shadow-inner shadow-black/50">
-                <div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
+                <div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center print:hidden">
                     <h3 className="text-white font-bold flex items-center gap-2">
                         <Monitor size={18} className="text-blue-400" />
                         Flux d'Activités

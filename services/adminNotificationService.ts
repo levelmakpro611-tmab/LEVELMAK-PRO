@@ -116,6 +116,16 @@ class AdminNotificationService {
         this.notify();
     }
 
+    public deleteNotification(id: string) {
+        this.notifications = this.notifications.filter(n => n.id !== id);
+        this.notify();
+    }
+
+    public clearAllNotifications() {
+        this.notifications = [];
+        this.notify();
+    }
+
     public addNotification(notif: AdminNotification) {
         // 1. Strict duplicate check by ID
         if (this.notifications.some(n => n.id === notif.id)) {

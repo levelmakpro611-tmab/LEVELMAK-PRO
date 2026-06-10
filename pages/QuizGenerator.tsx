@@ -25,7 +25,7 @@ import { useStore } from '../hooks/useStore';
 import { SUBJECTS } from '../constants';
 import { Quiz } from '../types';
 const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGenerated }) => {
-  const { saveQuiz, quizzes, deleteQuiz, t, settings } = useStore();
+  const { user, saveQuiz, quizzes, deleteQuiz, t, settings } = useStore();
   const [viewMode, setViewMode] = useState<'generator' | 'saved'>('generator');
   const [files, setFiles] = useState<{ id: string, file: File, preview: string, type: 'image' }[]>([]);
   const [manualText, setManualText] = useState('');
@@ -498,6 +498,21 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
 
           <div className="lg:col-span-4 space-y-8">
             <div className="glass rounded-[2.5rem] border border-white/5 p-6 md:p-8 space-y-8 sticky top-8">
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">Matière du Quiz</label>
+                <select
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold text-xs outline-none focus:border-primary/40 transition-all cursor-pointer"
+                >
+                  {[...SUBJECTS, ...(user?.customSubjects || [])].map((sub) => (
+                    <option key={sub} value={sub} className="bg-slate-950 text-white font-semibold">
+                      {sub}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="space-y-6">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">{t('quiz.generator.intensity')}</label>
                 <div className="grid grid-cols-1 gap-3">
