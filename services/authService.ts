@@ -14,9 +14,16 @@ const phoneToEmail = (phone: string): string => {
 // Optimized with a short-lived deduplication cache to prevent redundant DB calls
 // ======================================================
 export const mapProfileToUser = (profile: any): User => {
+    const stats = profile.stats || {
+        quizzesCompleted: 0,
+        hoursLearned: 0,
+        booksRead: 0,
+        storiesWritten: 0,
+        flashcardsStudied: 0
+    };
     return {
         ...profile,
-        education: profile.stats?.education || profile.education || '',
+        education: stats.education || profile.education || '',
         phoneNumber: profile.phone_number,
         totalXp: profile.total_xp || 0,
         levelCoins: profile.level_coins || 50,
@@ -28,13 +35,11 @@ export const mapProfileToUser = (profile: any): User => {
             aura: 'none',
             currentLevel: 1
         },
-        stats: profile.stats || {
-            quizzesCompleted: 0,
-            hoursLearned: 0,
-            booksRead: 0,
-            storiesWritten: 0,
-            flashcardsStudied: 0
-        },
+        stats: stats,
+        customSubjects: stats.customSubjects || profile.customSubjects || [],
+        activeSubjects: stats.activeSubjects || profile.activeSubjects || undefined,
+        subjectTargets: stats.subjectTargets || profile.subjectTargets || {},
+        analytics: stats.analytics || profile.analytics || undefined,
         coachSessions: profile.coach_sessions || [],
         status: profile.status || 'active',
         badges: profile.badges || [],

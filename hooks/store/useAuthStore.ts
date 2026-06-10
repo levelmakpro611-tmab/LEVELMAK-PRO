@@ -199,7 +199,22 @@ export const useAuthStore = () => {
     const updateProfile = useCallback(async (name: string, phoneNumber?: string, updates?: Partial<User>) => {
         setUser(prev => {
             if (!prev) return null;
-            const updated = { ...prev, name, phoneNumber: phoneNumber || prev.phoneNumber, ...updates };
+            
+            // Replicate custom fields into user.stats so they sync to Supabase JSONB
+            let updatedStats = { ...prev.stats };
+            if (updates?.customSubjects !== undefined) updatedStats.customSubjects = updates.customSubjects;
+            if (updates?.activeSubjects !== undefined) updatedStats.activeSubjects = updates.activeSubjects;
+            if (updates?.subjectTargets !== undefined) updatedStats.subjectTargets = updates.subjectTargets;
+            if (updates?.analytics !== undefined) updatedStats.analytics = updates.analytics;
+            if (updates?.stats !== undefined) updatedStats = { ...updatedStats, ...updates.stats };
+
+            const updated = { 
+                ...prev, 
+                name, 
+                phoneNumber: phoneNumber || prev.phoneNumber, 
+                ...updates,
+                stats: updatedStats
+            };
             localStorage.setItem('levelmak_user', JSON.stringify(updated));
             return updated;
         });

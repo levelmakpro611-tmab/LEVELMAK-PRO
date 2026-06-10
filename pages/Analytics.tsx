@@ -27,6 +27,47 @@ const Analytics: React.FC = () => {
     const [showSubjectsModal, setShowSubjectsModal] = useState(false);
     const [newSubjectText, setNewSubjectText] = useState('');
 
+    const parseMinutesFromText = (text: string): number => {
+        const lower = text.toLowerCase();
+        const hourRegex = /(\d+(?:\.\d+)?)\s*(?:heure|h)(?:s)?\b/;
+        const hourMatch = lower.match(hourRegex);
+        if (hourMatch) {
+            return Math.round(parseFloat(hourMatch[1]) * 60);
+        }
+        const minRegex = /(\d+)\s*(?:min|minute|m)(?:s)?\b/;
+        const minMatch = lower.match(minRegex);
+        if (minMatch) {
+            return parseInt(minMatch[1], 10);
+        }
+        return 30; // Par défaut 30 minutes
+    };
+
+    const detectSubjectFromText = (text: string, activePool: string[]): string | null => {
+        const lower = text.toLowerCase();
+        const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const normalizedText = normalize(lower);
+        
+        for (const subj of activePool) {
+            const normalizedSubj = normalize(subj);
+            if (normalizedText.includes(normalizedSubj)) {
+                return subj;
+            }
+            if (normalizedSubj === 'mathematiques' && (normalizedText.includes('math') || normalizedText.includes('calcul'))) {
+                return subj;
+            }
+            if (normalizedSubj === 'physique-chimie' && (normalizedText.includes('physique') || normalizedText.includes('chimie'))) {
+                return subj;
+            }
+            if (normalizedSubj === 'histoire-geo' && (normalizedText.includes('histoire') || normalizedText.includes('geo') || normalizedText.includes('geographie'))) {
+                return subj;
+            }
+            if (normalizedSubj === 'svt' && (normalizedText.includes('svt') || normalizedText.includes('biologie') || normalizedText.includes('sciences'))) {
+                return subj;
+            }
+        }
+        return null;
+    };
+
     const handleToggleGoal = (goalId: string) => {
         if (!user) return;
         const currentAnalytics = user.analytics || {
@@ -36,12 +77,59 @@ const Analytics: React.FC = () => {
             weeklyGoals: { target: 120, achieved: 0 },
             examPredictions: []
         };
+        
+        let targetAnalytics = { ...currentAnalytics };
+        const goalToToggle = (currentAnalytics.customGoals || []).find(g => g.id === goalId);
+        
+        // Si on coche l'objectif (changement vers complété)
+        if (goalToToggle && !goalToToggle.completed) {
+            const activePool = [...DEFAULT_SUBJECTS, ...(user.customSubjects || [])];
+            const detectedSubj = detectSubjectFromText(goalToToggle.text, activePool);
+            
+            if (detectedSubj) {
+                const minutesToCredit = parseMinutesFromText(goalToToggle.text);
+                const todayStr = new Date().toISOString().split('T')[0];
+                
+                // 1. Créditer le temps pour la matière
+                const updatedSubjectTime = {
+                    ...targetAnalytics.studyTimeBySubject,
+                    [detectedSubj]: (targetAnalytics.studyTimeBySubject[detectedSubj] || 0) + minutesToCredit
+                };
+                
+                // 2. Créditer le temps pour aujourd'hui
+                const dayIndex = targetAnalytics.studyTimeByDay.findIndex(d => d.date === todayStr);
+                let updatedTimeByDay = [...targetAnalytics.studyTimeByDay];
+                if (dayIndex !== -1) {
+                    updatedTimeByDay[dayIndex] = {
+                        ...updatedTimeByDay[dayIndex],
+                        minutes: updatedTimeByDay[dayIndex].minutes + minutesToCredit
+                    };
+                } else {
+                    updatedTimeByDay.push({ date: todayStr, minutes: minutesToCredit });
+                }
+                
+                // 3. Mettre à jour l'objectif hebdomadaire
+                const updatedWeeklyGoals = {
+                    ...targetAnalytics.weeklyGoals,
+                    achieved: (targetAnalytics.weeklyGoals.achieved || 0) + minutesToCredit
+                };
+                
+                targetAnalytics = {
+                    ...targetAnalytics,
+                    studyTimeBySubject: updatedSubjectTime,
+                    studyTimeByDay: updatedTimeByDay,
+                    weeklyGoals: updatedWeeklyGoals
+                };
+            }
+        }
+        
         const updatedGoals = (currentAnalytics.customGoals || []).map(g =>
             g.id === goalId ? { ...g, completed: !g.completed } : g
         );
+        
         updateProfile(user.name, user.phoneNumber, {
             analytics: {
-                ...currentAnalytics,
+                ...targetAnalytics,
                 customGoals: updatedGoals
             }
         });
@@ -117,8 +205,14 @@ const Analytics: React.FC = () => {
             alert(isFrench ? "Cette matière existe déjà !" : "This subject already exists!");
             return;
         }
+        
+        const updatedCustom = [...currentCustom, subjectName];
+        const currentActive = user.activeSubjects || DEFAULT_SUBJECTS;
+        const updatedActive = [...currentActive, subjectName];
+        
         updateProfile(user.name, user.phoneNumber, {
-            customSubjects: [...currentCustom, subjectName]
+            customSubjects: updatedCustom,
+            activeSubjects: updatedActive
         });
         setNewSubjectText('');
     };
@@ -126,9 +220,41 @@ const Analytics: React.FC = () => {
     const handleDeleteSubject = (subjectName: string) => {
         if (!user) return;
         const currentCustom = user.customSubjects || [];
+        const currentActive = user.activeSubjects || DEFAULT_SUBJECTS;
+        
         updateProfile(user.name, user.phoneNumber, {
-            customSubjects: currentCustom.filter(s => s !== subjectName)
+            customSubjects: currentCustom.filter(s => s !== subjectName),
+            activeSubjects: currentActive.filter(s => s !== subjectName)
         });
+    };
+
+    const handleToggleSubjectActive = (subjectName: string) => {
+        if (!user) return;
+        const currentActive = user.activeSubjects || DEFAULT_SUBJECTS;
+        let updatedActive;
+        if (currentActive.includes(subjectName)) {
+            updatedActive = currentActive.filter(s => s !== subjectName);
+        } else {
+            updatedActive = [...currentActive, subjectName];
+        }
+        updateProfile(user.name, user.phoneNumber, {
+            activeSubjects: updatedActive
+        });
+    };
+
+    const handleUpdateSubjectTarget = (subjectName: string, targetMinutes: number) => {
+        if (!user) return;
+        const currentTargets = user.subjectTargets || {};
+        updateProfile(user.name, user.phoneNumber, {
+            subjectTargets: {
+                ...currentTargets,
+                [subjectName]: targetMinutes
+            }
+        });
+    };
+
+    const handleStartSubjectQuiz = (subjectName: string) => {
+        window.dispatchEvent(new CustomEvent('nav_change', { detail: 'quiz' }));
     };
 
     const t = {
@@ -173,7 +299,31 @@ const Analytics: React.FC = () => {
         return days;
     }, [analytics.studyTimeByDay, isFrench]);
 
-    const maxMinutes = Math.max(...weeklyData.map(d => d.minutes), 60);
+    const calculatedPredictions = useMemo(() => {
+        const activeSubjects = user?.activeSubjects || DEFAULT_SUBJECTS;
+        return activeSubjects.map(subject => {
+            const perf = analytics.quizPerformance.find(
+                p => p.subject.toLowerCase() === subject.toLowerCase()
+            );
+            if (perf && perf.totalAttempts > 0) {
+                const score = Math.round(perf.correctRate * 20 * 10) / 10;
+                const confidence = Math.min(50 + perf.totalAttempts * 10, 95);
+                return {
+                    subject,
+                    predictedScore: score,
+                    confidence,
+                    hasData: true
+                };
+            } else {
+                return {
+                    subject,
+                    predictedScore: 0,
+                    confidence: 0,
+                    hasData: false
+                };
+            }
+        });
+    }, [analytics.quizPerformance, user?.activeSubjects]);
 
     return (
         <div className="min-h-screen bg-transparent pt-20 pb-24 md:pt-24 md:pb-12 px-4 md:px-8 max-w-7xl mx-auto">
@@ -348,9 +498,15 @@ const Analytics: React.FC = () => {
 
                         <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar w-full">
                             {(() => {
-                                const activeSubjects = [...DEFAULT_SUBJECTS, ...(user?.customSubjects || [])];
+                                const activeSubjects = user?.activeSubjects || DEFAULT_SUBJECTS;
                                 return activeSubjects.map((subj, i) => {
                                     const time = analytics.studyTimeBySubject[subj] || 0;
+                                    const targets = user?.subjectTargets || {};
+                                    const target = targets[subj] || 0;
+                                    const progressPercent = target > 0
+                                        ? Math.min((time / target) * 100, 100)
+                                        : (totalStudyMinutes > 0 ? (time / totalStudyMinutes) * 100 : 0);
+                                    
                                     return (
                                         <div key={subj} className="flex items-center gap-4 w-full">
                                             <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-xs font-black text-white shrink-0">
@@ -359,12 +515,14 @@ const Analytics: React.FC = () => {
                                             <div className="flex-grow min-w-0">
                                                 <div className="flex justify-between mb-1 gap-2">
                                                     <span className="text-[11px] font-black text-white uppercase tracking-tighter truncate">{subj}</span>
-                                                    <span className="text-[10px] font-bold text-slate-500 uppercase shrink-0">{time} min</span>
+                                                    <span className="text-[10px] font-bold text-slate-500 uppercase shrink-0">
+                                                        {target > 0 ? `${time} / ${target} min` : `${time} min`}
+                                                    </span>
                                                 </div>
                                                 <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                                                     <motion.div
                                                         initial={{ width: 0 }}
-                                                        animate={{ width: `${totalStudyMinutes > 0 ? (time / totalStudyMinutes) * 100 : 0}%` }}
+                                                        animate={{ width: `${progressPercent}%` }}
                                                         transition={{ delay: 0.2 + i * 0.05 }}
                                                         className={`h-full rounded-full ${i % 3 === 0 ? 'bg-primary' : i % 3 === 1 ? 'bg-secondary' : 'bg-accent'}`}
                                                     />
@@ -436,23 +594,29 @@ const Analytics: React.FC = () => {
                             </p>
                         </div>
 
-                        {analytics.examPredictions.length > 0 ? (
-                            analytics.examPredictions.map((pred, i) => (
-                                <div key={pred.subject} className="flex items-center justify-between p-2">
-                                    <span className="text-[10px] font-black text-white uppercase">{pred.subject}</span>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right">
-                                            <div className="text-xs font-black text-white">{pred.predictedScore}/20</div>
-                                            <div className="text-[8px] text-slate-500 font-bold italic">{pred.confidence}% confidence</div>
+                        {calculatedPredictions.length > 0 ? (
+                            calculatedPredictions.map((pred) => (
+                                <div key={pred.subject} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 gap-4">
+                                    <span className="text-[11px] font-black text-white uppercase truncate tracking-tighter max-w-[150px]">{pred.subject}</span>
+                                    {pred.hasData ? (
+                                        <div className="text-right shrink-0">
+                                            <div className="text-xs font-black text-success tracking-tighter">{pred.predictedScore}/20</div>
+                                            <div className="text-[8px] text-slate-500 font-bold italic">
+                                                {isFrench ? `${pred.confidence}% confiance` : `${pred.confidence}% confidence`}
+                                            </div>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleStartSubjectQuiz(pred.subject)}
+                                            className="px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/40 text-primary-light text-[8px] font-black uppercase tracking-widest border border-primary/30 transition-all shrink-0 active:scale-95"
+                                        >
+                                            {isFrench ? "Lancer un Quiz 🎯" : "Take Quiz 🎯"}
+                                        </button>
+                                    )}
                                 </div>
                             ))
                         ) : (
-                            <div className="pt-4 space-y-2 opacity-50">
-                                <div className="h-10 bg-white/5 rounded-xl border border-white/5 animate-pulse" />
-                                <div className="h-10 bg-white/5 rounded-xl border border-white/5 animate-pulse" />
-                            </div>
+                            <p className="text-center py-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t.noData}</p>
                         )}
                     </div>
                 </motion.div>
@@ -613,25 +777,69 @@ const Analytics: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* List and delete existing custom subjects */}
+                            {/* List and manage all subjects (active toggles & target minutes) */}
                             <div className="space-y-3 flex-1 flex flex-col min-h-0">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">Matières personnalisées</label>
-                                <div className="space-y-2 overflow-y-auto max-h-[200px] pr-1 custom-scrollbar">
-                                    {(user?.customSubjects && user.customSubjects.length > 0) ? (
-                                        user.customSubjects.map((sub) => (
-                                            <div key={sub} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between gap-3 group">
-                                                <span className="text-xs font-bold text-slate-300 leading-snug">{sub}</span>
-                                                <button
-                                                    onClick={() => handleDeleteSubject(sub)}
-                                                    className="p-2 text-slate-500 hover:text-red-500 transition-colors"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-center py-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Aucune matière personnalisée ajoutée</p>
-                                    )}
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">
+                                    {isFrench ? "Liste des matières et Objectifs" : "Subjects List & Targets"}
+                                </label>
+                                <div className="space-y-3 overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
+                                    {(() => {
+                                        const availablePool = [...DEFAULT_SUBJECTS, ...(user?.customSubjects || [])];
+                                        const activeSubjects = user?.activeSubjects || DEFAULT_SUBJECTS;
+                                        const targets = user?.subjectTargets || {};
+                                        
+                                        return availablePool.map((sub) => {
+                                            const isActive = activeSubjects.includes(sub);
+                                            const isDefault = DEFAULT_SUBJECTS.includes(sub);
+                                            const targetMinutes = targets[sub] || 0;
+                                            
+                                            return (
+                                                <div key={sub} className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-3 transition-all">
+                                                    <div className="flex items-center justify-between">
+                                                        <button
+                                                            onClick={() => handleToggleSubjectActive(sub)}
+                                                            className="flex items-center gap-3 text-left"
+                                                        >
+                                                            <div className={`w-5 h-5 rounded-lg border flex items-center justify-center ${
+                                                                isActive
+                                                                    ? 'bg-accent border-accent text-slate-950 font-black'
+                                                                    : 'border-white/30 text-transparent'
+                                                            }`}>
+                                                                {isActive && <CheckCircle2 size={12} className="text-white" />}
+                                                            </div>
+                                                            <span className="text-xs font-bold text-white uppercase">{sub}</span>
+                                                        </button>
+                                                        
+                                                        {!isDefault && (
+                                                            <button
+                                                                onClick={() => handleDeleteSubject(sub)}
+                                                                className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {isActive && (
+                                                        <div className="flex items-center justify-between pl-8 gap-4 border-t border-white/5 pt-2">
+                                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                                                {isFrench ? "Objectif hebdo (min)" : "Weekly Target (min)"}
+                                                            </span>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="600"
+                                                                step="5"
+                                                                value={targetMinutes}
+                                                                onChange={(e) => handleUpdateSubjectTarget(sub, parseInt(e.target.value) || 0)}
+                                                                className="w-20 p-2 bg-slate-950 rounded-xl border border-white/10 text-white text-xs font-bold text-center outline-none focus:border-accent/40"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        });
+                                    })()}
                                 </div>
                             </div>
 
