@@ -671,15 +671,17 @@ export const AILab: React.FC = () => {
   const { aiLabHistory, deleteAILabSession, t, user, setAiLabHistory } = useStore();
 
   // Ephemeral AI Lab history cleanup for non-premium users on unmount
+  // Strict check: requires is_premium=true AND valid non-expired premium_until
+  const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
   useEffect(() => {
     return () => {
-      if (!user?.is_premium) {
+      if (!isPremiumActive) {
         setAiLabHistory([]);
         const labKey = user?.id ? `levelmak_${user.id}_ailab_history` : 'levelmak_ailab_history';
         localStorage.removeItem(labKey);
       }
     };
-  }, [user, setAiLabHistory]);
+  }, [isPremiumActive, user?.id, setAiLabHistory]);
 
   const handleSelect = (view: 'feynman' | 'timemachine' | 'history') => {
     HapticFeedback.success();

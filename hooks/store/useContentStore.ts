@@ -760,7 +760,9 @@ export const useContentStore = (
         const defaultQuizzes = getDefaultQuizzes();
         const customQuizzes = quizzes.filter(q => !defaultQuizzes.some(dq => dq.id === q.id));
 
-        if (!user?.is_premium && !isExisting && customQuizzes.length >= 3) {
+        const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
+
+        if (!isPremiumActive && !isExisting && customQuizzes.length >= 3) {
             const msg = language === 'fr'
                 ? "Limite atteinte : Vous ne pouvez créer que 3 quiz personnalisés dans le plan gratuit. Veuillez vous abonner pour en créer un nombre illimité !"
                 : language === 'ar'
@@ -778,7 +780,7 @@ export const useContentStore = (
         });
 
         if (userId && !userId.includes('anon')) {
-            if (user?.is_premium) {
+            if (isPremiumActive) {
                 import('../../services/contentService').then(({ contentService }) => {
                     contentService.saveQuiz(userId, quiz).catch(e => console.error("Error saving quiz to Supabase:", e));
                 });
@@ -791,7 +793,7 @@ export const useContentStore = (
                 alert(msg);
             }
         }
-    }, [userId, user?.is_premium, language, quizzes, getDefaultQuizzes]);
+    }, [userId, user?.is_premium, user?.premium_until, language, quizzes, getDefaultQuizzes]);
 
     const deleteQuiz = useCallback((id: string) => {
         setQuizzes(prev => {
@@ -817,7 +819,8 @@ export const useContentStore = (
         });
 
         if (userId && !userId.includes('anon')) {
-            if (user?.is_premium) {
+            const isPremiumActiveStory = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
+            if (isPremiumActiveStory) {
                 import('../../services/contentService').then(({ contentService }) => {
                     contentService.saveStory(userId, story).catch(e => console.error("Error saving story to Supabase:", e));
                 });
@@ -830,7 +833,7 @@ export const useContentStore = (
                 alert(msg);
             }
         }
-    }, [userId, user?.is_premium, language]);
+    }, [userId, user?.is_premium, user?.premium_until, language]);
 
     const deleteStory = useCallback((id: string) => {
         setStories(prev => {
@@ -873,7 +876,9 @@ export const useContentStore = (
         const defaultDecks = getDefaultDecks();
         const customDecks = decks.filter(d => !defaultDecks.some(dd => dd.id === d.id));
 
-        if (!user?.is_premium && !isExisting && customDecks.length >= 3) {
+        const isPremiumActiveDeck = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
+
+        if (!isPremiumActiveDeck && !isExisting && customDecks.length >= 3) {
             const msg = language === 'fr'
                 ? "Limite atteinte : Vous ne pouvez créer que 3 paquets de flashcards personnalisés dans le plan gratuit. Veuillez vous abonner pour en créer un nombre illimité !"
                 : language === 'ar'
@@ -897,7 +902,7 @@ export const useContentStore = (
         });
 
         if (userId && !userId.includes('anon')) {
-            if (user?.is_premium) {
+            if (isPremiumActiveDeck) {
                 import('../../services/contentService').then(({ contentService }) => {
                     contentService.saveFlashcardDeck(userId, deck, cards).catch(e => console.error("Error saving deck/cards to Supabase:", e));
                 });
@@ -910,7 +915,7 @@ export const useContentStore = (
                 alert(msg);
             }
         }
-    }, [userId, user?.is_premium, language, decks, getDefaultDecks]);
+    }, [userId, user?.is_premium, user?.premium_until, language, decks, getDefaultDecks]);
 
     const deleteFlashcardDeck = useCallback((id: string) => {
         setDecks(prev => {

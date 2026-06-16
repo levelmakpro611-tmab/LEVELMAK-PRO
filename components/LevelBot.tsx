@@ -85,27 +85,29 @@ const LevelBot: React.FC = () => {
   );
 
   const messages = currentSession?.messages || [];
-  const isLimitReached = !user?.is_premium && messages.filter(m => m.role === 'user').length >= 10;
+  // Strict premium check: requires is_premium=true AND valid non-expired premium_until
+  const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
+  const isLimitReached = !isPremiumActive && messages.filter(m => m.role === 'user').length >= 10;
 
   // Ephemeral chat cleanup for non-premium users on unmount or window close
   useEffect(() => {
-    if (!isOpen && !user?.is_premium && coachSessions.length > 0) {
+    if (!isOpen && !isPremiumActive && coachSessions.length > 0) {
       setCoachSessions([]);
       const coachKey = user?.id ? `levelmak_${user.id}_coach_sessions` : 'levelmak_coach_sessions';
       localStorage.removeItem(coachKey);
       setActiveSessionId(null);
     }
-  }, [isOpen, user?.is_premium, user?.id, coachSessions.length, setCoachSessions]);
+  }, [isOpen, isPremiumActive, user?.id, coachSessions.length, setCoachSessions]);
 
   useEffect(() => {
     return () => {
-      if (!user?.is_premium) {
+      if (!isPremiumActive) {
         setCoachSessions([]);
         const coachKey = user?.id ? `levelmak_${user.id}_coach_sessions` : 'levelmak_coach_sessions';
         localStorage.removeItem(coachKey);
       }
     };
-  }, [user?.is_premium, user?.id, setCoachSessions]);
+  }, [isPremiumActive, user?.id, setCoachSessions]);
 
   // Initialize first session if none exists or if session is empty
   useEffect(() => {

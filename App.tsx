@@ -138,9 +138,12 @@ const AppContent: React.FC = () => {
   const [currentBook, setCurrentBook] = useState<BookType | null>(null);
   const [sessionChosenPlan, setSessionChosenPlan] = useState(false);
 
+  // Strict premium check: user must have is_premium=true AND a valid non-expired premium_until date
+  const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
+
   const handleSetActiveTab = (tab: string) => {
     const freeTabs = ['dashboard', 'quiz', 'flashcards', 'settings', 'pricing', 'flashcard_mode'];
-    if (!user?.is_premium && !freeTabs.includes(tab)) {
+    if (!isPremiumActive && !freeTabs.includes(tab)) {
       alert("Veuillez souscrire à un forfait Premium pour accéder à cette fonctionnalité.");
       setActiveTab('pricing');
     } else {
@@ -411,7 +414,7 @@ const AppContent: React.FC = () => {
         <Suspense fallback={<PageLoader message="Chargement de l'accès..." fullScreen={false} />}>
           <Auth />
         </Suspense>
-      ) : user && !user.is_premium && !sessionChosenPlan ? (
+      ) : user && !isPremiumActive && !sessionChosenPlan ? (
         <Suspense fallback={<PageLoader message="Chargement des forfaits..." fullScreen={true} />}>
           <Pricing 
             onChooseFree={() => setSessionChosenPlan(true)} 

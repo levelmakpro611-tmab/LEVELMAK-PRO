@@ -67,9 +67,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [showHistory, setShowHistory] = React.useState(false);
   const [timeLeft, setTimeLeft] = React.useState<string>('');
   const [percentLeft, setPercentLeft] = React.useState<number>(100);
+  const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
 
   React.useEffect(() => {
-    if (!user || !user.is_premium || !user.premium_until) return;
+    if (!isPremiumActive) return;
 
     const updateTimer = () => {
       const expiry = new Date(user.premium_until).getTime();
@@ -286,7 +287,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       </div>
                     </div>
                   </div>                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    {user.is_premium ? (
+                    {isPremiumActive ? (
                       <>
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-blue-500/10">
                           <Sparkles size={10} /> {t('dashboard.profile.studentPro')}
@@ -556,7 +557,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         {/* Sidebar Column */}
         <div className="space-y-8">
           {/* Premium Status / Countdown Widget */}
-          {user.is_premium && (
+          {isPremiumActive && (
             <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border-blue-500/30 bg-gradient-to-br from-blue-950/10 via-slate-900/40 to-indigo-950/10 shadow-premium relative overflow-hidden ring-1 ring-blue-500/10">
               {/* Pulsing glow background */}
               <div className="absolute -right-12 -top-12 w-36 h-36 bg-blue-500/15 rounded-full blur-2xl animate-pulse" />

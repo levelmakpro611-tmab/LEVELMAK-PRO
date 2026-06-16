@@ -27,6 +27,9 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         expiresAt: string;
     } | null>(null);
 
+    // Strict active premium check: requires valid non-expired premium_until
+    const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
+
     const activePlanId = user ? localStorage.getItem(`levelmak_demo_premium_plan_id_${user.id}`) : null;
 
     if (isNativePlatform()) {
@@ -403,12 +406,12 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                             <button
                                 disabled
                                 className={`mt-6 w-full py-3 px-4 font-bold rounded-xl text-center text-sm border ${
-                                    user?.is_premium
+                                    isPremiumActive
                                         ? 'border-white/5 bg-slate-900/40 text-slate-500'
                                         : 'border-purple-500/30 text-purple-400 bg-purple-500/5'
                                 }`}
                             >
-                                {user?.is_premium ? 'Plan inactif' : 'Votre plan actuel'}
+                                {isPremiumActive ? 'Plan inactif' : 'Votre plan actuel'}
                             </button>
                         )}
                         <p className="text-center text-xs text-slate-500 mt-2">Parfait pour commencer !</p>
@@ -479,16 +482,16 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
 
                         <button
                             onClick={() => handleSelectPlan('weekly', 10000)}
-                            disabled={user?.is_premium}
+                            disabled={isPremiumActive}
                             className={`mt-6 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
-                                user?.is_premium 
+                                isPremiumActive 
                                     ? (activePlanId === 'plan_weekly' 
                                         ? 'bg-emerald-600 text-white cursor-not-allowed' 
                                         : 'bg-slate-850 text-slate-500 cursor-not-allowed border border-white/5')
                                     : 'bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white shadow-lg shadow-rose-950/20'
                             }`}
                         >
-                            {user?.is_premium 
+                            {isPremiumActive 
                                 ? (activePlanId === 'plan_weekly' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
                                 : 'Choisir Hebdomadaire'}
                         </button>
@@ -557,16 +560,16 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
 
                         <button
                             onClick={() => handleSelectPlan('monthly', 25000)}
-                            disabled={user?.is_premium}
+                            disabled={isPremiumActive}
                             className={`mt-6 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
-                                user?.is_premium 
+                                isPremiumActive 
                                     ? (activePlanId === 'plan_monthly' 
                                         ? 'bg-emerald-600 text-white cursor-not-allowed' 
                                         : 'bg-slate-850 text-slate-500 cursor-not-allowed border border-white/5')
                                     : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-950/20'
                             }`}
                         >
-                            {user?.is_premium 
+                            {isPremiumActive 
                                 ? (activePlanId === 'plan_monthly' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
                                 : 'Choisir Mensuel'}
                         </button>
@@ -635,16 +638,16 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
 
                         <button
                             onClick={() => handleSelectPlan('annual', 250000)}
-                            disabled={user?.is_premium}
+                            disabled={isPremiumActive}
                             className={`mt-6 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
-                                user?.is_premium 
+                                isPremiumActive 
                                     ? (activePlanId === 'plan_annual' 
                                         ? 'bg-emerald-600 text-white cursor-not-allowed' 
                                         : 'bg-slate-850 text-slate-500 cursor-not-allowed border border-white/5')
                                     : 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white shadow-lg shadow-yellow-950/20'
                             }`}
                         >
-                            {user?.is_premium 
+                            {isPremiumActive 
                                 ? (activePlanId === 'plan_annual' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
                                 : 'Choisir Annuel'}
                         </button>
