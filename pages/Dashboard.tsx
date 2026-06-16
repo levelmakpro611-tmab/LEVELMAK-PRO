@@ -285,21 +285,39 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-blue-500/10">
-                      <Sparkles size={10} /> {t('dashboard.profile.studentPro')}
-                    </div>
-                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-colors ${isOnline
-                      ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/10'
-                      : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/10'
-                      }`}>
-                      {isOnline ? (<><Wifi size={10} /> {t('dashboard.online')}</>) : (<><WifiOff size={10} /> {t('dashboard.offline')}</>)}
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
-                      {t('dashboard.profile.eliteMember')}
-                    </div>
-                  </div>
+                  </div>                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                    {user.is_premium ? (
+                      <>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-blue-500/10">
+                          <Sparkles size={10} /> {t('dashboard.profile.studentPro')}
+                        </div>
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-colors ${isOnline
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/10'
+                          : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/10'
+                          }`}>
+                          {isOnline ? (<><Wifi size={10} /> {t('dashboard.online')}</>) : (<><WifiOff size={10} /> {t('dashboard.offline')}</>)}
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
+                          {t('dashboard.profile.eliteMember')}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-500/10 text-slate-500 dark:text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-550/10">
+                          {settings.language === 'fr' ? 'Étudiant Gratuit' : 'Free Student'}
+                        </div>
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-colors ${isOnline
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/10'
+                          : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/10'
+                          }`}>
+                          {isOnline ? (<><Wifi size={10} /> {t('dashboard.online')}</>) : (<><WifiOff size={10} /> {t('dashboard.offline')}</>)}
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-500/10 text-slate-500 dark:text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-550/10">
+                          {settings.language === 'fr' ? 'Membre Standard' : 'Standard Member'}
+                        </div>
+                      </>
+                    )}
+                   </div>
                 </div>
                 <p className="text-[10px] md:text-base text-slate-500 dark:text-slate-400 font-medium max-w-lg leading-relaxed mx-auto md:mx-0">
                   {t('dashboard.profile.nextLevel')} <span className="text-slate-900 dark:text-white font-bold">{Math.round(xpPercentage)}%</span> {t('dashboard.profile.ofNextLevel')}

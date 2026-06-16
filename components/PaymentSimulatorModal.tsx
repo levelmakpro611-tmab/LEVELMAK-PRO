@@ -104,9 +104,39 @@ export const PaymentSimulatorModal: React.FC<PaymentSimulatorModalProps> = ({
     };
 
     const runSimulation = async (simulateSuccess: boolean) => {
+        setError(null);
+
+        // Form Validation Checks
+        if (method !== 'card') {
+            const cleanedPhone = phoneNumber.replace(/\D/g, '');
+            // Accept standard Guinea phone number lengths (9 digits local, 12 digits with 224 country code)
+            if (cleanedPhone.length < 9) {
+                setError("Veuillez saisir un numéro de téléphone mobile guinéen valide à 9 chiffres (ex: 611 29 68 29).");
+                return;
+            }
+        } else {
+            if (!cardDetails.name.trim()) {
+                setError("Veuillez saisir le nom figurant sur la carte.");
+                return;
+            }
+            const cleanedCard = cardDetails.number.replace(/\D/g, '');
+            if (cleanedCard.length !== 16) {
+                setError("Veuillez saisir un numéro de carte valide à 16 chiffres.");
+                return;
+            }
+            if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardDetails.expiry)) {
+                setError("La date d'expiration doit être au format MM/AA (ex: 12/28).");
+                return;
+            }
+            const cleanedCvv = cardDetails.cvv.replace(/\D/g, '');
+            if (cleanedCvv.length !== 3) {
+                setError("Le code CVV doit contenir exactement 3 chiffres.");
+                return;
+            }
+        }
+
         setStep('processing');
         setLoading(true);
-        setError(null);
 
         // Simulated steps during processing (total 5 seconds)
         const steps = [
@@ -266,7 +296,7 @@ export const PaymentSimulatorModal: React.FC<PaymentSimulatorModalProps> = ({
                                             <label className="block text-xs text-slate-400 uppercase font-semibold mb-1">Numéro de téléphone mobile</label>
                                             <input
                                                 type="tel"
-                                                placeholder="Ex: +224 622 00 00 00"
+                                                placeholder="Ex: +224 611 29 68 29"
                                                 value={phoneNumber}
                                                 onChange={(e) => setPhoneNumber(e.target.value)}
                                                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 font-semibold"
