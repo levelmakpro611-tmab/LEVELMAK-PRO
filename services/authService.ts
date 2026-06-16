@@ -192,6 +192,8 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
                 streak: newUser.streak,
                 onboarding_completed: newUser.onboardingCompleted,
                 status: 'active',
+                is_premium: false,
+                premium_until: null,
                 last_active: new Date().toISOString()
             });
 

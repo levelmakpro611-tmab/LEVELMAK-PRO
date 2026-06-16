@@ -235,8 +235,8 @@ export const useAuthStore = () => {
             // Replicate custom fields into user.stats so they sync to Supabase JSONB
             let updatedStats = { ...prev.stats };
             if (updates?.customSubjects !== undefined) updatedStats.customSubjects = updates.customSubjects;
-            if (updates?.activeSubjects !== undefined) updatedStats.activeSubjects = updates.activeSubjects;
-            if (updates?.subjectTargets !== undefined) updatedStats.subjectTargets = updates.subjectTargets;
+            if ((updates as any)?.activeSubjects !== undefined) updatedStats.activeSubjects = (updates as any).activeSubjects;
+            if ((updates as any)?.subjectTargets !== undefined) updatedStats.subjectTargets = (updates as any).subjectTargets;
             if (updates?.analytics !== undefined) updatedStats.analytics = updates.analytics;
             if (updates?.stats !== undefined) updatedStats = { ...updatedStats, ...updates.stats };
 
