@@ -7,11 +7,36 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 /**
  * Native Platform Detection
  */
-export const isNativePlatform = () => Capacitor.isNativePlatform();
-export const getPlatform = () => Capacitor.getPlatform(); // 'ios', 'android', or 'web'
-export const isIOS = () => Capacitor.getPlatform() === 'ios';
-export const isAndroid = () => Capacitor.getPlatform() === 'android';
-export const isWeb = () => Capacitor.getPlatform() === 'web';
+export const isNativePlatform = () => {
+    if (typeof window !== 'undefined' && window.location.search.includes('simulateMobile=true')) {
+        return true;
+    }
+    return Capacitor.isNativePlatform();
+};
+export const getPlatform = () => {
+    if (typeof window !== 'undefined' && window.location.search.includes('simulateMobile=true')) {
+        return 'android';
+    }
+    return Capacitor.getPlatform();
+}; // 'ios', 'android', or 'web'
+export const isIOS = () => {
+    if (typeof window !== 'undefined' && window.location.search.includes('simulateMobile=true')) {
+        return false;
+    }
+    return Capacitor.getPlatform() === 'ios';
+};
+export const isAndroid = () => {
+    if (typeof window !== 'undefined' && window.location.search.includes('simulateMobile=true')) {
+        return true;
+    }
+    return Capacitor.getPlatform() === 'android';
+};
+export const isWeb = () => {
+    if (typeof window !== 'undefined' && window.location.search.includes('simulateMobile=true')) {
+        return false;
+    }
+    return Capacitor.getPlatform() === 'web';
+};
 
 /**
  * Haptic Feedback Helpers
