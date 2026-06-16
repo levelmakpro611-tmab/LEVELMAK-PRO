@@ -6,6 +6,25 @@
 import { geminiService } from './geminiService';
 import { DAILY_VOCAB, DAILY_MOTIVATION } from '../utils/dailyContent';
 import { supabase } from './supabase';
+import { 
+  COACH_SYSTEM_PROMPT, 
+  SEARCH_BOOKS_SYSTEM, 
+  SEARCH_BOOKS_USER, 
+  FLASHCARDS_SYSTEM, 
+  FLASHCARDS_USER, 
+  VOCABULARY_SYSTEM, 
+  MOTIVATION_SYSTEM, 
+  WRITING_ANALYZE_SYSTEM, 
+  WRITING_ANALYZE_USER, 
+  WRITING_COACH_REVIEW_SYSTEM, 
+  WRITING_COACH_HELP_SYSTEM, 
+  SCIENTIFIC_SOLVER_SYSTEM, 
+  SCIENTIFIC_CHECKER_SYSTEM, 
+  HISTORY_SYSTEM_PROMPT, 
+  FEYNMAN_SYSTEM_PROMPT, 
+  BATTLE_QUIZ_USER_PROMPT 
+} from './aiPrompts';
+
 
 async function getHistoricalWords(lang: string): Promise<string[]> {
   try {
@@ -203,7 +222,131 @@ function generateOfflineFlashcardsFallback(subject: string, manualText: string):
   return cards.slice(0, 15);
 }
 
+/**
+ * Centralized AI Service for Levelmak Pro.
+ * Provides interaction methods for generating quizzes, flashcards, coaching, Feynman laboratory,
+ * scientific problem solving, writing review, and plagiarism checking using Google Gemini API.
+ */
 export const aiService = {
+  /**
+   * Génère un examen surprise IA basé sur l'historique des discussions avec le coach.
+   * 
+   * @param {string} subject - Le sujet de l'examen.
+   * @param {any[]} [coachSessions] - Liste des sessions de coaching de l'élève.
+   * @param {string} [lang] - La langue cible ('fr', 'en', 'ar').
+   */
+  async generateAISurpriseExam(subject: string, coachSessions: any[] = [], lang: string = 'fr') {
+    // 1. Extraire le contexte des sessions de coaching correspondant au sujet
+    const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const normSubject = normalize(subject);
+    
+    let relevantDialogues = "";
+    let count = 0;
+    
+    // Trier par date de mise à jour décroissante
+    const sortedSessions = [...coachSessions].sort((a, b) => 
+      new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+    );
+    
+    for (const session of sortedSessions) {
+      const titleMatches = normalize(session.title || "").includes(normSubject);
+      let sessionText = "";
+      let hasSubjectKeywords = false;
+      
+      if (session.messages) {
+        for (const msg of session.messages) {
+          const text = msg.text || "";
+          sessionText += `${msg.role === 'user' ? 'Élève' : 'Coach'}: ${text}\n`;
+          if (normalize(text).includes(normSubject)) {
+            hasSubjectKeywords = true;
+          }
+        }
+      }
+      
+      if (titleMatches || hasSubjectKeywords) {
+        relevantDialogues += `--- Discussion Session: ${session.title || 'Discussion'} ---\n${sessionText}\n`;
+        count++;
+        if (count >= 3) break;
+      }
+    }
+    
+    // Si aucun dialogue spécifique n'est trouvé, prendre les discussions générales récentes
+    if (!relevantDialogues && sortedSessions.length > 0) {
+      let generalText = "";
+      for (const session of sortedSessions.slice(0, 2)) {
+        if (session.messages) {
+          for (const msg of session.messages) {
+            generalText += `${msg.role === 'user' ? 'Élève' : 'Coach'}: ${msg.text || ""}\n`;
+          }
+        }
+      }
+      relevantDialogues = `--- Discussions Générales Récentes ---\n${generalText}\n`;
+    }
+
+    try {
+      const messages = [
+        {
+          role: "system",
+          content: `Tu es le tuteur d'élite Levelmak Pro de TMAB GROUP. Ton rôle est de concevoir un examen surprise personnalisé de 10 questions sous forme de QCM.
+          Cet examen doit porter en priorité SUR CE QUE L'ÉLÈVE A APPRIS ET SURTOUT LES SUJETS DISCUTÉS DANS L'HISTORIQUE DE SES SESSIONS DE COACHING (ci-dessous), en insistant sur ses erreurs, exercices ou explications scientifiques.
+          Retourne UNIQUEMENT un objet JSON.`
+        },
+        {
+          role: "user",
+          content: `Matière principale : ${subject}
+          Langue : ${lang === 'ar' ? 'Arabe' : (lang === 'en' ? 'Anglais' : 'Français')}
+          
+          === HISTORIQUE DE SES INTERACTIONS / DISCUSSIONS AVEC LE COACH ===
+          ${relevantDialogues || "Aucune discussion récente pour cette matière. Base-toi sur les notions clés du programme standard de : " + subject}
+          ==================================================================
+          
+          Règles ABSOLUES :
+          1. Génère exactement 10 questions de type QCM adaptées au niveau de l'élève. Basé sur les concepts abordés ou les éventuelles fautes de la discussion s'il y en a.
+          2. Chaque question doit comporter 4 options, un index de bonne réponse (0, 1, 2 ou 3) et une explication pédagogique détaillée reprenant les explications du coach.
+          3. Génère un JSON structuré :
+             - "title": Titre accrocheur de l'examen (ex: "Examen Surprise IA : [Sujet]").
+             - "summary": Résumé de 2-3 phrases sur les performances/concepts vus par l'élève dans ses discussions.
+             - "keyPoints": 5 points clés validés par cet examen.
+             - "definitions": [{ "term": "...", "definition": "..." }] (2-3 définitions importantes).
+             - "questions": Tableau de 10 questions : { "text": "...", "options": ["Option A", "Option B", "Option C", "Option D"], "correctAnswer": 0, "explanation": "..." }.
+             - "subject": "${subject}"
+          
+          RÈGLE D'OR ABSOLUE:
+          RETOURNE UNIQUEMENT L'OBJET JSON. AUCUN TEXTE AVANT ou APRÈS. PAS DE BALISES MARKDOWN COMME \`\`\`json. Assure-toi que la syntaxe JSON est PARFAITE (virgules et guillemets).`
+        }
+      ];
+
+      const responseText = await callGemini(messages, true);
+
+      let cleanedText = responseText.trim();
+      if (cleanedText.startsWith("```json")) {
+        cleanedText = cleanedText.replace(/^```json/, "").replace(/```$/, "").trim();
+      } else if (cleanedText.startsWith("```")) {
+        cleanedText = cleanedText.replace(/^```/, "").replace(/```$/, "").trim();
+      }
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : cleanedText;
+      const data = JSON.parse(jsonStr);
+      if (data.questions) {
+        data.questions = data.questions.map((q: any, idx: number) => ({
+          ...q,
+          id: `surprise_q_${Date.now()}_${idx}`
+        }));
+      }
+      return data;
+    } catch (err) {
+      console.warn("⚠️ Échec de la génération de l'examen surprise en ligne, activation du fallback hors-ligne...", err);
+      const offlineQuiz = generateOfflineQuizFallback(subject, 'Intermédiaire', '');
+      if (offlineQuiz.questions) {
+        offlineQuiz.questions = offlineQuiz.questions.map((q: any, idx: number) => ({
+          ...q,
+          id: `surprise_q_${Date.now()}_${idx}`
+        }));
+      }
+      return offlineQuiz;
+    }
+  },
+
   /**
    * Génère un quiz à partir de sources textuelles ou visuelles
    */
@@ -298,33 +441,7 @@ export const aiService = {
   },
 
   async coachChat(message: string, history: { role: 'user' | 'bot'; text: string }[], userContext: string, base64Image?: string, lang: string = 'fr') {
-    const systemPrompt = `Tu es l'Elite Coach de Levelmak Pro, un TUTEUR HUMAIN, BIENVEILLANT et EXPERT en pédagogie pour la plateforme LEVELMAK, éditée par TMAB GROUP.
-Ton objectif : Transformer chaque exercice et question en une opportunité d'apprentissage actif, en évitant de donner les réponses toutes faites.
-
-RÈGLES D'OR DE TON ENSEIGNEMENT :
-
-1. CONTRAT PÉDAGOGIQUE & NOUVEL EXERCICE (MATIÈRES SCIENTIFIQUES & EXACTES comme Mathématiques, Physique-Chimie, Électricité, SVT, etc.) :
-   Dès que l'élève soumet un devoir, un exercice ou pose une question sur un problème scientifique :
-   - Propose systématiquement deux options claires à l'élève :
-     * **Option A (Interactif pas-à-pas)** : On résout l'exercice ensemble, étape par étape. Je t'explique et te donne la première question/étape, tu y réponds, on valide ensemble, puis on passe à la suite.
-     * **Option B (Explication Globale)** : Je t'explique tout le raisonnement d'un coup avec les formules et étapes détaillées.
-   - Demande-lui clairement de choisir entre l'Option A et l'Option B pour commencer.
-
-2. DÉROULEMENT DU MODE INTERACTIF PAS-À-PAS (OPTION A) :
-   - **Partie A (Guidage et Évaluation)** : Ne donne jamais toute la solution. Explique uniquement l'étape en cours, présente les notions clés, puis pose UNE question ou demande un calcul à l'élève pour valider cette étape. Attends sa réponse. Répète cela pour chaque étape.
-   - **Partie B (Résumé final)** : Une fois que toutes les étapes de l'exercice sont résolues, fournis-lui obligatoirement un **résumé global et structuré** de tout l'exercice avec la méthode de résolution générale.
-
-3. LE DÉFI DE COMPRÉHENSION (EXERCICE SIMILAIRE DE VALIDATION) :
-   - Immédiatement après avoir fini de résoudre un exercice avec l'élève (que ce soit via l'Option A ou B), propose-lui systématiquement un **nouvel exercice similaire** (par exemple, si l'exercice portait sur un circuit électrique, les forces ou de l'algèbre, génère un problème analogue avec des valeurs différentes).
-   - Demande-lui explicitement de le résoudre seul et de t'envoyer ses réponses ou une photo de sa feuille afin de vérifier ensemble s'il a réellement assimilé la notion.
-
-4. EXPLICATION DES DEVOIRS ET DOCUMENTS ENVOYÉS :
-   - Si l'élève envoie la photo d'un devoir ou d'un exercice qu'il ne comprend pas, commence par déchiffrer l'énoncé, explique les concepts sous-jacents de manière très simple et encourageante, et lance le contrat pédagogique (Option A ou B) pour guider sa résolution.
-
-5. TON ET POSTURE :
-   - Sois extrêmement bienveillant, clair, structuré et utilise le Markdown pour aérer tes explications.
-   - Si on te demande qui a créé LEVELMAK, réponds simplement que c'est TMAB GROUP. Ne mentionne jamais de noms de personnes.
-   - Répond en ${lang}.`;
+    const systemPrompt = COACH_SYSTEM_PROMPT(lang);
 
     const recentHistory = history.slice(-10).map(msg => ({
       role: msg.role === 'bot' ? 'assistant' : 'user',
@@ -348,8 +465,8 @@ RÈGLES D'OR DE TON ENSEIGNEMENT :
 
   async searchBooks(query: string, lang: string = 'fr') {
     const messages = [
-      { role: "system", content: "Expert bibliographique. Retourne un JSON uniquement." },
-      { role: "user", content: `Recherche de livres pour : "${query}". Langue: ${lang}. JSON format: { "recommendations": [ { "title", "authors", "description" } ] }.` }
+      { role: "system", content: SEARCH_BOOKS_SYSTEM },
+      { role: "user", content: SEARCH_BOOKS_USER(query, lang) }
     ];
 
     const text = await callGemini(messages, true);
@@ -377,14 +494,14 @@ RÈGLES D'OR DE TON ENSEIGNEMENT :
       const messages = [
         { 
           role: "system", 
-          content: "Expert en mémorisation d'élite. Tu dois ABSOLUMENT répondre par un objet JSON pur: { \"cards\": [ { \"front\": \"Question/Concept\", \"back\": \"Réponse/Définition détaillée\" } ] }. Génère un minimum de 15 cartes et un maximum de 20 cartes obligatoirement." 
+          content: FLASHCARDS_SYSTEM 
         },
         { 
           role: "user", 
           content: [
             {
               type: "text",
-              text: `Conçois un deck de flashcards complet et exhaustif (entre 15 et 20 cartes) basé STRICTEMENT sur les documents fournis. ADAPTE TON LANGAGE AU NIVEAU DE L'ÉLÈVE. Utilise un vocabulaire très simple, clair et accessible. Évite les termes trop complexes, "robustes" ou académiques pour que l'élève comprenne facilement chaque question et chaque réponse.\nSujet: ${subject}\nLangue: ${lang}`
+              text: FLASHCARDS_USER(subject, lang)
             }
           ]
         }
@@ -443,14 +560,7 @@ RÈGLES D'OR DE TON ENSEIGNEMENT :
       const messages = [
         {
           role: "system",
-          content: `Tu es un professeur de langue d'élite. Génère un vocabulaire quotidien composé de DEUX mots de vocabulaire intéressants, riches et captivants en ${languageName}.
-Les mots, les explications et les phrases d'exemples doivent être entièrement rédigés en ${languageName}.
-Tu dois impérativement répondre par un objet JSON valide sous la forme d'un tableau de deux objets ayant la structure suivante:
-[
-  { "word": "Mot 1", "explanation": "Définition simple et pédagogique du mot", "usage": "Exemple d'utilisation du mot dans une phrase concrète." },
-  { "word": "Mot 2", "explanation": "Définition simple et pédagogique du mot", "usage": "Exemple d'utilisation du mot dans une phrase concrète." }
-]
-Pour éviter toute répétition, tu ne dois ABSOLUMENT PAS générer ou utiliser les mots suivants : ${allExcludedWords.join(', ')}.`
+          content: VOCABULARY_SYSTEM(languageName, allExcludedWords)
         },
         {
           role: "user",
@@ -487,15 +597,7 @@ Pour éviter toute répétition, tu ne dois ABSOLUMENT PAS générer ou utiliser
       const messages = [
         {
           role: "system",
-          content: `Tu es un coach de motivation pour étudiants d'élite chez LEVELMAK.
-Génère une citation inspirante unique en ${languageName} pour encourager l'excellence, l'apprentissage et la persévérance.
-La citation et l'auteur doivent être entièrement rédigés en ${languageName}.
-Tu dois impérativement répondre par un objet JSON valide ayant la structure suivante:
-{
-  "quote": "La citation inspirante...",
-  "author": "Nom de l'auteur célèbre ou de la source"
-}
-Pour éviter toute répétition, tu ne dois ABSOLUMENT PAS générer les citations suivantes : ${allExcludedQuotes.slice(0, 100).join(' | ')}.`
+          content: MOTIVATION_SYSTEM(languageName, allExcludedQuotes)
         },
         {
           role: "user",
@@ -520,42 +622,12 @@ Pour éviter toute répétition, tu ne dois ABSOLUMENT PAS générer les citatio
     }
   },
 
-
-
-
   async analyzeWriting(text: string, title: string, lang: string = 'fr') {
-    const systemPrompt = `Tu es un expert linguistique d'élite et correcteur de langue française.
-Analyse le texte fourni et renvoie uniquement un objet JSON valide correspondant à la structure ci-dessous.
-Tu dois repérer TOUTES les fautes d'orthographe, de grammaire, de conjugaison et de ponctuation, et fournir une explication claire, pédagogique et détaillée pour chaque faute (dans le champ "reason").
-
-Structure JSON attendue :
-{
-  "score": 85, // Note globale sur 100
-  "criteria": {
-    "style": 80, // Note de style sur 100
-    "grammar": 75, // Note de grammaire sur 100
-    "vocabulary": 85, // Note de vocabulaire sur 100
-    "structure": 90 // Note de structure sur 100
-  },
-  "feedback": "Une analyse synthétique globale et constructive...",
-  "corrections": [
-    {
-      "original": "l'homme viens", // Le segment erroné exact
-      "correction": "l'homme vient", // Le segment corrigé exact
-      "reason": "Le verbe 'venir' conjugué au présent de l'indicatif avec le sujet 'l'homme' (3ème personne du singulier) prend un 't' à la fin ('vient') et non un 's' ('viens' est pour la 1ère ou 2ème personne)."
-    }
-  ],
-  "synonyms": [
-    {
-      "word": "mot_a_remplacer",
-      "suggestions": ["synonyme1", "synonyme2", "synonyme3"],
-      "context": "Le contexte d'utilisation du mot pour aider l'élève."
-    }
-  ]
-}`;
+    const systemPrompt = WRITING_ANALYZE_SYSTEM;
+    const langName = lang === 'ar' ? 'arabe' : (lang === 'en' ? 'anglais' : 'français');
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Texte à analyser: "${text}"\nTitre: "${title}"\nLangue attendue des explications: ${lang === 'ar' ? 'arabe' : (lang === 'en' ? 'anglais' : 'français')}.` }
+      { role: "user", content: WRITING_ANALYZE_USER(text, title, langName) }
     ];
     const response = await callGemini(messages, true);
     return JSON.parse(response);
@@ -563,23 +635,11 @@ Structure JSON attendue :
 
   async writingCoachChat(mode: 'review' | 'help', text: string, title: string, lang: string = 'fr') {
     let systemPrompt = "";
+    const langName = lang === 'ar' ? 'arabe' : (lang === 'en' ? 'anglais' : 'français');
     if (mode === 'review') {
-      systemPrompt = `Tu es un mentor d'écriture et critique littéraire bienveillant et exigeant, travaillant pour LEVELMAK PRO.
-Ton rôle est de donner un AVIS INTÉGRAL, honnête et approfondi sur le texte de l'élève.
-Analyse en profondeur le texte fourni (intitulé "${title}").
-Ne propose AUCUNE option (comme Option A / Option B). Donne ton avis directement et de manière naturelle.
-Évalue le style, la structure, l'ambiance, les émotions et le rythme.
-Comporte-toi comme le superviseur/tuteur personnel de l'auteur. Sois constructif, donne des conseils d'amélioration concrets et encourage-le.
-Réponds directement en ${lang === 'ar' ? 'arabe' : (lang === 'en' ? 'anglais' : 'français')}.`;
+      systemPrompt = WRITING_COACH_REVIEW_SYSTEM(title, langName);
     } else {
-      systemPrompt = `Tu es un coach d'écriture créative inspirant pour LEVELMAK PRO.
-Ton rôle est d'apporter de l'AIDE concrète à l'élève à partir de ses écrits (intitulés "${title}").
-Ne propose AUCUNE option (comme Option A / Option B). Donne ton aide directement.
-Analyse ce que l'élève a écrit. Si le texte est très court ou inexistant, propose 3 idées originales de départ de récits/poèmes/essais.
-Si l'élève a déjà écrit quelque chose, base-toi sur ses écrits pour :
-1. Lui suggérer la suite directe en écrivant quelques phrases ou paragraphes de proposition.
-2. Lui donner des idées de réflexion et des pistes de développement pour la suite de son histoire (ex: développement de personnages, rebondissements).
-Sois très créatif, encourageant et réponds directement en ${lang === 'ar' ? 'arabe' : (lang === 'en' ? 'anglais' : 'français')}.`;
+      systemPrompt = WRITING_COACH_HELP_SYSTEM(title, langName);
     }
 
     const messages = [
@@ -590,7 +650,7 @@ Sois très créatif, encourageant et réponds directement en ${lang === 'ar' ? '
   },
 
   async solveScientificProblem(problem: string, context?: string, base64Image?: string, lang: string = 'fr') {
-    const systemPrompt = `Expert Scientifique. JSON: { \"solution\", \"steps\", \"pedagogy\", \"formulas\", \"subject\" }.`;
+    const systemPrompt = SCIENTIFIC_SOLVER_SYSTEM;
     const userContent: any[] = [{ type: "text", text: `Problème : ${problem}` }];
     if (base64Image) {
       const imgData = base64Image.includes(',') ? base64Image : `data:image/jpeg;base64,${base64Image}`;
@@ -601,7 +661,7 @@ Sois très créatif, encourageant et réponds directement en ${lang === 'ar' ? '
   },
 
   async verifyScientificSolution(problemContext: string, studentSolutionBase64: string, lang: string = 'fr') {
-    const systemPrompt = `Expert Correcteur. JSON: { \"isCorrect\", \"score\", \"feedback\", \"errors\", \"suggestions\", \"ocrTranscript\" }.`;
+    const systemPrompt = SCIENTIFIC_CHECKER_SYSTEM;
     const imgData = studentSolutionBase64.includes(',') ? studentSolutionBase64 : `data:image/jpeg;base64,${studentSolutionBase64}`;
     const messages = [
       { role: "system", content: systemPrompt },
@@ -612,16 +672,7 @@ Sois très créatif, encourageant et réponds directement en ${lang === 'ar' ? '
   },
 
   async historyChat(message: string, history: { role: 'user' | 'assistant'; content: string }[], character: string, era: string, dates: string, bio: string, lang: string = 'fr', base64Image?: string) {
-    const systemPrompt = `Tu es ${character} (${dates}). 
-Époque : ${era}.
-Bio : ${bio}.
-
-CONSIGNE DE RÉALISME HISTORIQUE ET DE MISE EN SCÈNE IMMERSIVE :
-1. MISE EN SCÈNE IMMERSIVE OBLIGATOIRE (SCÉNARIO PHYSIQUE VIVANT) : Chaque réponse que tu donnes DOIT obligatoirement commencer par une description physique de tes actions, gestes, mimiques, émotions, environnement, mouvements ou attitude en rapport avec la situation, écrite à la troisième personne, au présent de l'indicatif, et placée entre parenthèses au tout début de ton message (ex: "(Il regarde la personne, les yeux clignotants, s'assoit en s'appuyant sur sa canne, me fixe droit dans les yeux et déclare :)"). Sois extrêmement créatif et immersif (utilise des éléments caractéristiques comme ta canne pour Socrate, tes cheveux ébouriffés pour Einstein, tes éprouvettes, etc.) pour donner l'impression aux élèves que tu es en vie face à eux dans un vrai scénario interactif.
-2. Tu ne connais RIEN de ce qui s'est passé APRÈS ta mort ou en dehors de ton époque.
-3. Si l'élève te pose une question sur une technologie moderne, un personnage futur ou un événement futur, réponds avec confusion, curiosité ou scepticisme historique, en insistant sur le fait que cela n'existe pas encore.
-4. Réponds en ${lang} avec le ton, la posture et le vocabulaire authentique de ton personnage et de son époque.
-5. Après la mise en scène entre parenthèses, exprime ton dialogue de façon fluide, naturelle et vivante. Pas de tableaux Markdown ni de formalisme robotique.`;
+    const systemPrompt = HISTORY_SYSTEM_PROMPT(character, dates, era, bio, lang);
     
     const userContent: any[] = [{ type: "text", text: message || "Regarde cette image." }];
     if (base64Image) {
@@ -638,15 +689,7 @@ CONSIGNE DE RÉALISME HISTORIQUE ET DE MISE EN SCÈNE IMMERSIVE :
   },
 
   async feynmanChat(message: string, history: { role: 'user' | 'assistant'; content: string }[], topic: string, lang: string = 'fr', base64Image?: string) {
-    const systemPrompt = `Tu es Léo, un enfant curieux de 10 ans. 
-Ton objectif : Comprendre "${topic}".
-
-CONSIGNES DE PERSONNALITÉ :
-1. Tu es UN ENFANT. Tu n'utilises JAMAIS de mots compliqués, de jargon scientifique ou de phrases trop formelles.
-2. Si l'élève utilise un mot difficile (ex: "thermodynamique", "ontologique", "systémique"), tu dois t'arrêter et dire : "C'est quoi ce mot ? Je ne comprends pas, explique-moi avec des mots simples !"
-3. Pose UNE SEULE question courte par message pour faire avancer ton apprentissage.
-4. Si on t'envoie une image, essaie de deviner ce que c'est comme un enfant (ex: un schéma de cellule devient "un œuf avec des points bizarres").
-5. Réponds en ${lang}.`;
+    const systemPrompt = FEYNMAN_SYSTEM_PROMPT(topic, lang);
     
     const userContent: any[] = [{ type: "text", text: message || "Qu'est-ce que c'est sur cette image ?" }];
     if (base64Image) {
@@ -663,24 +706,7 @@ CONSIGNES DE PERSONNALITÉ :
   },
 
   async getBattleQuiz(lang: string = 'fr') {
-    const prompt = `Génère 10 questions de duel pour un quiz compétitif d'élèves en ${lang}. 
-Le quiz doit être extrêmement diversifié et couvrir un large éventail de sujets :
-- Matières scolaires (Mathématiques, Physique-Chimie, Sciences de la Terre, Histoire, Géographie, Littérature, Philosophie).
-- Culture générale mondiale et africaine (Cinéma, Musique, Art, Sports, Technologies).
-- Actualités et faits du monde contemporain (événements marquants, découvertes scientifiques récentes, défis écologiques).
-
-Les questions doivent être stimulantes, amusantes et variées. 
-Format JSON attendu (uniquement le JSON brut) :
-{ 
-  "questions": [ 
-    { 
-      "text": "Texte de la question...", 
-      "options": ["Option A", "Option B", "Option C", "Option D"], 
-      "correctAnswer": 0, 
-      "explanation": "Explication rapide de la bonne réponse." 
-    } 
-  ] 
-}`;
+    const prompt = BATTLE_QUIZ_USER_PROMPT(lang);
     const text = await callGemini([{ role: "user", content: prompt }], true);
     const data = JSON.parse(text);
     return (data.questions || []).map((q: any, idx: number) => ({ ...q, id: `battle_q_${Date.now()}_${idx}` }));

@@ -21,6 +21,7 @@ const FlashcardMode = lazy(() => import('./pages/FlashcardMode').then(m => ({ de
 const Ranking = lazy(() => import('./pages/Ranking'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const AISummary = lazy(() => import('./pages/AISummary'));
+const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
 const Library = lazy(() => import('./pages/Library'));
 const AtlasLibrary = lazy(() => import('./components/AtlasLibrary'));
 import LevelBot from './components/LevelBot';
@@ -130,11 +131,57 @@ const PageLoader = ({ message = "Synchronisation...", fullScreen = true }: { mes
 );
 
 const AppContent: React.FC = () => {
-  const { user, loading, settings, t } = useStore();
+  const { user, loading, settings, t, updateProfile } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
   const [currentDeck, setCurrentDeck] = useState<{ deck: FlashcardDeck, cards: Flashcard[] } | null>(null);
   const [currentBook, setCurrentBook] = useState<BookType | null>(null);
+  const [sessionChosenPlan, setSessionChosenPlan] = useState(false);
+
+  const handleSetActiveTab = (tab: string) => {
+    const freeTabs = ['dashboard', 'quiz', 'flashcards', 'settings', 'pricing', 'flashcard_mode'];
+    if (!user?.is_premium && !freeTabs.includes(tab)) {
+      alert("Veuillez souscrire à un forfait Premium pour accéder à cette fonctionnalité.");
+      setActiveTab('pricing');
+    } else {
+      setActiveTab(tab);
+    }
+  };
+
+  // Reset chosen plan flag on logout
+  useEffect(() => {
+    if (!user) {
+      setSessionChosenPlan(false);
+    }
+  }, [user]);
+
+  // Expiration check logic for premium subscriptions (polls every 15 seconds)
+  useEffect(() => {
+    if (!user || !user.is_premium || !user.premium_until) return;
+
+    const checkExpiry = () => {
+      const expiryTime = new Date(user.premium_until!).getTime();
+      const currentTime = new Date().getTime();
+
+      if (currentTime >= expiryTime) {
+        console.log('Subscription expired. Reverting to free tier.');
+        
+        // Clear local demo premium variables
+        localStorage.removeItem('levelmak_demo_premium');
+        localStorage.removeItem('levelmak_demo_premium_until');
+
+        updateProfile(user.name, user.phoneNumber, {
+          is_premium: false,
+          premium_until: null
+        });
+        alert('Votre abonnement Premium est arrivé à expiration. Votre compte a été configuré sur le plan gratuit.');
+      }
+    };
+
+    checkExpiry();
+    const interval = setInterval(checkExpiry, 15000);
+    return () => clearInterval(interval);
+  }, [user?.is_premium, user?.premium_until, updateProfile, user?.name, user?.phoneNumber]);
 
   // Apply theme and font size to body
   useEffect(() => {
@@ -172,10 +219,23 @@ const AppContent: React.FC = () => {
       initializeNativeFeatures();
       
       const handleNav = (e: any) => {
-        if (e.detail) setActiveTab(e.detail);
+        if (e.detail) handleSetActiveTab(e.detail);
       };
+
+      const handleStartQuiz = (e: any) => {
+        if (e.detail) {
+          setCurrentQuiz(e.detail);
+          handleSetActiveTab('quiz');
+        }
+      };
+
       window.addEventListener('nav_change', handleNav);
-      return () => window.removeEventListener('nav_change', handleNav);
+      window.addEventListener('start_quiz', handleStartQuiz);
+
+      return () => {
+        window.removeEventListener('nav_change', handleNav);
+        window.removeEventListener('start_quiz', handleStartQuiz);
+      };
     } catch (e) {
       console.error("Native init error:", e);
     }
@@ -188,7 +248,7 @@ const AppContent: React.FC = () => {
         if (currentBook) setCurrentBook(null);
         else if (currentQuiz) setCurrentQuiz(null);
         else if (currentDeck) setCurrentDeck(null);
-        else if (activeTab !== 'dashboard') setActiveTab('dashboard');
+        else if (activeTab !== 'dashboard') handleSetActiveTab('dashboard');
         else CapacitorApp.exitApp();
       });
 
@@ -224,13 +284,7 @@ const AppContent: React.FC = () => {
   }
 
   // Define Admin Check explicitly - Hardened
-  const isAdmin = Boolean(
-    user && (
-      (user.phoneNumber && (user.phoneNumber === 'levelmak611' || user.phoneNumber === '611')) ||
-      (user.email && (user.email === 'admin@levelmak.com' || user.email === '611@levelmak.app')) ||
-      (user.name && user.name.toLowerCase().includes('administrateur principal'))
-    )
-  );
+  const isAdmin = Boolean(user && user.role === 'admin');
 
   if (isAdmin) {
     return (
@@ -251,20 +305,20 @@ const AppContent: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard onNavigate={setActiveTab} />;
+        return <Dashboard onNavigate={handleSetActiveTab} />;
       case 'quiz':
         return <QuizGenerator onGenerated={(q) => setCurrentQuiz(q)} />;
       case 'library':
         return (
           <Library
-            onNavigate={setActiveTab}
-            onQuizGenerated={(quiz) => { setCurrentQuiz(quiz); setActiveTab('quiz'); }}
-            onFlashcardsGenerated={(deck, cards) => { setCurrentDeck({ deck, cards }); setActiveTab('flashcards'); }}
+            onNavigate={handleSetActiveTab}
+            onQuizGenerated={(quiz) => { setCurrentQuiz(quiz); handleSetActiveTab('quiz'); }}
+            onFlashcardsGenerated={(deck, cards) => { setCurrentDeck({ deck, cards }); handleSetActiveTab('flashcards'); }}
             onReadBook={(book) => { setCurrentQuiz(null); setCurrentDeck(null); setCurrentBook(book); }}
           />
         );
       case 'writing': return <CreativeWriting />;
-      case 'social': return <Community onNavigate={setActiveTab} />;
+      case 'social': return <Community onNavigate={handleSetActiveTab} />;
       case 'shop': return <Shop />;
       case 'planner': return <StudyPlanner />;
       case 'flashcards': return <Flashcards onStartSession={(deck, cards) => setCurrentDeck({ deck, cards })} />;
@@ -275,7 +329,7 @@ const AppContent: React.FC = () => {
               try {
                 const quiz = await aiService.generateQuiz(content, title, 'Intermédiaire');
                 setCurrentQuiz(quiz);
-                setActiveTab('quiz');
+                handleSetActiveTab('quiz');
               } catch (error) { alert(t('common.quizError')); }
             }}
             onGenerateFlashcards={async (content, title) => {
@@ -292,7 +346,7 @@ const AppContent: React.FC = () => {
                   },
                   cards
                 });
-                setActiveTab('flashcards');
+                handleSetActiveTab('flashcards');
               } catch (error) { alert(t('common.flashcardError')); }
             }}
           />
@@ -300,13 +354,14 @@ const AppContent: React.FC = () => {
       case 'ailab': return <AILab />;
       case 'ranking': return <Ranking />;
       case 'analytics': return <Analytics />;
-      case 'settings': return <Settings onNavigate={setActiveTab} />;
-      case 'atlas': return <AtlasLibrary onNavigate={setActiveTab} />;
-      case 'map': return <WorldBrainMap onCloseMap={() => setActiveTab('atlas')} onNavigate={setActiveTab} />;
-      case 'flashcard_mode': return <FlashcardMode onClose={() => setActiveTab('dashboard')} />;
-      case 'tutor_registration': return <TutorRegistration onComplete={() => setActiveTab('settings')} />;
+      case 'settings': return <Settings onNavigate={handleSetActiveTab} />;
+      case 'pricing': return <Pricing />;
+      case 'atlas': return <AtlasLibrary onNavigate={handleSetActiveTab} />;
+      case 'map': return <WorldBrainMap onCloseMap={() => handleSetActiveTab('atlas')} onNavigate={handleSetActiveTab} />;
+      case 'flashcard_mode': return <FlashcardMode onClose={() => handleSetActiveTab('dashboard')} />;
+      case 'tutor_registration': return <TutorRegistration onComplete={() => handleSetActiveTab('settings')} />;
       case 'tutor_hub': return <TutorHub />;
-      default: return <Dashboard onNavigate={setActiveTab} />;
+      default: return <Dashboard onNavigate={handleSetActiveTab} />;
     }
   };
 
@@ -355,8 +410,16 @@ const AppContent: React.FC = () => {
         <Suspense fallback={<PageLoader message="Chargement de l'accès..." fullScreen={false} />}>
           <Auth />
         </Suspense>
+      ) : user && !user.is_premium && !sessionChosenPlan ? (
+        <Suspense fallback={<PageLoader message="Chargement des forfaits..." fullScreen={true} />}>
+          <Pricing 
+            onChooseFree={() => setSessionChosenPlan(true)} 
+            onChoosePremium={() => setSessionChosenPlan(true)} 
+            isFullScreen={true}
+          />
+        </Suspense>
       ) : (
-        <AppShell activeTab={activeTab} setActiveTab={setActiveTab}>
+        <AppShell activeTab={activeTab} setActiveTab={handleSetActiveTab}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

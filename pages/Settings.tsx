@@ -18,7 +18,8 @@ import {
     Volume2,
     Type,
     GraduationCap,
-    FileText
+    FileText,
+    CreditCard
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { audioService } from '../services/audio';
@@ -146,6 +147,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
 
     const sections = [
         { id: 'profile', title: t('settings.profile'), icon: User, color: 'text-primary', bg: 'bg-primary/10' },
+        { id: 'subscription', title: "Abonnement & Pièces", icon: CreditCard, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
         { id: 'appearance', title: t('settings.appearance'), icon: Palette, color: 'text-secondary', bg: 'bg-secondary/10' },
         { id: 'notifications', title: t('settings.notifications'), icon: Bell, color: 'text-accent', bg: 'bg-accent/10' },
         { id: 'security', title: t('settings.security'), icon: Shield, color: 'text-success', bg: 'bg-success/10' },
@@ -286,6 +288,43 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                             )}
                                                         </button>
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {section.id === 'subscription' && (
+                                                <div className="space-y-6">
+                                                    <div className="flex flex-col gap-4">
+                                                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
+                                                            <div>
+                                                                <h4 className="font-bold text-sm">Statut de l'abonnement</h4>
+                                                                <p className="text-xs text-slate-400 mt-1">
+                                                                    {user.is_premium 
+                                                                        ? `Premium (Expire le : ${new Date(user.premium_until!).toLocaleString()})`
+                                                                        : 'Plan Gratuit'}
+                                                                </p>
+                                                            </div>
+                                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${user.is_premium ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/30 text-slate-400 border border-slate-700/40'}`}>
+                                                                {user.is_premium ? 'Premium' : 'Gratuit'}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
+                                                            <div>
+                                                                <h4 className="font-bold text-sm">Solde de LevelCoins</h4>
+                                                                <p className="text-xs text-slate-400 mt-1">Utilisables dans la boutique et le jardin</p>
+                                                            </div>
+                                                            <span className="text-lg font-black text-yellow-500">
+                                                                {user.levelCoins || 0} 🪙
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => onNavigate?.('pricing')}
+                                                        className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl text-center text-xs shadow-glow transition-all"
+                                                    >
+                                                        Voir les tarifs & packs de pièces
+                                                    </button>
                                                 </div>
                                             )}
 

@@ -233,7 +233,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   ];
 
   const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !Capacitor.isNativePlatform();
-  const navItems = isLocal
+  let navItems = isLocal
     ? navItemsRaw
     : navItemsRaw.filter(item => !['tutor_hub', 'planner', 'library'].includes(item.id));
 

@@ -173,12 +173,16 @@ class SmartFAQCache {
         try {
             const data = localStorage.getItem(this.cacheKey);
             if (data) {
-                const entries: [string, CachedFAQ][] = JSON.parse(data);
-                this.cache = new Map(entries);
-                console.log(`✅ FAQ Cache chargé: ${this.cache.size} questions en mémoire`);
+                try {
+                    const entries: [string, CachedFAQ][] = JSON.parse(data);
+                    this.cache = new Map(entries);
+                    console.log(`✅ FAQ Cache chargé: ${this.cache.size} questions en mémoire`);
+                } catch {
+                    localStorage.removeItem(this.cacheKey);
+                }
             }
         } catch (error) {
-            console.error('⚠️ Erreur chargement FAQ cache:', error);
+            console.warn('⚠️ Erreur chargement FAQ cache:', error);
         }
     }
 

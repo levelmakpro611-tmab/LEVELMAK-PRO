@@ -63,10 +63,10 @@ const formatInline = (text: string) => {
 };
 
 const LevelBot: React.FC = () => {
-  const { user, coachSessions, saveCoachMessage, createCoachSession, deleteCoachSession, settings } = useStore();
+  const { user, coachSessions, saveCoachMessage, createCoachSession, deleteCoachSession, settings, setCoachSessions } = useStore();
   const language = settings?.language || 'fr';
   const t = (translations[language] || translations['fr']).levelBot;
-  
+
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'history'>('chat');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -85,10 +85,31 @@ const LevelBot: React.FC = () => {
   );
 
   const messages = currentSession?.messages || [];
+  const isLimitReached = !user?.is_premium && messages.filter(m => m.role === 'user').length >= 10;
+
+  // Ephemeral chat cleanup for non-premium users on unmount or window close
+  useEffect(() => {
+    if (!isOpen && !user?.is_premium && coachSessions.length > 0) {
+      setCoachSessions([]);
+      const coachKey = user?.id ? `levelmak_${user.id}_coach_sessions` : 'levelmak_coach_sessions';
+      localStorage.removeItem(coachKey);
+      setActiveSessionId(null);
+    }
+  }, [isOpen, user?.is_premium, user?.id, coachSessions.length, setCoachSessions]);
+
+  useEffect(() => {
+    return () => {
+      if (!user?.is_premium) {
+        setCoachSessions([]);
+        const coachKey = user?.id ? `levelmak_${user.id}_coach_sessions` : 'levelmak_coach_sessions';
+        localStorage.removeItem(coachKey);
+      }
+    };
+  }, [user?.is_premium, user?.id, setCoachSessions]);
 
   // Initialize first session if none exists or if session is empty
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isOpen) return;
 
     if (coachSessions.length === 0 && !activeSessionId) {
       const newId = `session_${Date.now()}`;
@@ -104,7 +125,7 @@ const LevelBot: React.FC = () => {
     } else if (!activeSessionId && coachSessions.length > 0) {
       setActiveSessionId(coachSessions[0].id);
     }
-  }, [coachSessions.length, activeSessionId, user, createCoachSession, saveCoachMessage, t.firstQuestion]);
+  }, [coachSessions.length, activeSessionId, user, isOpen, createCoachSession, saveCoachMessage, t.firstQuestion]);
 
   const compressImage = async (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
     return new Promise((resolve) => {
@@ -166,6 +187,8 @@ const LevelBot: React.FC = () => {
   const handleSend = async (e: React.FormEvent, retryMsg?: { text: string; image?: string | null }) => {
     e.preventDefault();
     if (!activeSessionId) return;
+
+    if (isLimitReached) return;
 
     const userMsg = retryMsg ? retryMsg.text : input.trim();
     const currentImage = retryMsg ? retryMsg.image ?? null : selectedImage;
@@ -393,7 +416,16 @@ const LevelBot: React.FC = () => {
 
             {/* Input Area */}
             <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,1.5rem)+1.5rem)] md:pb-6">
-              {selectedImage && (
+              {isLimitReached && (
+                <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-400 text-center animate-fade-in">
+                  {language === 'fr' 
+                    ? "⚠️ Limite de 10 messages atteinte. Abonnez-vous à un forfait Premium pour continuer à discuter avec le Coach IA !"
+                    : language === 'ar'
+                    ? "⚠️ تم الوصول إلى حد 10 رسائل. اشترك في باقة Premium لمواصلة التحدث مع مدرب الذكاء الاصطناعي!"
+                    : "⚠️ Limit of 10 messages reached. Subscribe to a Premium plan to continue chatting with the AI Coach!"}
+                </div>
+              )}
+              {selectedImage && !isLimitReached && (
                 <div className="mb-3 animate-fade-in">
                   <div className="relative inline-block mb-2">
                     <img src={selectedImage} alt="Preview" className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-xl border border-white/20 shadow-lg" />
@@ -435,6 +467,7 @@ const LevelBot: React.FC = () => {
                   ref={fileInputRef}
                   className="hidden"
                   onChange={handleImageSelect}
+                  disabled={isLimitReached}
                 />
                 <div className="flex gap-1.5 md:gap-2 shrink-0">
                   <button
@@ -445,8 +478,13 @@ const LevelBot: React.FC = () => {
                         fileInputRef.current.click();
                       }
                     }}
-                    className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-blue-500/30"
+                    className={`w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-xl md:rounded-2xl flex items-center justify-center transition-all border ${
+                      isLimitReached 
+                        ? 'bg-slate-800 text-slate-600 border-white/5 cursor-not-allowed opacity-50' 
+                        : 'bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-white border-blue-500/30'
+                    }`}
                     title={t.snapSolve}
+                    disabled={isLimitReached}
                   >
                     <Camera size={20} className="md:w-5 md:h-5" />
                   </button>
@@ -458,8 +496,13 @@ const LevelBot: React.FC = () => {
                         fileInputRef.current.click();
                       }
                     }}
-                    className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-white/5"
+                    className={`w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-xl md:rounded-2xl flex items-center justify-center transition-all border ${
+                      isLimitReached 
+                        ? 'bg-slate-800 text-slate-600 border-white/5 cursor-not-allowed opacity-50' 
+                        : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border-white/5'
+                    }`}
                     title={t.gallery}
+                    disabled={isLimitReached}
                   >
                     <ImageIcon size={20} className="md:w-5 md:h-5" />
                   </button>
@@ -469,22 +512,31 @@ const LevelBot: React.FC = () => {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder={t.placeholder}
+                    placeholder={
+                      isLimitReached
+                        ? (language === 'fr'
+                          ? "Limite de messages atteinte"
+                          : language === 'ar'
+                          ? "تم الوصول إلى الحد الأقصى"
+                          : "Message limit reached")
+                        : t.placeholder
+                    }
                     className="w-full h-full bg-white/5 border border-white/10 outline-none rounded-xl md:rounded-2xl px-4 text-sm font-bold text-white placeholder:text-slate-500 focus:bg-white/10 transition-all shadow-inner pr-12 md:pr-14"
+                    disabled={isLimitReached}
                   />
                   <button
                     type="submit"
-                    disabled={(!input.trim() && !selectedImage) || isTyping}
+                    disabled={(!input.trim() && !selectedImage) || isTyping || isLimitReached}
                     className={`
                       absolute right-1.5 top-1.5 bottom-1.5 
                       w-10 md:w-12 flex items-center justify-center 
                       rounded-xl md:rounded-xl shadow-lg border transition-all active:scale-95 group-hover:scale-105
-                      ${(input.trim() || selectedImage) && !isTyping
+                      ${(input.trim() || selectedImage) && !isTyping && !isLimitReached
                         ? 'bg-gradient-to-br from-primary to-secondary text-white border-primary/20 shadow-glow'
                         : 'bg-slate-800 text-slate-500 border-white/5 cursor-not-allowed opacity-50'}
                     `}
                   >
-                    {isTyping ? <Loader2 size={16} className="animate-spin" /> : <Send size={18} className={((input.trim() || selectedImage) && !isTyping) ? "animate-pulse" : ""} />}
+                    {isTyping ? <Loader2 size={16} className="animate-spin" /> : <Send size={18} className={((input.trim() || selectedImage) && !isTyping && !isLimitReached) ? "animate-pulse" : ""} />}
                   </button>
                 </div>
               </form>

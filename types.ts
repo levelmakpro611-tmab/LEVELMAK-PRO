@@ -126,6 +126,8 @@ export interface User {
   inventory: string[];
   wallpaper?: string;
   onboardingCompleted?: boolean;
+  is_premium?: boolean;
+  premium_until?: string;
   streak: {
     current: number;
     lastLogin?: string;
@@ -150,7 +152,7 @@ export interface User {
   league?: League;
   coachSessions?: CoachSession[];
   aiLabHistory?: AILabSession[];
-  role?: 'student' | 'teacher';
+  role?: 'student' | 'teacher' | 'admin';
 }
 
 

@@ -88,42 +88,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.removeItem('levelmak_last_sync');
   }, [auth]);
 
-  // Seed initial study history/analytics if empty
+  // Initialize study history/analytics to clean starting values if empty
   useEffect(() => {
-    if (auth.user && (!auth.user.analytics || !auth.user.analytics.studyTimeByDay || auth.user.analytics.studyTimeByDay.length === 0)) {
-      const today = new Date();
-      const initialDays = [];
-      const mockMinutes = [30, 45, 15, 60, 40, 25]; // Mock study minutes for the last 6 days
-      for (let i = 6; i >= 1; i--) {
-        const date = new Date();
-        date.setDate(today.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        initialDays.push({
-          date: dateStr,
-          minutes: mockMinutes[6 - i]
-        });
-      }
-      
+    if (auth.user && (!auth.user.analytics || !auth.user.analytics.weeklyGoals)) {
       const seededAnalytics = {
-        studyTimeBySubject: {
-          "Mathématiques": 75,
-          "Physique-Chimie": 60,
-          "Général": 80
-        },
-        studyTimeByDay: initialDays,
-        quizPerformance: [
-          { date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], score: 80 },
-          { date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], score: 90 }
-        ],
-        weeklyGoals: { target: 120, achieved: 215 },
-        examPredictions: [
-          { subject: "Mathématiques", score: 14 },
-          { subject: "Physique-Chimie", score: 15 },
-          { subject: "Général", score: 14.5 }
-        ],
+        studyTimeBySubject: {},
+        studyTimeByDay: [],
+        quizPerformance: [],
+        weeklyGoals: { target: 120, achieved: 0 },
+        examPredictions: [],
         customGoals: auth.user.analytics?.customGoals || [
-          { id: "g1", text: "Faire 3 quiz cette semaine", completed: true },
-          { id: "g2", text: "Étudier 2 heures au total", completed: true },
+          { id: "g1", text: "Faire 3 quiz cette semaine", completed: false },
+          { id: "g2", text: "Étudier 2 heures au total", completed: false },
           { id: "g3", text: "Lire un livre de la bibliothèque", completed: false }
         ]
       };

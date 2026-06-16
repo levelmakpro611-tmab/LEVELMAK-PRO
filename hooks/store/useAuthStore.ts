@@ -20,6 +20,13 @@ export const useAuthStore = () => {
     const [isOnline, setIsOnline] = useState(true);
     const locationUpdateTimer = useRef<NodeJS.Timeout | null>(null);
 
+    const triggerSync = useCallback((userId: string) => {
+        if (!userId || userId.includes('anon')) return;
+        import('../../services/syncService').then(({ syncService }) => {
+            syncService.syncUserContent(userId).catch(e => console.error('[AuthStore Sync Error]:', e));
+        });
+    }, []);
+
     // Load user from LocalStorage and verify with Supabase on mount
     useEffect(() => {
         const initAuth = async () => {
@@ -39,7 +46,16 @@ export const useAuthStore = () => {
                     
                     // Background fetch and verify latest profile status & details
                     supabase.from('profiles').select('*').eq('id', session.user.id).single()
-                        .then(({ data }) => {
+                        .then(({ data, error }) => {
+                            if (error && (error.status === 401 || error.code === 'PGRST301')) {
+                                console.warn("Session is unauthorized (401), signing out...");
+                                signOutUser().then(() => {
+                                    setUser(null);
+                                    localStorage.removeItem('levelmak_user');
+                                    window.location.reload();
+                                });
+                                return;
+                            }
                             if (data) {
                                 if (data.status === 'blocked' || data.status === 'suspended') {
                                     signOutUser().then(() => {
@@ -52,16 +68,27 @@ export const useAuthStore = () => {
                                     const appUser = mapProfileToUser(data);
                                     setUser(appUser);
                                     localStorage.setItem('levelmak_user', JSON.stringify(appUser));
+                                    triggerSync(appUser.id);
                                 }
                             }
                         }).catch(e => console.warn("Background check skipped", e));
 
                 } else if (session && !storedUser) {
                     // Session exists but local cache is gone (re-install or clear cache)
-                    const user = await convertSupabaseUser(session.user);
-                    if (user) {
+                    const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                    if (error && (error.status === 401 || error.code === 'PGRST301')) {
+                        console.warn("Session is unauthorized (401) on empty cache, signing out...");
+                        await signOutUser();
+                        setUser(null);
+                        localStorage.removeItem('levelmak_user');
+                        window.location.reload();
+                        return;
+                    }
+                    if (profile) {
+                        const user = mapProfileToUser(profile);
                         setUser(user);
                         localStorage.setItem('levelmak_user', JSON.stringify(user));
+                        triggerSync(user.id);
                     }
                 } else {
                     // No session or it's expired
@@ -81,7 +108,7 @@ export const useAuthStore = () => {
         };
 
         initAuth();
-    }, []);
+    }, [triggerSync]);
 
     const addActivity = useCallback((type: Activity['type'], title: string, description: string) => {
         setUser(prev => {
@@ -125,11 +152,12 @@ export const useAuthStore = () => {
                 }
                 setUser(loggedUser);
                 localStorage.setItem('levelmak_user', JSON.stringify(loggedUser));
+                triggerSync(loggedUser.id);
             }
         } finally {
             setTimeout(() => setLoading(false), 1000);
         }
-    }, []);
+    }, [triggerSync]);
 
     const registerWithPhone = useCallback(async (params: any) => {
         try {
@@ -138,11 +166,12 @@ export const useAuthStore = () => {
             if (newUser) {
                 setUser(newUser);
                 localStorage.setItem('levelmak_user', JSON.stringify(newUser));
+                triggerSync(newUser.id);
             }
         } finally {
             setTimeout(() => setLoading(false), 1000);
         }
-    }, []);
+    }, [triggerSync]);
 
     const registerWithEmail = useCallback(async (name: string, email: string, password: string, gender: any, ageRange: any, extra?: any) => {
         try {
@@ -151,11 +180,12 @@ export const useAuthStore = () => {
             if (newUser) {
                 setUser(newUser);
                 localStorage.setItem('levelmak_user', JSON.stringify(newUser));
+                triggerSync(newUser.id);
             }
         } finally {
             setTimeout(() => setLoading(false), 1000);
         }
-    }, []);
+    }, [triggerSync]);
 
     const loginWithEmail = useCallback(async (email: string, password: string) => {
         try {
@@ -170,11 +200,12 @@ export const useAuthStore = () => {
                 }
                 setUser(loggedUser);
                 localStorage.setItem('levelmak_user', JSON.stringify(loggedUser));
+                triggerSync(loggedUser.id);
             }
         } finally {
             setTimeout(() => setLoading(false), 1000);
         }
-    }, []);
+    }, [triggerSync]);
 
     const loginWithGoogle = useCallback(async () => {
         try {
@@ -183,11 +214,12 @@ export const useAuthStore = () => {
             if (loggedUser) {
                 setUser(loggedUser);
                 localStorage.setItem('levelmak_user', JSON.stringify(loggedUser));
+                triggerSync(loggedUser.id);
             }
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [triggerSync]);
 
     const logout = useCallback(async () => {
         await signOutUser();
@@ -342,6 +374,25 @@ export const useAuthStore = () => {
             supabase.removeChannel(channel);
         };
     }, [user?.id, user]);
+
+    // Periodically sync user content (quizzes, stories, flashcards) every 5 minutes
+    useEffect(() => {
+        if (!user || !user.id || user.id.includes('anon')) return;
+
+        const interval = setInterval(() => {
+            triggerSync(user.id);
+        }, 5 * 60 * 1000); // 5 minutes
+
+        // Trigger an initial sync shortly after mounting/login to stabilize state
+        const initialTimer = setTimeout(() => {
+            triggerSync(user.id);
+        }, 3000);
+
+        return () => {
+            clearInterval(interval);
+            clearTimeout(initialTimer);
+        };
+    }, [user?.id, triggerSync]);
 
     return {
         user,

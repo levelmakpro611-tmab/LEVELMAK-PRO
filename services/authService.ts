@@ -13,6 +13,13 @@ const phoneToEmail = (phone: string): string => {
 // Convert Supabase User to App User (with profile creation)
 // Optimized with a short-lived deduplication cache to prevent redundant DB calls
 // ======================================================
+/**
+ * Maps a raw Supabase profile row object into a structured client-side User object.
+ * Applies default fallback configurations for stats, avatar config, level, inventory, etc.
+ * 
+ * @param {any} profile - The database profile row object.
+ * @returns {User} A standardized User object.
+ */
 export const mapProfileToUser = (profile: any): User => {
     const stats = profile.stats || {
         quizzesCompleted: 0,
@@ -21,8 +28,26 @@ export const mapProfileToUser = (profile: any): User => {
         storiesWritten: 0,
         flashcardsStudied: 0
     };
+    
+    // Check for demo premium overrides stored locally
+    const localDemoPremium = localStorage.getItem('levelmak_demo_premium') === 'true';
+    const localDemoPremiumUntil = localStorage.getItem('levelmak_demo_premium_until');
+    
+    let isPremium = profile.is_premium || false;
+    let premiumUntil = profile.premium_until || null;
+    
+    if (localDemoPremium && localDemoPremiumUntil) {
+        const expiryTime = new Date(localDemoPremiumUntil).getTime();
+        if (Date.now() < expiryTime) {
+            isPremium = true;
+            premiumUntil = localDemoPremiumUntil;
+        }
+    }
+
     return {
         ...profile,
+        is_premium: isPremium,
+        premium_until: premiumUntil,
         education: stats.education || profile.education || '',
         phoneNumber: profile.phone_number,
         totalXp: profile.total_xp || 0,
@@ -53,6 +78,14 @@ export const mapProfileToUser = (profile: any): User => {
 
 const convertCache = new Map<string, Promise<User | null>>();
 
+/**
+ * Normalizes and converts a standard Supabase User (auth) to the client App User model.
+ * If the database profile does not exist yet, it automatically creates it from the auth metadata.
+ * Employs a short-lived deduplication cache to prevent redundant concurrent queries.
+ * 
+ * @param {any} supabaseUser - The Supabase auth user object.
+ * @returns {Promise<User | null>} The mapped App User, or null if initialization fails.
+ */
 export const convertSupabaseUser = async (supabaseUser: any): Promise<User | null> => {
     const userId = supabaseUser.id;
     
@@ -569,17 +602,28 @@ export const deleteCurrentUserAccount = async (password: string): Promise<void> 
 
         const userId = user.id;
 
-        // 3. Clear user-generated contents
-        await supabase.from('user_comments').delete().eq('user_id', userId);
-        await supabase.from('user_ratings').delete().eq('user_id', userId);
-        await supabase.from('messages').delete().eq('sender_id', userId);
-        await supabase.from('user_activities').delete().eq('user_id', userId);
+        // 3. Get the current session token for authorization
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
-        // 4. Delete profile
-        const { error: profileError } = await supabase.from('profiles').delete().eq('id', userId);
-        if (profileError) throw profileError;
+        // 4. Call Edge Function which uses service_role to delete auth account + all data
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const response = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ userId }),
+        });
 
-        // 5. Sign out / Delete Auth Account session
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Erreur lors de la suppression du compte.');
+        }
+
+        // 5. Sign out locally
         await supabase.auth.signOut();
     } catch (error: any) {
         console.error('Delete account error:', error);

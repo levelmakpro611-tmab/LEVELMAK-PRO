@@ -13,19 +13,30 @@ import {
     Plus,
     Trash2,
     X,
-    CheckCircle2
+    CheckCircle2,
+    Loader2
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { SUBJECTS as DEFAULT_SUBJECTS } from '../constants';
+import { aiService } from '../services/aiService';
 
 const Analytics: React.FC = () => {
-    const { user, settings, updateProfile } = useStore();
+    const { 
+        user, 
+        settings, 
+        updateProfile, 
+        coachSessions, 
+        addLevelCoins, 
+        addNotification, 
+        addActivity 
+    } = useStore();
     const isFrench = settings.language === 'fr';
 
     const [showGoalsModal, setShowGoalsModal] = useState(false);
     const [newGoalText, setNewGoalText] = useState('');
     const [showSubjectsModal, setShowSubjectsModal] = useState(false);
     const [newSubjectText, setNewSubjectText] = useState('');
+    const [loadingSubject, setLoadingSubject] = useState<string | null>(null);
 
     const parseMinutesFromText = (text: string): number => {
         const lower = text.toLowerCase();
@@ -257,6 +268,82 @@ const Analytics: React.FC = () => {
         window.dispatchEvent(new CustomEvent('nav_change', { detail: 'quiz' }));
     };
 
+    const handleAcceptSurpriseExam = async (subject: string) => {
+        if (!user) return;
+        setLoadingSubject(subject);
+        try {
+            const quiz = await aiService.generateAISurpriseExam(subject, coachSessions || [], settings.language || 'fr');
+            
+            // Réinitialiser le temps d'étude de cette matière à 0
+            const currentAnalytics = user.analytics || {
+                studyTimeBySubject: {},
+                studyTimeByDay: [],
+                quizPerformance: [],
+                weeklyGoals: { target: 120, achieved: 0 },
+                examPredictions: []
+            };
+            const updatedSubjectTime = {
+                ...currentAnalytics.studyTimeBySubject,
+                [subject]: 0
+            };
+            
+            updateProfile(user.name, user.phoneNumber, {
+                analytics: {
+                    ...currentAnalytics,
+                    studyTimeBySubject: updatedSubjectTime
+                }
+            });
+            
+            // Lancer le quiz
+            window.dispatchEvent(new CustomEvent('start_quiz', { detail: quiz }));
+        } catch (error) {
+            console.error("Error generating surprise exam:", error);
+            alert(isFrench ? "Erreur lors de la génération de l'examen." : "Error generating exam.");
+        } finally {
+            setLoadingSubject(null);
+        }
+    };
+
+    const handleDeclineSurpriseExam = (subject: string) => {
+        if (!user) return;
+        // Déduire 5 LevelCoins
+        addLevelCoins(-5);
+        
+        // Notification d'avertissement
+        addNotification(
+            'warning', 
+            isFrench ? 'Pénalité LevelCoins 🪙' : 'LevelCoins Penalty 🪙', 
+            isFrench ? `Examen surprise décliné. -5 LevelCoins.` : `Surprise exam declined. -5 LevelCoins.`
+        );
+        
+        // Activité
+        addActivity(
+            'profile', 
+            isFrench ? 'Examen surprise décliné 🪙' : 'Surprise exam declined 🪙', 
+            isFrench ? `Sujet : ${subject} (-5 LevelCoins)` : `Subject: ${subject} (-5 LevelCoins)`
+        );
+        
+        // Réinitialiser le temps d'étude de cette matière à 0
+        const currentAnalytics = user.analytics || {
+            studyTimeBySubject: {},
+            studyTimeByDay: [],
+            quizPerformance: [],
+            weeklyGoals: { target: 120, achieved: 0 },
+            examPredictions: []
+        };
+        const updatedSubjectTime = {
+            ...currentAnalytics.studyTimeBySubject,
+            [subject]: 0
+        };
+        
+        updateProfile(user.name, user.phoneNumber, {
+            analytics: {
+                ...currentAnalytics,
+                studyTimeBySubject: updatedSubjectTime
+            }
+        });
+    };
+
     const t = {
         title: isFrench ? 'Mes Analyses' : 'My Analytics',
         subtitle: isFrench ? 'Suis tes progrès et dépasse tes limites.' : 'Track your progress and push your limits.',
@@ -299,11 +386,14 @@ const Analytics: React.FC = () => {
         return days;
     }, [analytics.studyTimeByDay, isFrench]);
 
+    const maxMinutes = Math.max(...weeklyData.map(d => d.minutes), 60);
+
     const calculatedPredictions = useMemo(() => {
         const activeSubjects = user?.activeSubjects || DEFAULT_SUBJECTS;
         return activeSubjects.map(subject => {
+            if (!subject) return { subject: '', predictedScore: 0, confidence: 0, hasData: false };
             const perf = analytics.quizPerformance.find(
-                p => p.subject.toLowerCase() === subject.toLowerCase()
+                p => p && p.subject && p.subject.toLowerCase() === subject.toLowerCase()
             );
             if (perf && perf.totalAttempts > 0) {
                 const score = Math.round(perf.correctRate * 20 * 10) / 10;
@@ -595,26 +685,76 @@ const Analytics: React.FC = () => {
                         </div>
 
                         {calculatedPredictions.length > 0 ? (
-                            calculatedPredictions.map((pred) => (
-                                <div key={pred.subject} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 gap-4">
-                                    <span className="text-[11px] font-black text-white uppercase truncate tracking-tighter max-w-[150px]">{pred.subject}</span>
-                                    {pred.hasData ? (
-                                        <div className="text-right shrink-0">
-                                            <div className="text-xs font-black text-success tracking-tighter">{pred.predictedScore}/20</div>
-                                            <div className="text-[8px] text-slate-500 font-bold italic">
-                                                {isFrench ? `${pred.confidence}% confiance` : `${pred.confidence}% confidence`}
-                                            </div>
+                            calculatedPredictions.map((pred) => {
+                                const studyTime = analytics.studyTimeBySubject[pred.subject] || 0;
+                                const isLoadingThis = loadingSubject === pred.subject;
+                                const hasSurpriseExam = studyTime > 0;
+
+                                return (
+                                    <motion.div
+                                        key={pred.subject}
+                                        layout
+                                        className={`p-3 rounded-2xl border transition-all ${
+                                            hasSurpriseExam
+                                                ? 'bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30'
+                                                : 'bg-white/5 border-white/5'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between gap-4">
+                                            <span className="text-[11px] font-black text-white uppercase truncate tracking-tighter max-w-[150px]">{pred.subject}</span>
+                                            {pred.hasData ? (
+                                                <div className="text-right shrink-0">
+                                                    <div className="text-xs font-black text-success tracking-tighter">{pred.predictedScore}/20</div>
+                                                    <div className="text-[8px] text-slate-500 font-bold italic">
+                                                        {isFrench ? `${pred.confidence}% confiance` : `${pred.confidence}% confidence`}
+                                                    </div>
+                                                </div>
+                                            ) : hasSurpriseExam ? (
+                                                <span className="text-[9px] font-black text-primary uppercase tracking-widest animate-pulse">
+                                                    ⚡ Examen dispo !
+                                                </span>
+                                            ) : (
+                                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+                                                    📖 Étudier d'abord
+                                                </span>
+                                            )}
                                         </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleStartSubjectQuiz(pred.subject)}
-                                            className="px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/40 text-primary-light text-[8px] font-black uppercase tracking-widest border border-primary/30 transition-all shrink-0 active:scale-95"
-                                        >
-                                            {isFrench ? "Lancer un Quiz 🎯" : "Take Quiz 🎯"}
-                                        </button>
-                                    )}
-                                </div>
-                            ))
+
+                                        {/* Surprise Exam Controls */}
+                                        {!pred.hasData && hasSurpriseExam && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                className="mt-3 pt-3 border-t border-white/10"
+                                            >
+                                                <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-2">
+                                                    🎯 Examen Surprise IA disponible !
+                                                </p>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleAcceptSurpriseExam(pred.subject)}
+                                                        disabled={isLoadingThis}
+                                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-primary hover:bg-primary/80 text-white text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                                                    >
+                                                        {isLoadingThis ? (
+                                                            <><Loader2 size={10} className="animate-spin" /> {isFrench ? 'Génération...' : 'Generating...'}</>
+                                                        ) : (
+                                                            <>🎯 {isFrench ? 'Relever le Défi' : 'Accept Challenge'}</>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeclineSurpriseExam(pred.subject)}
+                                                        disabled={isLoadingThis}
+                                                        className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[8px] font-black uppercase tracking-widest border border-red-500/20 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                    >
+                                                        💀 -5 🪙
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </motion.div>
+                                );
+                            })
                         ) : (
                             <p className="text-center py-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t.noData}</p>
                         )}

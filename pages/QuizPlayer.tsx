@@ -36,7 +36,7 @@ interface QuizPlayerProps {
 }
 
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
-  const { user, addXp, addActivity, trackTime, usePotion, betLevelCoins, addLevelCoins, updateSRSMetadata, plantInGarden, saveQuiz, t } = useStore();
+  const { user, addXp, addActivity, trackTime, usePotion, betLevelCoins, addLevelCoins, updateSRSMetadata, plantInGarden, saveQuiz, t, updateProfile } = useStore();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isSaved, setIsSaved] = useState(false);
@@ -281,7 +281,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     }
 
     if (xpGained > 0) addXp(xpGained);
-    trackTime(timeSpent / 60); // Convert seconds to minutes for trackTime
+    trackTime(timeSpent / 60, quiz.subject); // Convert seconds to minutes and track time with subject
 
     // Plant in garden if score is >= 50%
     if (successPercentage >= 50) {
@@ -301,7 +301,51 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     updateSRSMetadata(quiz.id, 'quiz', srsRating);
     addActivity('quiz', 'Quiz Terminé', `Tu as complété le quiz "${quiz.title}" avec un score de ${score}/${quiz.questions.length}`);
 
+    // Update real-time quiz performance analytics for exam prediction
     if (user) {
+      const currentAnalytics = user.analytics || {
+        studyTimeBySubject: {},
+        studyTimeByDay: [],
+        quizPerformance: [],
+        weeklyGoals: { target: 120, achieved: 0 },
+        examPredictions: []
+      };
+      
+      const subject = quiz.subject || "Général";
+      const attempts = currentAnalytics.quizPerformance || [];
+      const existingIdx = attempts.findIndex(
+        (p: any) => p && p.subject && p.subject.toLowerCase() === subject.toLowerCase()
+      );
+      
+      let updatedAttempts = [...attempts];
+      const scoreRate = score / quiz.questions.length;
+      
+      if (existingIdx !== -1) {
+        const existing = attempts[existingIdx];
+        const newTotal = (existing.totalAttempts || 0) + 1;
+        const newCorrectRate = ((existing.correctRate || 0) * (existing.totalAttempts || 0) + scoreRate) / newTotal;
+        updatedAttempts[existingIdx] = {
+          ...existing,
+          correctRate: newCorrectRate,
+          totalAttempts: newTotal,
+          lastScore: score
+        };
+      } else {
+        updatedAttempts.push({
+          subject,
+          correctRate: scoreRate,
+          totalAttempts: 1,
+          lastScore: score
+        });
+      }
+      
+      updateProfile(user.name, user.phoneNumber, {
+        analytics: {
+          ...currentAnalytics,
+          quizPerformance: updatedAttempts
+        }
+      });
+      
       logUserActivity(user.id, user.name, 'quiz', `Completed Quiz: ${quiz.title}`, { score: score, total: quiz.questions.length, xpGained: xpGained, timeSpent: timeSpent });
     }
 

@@ -88,6 +88,13 @@ export const submitRating = async (rating: Omit<PlatformRating, 'id'>): Promise<
     }
 };
 
+/**
+ * Validates identifier and password against hardcoded admin credentials (legacy fallback).
+ * 
+ * @param {string} identifier - Admin username or phone identifier.
+ * @param {string} password - Admin password.
+ * @returns {boolean} True if matching, false otherwise.
+ */
 export const isAdminCredentials = (identifier: string, password: string): boolean => {
     // Accept both username and cleaned phone-style identifier
     const cleanIdentifier = identifier.replace(/\D/g, '');
@@ -95,25 +102,24 @@ export const isAdminCredentials = (identifier: string, password: string): boolea
         && password === ADMIN_PASSWORD;
 };
 
+/**
+ * Checks the database-driven user role from profiles table in Supabase.
+ * Returns 'admin' if role field is 'admin', otherwise 'user'.
+ * 
+ * @param {string} userId - User's UUID in database.
+ * @returns {Promise<'admin' | 'user'>} The resolved role.
+ */
 export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => {
     try {
         const { data, error } = await supabase
             .from('profiles')
-            .select('name, phone_number, email')
+            .select('role')
             .eq('id', userId)
             .single();
 
         if (error) throw error;
         
-        const isAdmin = 
-            data.name?.toLowerCase() === 'administrateur principal' ||
-            data.phone_number === ADMIN_USERNAME ||
-            data.email === 'admin@levelmak.com';
-
-        if (isAdmin) {
-            return 'admin';
-        }
-        return 'user';
+        return data?.role === 'admin' ? 'admin' : 'user';
     } catch (error) {
         console.error('Error checking user role:', error);
         return 'user';
@@ -506,8 +512,32 @@ export const resetAllRatings = async (): Promise<void> => {
 
 export const deleteUser = async (userId: string): Promise<void> => {
     try {
-        const { error } = await supabase.from('profiles').delete().eq('id', userId);
-        if (error) throw error;
+        // Récupérer le token de la session admin courante
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+        // Appeler la Edge Function avec service_role pour supprimer le compte auth + données
+        const response = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ userId }),
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+            // Si l'utilisateur n'existe pas dans auth mais existe dans profiles, supprimer le profil directement
+            if (response.status === 404 || err.error?.includes('not found')) {
+                await supabase.from('profiles').delete().eq('id', userId);
+                return;
+            }
+            throw new Error(err.error || `Erreur suppression (${response.status})`);
+        }
     } catch (error) {
         console.error('Error deleting user:', error);
         throw error;
@@ -670,20 +700,10 @@ export const getLeaderboard = async (limitCount: number = 50): Promise<User[]> =
                 streak: u.streak,
                 stats: u.stats,
                 activities: u.activities,
-                avatar: u.avatar_config || { baseColor: '#1E293B', accessory: 'none', aura: 'none', currentLevel: u.level || 1 }
+                avatar: u.avatar_config || { baseColor: '#1E293B', accessory: 'none', aura: 'none', currentLevel: u.level || 1 },
+                role: u.role
             } as User))
-            .filter(u => {
-                const name = (u.name || '').toLowerCase();
-                const username = (u.username || '').toLowerCase();
-                const phone = (u.phoneNumber || '').toLowerCase();
-
-                const isAdmin =
-                    name === 'administrateur principal' ||
-                    username === ADMIN_USERNAME.toLowerCase() ||
-                    phone === ADMIN_USERNAME.toLowerCase();
-
-                return !isAdmin;
-            })
+            .filter(u => u.role !== 'admin')
             .slice(0, limitCount);
     } catch (error) {
         console.error('Error getting leaderboard:', error);

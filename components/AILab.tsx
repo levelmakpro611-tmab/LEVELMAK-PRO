@@ -668,7 +668,18 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
 export const AILab: React.FC = () => {
   const [activeView, setActiveView] = useState<'hub' | 'feynman' | 'timemachine' | 'history'>('hub');
   const [selectedSession, setSelectedSession] = useState<AILabSession | undefined>(undefined);
-  const { aiLabHistory, deleteAILabSession, t } = useStore();
+  const { aiLabHistory, deleteAILabSession, t, user, setAiLabHistory } = useStore();
+
+  // Ephemeral AI Lab history cleanup for non-premium users on unmount
+  useEffect(() => {
+    return () => {
+      if (!user?.is_premium) {
+        setAiLabHistory([]);
+        const labKey = user?.id ? `levelmak_${user.id}_ailab_history` : 'levelmak_ailab_history';
+        localStorage.removeItem(labKey);
+      }
+    };
+  }, [user, setAiLabHistory]);
 
   const handleSelect = (view: 'feynman' | 'timemachine' | 'history') => {
     HapticFeedback.success();

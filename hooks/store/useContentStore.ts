@@ -645,6 +645,16 @@ export const useContentStore = (
         const storiesKey = userId ? `levelmak_${userId}_stories` : 'levelmak_stories';
         const booksKey = userId ? `levelmak_${userId}_books` : 'levelmak_books';
 
+        // Helper to load items
+        const load = (key: string, setter: (val: any) => void) => {
+            const data = localStorage.getItem(key);
+            if (data) {
+                try { setter(JSON.parse(data)); } catch (e) { console.error(`Error loading ${key}`, e); }
+            } else {
+                setter([]);
+            }
+        };
+
         // --- 1. QUIZZES MERGING ---
         const defaultQuizzes = getDefaultQuizzes();
         let quizData = localStorage.getItem(quizKey);
@@ -656,7 +666,6 @@ export const useContentStore = (
         if (quizData) {
             try { currentQuizzes = JSON.parse(quizData); } catch (e) { console.error(e); }
         }
-        // Filter out old defaults and insert fresh defaults
         const customQuizzes = currentQuizzes.filter(q => !defaultQuizzes.some(dq => dq.id === q.id));
         const mergedQuizzes = [...defaultQuizzes, ...customQuizzes];
         setQuizzes(mergedQuizzes);
@@ -695,7 +704,6 @@ export const useContentStore = (
         localStorage.setItem(fcKey, JSON.stringify(mergedFlashcards));
 
         // --- 4. STORIES AND BOOKS LOADING ---
-        // Cloud recovery for stories/books prior to load
         if (!localStorage.getItem(storiesKey) && user?.stats?.customStories) {
             localStorage.setItem(storiesKey, JSON.stringify(user.stats.customStories));
         }
@@ -703,237 +711,227 @@ export const useContentStore = (
             localStorage.setItem(booksKey, JSON.stringify(user.stats.customBooks));
         }
 
-        const load = (key: string, setter: (val: any) => void) => {
-            const data = localStorage.getItem(key);
-            if (data) {
-                try { setter(JSON.parse(data)); } catch (e) { console.error(`Error loading ${key}`, e); }
-            } else {
-                setter([]); // Reset to empty list for new/other users
-            }
-        };
         load(storiesKey, setStories);
         load(booksKey, setBooks);
+
+        // --- 5. BACKGROUND SYNCHRONIZATION ---
+        if (userId && !userId.includes('anon')) {
+            import('../../services/syncService').then(({ syncService }) => {
+                syncService.syncUserContent(userId).then(({ success }) => {
+                    if (success) {
+                        // Reload state to present synced content dynamically
+                        load(storiesKey, setStories);
+                        load(booksKey, setBooks);
+
+                        const freshQuizzes = localStorage.getItem(quizKey);
+                        if (freshQuizzes) {
+                            try {
+                                const parsed = JSON.parse(freshQuizzes);
+                                const customOnly = parsed.filter((q: Quiz) => !defaultQuizzes.some(dq => dq.id === q.id));
+                                setQuizzes([...defaultQuizzes, ...customOnly]);
+                            } catch (e) { console.error(e); }
+                        }
+
+                        const freshDecks = localStorage.getItem(deckKey);
+                        if (freshDecks) {
+                            try {
+                                const parsed = JSON.parse(freshDecks);
+                                const customOnly = parsed.filter((d: FlashcardDeck) => !defaultDecks.some(dd => dd.id === d.id));
+                                setDecks([...defaultDecks, ...customOnly]);
+                            } catch (e) { console.error(e); }
+                        }
+
+                        const freshCards = localStorage.getItem(fcKey);
+                        if (freshCards) {
+                            try {
+                                const parsed = JSON.parse(freshCards);
+                                const customOnly = parsed.filter((c: Flashcard) => !defaultFlashcards.some(df => df.id === c.id));
+                                setFlashcards([...defaultFlashcards, ...customOnly]);
+                            } catch (e) { console.error(e); }
+                        }
+                    }
+                }).catch(err => console.error('[ContentStore Sync Error]:', err));
+            });
+        }
     }, [language, user, getDefaultQuizzes, getDefaultDecks, getDefaultFlashcards]);
 
     const saveQuiz = useCallback((quiz: Quiz) => {
-        let updatedQuizzes: Quiz[] = [];
+        const isExisting = quizzes.some(q => q.id === quiz.id);
+        const defaultQuizzes = getDefaultQuizzes();
+        const customQuizzes = quizzes.filter(q => !defaultQuizzes.some(dq => dq.id === q.id));
+
+        if (!user?.is_premium && !isExisting && customQuizzes.length >= 3) {
+            const msg = language === 'fr'
+                ? "Limite atteinte : Vous ne pouvez créer que 3 quiz personnalisés dans le plan gratuit. Veuillez vous abonner pour en créer un nombre illimité !"
+                : language === 'ar'
+                ? "تم الوصول إلى الحد الأقصى: يمكنك إنشاء 3 اختبارات مخصصة فقط في الخطة المجانية. يرجى الاشتراك لإنشاء عدد غير محدود!"
+                : "Limit reached: You can only create 3 custom quizzes in the free plan. Please subscribe to create unlimited ones!";
+            alert(msg);
+            return;
+        }
+
         setQuizzes(prev => {
             const updated = [quiz, ...prev.filter(q => q.id !== quiz.id)];
             const quizKey = userId ? `levelmak_${userId}_quizzes` : 'levelmak_quizzes';
             localStorage.setItem(quizKey, JSON.stringify(updated));
-            updatedQuizzes = updated;
             return updated;
         });
 
-        if (setUser) {
-            setUser(prev => {
-                if (!prev) return prev;
-                const customQuizzesOnly = updatedQuizzes.filter(q => !q.id.startsWith('quiz_default_'));
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        customQuizzes: customQuizzesOnly
-                    }
-                };
-            });
+        if (userId && !userId.includes('anon')) {
+            if (user?.is_premium) {
+                import('../../services/contentService').then(({ contentService }) => {
+                    contentService.saveQuiz(userId, quiz).catch(e => console.error("Error saving quiz to Supabase:", e));
+                });
+            } else {
+                const msg = language === 'fr' 
+                    ? "La sauvegarde sur le cloud est une fonctionnalité Premium. Votre progression est enregistrée localement. Abonnez-vous pour la sauvegarder en ligne !"
+                    : language === 'ar'
+                    ? "النسخ الاحتياطي السحابي ميزة مدفوعة. تم حفظ تقدمك محلياً. اشترك لحفظه عبر الإنترنت!"
+                    : "Cloud backup is a Premium feature. Your progress is saved locally. Subscribe to save it online!";
+                alert(msg);
+            }
         }
-    }, [userId, setUser]);
+    }, [userId, user?.is_premium, language, quizzes, getDefaultQuizzes]);
 
     const deleteQuiz = useCallback((id: string) => {
-        let updatedQuizzes: Quiz[] = [];
         setQuizzes(prev => {
             const updated = prev.filter(q => q.id !== id);
             const quizKey = userId ? `levelmak_${userId}_quizzes` : 'levelmak_quizzes';
             localStorage.setItem(quizKey, JSON.stringify(updated));
-            updatedQuizzes = updated;
             return updated;
         });
 
-        if (setUser) {
-            setUser(prev => {
-                if (!prev) return prev;
-                const customQuizzesOnly = updatedQuizzes.filter(q => !q.id.startsWith('quiz_default_'));
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        customQuizzes: customQuizzesOnly
-                    }
-                };
+        if (userId && !userId.includes('anon')) {
+            import('../../services/contentService').then(({ contentService }) => {
+                contentService.deleteQuiz(id).catch(e => console.error("Error deleting quiz from Supabase:", e));
             });
         }
-    }, [userId, setUser]);
+    }, [userId]);
 
     const saveStory = useCallback((story: Story) => {
-        let updatedStories: Story[] = [];
         setStories(prev => {
             const updated = [story, ...prev.filter(s => s.id !== story.id)];
             const storiesKey = userId ? `levelmak_${userId}_stories` : 'levelmak_stories';
             localStorage.setItem(storiesKey, JSON.stringify(updated));
-            updatedStories = updated;
             return updated;
         });
 
-        if (setUser) {
-            setUser(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        customStories: updatedStories
-                    }
-                };
-            });
+        if (userId && !userId.includes('anon')) {
+            if (user?.is_premium) {
+                import('../../services/contentService').then(({ contentService }) => {
+                    contentService.saveStory(userId, story).catch(e => console.error("Error saving story to Supabase:", e));
+                });
+            } else {
+                const msg = language === 'fr'
+                    ? "La sauvegarde sur le cloud est une fonctionnalité Premium. Votre histoire est enregistrée localement. Abonnez-vous pour la sauvegarder en ligne !"
+                    : language === 'ar'
+                    ? "النسخ الاحتياطي السحابي ميزة مدفوعة. تم حفظ قصتك محلياً. اشترك لحفظها عبر الإنترنت!"
+                    : "Cloud backup is a Premium feature. Your story is saved locally. Subscribe to save it online!";
+                alert(msg);
+            }
         }
-    }, [userId, setUser]);
+    }, [userId, user?.is_premium, language]);
 
     const deleteStory = useCallback((id: string) => {
-        let updatedStories: Story[] = [];
         setStories(prev => {
             const updated = prev.filter(s => s.id !== id);
             const storiesKey = userId ? `levelmak_${userId}_stories` : 'levelmak_stories';
             localStorage.setItem(storiesKey, JSON.stringify(updated));
-            updatedStories = updated;
             return updated;
         });
 
-        if (setUser) {
-            setUser(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        customStories: updatedStories
-                    }
-                };
+        if (userId && !userId.includes('anon')) {
+            import('../../services/contentService').then(({ contentService }) => {
+                contentService.deleteStory(id).catch(e => console.error("Error deleting story from Supabase:", e));
             });
         }
-    }, [userId, setUser]);
+    }, [userId]);
 
     const saveBook = useCallback((book: Book) => {
-        let updatedBooks: Book[] = [];
         setBooks(prev => {
             if (prev.some(b => b.title === book.title)) {
-                updatedBooks = prev;
                 return prev;
             }
             const updated = [book, ...prev];
             const booksKey = userId ? `levelmak_${userId}_books` : 'levelmak_books';
             localStorage.setItem(booksKey, JSON.stringify(updated));
-            updatedBooks = updated;
             return updated;
         });
-
-        if (setUser) {
-            setUser(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        customBooks: updatedBooks
-                    }
-                };
-            });
-        }
-    }, [userId, setUser]);
+    }, [userId]);
 
     const deleteBook = useCallback((id: string) => {
-        let updatedBooks: Book[] = [];
         setBooks(prev => {
             const updated = prev.filter(b => b.id !== id);
             const booksKey = userId ? `levelmak_${userId}_books` : 'levelmak_books';
             localStorage.setItem(booksKey, JSON.stringify(updated));
-            updatedBooks = updated;
             return updated;
         });
-
-        if (setUser) {
-            setUser(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        customBooks: updatedBooks
-                    }
-                };
-            });
-        }
-    }, [userId, setUser]);
+    }, [userId]);
 
     const saveFlashcardDeck = useCallback((deck: FlashcardDeck, cards: Flashcard[]) => {
-        let updatedDecks: FlashcardDeck[] = [];
-        let updatedCards: Flashcard[] = [];
+        const isExisting = decks.some(d => d.id === deck.id);
+        const defaultDecks = getDefaultDecks();
+        const customDecks = decks.filter(d => !defaultDecks.some(dd => dd.id === d.id));
+
+        if (!user?.is_premium && !isExisting && customDecks.length >= 3) {
+            const msg = language === 'fr'
+                ? "Limite atteinte : Vous ne pouvez créer que 3 paquets de flashcards personnalisés dans le plan gratuit. Veuillez vous abonner pour en créer un nombre illimité !"
+                : language === 'ar'
+                ? "تم الوصول إلى الحد الأقصى: يمكنك إنشاء 3 مجموعات بطاقات تعليمية مخصصة فقط في الخطة المجانية. يرجى الاشتراك لإنشاء عدد غير محدود!"
+                : "Limit reached: You can only create 3 custom flashcard decks in the free plan. Please subscribe to create unlimited ones!";
+            alert(msg);
+            return;
+        }
+
         setDecks(prev => {
             const updated = [deck, ...prev.filter(d => d.id !== deck.id)];
             const deckKey = userId ? `levelmak_${userId}_decks` : 'levelmak_decks';
             localStorage.setItem(deckKey, JSON.stringify(updated));
-            updatedDecks = updated;
             return updated;
         });
         setFlashcards(prev => {
             const updated = [...cards, ...prev.filter(c => !cards.find(nc => nc.id === c.id))];
             const fcKey = userId ? `levelmak_${userId}_flashcards` : 'levelmak_flashcards';
             localStorage.setItem(fcKey, JSON.stringify(updated));
-            updatedCards = updated;
             return updated;
         });
 
-        if (setUser) {
-            setUser(prev => {
-                if (!prev) return prev;
-                const customDecksOnly = updatedDecks.filter(d => !d.id.startsWith('deck_default_'));
-                const customCardsOnly = updatedCards.filter(c => !c.id.startsWith('fc_'));
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        customDecks: customDecksOnly,
-                        customFlashcards: customCardsOnly
-                    }
-                };
-            });
+        if (userId && !userId.includes('anon')) {
+            if (user?.is_premium) {
+                import('../../services/contentService').then(({ contentService }) => {
+                    contentService.saveFlashcardDeck(userId, deck, cards).catch(e => console.error("Error saving deck/cards to Supabase:", e));
+                });
+            } else {
+                const msg = language === 'fr'
+                    ? "La sauvegarde sur le cloud est une fonctionnalité Premium. Vos flashcards sont enregistrées localement. Abonnez-vous pour les sauvegarder en ligne !"
+                    : language === 'ar'
+                    ? "النسخ الاحتياطي السحابي ميزة مدفوعة. تم حفظ بطاقاتك تعليمية محلياً. اشترك لحفظها عبر الإنترنت!"
+                    : "Cloud backup is a Premium feature. Your flashcards are saved locally. Subscribe to save them online!";
+                alert(msg);
+            }
         }
-    }, [userId, setUser]);
+    }, [userId, user?.is_premium, language, decks, getDefaultDecks]);
 
     const deleteFlashcardDeck = useCallback((id: string) => {
-        let updatedDecks: FlashcardDeck[] = [];
-        let updatedCards: Flashcard[] = [];
         setDecks(prev => {
             const updated = prev.filter(d => d.id !== id);
             const deckKey = userId ? `levelmak_${userId}_decks` : 'levelmak_decks';
             localStorage.setItem(deckKey, JSON.stringify(updated));
-            updatedDecks = updated;
             return updated;
         });
         setFlashcards(prev => {
             const updated = prev.filter(c => c.deckId !== id);
             const fcKey = userId ? `levelmak_${userId}_flashcards` : 'levelmak_flashcards';
             localStorage.setItem(fcKey, JSON.stringify(updated));
-            updatedCards = updated;
             return updated;
         });
 
-        if (setUser) {
-            setUser(prev => {
-                if (!prev) return prev;
-                const customDecksOnly = updatedDecks.filter(d => !d.id.startsWith('deck_default_'));
-                const customCardsOnly = updatedCards.filter(c => !c.id.startsWith('fc_'));
-                return {
-                    ...prev,
-                    stats: {
-                        ...prev.stats,
-                        customDecks: customDecksOnly,
-                        customFlashcards: customCardsOnly
-                    }
-                };
+        if (userId && !userId.includes('anon')) {
+            import('../../services/contentService').then(({ contentService }) => {
+                contentService.deleteFlashcardDeck(id).catch(e => console.error("Error deleting deck from Supabase:", e));
             });
         }
-    }, [userId, setUser]);
+    }, [userId]);
 
     return {
         quizzes,

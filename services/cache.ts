@@ -213,14 +213,25 @@ class CacheService {
 
     loadFromStorage() {
         try {
-            // Default to 'fr' for initial load, will be corrected on first service call
             const vocabCache = localStorage.getItem('levelmak_vocab_cache_fr');
-            const motivationCache = localStorage.getItem('levelmak_motivation_cache_fr');
+            if (vocabCache) {
+                try {
+                    this.storage.dailyVocab = JSON.parse(vocabCache);
+                } catch {
+                    localStorage.removeItem('levelmak_vocab_cache_fr');
+                }
+            }
 
-            if (vocabCache) this.storage.dailyVocab = JSON.parse(vocabCache);
-            if (motivationCache) this.storage.dailyMotivation = JSON.parse(motivationCache);
+            const motivationCache = localStorage.getItem('levelmak_motivation_cache_fr');
+            if (motivationCache) {
+                try {
+                    this.storage.dailyMotivation = JSON.parse(motivationCache);
+                } catch {
+                    localStorage.removeItem('levelmak_motivation_cache_fr');
+                }
+            }
         } catch (error) {
-            console.error('⚠️ Erreur chargement cache:', error);
+            console.warn('⚠️ Erreur chargement cache:', error);
         }
     }
 
