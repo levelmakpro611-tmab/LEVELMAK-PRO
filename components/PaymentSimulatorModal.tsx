@@ -111,7 +111,7 @@ export const PaymentSimulatorModal: React.FC<PaymentSimulatorModalProps> = ({
             const cleanedPhone = phoneNumber.replace(/\D/g, '');
             // Accept standard Guinea phone number lengths (9 digits local, 12 digits with 224 country code)
             if (cleanedPhone.length < 9) {
-                setError("Veuillez saisir un numéro de téléphone mobile guinéen valide à 9 chiffres (ex: 611 29 68 29).");
+                setError("Veuillez saisir un numéro de téléphone mobile guinéen valide à 9 chiffres (ex: 620 00 00 00).");
                 return;
             }
         } else {
@@ -296,7 +296,7 @@ export const PaymentSimulatorModal: React.FC<PaymentSimulatorModalProps> = ({
                                             <label className="block text-xs text-slate-400 uppercase font-semibold mb-1">Numéro de téléphone mobile</label>
                                             <input
                                                 type="tel"
-                                                placeholder="Ex: +224 611 29 68 29"
+                                                placeholder="Ex: +224 620 00 00 00"
                                                 value={phoneNumber}
                                                 onChange={(e) => setPhoneNumber(e.target.value)}
                                                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 font-semibold"
