@@ -65,6 +65,50 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { user, missions, quizzes, flashcards, decks, dailyVocab, dailyMotivation, rollDice, isOnline, t, settings, updateProfile } = useStore();
   const [showHistory, setShowHistory] = React.useState(false);
+  const [timeLeft, setTimeLeft] = React.useState<string>('');
+  const [percentLeft, setPercentLeft] = React.useState<number>(100);
+
+  React.useEffect(() => {
+    if (!user || !user.is_premium || !user.premium_until) return;
+
+    const updateTimer = () => {
+      const expiry = new Date(user.premium_until).getTime();
+      const now = Date.now();
+      const diff = expiry - now;
+
+      if (diff <= 0) {
+        setTimeLeft('Abonnement expiré');
+        setPercentLeft(0);
+        return;
+      }
+
+      // Calculate time components
+      const totalSecs = Math.floor(diff / 1000);
+      const hours = Math.floor(totalSecs / 3600);
+      const mins = Math.floor((totalSecs % 3600) / 60);
+      const secs = totalSecs % 60;
+
+      // Formatting
+      const formatted = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+      setTimeLeft(formatted);
+
+      // Estimate total duration for percent calculations
+      const activePlanId = localStorage.getItem(`levelmak_demo_premium_plan_id_${user.id}`);
+      let totalDurationMs = 3600000; // default 1 hour
+      if (activePlanId?.includes('weekly')) {
+        totalDurationMs = 30 * 60 * 1000; // 30 minutes
+      } else if (activePlanId?.includes('annual')) {
+        totalDurationMs = 90 * 60 * 1000; // 90 minutes
+      }
+      
+      const pct = Math.max(0, Math.min(100, (diff / totalDurationMs) * 100));
+      setPercentLeft(pct);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [user?.is_premium, user?.premium_until, user?.id]);
 
   if (!user) {
     console.warn('[Dashboard] User is null, showing inner loader');
@@ -493,6 +537,51 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Sidebar Column */}
         <div className="space-y-8">
+          {/* Premium Status / Countdown Widget */}
+          {user.is_premium && (
+            <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border-blue-500/30 bg-gradient-to-br from-blue-950/10 via-slate-900/40 to-indigo-950/10 shadow-premium relative overflow-hidden ring-1 ring-blue-500/10">
+              {/* Pulsing glow background */}
+              <div className="absolute -right-12 -top-12 w-36 h-36 bg-blue-500/15 rounded-full blur-2xl animate-pulse" />
+              
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <h3 className="text-lg md:text-xl font-display font-black text-white flex items-center gap-2.5">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </span>
+                  Levelmak Pro
+                </h3>
+                <span className="text-[9px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full">
+                  Elite
+                </span>
+              </div>
+
+              <div className="space-y-4 relative z-10">
+                <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5 text-center">
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Temps restant</p>
+                  <p className="text-3xl font-mono font-black text-blue-400 tracking-tight">{timeLeft || 'Calcul en cours...'}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
+                    <span>Abonnement Actif</span>
+                    <span className="text-blue-300 font-bold">{Math.round(percentLeft)}% restants</span>
+                  </div>
+                  <div className="h-2.5 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/5">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_12px_rgba(59,130,246,0.3)]"
+                      style={{ width: `${percentLeft}%` }}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[9px] text-slate-500 font-bold text-center leading-normal">
+                  Votre accès Premium repassera automatiquement au mode gratuit à l'échéance.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Mind Garden */}
           <React.Suspense fallback={<WidgetLoader label="Culture de l'Esprit" />}>
             <MindGarden />
