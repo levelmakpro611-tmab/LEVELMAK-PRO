@@ -25,7 +25,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         expiresAt: string;
     } | null>(null);
 
-    const activePlanId = localStorage.getItem('levelmak_demo_premium_plan_id');
+    const activePlanId = user ? localStorage.getItem(`levelmak_demo_premium_plan_id_${user.id}`) : null;
 
     const handleSelectPlan = (plan: 'weekly' | 'monthly' | 'annual', amount: number) => {
         if (!user) return;
@@ -45,6 +45,8 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
     };
 
     const handlePaymentSuccess = (transactionId: string) => {
+        if (!user) return;
+
         // Calculate matching simulated expiration date locally for instant state update
         const expirationDate = new Date();
         if (selectedOptions?.duration === 'weekly') {
@@ -56,10 +58,10 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         }
 
         // Save demo subscription keys locally to persist across DB background checks
-        localStorage.setItem('levelmak_demo_premium', 'true');
-        localStorage.setItem('levelmak_demo_premium_until', expirationDate.toISOString());
+        localStorage.setItem(`levelmak_demo_premium_${user.id}`, 'true');
+        localStorage.setItem(`levelmak_demo_premium_until_${user.id}`, expirationDate.toISOString());
         if (selectedOptions?.planId) {
-            localStorage.setItem('levelmak_demo_premium_plan_id', selectedOptions.planId);
+            localStorage.setItem(`levelmak_demo_premium_plan_id_${user.id}`, selectedOptions.planId);
         }
 
         // Apply instant local update

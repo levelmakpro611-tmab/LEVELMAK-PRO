@@ -30,8 +30,9 @@ export const mapProfileToUser = (profile: any): User => {
     };
     
     // Check for demo premium overrides stored locally
-    const localDemoPremium = localStorage.getItem('levelmak_demo_premium') === 'true';
-    const localDemoPremiumUntil = localStorage.getItem('levelmak_demo_premium_until');
+    const userId = profile.id;
+    const localDemoPremium = localStorage.getItem(`levelmak_demo_premium_${userId}`) === 'true';
+    const localDemoPremiumUntil = localStorage.getItem(`levelmak_demo_premium_until_${userId}`);
     
     let isPremium = profile.is_premium || false;
     let premiumUntil = profile.premium_until || null;

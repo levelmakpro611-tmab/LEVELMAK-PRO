@@ -167,8 +167,9 @@ const AppContent: React.FC = () => {
         console.log('Subscription expired. Reverting to free tier.');
         
         // Clear local demo premium variables
-        localStorage.removeItem('levelmak_demo_premium');
-        localStorage.removeItem('levelmak_demo_premium_until');
+        localStorage.removeItem(`levelmak_demo_premium_${user.id}`);
+        localStorage.removeItem(`levelmak_demo_premium_until_${user.id}`);
+        localStorage.removeItem(`levelmak_demo_premium_plan_id_${user.id}`);
 
         updateProfile(user.name, user.phoneNumber, {
           is_premium: false,
