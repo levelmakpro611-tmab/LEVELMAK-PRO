@@ -1042,7 +1042,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                             className="w-full bg-[#070b14] border border-slate-805 rounded-2xl pl-16 pr-4 py-3.5 text-white focus:outline-none focus:border-blue-500 font-mono font-bold text-sm tracking-widest"
                                         />
                                     </div>
-                                    <p className="text-[10px] text-slate-500 font-medium">Format à 9 chiffres sans le code pays (ex: 611296829)</p>
+                                    <p className="text-[10px] text-slate-500 font-medium">Format à 9 chiffres sans le code pays (ex: 620000000)</p>
                                 </div>
 
                                 <button
