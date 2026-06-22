@@ -1,0 +1,14 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/legal.html"
+    [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Content-Type = "text/html; charset=utf-8"

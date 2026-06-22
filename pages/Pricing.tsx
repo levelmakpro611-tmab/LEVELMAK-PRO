@@ -1,19 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, X, Shield, Landmark, Star, Sparkles, Award, Zap, PenTool, BrainCircuit, Globe, Database, Headphones, Mail, Phone, Trophy, Map, Layers } from 'lucide-react';
+import { Check, X, Shield, Landmark, Star, Sparkles, Award, Zap, PenTool, BrainCircuit, Globe, Database, Headphones, Mail, Phone, Trophy, Map, Layers, AlertCircle, Loader2 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
-import { PaymentSimulatorModal } from '../components/PaymentSimulatorModal';
-import { PaymentSessionOptions } from '../services/paymentService';
+import { supabase } from '../services/supabase';
+import { paymentService, PaymentSessionOptions } from '../services/paymentService';
 import { isNativePlatform } from '../services/nativeAdapters';
 
 export interface PricingProps {
     onChooseFree?: () => void;
     onChoosePremium?: () => void;
+    onPaymentSuccess?: (data: {
+        transactionId: string;
+        planName: string;
+        amount: number;
+        purchasedAt: string;
+        startsAt: string;
+        expiresAt: string;
+    }) => void;
     isFullScreen?: boolean;
 }
 
-export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium, isFullScreen = false }) => {
-    const { user, updateProfile, t, logout } = useStore();
+export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium, onPaymentSuccess, isFullScreen = false }) => {
+    const { user, updateProfile, t, logout, addNotification } = useStore();
     const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
     const [isMobileInfoOpen, setIsMobileInfoOpen] = useState(false);
     const [selectedOptions, setSelectedOptions] = useState<PaymentSessionOptions | null>(null);
@@ -27,10 +35,259 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         expiresAt: string;
     } | null>(null);
 
+    // Real Mobile Money payment state
+    const [paymentPayerNumber, setPaymentPayerNumber] = useState('');
+    const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+    const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
+    const [initiateError, setInitiateError] = useState<string | null>(null);
+
+    // Validation states when redirected back with ?success=true
+    const [isValidating, setIsValidating] = useState(false);
+    const [validationProgress, setValidationProgress] = useState('Attente de la passerelle...');
+    const [validationStatus, setValidationStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'timeout'>('idle');
+
     // Strict active premium check: requires valid non-expired premium_until
     const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
 
     const activePlanId = user ? localStorage.getItem(`levelmak_demo_premium_plan_id_${user.id}`) : null;
+
+    // Detect return from payment redirection
+    useEffect(() => {
+        if (typeof window === 'undefined' || !user) return;
+        
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('success') === 'true') {
+            handleReturnValidation();
+        }
+    }, [user]);
+
+    const handleReturnValidation = async () => {
+        if (!user) return;
+        setIsValidating(true);
+        setValidationStatus('loading');
+        setValidationProgress("Connexion sécurisée avec Djomy...");
+        
+        let attempts = 0;
+        const maxAttempts = 15; // 37.5 seconds total
+        const pendingTxId = localStorage.getItem(`levelmak_pending_tx_id_${user.id}`);
+        
+        const interval = setInterval(async () => {
+            attempts++;
+            
+            if (attempts === 3) setValidationProgress("Vérification de l'état de votre transaction...");
+            if (attempts === 6) setValidationProgress("Sécurisation de la liaison de compte...");
+            if (attempts === 9) setValidationProgress("Activation finale de votre abonnement...");
+            if (attempts === 12) setValidationProgress("Finalisation de l'espace Premium...");
+            
+            try {
+                if (pendingTxId) {
+                    // Call our Edge function to verify status directly from Djomy API
+                    await supabase.functions.invoke('djomy-payment', {
+                        body: {
+                            action: 'verify-status',
+                            transactionId: pendingTxId
+                        }
+                    });
+                }
+
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('is_premium, premium_until')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (error) {
+                    console.error("Error fetching profile during validation:", error);
+                } else if (profile && profile.is_premium && profile.premium_until && new Date(profile.premium_until).getTime() > Date.now()) {
+                    clearInterval(interval);
+                    
+                    const { data: tx } = await supabase
+                        .from('user_transactions')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .eq('status', 'success')
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    
+                    updateProfile(user.name, user.phoneNumber, {
+                        is_premium: true,
+                        premium_until: profile.premium_until
+                    });
+                    
+                    localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
+                    localStorage.removeItem(`levelmak_demo_premium_${user.id}`);
+                    localStorage.removeItem(`levelmak_demo_premium_until_${user.id}`);
+                    localStorage.removeItem(`levelmak_demo_premium_plan_id_${user.id}`);
+                    
+                    import('../services/audio').then(({ audioService }) => {
+                        audioService.playSuccess?.();
+                    });
+                    
+                    import('canvas-confetti').then(({ default: confetti }) => {
+                        confetti({
+                            particleCount: 150,
+                            spread: 80,
+                            origin: { y: 0.6 },
+                            colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
+                        });
+                    });
+                    
+                    const purchaseDate = new Date();
+                    const expirationDate = new Date(profile.premium_until);
+                    const planDuration = tx?.plan_duration || 'monthly';
+                    const planName = planDuration === 'weekly' ? 'Hebdomadaire' : planDuration === 'monthly' ? 'Mensuel' : 'Annuel';
+                    const amount = tx?.amount || (planDuration === 'weekly' ? 10000 : planDuration === 'monthly' ? 25000 : 250000);
+                    
+                    const receiptPayload = {
+                        transactionId: tx?.id || `tx_${Date.now()}`,
+                        planName,
+                        amount,
+                        purchasedAt: formatDateFrench(purchaseDate),
+                        startsAt: formatDateFrench(purchaseDate),
+                        expiresAt: formatDateFrench(expirationDate)
+                    };
+                    
+                    addNotification({
+                        type: 'admin',
+                        title: `Reçu d'Abonnement PRO`,
+                        message: `Reçu officiel LEVELMAK PRO :\n• Forfait : PRO ${planName}\n• Montant : ${amount.toLocaleString()} FG\n• Réf : ${receiptPayload.transactionId}\n• Période : du ${receiptPayload.startsAt} au ${receiptPayload.expiresAt}\nMerci pour votre confiance.`,
+                        read: false,
+                        timestamp: new Date().toISOString()
+                    });
+            
+                    addNotification({
+                        type: 'achievement',
+                        title: `Bienvenue dans l'Élite PRO`,
+                        message: `Votre accès illimité a été activé. Explorez l'AI Lab, résumez vos cours et révisez sans limites.`,
+                        read: false,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    setReceiptData(receiptPayload);
+                    setValidationStatus('success');
+                    setIsValidating(false);
+                    
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } catch (err) {
+                console.error("Validation loop error:", err);
+            }
+            
+            if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                setValidationStatus('timeout');
+                setIsValidating(false);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }, 2500);
+    };
+
+    const handleInitiatePayment = async () => {
+        if (!user || !selectedOptions) return;
+        setInitiateError(null);
+
+        if (paymentPayerNumber.length < 9) {
+            setInitiateError("Veuillez saisir un numéro de téléphone valide à 9 chiffres.");
+            return;
+        }
+
+        setIsInitiatingPayment(true);
+        try {
+            const formattedPayerNumber = `224${paymentPayerNumber}`;
+            
+            const res = await paymentService.createCheckoutSession(
+                user.id,
+                'orange_money',
+                selectedOptions,
+                false,
+                formattedPayerNumber
+            );
+
+            if (res.success && res.redirectUrl) {
+                if (res.transactionId) {
+                    localStorage.setItem(`levelmak_pending_tx_id_${user.id}`, res.transactionId);
+                }
+                window.location.href = res.redirectUrl;
+            } else {
+                setInitiateError(res.error || "Impossible d'initier le paiement. Réessayez.");
+                setIsInitiatingPayment(false);
+            }
+        } catch (err: any) {
+            setInitiateError(err.message || "Une erreur inattendue est survenue.");
+            setIsInitiatingPayment(false);
+        }
+    };
+
+    if (isValidating || validationStatus === 'loading') {
+        return (
+            <div className="fixed inset-0 z-[9999] bg-[#050b18] flex flex-col items-center justify-center p-6 text-center select-none relative">
+                {/* Subtle Ambient Light Effects */}
+                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[40%] bg-blue-600/15 rounded-full blur-[100px] pointer-events-none" />
+                <div className="absolute bottom-[20%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+                <div className="max-w-md w-full space-y-8 relative font-sans animate-fade-in">
+                    {/* Glowing Logo */}
+                    <div className="relative inline-block mx-auto">
+                        <div className="absolute inset-0 rounded-3xl bg-blue-500/20 blur-xl animate-pulse" />
+                        <div className="w-20 h-20 bg-slate-900 border border-white/10 rounded-3xl flex items-center justify-center shrink-0 shadow-2xl relative mx-auto">
+                            <img src="/logo.png" alt="Levelmak" className="h-14 w-auto object-contain brightness-110 drop-shadow-[0_0_15px_rgba(59,130,246,0.4)] animate-bounce" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                            <h2 className="text-xl font-extrabold text-white tracking-tight uppercase">Validation du Paiement</h2>
+                        </div>
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-400 animate-pulse">{validationProgress}</p>
+                        
+                        <div className="backdrop-blur-xl bg-[#0a1122]/60 p-5 rounded-2xl border border-white/5 shadow-lg max-w-sm mx-auto">
+                            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                Nous validons votre transaction avec **Djomy Africa** et activons vos privilèges Premium. 
+                                S'il vous plaît, **ne fermez pas cette fenêtre**.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (validationStatus === 'timeout') {
+        return (
+            <div className="fixed inset-0 z-[9999] bg-[#050b18] flex flex-col items-center justify-center p-6 text-center select-none relative font-sans">
+                {/* Subtle Ambient Light Effects */}
+                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[40%] bg-yellow-600/10 rounded-full blur-[100px] pointer-events-none" />
+
+                <div className="max-w-md w-full space-y-6 relative animate-fade-in">
+                    <div className="w-16 h-16 bg-yellow-500/10 text-yellow-500 rounded-3xl flex items-center justify-center mx-auto border border-yellow-500/20 shadow-lg">
+                        <Star className="w-8 h-8 animate-pulse" />
+                    </div>
+
+                    <div className="space-y-2">
+                        <h2 className="text-xl font-extrabold text-white tracking-tight">Paiement en traitement</h2>
+                        <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed font-medium">
+                            L'opérateur mobile met un peu plus de temps que prévu à valider votre débit. 
+                            Votre abonnement **LEVELMAK PRO** s'activera automatiquement en arrière-plan d'ici quelques minutes.
+                        </p>
+                    </div>
+
+                    <div className="pt-4 max-w-xs mx-auto">
+                        <button
+                            onClick={() => {
+                                setValidationStatus('idle');
+                                if (onChoosePremium) onChoosePremium(); // exit pricing
+                            }}
+                            className="w-full py-4 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] transition-all active:scale-[0.98] shadow-lg shadow-yellow-950/20"
+                        >
+                            Accéder à mon espace
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (isNativePlatform()) {
         const premiumFeatures = [
@@ -236,8 +493,24 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         if (isNativePlatform()) {
             setIsMobileInfoOpen(true);
         } else {
-            setIsSimulatorOpen(true);
+            let rawPhone = user.phoneNumber || '';
+            let cleaned = rawPhone.replace(/\D/g, '');
+            if (cleaned.startsWith('224')) {
+                cleaned = cleaned.slice(3);
+            }
+            setPaymentPayerNumber(cleaned);
+            setIsPhoneModalOpen(true);
         }
+    };
+
+    const formatDateFrench = (date: Date) => {
+        const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day} ${month} ${year} à ${hours}:${minutes}`;
     };
 
     const handlePaymentSuccess = (transactionId: string) => {
@@ -270,13 +543,35 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         }
 
         // Trigger the custom receipt modal
-        setReceiptData({
+        const receiptPayload = {
             transactionId,
             planName: selectedOptions?.duration === 'weekly' ? 'Hebdomadaire' : selectedOptions?.duration === 'monthly' ? 'Mensuel' : 'Annuel',
             amount: selectedOptions?.amount || 0,
-            purchasedAt: purchaseDate.toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }),
-            startsAt: purchaseDate.toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }),
-            expiresAt: expirationDate.toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
+            purchasedAt: formatDateFrench(purchaseDate),
+            startsAt: formatDateFrench(purchaseDate),
+            expiresAt: formatDateFrench(expirationDate)
+        };
+        setReceiptData(receiptPayload);
+        // Also fire global receipt (survives page transition)
+        if (onPaymentSuccess) onPaymentSuccess(receiptPayload);
+
+        // Send subscription notification and receipt to the notification section
+        const planTitle = selectedOptions?.duration === 'weekly' ? 'Hebdomadaire' : selectedOptions?.duration === 'monthly' ? 'Mensuel' : 'Annuel';
+        
+        addNotification({
+            type: 'admin',
+            title: `Reçu d'Abonnement PRO`,
+            message: `Reçu officiel LEVELMAK PRO :\n• Forfait : PRO ${planTitle}\n• Montant : ${(selectedOptions?.amount || 0).toLocaleString()} FG\n• Réf : ${transactionId}\n• Période : du ${formatDateFrench(purchaseDate)} au ${formatDateFrench(expirationDate)}\nMerci pour votre confiance.`,
+            read: false,
+            timestamp: new Date().toISOString()
+        });
+
+        addNotification({
+            type: 'achievement',
+            title: `Bienvenue dans l'Élite PRO`,
+            message: `Votre accès illimité a été activé. Explorez l'AI Lab, résumez vos cours et révisez sans limites.`,
+            read: false,
+            timestamp: new Date().toISOString()
         });
     };
 
@@ -297,14 +592,23 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                 </div>
             )}
             <div className="max-w-7xl mx-auto">
-                {/* Title & Header */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-extrabold text-white tracking-tight sm:text-5xl">
-                        Abonnez-vous à <span className="text-blue-500">LEVELMAK PRO</span>
-                    </h1>
-                    <p className="mt-4 text-xl text-slate-400 max-w-2xl mx-auto">
-                        Débloquez la puissance illimitée de l'IA pédagogique, défiez vos amis et réussissez vos études à votre rythme.
-                    </p>
+                {/* Title & Header with Logo */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-10 text-center sm:text-left relative px-4">
+                    <div className="w-16 h-16 bg-slate-900/80 border border-white/10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-black/25">
+                        <img 
+                            src="/logo.png" 
+                            alt="LEVELMAK Logo" 
+                            className="h-12 w-auto object-contain brightness-110 drop-shadow-[0_0_12px_rgba(59,130,246,0.35)]" 
+                        />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                            Abonnez-vous à <span className="text-blue-500">LEVELMAK PRO</span>
+                        </h1>
+                        <p className="mt-1.5 text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+                            Débloquez la puissance illimitée de l'IA pédagogique, défiez vos amis et réussissez vos études à votre rythme.
+                        </p>
+                    </div>
                 </div>
 
                 {successMessage && (
@@ -318,78 +622,78 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     </motion.div>
                 )}
 
-                {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-stretch">
+                {/* Grid - Horizontal scrolling on mobile (web/native simulation), 4 columns on desktop */}
+                <div className="flex flex-row overflow-x-auto md:grid md:grid-cols-4 gap-4 md:gap-6 items-stretch pb-6 md:pb-0 snap-x snap-mandatory no-scrollbar w-full">
                     
                     {/* 1. GRATUIT */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-2xl p-6 transition-all hover:border-slate-700 relative overflow-hidden">
+                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-4 sm:p-6 transition-all hover:border-slate-700 relative overflow-hidden flex-1 min-w-[280px] sm:min-w-[325px] md:min-w-0 snap-center shadow-lg shadow-black/10">
                         <div className="flex-1">
                             <div className="w-10 h-10 rounded-lg bg-purple-900/20 flex items-center justify-center text-purple-400 mb-4 border border-purple-500/20">
                                 <Sparkles className="w-5 h-5" />
                             </div>
                             <h3 className="text-xl font-bold text-white uppercase tracking-wider">Gratuit</h3>
-                            <p className="mt-2 text-sm text-slate-400">Pour découvrir l'IA et commencer à apprendre</p>
+                            <p className="mt-2 text-xs text-slate-400">Pour découvrir l'IA et commencer à réviser</p>
                             
-                            <p className="mt-6">
-                                <span className="text-4xl font-extrabold text-white">0 FG</span>
-                                <span className="text-sm text-slate-400 font-semibold"> / à vie</span>
+                            <p className="mt-5">
+                                <span className="text-3xl sm:text-4xl font-extrabold text-white">0 FG</span>
+                                <span className="text-xs text-slate-400 font-semibold"> / à vie</span>
                             </p>
 
-                            <ul className="mt-8 space-y-3">
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                            <ul className="mt-4 sm:mt-6 space-y-2">
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-350 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
                                     <span>Créer des fiches et contenus</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
                                     <span>3 quiz personnalisés</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
                                     <span>3 paquets de flashcards</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
                                     <span>10 réponses à l'IA par jour</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-500 line-through">
-                                    <X className="w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
+                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
                                     <span>Quiz illimités</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-500 line-through">
-                                    <X className="w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
+                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
                                     <span>Accès complet à l'IA</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-500 line-through">
-                                    <X className="w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
+                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
                                     <span>Sauvegarde de tes quiz et contenus</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-500 line-through">
-                                    <X className="w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
+                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
                                     <span>Défier ses amis sur Levelmark</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-500 line-through">
-                                    <X className="w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
+                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
                                     <span>Accès complet à l'application</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-500 line-through">
-                                    <X className="w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
+                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
                                     <span>Fonctionnalités avancées</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-500 line-through">
-                                    <X className="w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
+                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
                                     <span>Support client réactif</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-500 line-through">
-                                    <X className="w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
+                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
                                     <span>Sauvegarde de session (discussions éphémères)</span>
                                 </li>
                             </ul>
                         </div>
 
                         {/* Info Box */}
-                        <div className="mt-6 p-3 rounded-xl bg-purple-950/20 border border-purple-500/10 text-xs text-purple-300">
-                            <span className="font-bold flex items-center gap-1 mb-1">🛈 Accès limité</span>
+                        <div className="mt-4 p-3 rounded-xl bg-purple-950/20 border border-purple-500/10 text-[11px] text-purple-300">
+                            <span className="font-bold flex items-center gap-1 mb-0.5">🛈 Accès limité</span>
                             <span className="opacity-80">Tu ne profites pas de toutes les fonctionnalités et avantages disponibles dans les autres plans.</span>
                         </div>
 
@@ -398,14 +702,14 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 onClick={() => {
                                     if (onChooseFree) onChooseFree();
                                 }}
-                                className="mt-6 w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-center text-sm shadow-lg shadow-purple-950/20 transition-all active:scale-[0.98]"
+                                className="mt-5 w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-center text-sm shadow-lg shadow-purple-950/20 transition-all active:scale-[0.98]"
                             >
-                                Continuer avec le plan gratuit
+                                Continuer gratuitement
                             </button>
                         ) : (
                             <button
                                 disabled
-                                className={`mt-6 w-full py-3 px-4 font-bold rounded-xl text-center text-sm border ${
+                                className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm border ${
                                     isPremiumActive
                                         ? 'border-white/5 bg-slate-900/40 text-slate-500'
                                         : 'border-purple-500/30 text-purple-400 bg-purple-500/5'
@@ -414,13 +718,13 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 {isPremiumActive ? 'Plan inactif' : 'Votre plan actuel'}
                             </button>
                         )}
-                        <p className="text-center text-xs text-slate-500 mt-2">Parfait pour commencer !</p>
+                        <p className="text-center text-[10px] text-slate-500 mt-2">Parfait pour commencer !</p>
                     </div>
 
                     {/* 2. HEBDOMADAIRE */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-2xl p-6 transition-all hover:border-slate-700 relative overflow-hidden">
+                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-4 sm:p-6 transition-all hover:border-slate-700 relative overflow-hidden flex-1 min-w-[280px] sm:min-w-[325px] md:min-w-0 snap-center shadow-lg shadow-black/10">
                         <div className="absolute top-4 right-4">
-                            <span className="text-[10px] font-bold uppercase tracking-widest bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="text-[9px] font-bold uppercase tracking-widest bg-rose-500/15 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
                                 ⚡ Engagement flexible
                             </span>
                         </div>
@@ -429,52 +733,52 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 <Zap className="w-5 h-5" />
                             </div>
                             <h3 className="text-xl font-bold text-white uppercase tracking-wider">Hebdomadaire</h3>
-                            <p className="mt-2 text-sm text-slate-400">Progresse chaque semaine avec un accès complet</p>
+                            <p className="mt-2 text-xs text-slate-400">Progresse chaque semaine avec un accès complet</p>
                             
-                            <p className="mt-6">
-                                <span className="text-4xl font-extrabold text-white">10 000 FG</span>
-                                <span className="text-sm text-slate-400 font-semibold"> / semaine</span>
+                            <p className="mt-5">
+                                <span className="text-3xl sm:text-4xl font-extrabold text-white">10 000 FG</span>
+                                <span className="text-xs text-slate-400 font-semibold"> / semaine</span>
                             </p>
 
-                            <ul className="mt-8 space-y-3">
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                            <ul className="mt-4 sm:mt-6 space-y-2">
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>Accès complet à l'IA</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>Accès complet à l'application</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>Quiz illimités</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>Flashcards illimitées</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>Sauvegarde automatique des quiz</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>Parle aux savants de ton choix (AudioLab)</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>Support client réactif</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>Idéal pour apprentissage flexible</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>🏆 Défier ses amis sur Levelmark</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                                     <span>⚡ IA rapide et stable</span>
                                 </li>
                             </ul>
@@ -483,11 +787,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         <button
                             onClick={() => handleSelectPlan('weekly', 10000)}
                             disabled={isPremiumActive}
-                            className={`mt-6 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
+                            className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
                                 isPremiumActive 
                                     ? (activePlanId === 'plan_weekly' 
                                         ? 'bg-emerald-600 text-white cursor-not-allowed' 
-                                        : 'bg-slate-850 text-slate-500 cursor-not-allowed border border-white/5')
+                                        : 'bg-slate-855 text-slate-500 cursor-not-allowed border border-white/5')
                                     : 'bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white shadow-lg shadow-rose-950/20'
                             }`}
                         >
@@ -495,13 +799,13 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 ? (activePlanId === 'plan_weekly' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
                                 : 'Choisir Hebdomadaire'}
                         </button>
-                        <p className="text-center text-xs text-slate-500 mt-2">Engagement flexible, résultats rapides !</p>
+                        <p className="text-center text-[10px] text-slate-500 mt-2">Engagement flexible, résultats rapides !</p>
                     </div>
 
                     {/* 3. MENSUEL */}
-                    <div className="flex flex-col border border-blue-500/50 bg-slate-900/40 rounded-2xl p-6 transition-all hover:border-blue-400 relative overflow-hidden shadow-2xl shadow-blue-950/20 ring-1 ring-blue-500/20">
+                    <div className="flex flex-col border border-blue-500/50 bg-slate-900/40 rounded-3xl p-4 sm:p-6 transition-all hover:border-blue-400 relative overflow-hidden flex-1 min-w-[280px] sm:min-w-[325px] md:min-w-0 snap-center shadow-lg shadow-blue-950/20 ring-1 ring-blue-500/20">
                         <div className="absolute top-4 right-4">
-                            <span className="text-[10px] font-bold uppercase tracking-widest bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <span className="text-[9px] font-bold uppercase tracking-widest bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full flex items-center gap-1">
                                 ★ Le plus choisi
                             </span>
                         </div>
@@ -510,49 +814,49 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 <Award className="w-5 h-5" />
                             </div>
                             <h3 className="text-xl font-bold text-white uppercase tracking-wider">Mensuel</h3>
-                            <p className="mt-2 text-sm text-slate-400">Le meilleur équilibre pour des résultats durables</p>
+                            <p className="mt-2 text-xs text-slate-400">Le meilleur équilibre pour des résultats durables</p>
                             
-                            <p className="mt-6">
-                                <span className="text-4xl font-extrabold text-white">25 000 FG</span>
-                                <span className="text-sm text-slate-400 font-semibold"> / mois</span>
+                            <p className="mt-5">
+                                <span className="text-3xl sm:text-4xl font-extrabold text-white">25 000 FG</span>
+                                <span className="text-xs text-slate-400 font-semibold"> / mois</span>
                             </p>
-                            <p className="text-xs text-blue-400 font-bold mt-1">✓ Économise 15 000 FG</p>
+                            <p className="text-[11px] text-blue-400 font-bold mt-1">✓ Économise 15 000 FG</p>
 
-                            <ul className="mt-8 space-y-3">
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                            <ul className="mt-4 sm:mt-6 space-y-2">
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span className="font-semibold text-white">Tout du plan hebdomadaire</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span>Sauvegarde 100% sécurisée sur le Cloud</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span>🤖 IA rapide et efficace</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span>Compte et données sécurisés à vie</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span>Recommandations personnalisées</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span>Statistiques de progression</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span>Accès prioritaire aux nouveautés</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span>Support prioritaire</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                                     <span>🏆 Défier ses amis sur Levelmark</span>
                                 </li>
                             </ul>
@@ -561,11 +865,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         <button
                             onClick={() => handleSelectPlan('monthly', 25000)}
                             disabled={isPremiumActive}
-                            className={`mt-6 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
+                            className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
                                 isPremiumActive 
                                     ? (activePlanId === 'plan_monthly' 
                                         ? 'bg-emerald-600 text-white cursor-not-allowed' 
-                                        : 'bg-slate-850 text-slate-500 cursor-not-allowed border border-white/5')
+                                        : 'bg-slate-855 text-slate-500 cursor-not-allowed border border-white/5')
                                     : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-950/20'
                             }`}
                         >
@@ -573,13 +877,13 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 ? (activePlanId === 'plan_monthly' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
                                 : 'Choisir Mensuel'}
                         </button>
-                        <p className="text-center text-xs text-slate-500 mt-2">Plus d'avantages, plus de sérénité !</p>
+                        <p className="text-center text-[10px] text-slate-500 mt-2">Plus d'avantages, plus de sérénité !</p>
                     </div>
 
                     {/* 4. ANNUEL */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-2xl p-6 transition-all hover:border-slate-700 relative overflow-hidden">
+                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-4 sm:p-6 transition-all hover:border-slate-700 relative overflow-hidden flex-1 min-w-[280px] sm:min-w-[325px] md:min-w-0 snap-center shadow-lg shadow-black/10">
                         <div className="absolute top-4 right-4">
-                            <span className="text-[10px] font-bold uppercase tracking-widest bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="text-[9px] font-bold uppercase tracking-widest bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
                                 Le meilleur investissement
                             </span>
                         </div>
@@ -588,49 +892,49 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 <Star className="w-5 h-5" />
                             </div>
                             <h3 className="text-xl font-bold text-white uppercase tracking-wider">Annuel</h3>
-                            <p className="mt-2 text-sm text-slate-400">Le choix ultime pour une réussite assurée</p>
+                            <p className="mt-2 text-xs text-slate-400">Le choix ultime pour une réussite assurée</p>
                             
-                            <p className="mt-6">
-                                <span className="text-4xl font-extrabold text-white">250 000 FG</span>
-                                <span className="text-sm text-slate-400 font-semibold"> / an</span>
+                            <p className="mt-5">
+                                <span className="text-3xl sm:text-4xl font-extrabold text-white">250 000 FG</span>
+                                <span className="text-xs text-slate-400 font-semibold"> / an</span>
                             </p>
-                            <p className="text-xs text-yellow-400 font-bold mt-1">✓ Économise 50 000 FG</p>
+                            <p className="text-[11px] text-yellow-400 font-bold mt-1">✓ Économise 50 000 FG</p>
 
-                            <ul className="mt-8 space-y-3">
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                            <ul className="mt-4 sm:mt-6 space-y-2">
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span className="font-semibold text-white">Tout du plan mensuel</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span>Sauvegarde illimitée et sécurisée</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span>🤖 IA plus rapide et structurée</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span>Accès complet toute l'année</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span>Conserve tes données l'année prochaine</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span>Modification des contenus à tout moment</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span>Aucun devoir imposé, rythme libre</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span>Accompagnement premium toute l'année</span>
                                 </li>
-                                <li className="flex items-start gap-3 text-sm text-slate-300">
-                                    <Check className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
+                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                                     <span>🏆 Défier ses amis sur Levelmark</span>
                                 </li>
                             </ul>
@@ -639,11 +943,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         <button
                             onClick={() => handleSelectPlan('annual', 250000)}
                             disabled={isPremiumActive}
-                            className={`mt-6 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
+                            className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
                                 isPremiumActive 
                                     ? (activePlanId === 'plan_annual' 
                                         ? 'bg-emerald-600 text-white cursor-not-allowed' 
-                                        : 'bg-slate-850 text-slate-500 cursor-not-allowed border border-white/5')
+                                        : 'bg-slate-855 text-slate-500 cursor-not-allowed border border-white/5')
                                     : 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white shadow-lg shadow-yellow-950/20'
                             }`}
                         >
@@ -651,21 +955,162 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 ? (activePlanId === 'plan_annual' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
                                 : 'Choisir Annuel'}
                         </button>
-                        <p className="text-center text-xs text-slate-500 mt-2">Investis une fois, profite toute l'année !</p>
+                        <p className="text-center text-[10px] text-slate-500 mt-2">Investis une fois, profite toute l'année !</p>
                     </div>
 
                 </div>
             </div>
 
-            {/* Payment Simulator Modal */}
-            <PaymentSimulatorModal
-                isOpen={isSimulatorOpen}
-                onClose={() => setIsSimulatorOpen(false)}
-                userId={user?.id || 'guest'}
-                options={selectedOptions}
-                onSuccess={handlePaymentSuccess}
-                onFailure={handlePaymentFailure}
-            />
+            {/* Phone Number Collection Modal for Djomy Real Payment Redirection */}
+            <AnimatePresence>
+                {isPhoneModalOpen && selectedOptions && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="relative w-full max-w-md bg-[#0b1222] border border-slate-800 text-white rounded-[2rem] p-6 shadow-2xl overflow-hidden font-sans text-left"
+                        >
+                            {/* Glowing light effect on top border */}
+                            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-500 via-cyan-500 to-indigo-500" />
+                            
+                            {/* Header */}
+                            <div className="flex justify-between items-center pb-4 border-b border-slate-800/60 mb-5">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20 flex items-center justify-center">
+                                        <Landmark className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-base tracking-tight text-white">Numéro de Paiement</h3>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Mobile Money Guinée</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setIsPhoneModalOpen(false);
+                                        setInitiateError(null);
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Summary of Achat */}
+                            <div className="mb-5 rounded-2xl bg-[#070b14] p-4 border border-slate-800/80 flex justify-between items-center">
+                                <div>
+                                    <p className="text-[9px] uppercase tracking-wider font-black text-slate-500">Abonnement</p>
+                                    <p className="text-sm font-black text-white capitalize">
+                                        LEVELMAK PRO {selectedOptions.duration === 'weekly' ? 'Hebdomadaire' : selectedOptions.duration === 'monthly' ? 'Mensuel' : 'Annuel'}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[9px] uppercase tracking-wider font-black text-slate-500">Montant</p>
+                                    <p className="text-lg font-black text-blue-400">
+                                        {selectedOptions.amount.toLocaleString()} FG
+                                    </p>
+                                </div>
+                            </div>
+
+                            {initiateError && (
+                                <div className="mb-5 flex gap-3 p-4 border border-red-500/20 bg-red-950/20 text-red-400 rounded-2xl text-xs font-bold leading-relaxed">
+                                    <AlertCircle className="w-5 h-5 shrink-0" />
+                                    <p>{initiateError}</p>
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                <p className="text-xs text-slate-350 leading-relaxed font-medium">
+                                    Saisissez le numéro Mobile Money (Orange Money, MTN MoMo...) à débiter pour finaliser votre abonnement. Vous serez redirigé vers la passerelle sécurisée officielle.
+                                </p>
+                                
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] text-slate-400 uppercase tracking-widest font-black">Numéro de téléphone (Guinée)</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs font-bold border-r border-slate-800 pr-2">
+                                            +224
+                                        </div>
+                                        <input
+                                            type="tel"
+                                            maxLength={9}
+                                            placeholder="Ex: 620 00 00 00"
+                                            value={paymentPayerNumber}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setPaymentPayerNumber(val);
+                                            }}
+                                            className="w-full bg-[#070b14] border border-slate-805 rounded-2xl pl-16 pr-4 py-3.5 text-white focus:outline-none focus:border-blue-500 font-mono font-bold text-sm tracking-widest"
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 font-medium">Format à 9 chiffres sans le code pays (ex: 611296829)</p>
+                                </div>
+
+                                <button
+                                    onClick={handleInitiatePayment}
+                                    disabled={isInitiatingPayment}
+                                    className="w-full mt-2 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2"
+                                >
+                                    {isInitiatingPayment ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>Redirection en cours...</span>
+                                        </>
+                                    ) : (
+                                        <span>Confirmer et Payer →</span>
+                                    )}
+                                </button>
+                                
+                                {(window.location.hostname === 'localhost' || 
+                                  window.location.hostname === '127.0.0.1' || 
+                                  window.location.hostname.startsWith('192.168.') || 
+                                  window.location.hostname.startsWith('10.') || 
+                                  window.location.hostname.startsWith('172.') || 
+                                  window.location.search.includes('test=true') || 
+                                  window.location.search.includes('demo=true') || 
+                                  window.location.hostname.includes('vercel.app') || 
+                                  window.location.hostname.includes('netlify.app')) && (
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setIsInitiatingPayment(true);
+                                            try {
+                                                const res = await paymentService.createCheckoutSession(
+                                                    user.id,
+                                                    'orange_money',
+                                                    selectedOptions!,
+                                                    true, // simulateSuccess = true
+                                                    '620000000'
+                                                );
+                                                if (res.success && res.redirectUrl) {
+                                                    if (res.transactionId) {
+                                                        localStorage.setItem(`levelmak_pending_tx_id_${user.id}`, res.transactionId);
+                                                    }
+                                                    window.location.href = res.redirectUrl;
+                                                } else {
+                                                    setInitiateError(res.error || "Échec de l'initiation de la simulation.");
+                                                    setIsInitiatingPayment(false);
+                                                }
+                                            } catch (err: any) {
+                                                setInitiateError(err.message || "Erreur de simulation.");
+                                                setIsInitiatingPayment(false);
+                                            }
+                                        }}
+                                        className="w-full mt-2 py-3 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 rounded-2xl font-bold uppercase tracking-widest text-[10px] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                    >
+                                        <span>Simuler un Succès (Mode Test) ✓</span>
+                                    </button>
+                                )}
+                                
+                                <div className="pt-2 text-center">
+                                    <span className="text-[10px] text-slate-500 font-semibold tracking-tight inline-flex items-center gap-1.5">
+                                        🔒 Transaction cryptée SSL 256 bits via Djomy
+                                    </span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Mobile Payment Instructions Modal */}
             <AnimatePresence>
@@ -752,82 +1197,80 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             {/* Receipt Modal */}
             <AnimatePresence>
                 {receiptData && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="relative w-full max-w-md bg-white text-slate-900 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden font-sans border-4 border-blue-500 text-left"
-                        >
-                            {/* Receipt Header styling */}
-                            <div className="text-center pb-6 border-b-2 border-dashed border-slate-200">
-                                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-200">
-                                    <Check className="w-8 h-8" strokeWidth={3} />
-                                </div>
-                                <h3 className="font-display font-black text-2xl tracking-tight uppercase text-blue-600">Reçu d'Abonnement</h3>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-450 mt-1">LEVELMAK PRO • ORDONNANCE ÉLITE</p>
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+                        className="fixed inset-0 z-[9999] bg-black overflow-y-auto"
+                    >
+                        {/* Blue border frame */}
+                        <div className="min-h-full border-4 border-blue-500 flex flex-col items-center bg-[#09101e] px-5 py-10 shadow-[inset_0_0_60px_rgba(59,130,246,0.08)]">
+
+                            {/* Green check circle */}
+                            <div className="w-20 h-20 rounded-full bg-emerald-900/50 border-2 border-emerald-500/60 flex items-center justify-center mb-5 shadow-[0_0_25px_rgba(16,185,129,0.25)]">
+                                <Check className="w-10 h-10 text-emerald-400" strokeWidth={3} />
                             </div>
 
-                            {/* Receipt Body */}
-                            <div className="py-6 space-y-4 text-xs font-bold font-sans">
-                                <div className="text-center p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-emerald-800 text-xs font-bold leading-normal">
-                                    🎉 Félicitations ! Votre abonnement **LEVELMAK PRO** est maintenant actif et prêt à l'emploi.
-                                </div>
+                            {/* Title */}
+                            <h2 className="text-[26px] font-black text-white uppercase tracking-wide text-center">Reçu d'Abonnement</h2>
+                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.15em] mt-1 text-center">LEVELMAK PRO • ORDONNANCE ÉLITE</p>
 
-                                <p className="text-[10px] font-black text-slate-450 uppercase tracking-widest text-center">Informations de Facturation</p>
-                                <div className="space-y-2.5 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Étudiant :</span>
-                                        <span className="text-slate-950">{user?.name || 'Étudiant Elite'}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Téléphone :</span>
-                                        <span className="text-slate-950">{user?.phoneNumber || 'N/A'}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Forfait :</span>
-                                        <span className="text-blue-600">PRO {receiptData.planName}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Montant payé :</span>
-                                        <span className="text-slate-950">{receiptData.amount.toLocaleString()} FG</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Date d'achat :</span>
-                                        <span className="text-slate-950">{receiptData.purchasedAt}</span>
-                                    </div>
-                                    <div className="flex justify-between border-t border-slate-200 pt-2.5 mt-1">
-                                        <span className="text-slate-500">Référence :</span>
-                                        <span className="text-slate-950 font-mono text-[10px]">{receiptData.transactionId}</span>
-                                    </div>
-                                </div>
+                            {/* Dashed separator */}
+                            <div className="w-full my-6 border-t-2 border-dashed border-slate-700" />
 
-                                <div className="space-y-2 bg-blue-50/50 p-4 rounded-2xl border border-blue-100 text-blue-900 leading-relaxed">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-700">Période de Validité</p>
-                                    <p className="text-[11px] font-black leading-snug">
-                                        Du : <span className="underline">{receiptData.startsAt}</span> <br />
-                                        Au : <span className="underline">{receiptData.expiresAt}</span>
-                                    </p>
-                                    <p className="text-[9px] font-medium opacity-85 mt-1">
-                                        À cette échéance, votre accès repassera automatiquement au mode gratuit. Vous pourrez le renouveler à tout moment.
-                                    </p>
-                                </div>
+                            {/* Green congrats box */}
+                            <div className="w-full mb-5 p-4 bg-emerald-950/30 border border-emerald-500/40 rounded-2xl text-center">
+                                <p className="text-emerald-300 text-[13px] font-bold leading-relaxed">
+                                    🎉 Félicitations ! Votre abonnement{' '}
+                                    <span className="text-white font-black">LEVELMAK PRO</span> est maintenant actif et prêt à l'emploi.
+                                </p>
                             </div>
 
-                            {/* Print / Action Button */}
+                            {/* Billing Info */}
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center mb-3">Informations de Facturation</p>
+                            <div className="w-full bg-[#0d1425] border border-slate-800 rounded-2xl overflow-hidden mb-5">
+                                {[
+                                    { label: 'Étudiant :', value: user?.name || 'Étudiant', cls: 'text-white' },
+                                    { label: 'Téléphone :', value: user?.phoneNumber || 'N/A', cls: 'text-white' },
+                                    { label: 'Forfait :', value: `PRO ${receiptData.planName}`, cls: 'text-blue-400 font-bold' },
+                                    { label: 'Montant payé :', value: `${receiptData.amount.toLocaleString()} FG`, cls: 'text-white' },
+                                    { label: "Date d'achat :", value: receiptData.purchasedAt, cls: 'text-white' },
+                                    { label: 'Référence :', value: receiptData.transactionId, cls: 'text-white font-mono text-[10px]' },
+                                ].map((row, i, arr) => (
+                                    <div key={i} className={`flex justify-between items-center px-4 py-3 ${i < arr.length - 1 ? 'border-b border-slate-800/70' : ''}`}>
+                                        <span className="text-slate-400 text-[12px]">{row.label}</span>
+                                        <span className={`${row.cls} text-[12px] text-right ml-4`}>{row.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Period of Validity */}
+                            <div className="w-full bg-[#0d1425] border border-slate-800 rounded-2xl px-5 py-4 mb-8">
+                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">Période de Validité</p>
+                                <p className="text-[12px] text-white font-bold mb-1">
+                                    Du : <span className="underline underline-offset-2">{receiptData.startsAt}</span>
+                                </p>
+                                <p className="text-[12px] text-white font-bold mb-3">
+                                    Au : <span className="underline underline-offset-2">{receiptData.expiresAt}</span>
+                                </p>
+                                <p className="text-[11px] text-slate-500 leading-relaxed">
+                                    À cette échéance, votre accès repassera automatiquement au mode gratuit. Vous pourrez le renouveler à tout moment.
+                                </p>
+                            </div>
+
+                            {/* Action Button */}
                             <button
                                 onClick={() => {
                                     setReceiptData(null);
-                                    if (onChoosePremium) {
-                                        onChoosePremium();
-                                    }
+                                    if (onChoosePremium) onChoosePremium();
                                 }}
-                                className="w-full py-4 bg-blue-600 hover:bg-blue-750 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-transform active:scale-95 shadow-lg shadow-blue-500/20"
+                                className="w-full py-4 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white rounded-2xl font-black uppercase tracking-widest text-[13px] transition-all shadow-lg shadow-blue-900/40"
                             >
                                 Commencer à Réviser
                             </button>
-                        </motion.div>
-                    </div>
+                        </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
