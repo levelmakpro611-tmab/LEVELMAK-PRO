@@ -145,449 +145,440 @@ export const POTIONS = [
 ];
 
 export const HARDCODED_SHOP_ITEMS = [
-        // Avatars - Budget Tier (20-50 coins) - 10 avatars
         {
-            id: 'onepiece_1',
-            name: 'Rookie Pirate',
-            description: 'Le début de ta légende commence ici.',
-            price: 20,
+            id: 'new_avatar_1',
+            name: 'Apprenti Curieux',
+            description: 'Un compagnon félin curieux de tout apprendre.',
+            price: 200,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.03.53.jpeg'
+            image: '/assets/avatars_shop/-5792189133450492382_121.jpg'
         },
         {
-            id: 'onepiece_2',
-            name: 'Marine Cadet',
-            description: 'Justice et honneur guident tes pas.',
-            price: 25,
+            id: 'new_avatar_2',
+            name: 'Écolier Modèle',
+            description: 'Toujours attentif et exemplaire en classe.',
+            price: 200,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.12.jpeg'
-        },
-        {
-            id: 'onepiece_3',
-            name: 'Apprenti Navigateur',
-            description: 'Trace ta route vers Grand Line.',
-            price: 30,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.20.jpeg'
-        },
-        {
-            id: 'onepiece_4',
-            name: 'Cuisinier Débutant',
-            description: 'Nourris tes rêves avec passion.',
-            price: 35,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.33.jpeg'
-        },
-        {
-            id: 'onepiece_5',
-            name: 'Combattant Rookie',
-            description: 'Forge ton style de combat unique.',
-            price: 40,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.39.jpeg'
-        },
-        {
-            id: 'onepiece_6',
-            name: 'Artisan Apprenti',
-            description: 'Crée ton futur de tes propres mains.',
-            price: 45,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.42.jpeg'
-        },
-        {
-            id: 'onepiece_7',
-            name: 'Musicien Aspirant',
-            description: 'La mélodie du savoir te guide.',
-            price: 50,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.45.jpeg'
-        },
-        {
-            id: 'onepiece_8',
-            name: 'Médecin en Formation',
-            description: 'Soigne le monde par ta science.',
-            price: 50,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.47.jpeg'
-        },
-        {
-            id: 'onepiece_9',
-            name: 'Archéologue Novice',
-            description: 'Découvre les secrets de l\'Histoire.',
-            price: 50,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.54.jpeg'
-        },
-        {
-            id: 'onepiece_10',
-            name: 'Chasseur de Primes',
-            description: 'Traque tes objectifs sans relâche.',
-            price: 50,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.58.jpeg'
+            image: '/assets/avatars_shop/-5792189133450492383_121.jpg'
         },
 
-        // Avatars - Standard Tier (60-100 coins) - 12 avatars
         {
-            id: 'onepiece_11',
-            name: 'Escrimeur Confirmé',
-            description: 'La voie du sabre te révèle.',
-            price: 60,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.04.59.jpeg'
-        },
-        {
-            id: 'onepiece_12',
-            name: 'Sniper Précis',
-            description: 'Ta vision atteint des horizons lointains.',
-            price: 65,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.00.jpeg'
-        },
-        {
-            id: 'onepiece_13',
-            name: 'Stratège Tactique',
-            description: 'Planifie chaque mouvement avec génie.',
-            price: 70,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.01.jpeg'
-        },
-        {
-            id: 'onepiece_14',
-            name: 'Ingénieur Créatif',
-            description: 'Construis l\'impossible avec science.',
-            price: 75,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.02.jpeg'
-        },
-        {
-            id: 'onepiece_15',
-            name: 'Espion Discret',
-            description: 'Les secrets n\'ont pas de prise sur toi.',
-            price: 80,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.04 (1).jpeg'
-        },
-        {
-            id: 'onepiece_16',
-            name: 'Combattant Agile',
-            description: 'Ta vitesse surpasse toute défense.',
-            price: 85,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.04.jpeg'
-        },
-        {
-            id: 'onepiece_17',
-            name: 'Capitaine Courageux',
-            description: 'Mène ton équipage vers la victoire.',
-            price: 90,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.06.jpeg'
-        },
-        {
-            id: 'onepiece_18',
-            name: 'Guerrier Tenace',
-            description: 'Rien ne peut briser ta détermination.',
-            price: 95,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.07.jpeg'
-        },
-        {
-            id: 'onepiece_19',
-            name: 'Maître Forgeron',
-            description: 'Forge des armes légendaires.',
-            price: 100,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.08.jpeg'
-        },
-        {
-            id: 'onepiece_20',
-            name: 'Aventurier Audacieux',
-            description: 'L\'inconnu t\'appelle à chaque aube.',
-            price: 100,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.14.jpeg'
-        },
-        {
-            id: 'onepiece_21',
-            name: 'Tireur d\'Élite',
-            description: 'Chaque tir est une certitude.',
-            price: 100,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.15.jpeg'
-        },
-        {
-            id: 'onepiece_22',
-            name: 'Navigator Expert',
-            description: 'Les mers n\'ont plus de mystères.',
-            price: 100,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.16 (1).jpeg'
-        },
-
-        // Avatars - Premium Tier (120-200 coins) - 12 avatars
-        {
-            id: 'onepiece_23',
-            name: 'Commandant Marine',
-            description: 'La justice absolue est ton crédo.',
-            price: 120,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.16.jpeg'
-        },
-        {
-            id: 'onepiece_24',
-            name: 'Champion de Dojo',
-            description: 'Les arts martiaux coulent dans tes veines.',
-            price: 130,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.17.jpeg'
-        },
-        {
-            id: 'onepiece_25',
-            name: 'Noble Révolutionnaire',
-            description: 'Change le monde par ta conviction.',
-            price: 140,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.19 (1).jpeg'
-        },
-        {
-            id: 'onepiece_26',
-            name: 'Roi des Mers',
-            description: 'Domine les océans par ta force.',
-            price: 150,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.19.jpeg'
-        },
-        {
-            id: 'onepiece_27',
-            name: 'Scientifique Visionnaire',
-            description: 'Repousse les limites du possible.',
-            price: 160,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.21.jpeg'
-        },
-        {
-            id: 'onepiece_28',
-            name: 'Lame Légendaire',
-            description: 'Ton sabre tranche l\'impossible.',
-            price: 170,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.22 (1).jpeg'
-        },
-        {
-            id: 'onepiece_29',
-            name: 'Conquérant Indomptable',
-            description: 'Ta volonté plie la réalité.',
-            price: 180,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.22.jpeg'
-        },
-        {
-            id: 'onepiece_30',
-            name: 'Maître Stratège',
-            description: 'Le champ de bataille est ton échiquier.',
-            price: 190,
-            category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.23 (1).jpeg'
-        },
-        {
-            id: 'onepiece_31',
-            name: 'Héros des Opprimés',
-            description: 'Protège ceux qui ne peuvent se défendre.',
+            id: 'new_avatar_4',
+            name: 'Calculateur Rapide',
+            description: 'Résout les équations plus vite que son ombre.',
             price: 200,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.23.jpeg'
+            image: '/assets/avatars_shop/-5848414473013017593_121.jpg'
         },
         {
-            id: 'onepiece_32',
-            name: 'Titan du Combat',
-            description: 'Ta puissance est sans égale.',
+            id: 'new_avatar_5',
+            name: 'Jeune Chercheur',
+            description: 'Toujours en quête de nouvelles vérités scientifiques.',
             price: 200,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.24.jpeg'
+            image: '/assets/avatars_shop/-5848414473013017596_121.jpg'
         },
         {
-            id: 'onepiece_33',
-            name: 'Sage Millénaire',
-            description: 'Ta sagesse traverse les âges.',
+            id: 'new_avatar_6',
+            name: 'Observateur Attentif',
+            description: 'Il observe les détails pour ne rater aucun piège.',
             price: 200,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.25.jpeg'
+            image: '/assets/avatars_shop/-5848414473013017598_121.jpg'
         },
         {
-            id: 'onepiece_34',
-            name: 'Gardien Immortel',
-            description: 'Le temps n\'a pas de prise sur toi.',
+            id: 'new_avatar_7',
+            name: 'Pionnier du Savoir',
+            description: 'Il ouvre la voie à de nouvelles méthodes d\'étude.',
             price: 200,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.26.jpeg'
+            image: '/assets/avatars_shop/-5848414473013017600_121.jpg'
         },
-
-        // Avatars - Elite Tier (250-400 coins) - 10 avatars
         {
-            id: 'onepiece_35',
-            name: 'Vice-Amiral Suprême',
-            description: 'Commande les flottes avec autorité.',
+            id: 'new_avatar_8',
+            name: 'Explorateur Scolaire',
+            description: 'Prêt à parcourir tous les sujets de l\'application.',
+            price: 200,
+            category: 'avatar',
+            image: '/assets/avatars_shop/-5848414473013017601_121.jpg'
+        },
+        {
+            id: 'new_avatar_9',
+            name: 'Esprit Vif',
+            description: 'Un esprit agile capable de s\'adapter à toutes les matières.',
+            price: 200,
+            category: 'avatar',
+            image: '/assets/avatars_shop/-5875119394248574589_121.jpg'
+        },
+        {
+            id: 'new_avatar_10',
+            name: 'Esprit Libre',
+            description: 'Il étudie selon ses propres règles et progresse vite.',
+            price: 200,
+            category: 'avatar',
+            image: '/assets/avatars_shop/-5875119394248574590_121.jpg'
+        },
+        {
+            id: 'new_avatar_11',
+            name: 'Bachelier Brillant',
+            description: 'Fier titulaire d\'un bagage académique impressionnant.',
             price: 250,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.27.jpeg'
+            image: '/assets/avatars_shop/-5890708609409595895_121.jpg'
         },
         {
-            id: 'onepiece_36',
-            name: 'Supernova Légendaire',
-            description: 'Ta renommée traverse les océans.',
+            id: 'new_avatar_12',
+            name: 'Major de Promo',
+            description: 'Celui qui trône fièrement en tête de sa promotion.',
+            price: 260,
+            category: 'avatar',
+            image: '/assets/avatars_shop/-6050874176169950458_121.jpg'
+        },
+        {
+            id: 'new_avatar_13',
+            name: 'Philosophe Junior',
+            description: 'Penseur profond qui questionne chaque réponse.',
+            price: 260,
+            category: 'avatar',
+            image: '/assets/avatars_shop/-6050874176169950459_121.jpg'
+        },
+        {
+            id: 'new_avatar_14',
+            name: 'Polyglotte Passionné',
+            description: 'Parle plusieurs langues et adore la grammaire.',
+            price: 270,
+            category: 'avatar',
+            image: '/assets/avatars_shop/-6050874176169950460_121.jpg'
+        },
+        {
+            id: 'new_avatar_15',
+            name: 'Féru d\'Histoire',
+            description: 'Il connaît les dates historiques sur le bout des doigts.',
+            price: 270,
+            category: 'avatar',
+            image: '/assets/avatars_shop/-6050874176169950461_121.jpg'
+        },
+        {
+            id: 'new_avatar_16',
+            name: 'Codeur Agile',
+            description: 'Transforme la logique pure en lignes de code fonctionnelles.',
             price: 280,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.28 (1).jpeg'
+            image: '/assets/avatars_shop/-6050874176169950462_121.jpg'
         },
         {
-            id: 'onepiece_37',
-            name: 'Empereur des Mers',
-            description: 'Les Yonko te reconnaissent comme égal.',
-            price: 310,
+            id: 'new_avatar_17',
+            name: 'Chimiste en Herbe',
+            description: 'Adore mélanger les formules et les savoirs complexes.',
+            price: 280,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.28.jpeg'
+            image: '/assets/avatars_shop/-6050874176169950463_121.jpg'
         },
         {
-            id: 'onepiece_38',
-            name: 'Révolutionnaire Légendaire',
-            description: 'Le monde tremble à ton passage.',
-            price: 340,
+            id: 'new_avatar_18',
+            name: 'Algorithmicien',
+            description: 'Rien ne lui plaît plus qu\'un algorithme bien structuré.',
+            price: 290,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.29.jpeg'
+            image: '/assets/avatars_shop/-6050874176169950466_121.jpg'
         },
         {
-            id: 'onepiece_39',
-            name: 'Shichibukai Redouté',
-            description: 'Les gouvernements comptent sur toi.',
-            price: 370,
+            id: 'new_avatar_19',
+            name: 'Astrophysicien Junior',
+            description: 'Il a la tête dans les étoiles et le cœur dans les livres.',
+            price: 290,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.31 (1).jpeg'
+            image: '/assets/avatars_shop/-6050874176169950467_121.jpg'
         },
         {
-            id: 'onepiece_40',
-            name: 'Champion Mondial',
-            description: 'Ta force est reconnue partout.',
+            id: 'new_avatar_20',
+            name: 'Mathématicien en Devenir',
+            description: 'Voit le monde à travers les théorèmes et les formules.',
+            price: 300,
+            category: 'avatar',
+            image: '/assets/avatars_shop/-6050874176169950468_121.jpg'
+        },
+        {
+            id: 'new_avatar_21',
+            name: 'Cerveau d\'Or',
+            description: 'Un intellect brillant qui brille dans le classement général.',
+            price: 350,
+            category: 'avatar',
+            image: '/assets/avatars_shop/1000104001.png'
+        },
+        {
+            id: 'new_avatar_22',
+            name: 'Maître de Conférences',
+            description: 'Partage sa sagesse et guide ses camarades d\'étude.',
             price: 400,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.31.jpeg'
+            image: '/assets/avatars_shop/avatar_28.jpg'
         },
         {
-            id: 'onepiece_41',
-            name: 'Maître du Haki',
-            description: 'Les trois types de Haki te servent.',
-            price: 400,
+            id: 'new_avatar_23',
+            name: 'Lauréat Académique',
+            description: 'Récompensé pour ses performances académiques exceptionnelles.',
+            price: 440,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.33.jpeg'
+            image: '/assets/avatars_shop/avatar_33.jpg'
         },
         {
-            id: 'onepiece_42',
-            name: 'Porteur du Fruit Légendaire',
-            description: 'Ton pouvoir défie la nature.',
-            price: 400,
+            id: 'new_avatar_24',
+            name: 'Prodige des Sciences',
+            description: 'Un jeune talent dont les capacités fascinent son entourage.',
+            price: 490,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.34.jpeg'
+            image: '/assets/avatars_shop/avatar_36.jpg'
         },
         {
-            id: 'onepiece_43',
-            name: 'Seigneur des Pirates',
-            description: 'Les équipages s\'inclinent devant toi.',
-            price: 400,
+            id: 'new_avatar_25',
+            name: 'Nobel en Puissance',
+            description: 'Son assiduité pourrait bien lui valoir un prix international.',
+            price: 540,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.36 (1).jpeg'
+            image: '/assets/avatars_shop/avatar_38.jpg'
         },
         {
-            id: 'onepiece_44',
-            name: 'Amiral de la Flotte',
-            description: 'La marine entière obéit à tes ordres.',
-            price: 400,
+            id: 'new_avatar_26',
+            name: 'Académicien Sage',
+            description: 'Membre estimé de la haute société du savoir.',
+            price: 580,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.36.jpeg'
+            image: '/assets/avatars_shop/avatar_43.jpg'
         },
-
-        // Avatars - Legendary Tier (500-800 coins) - 6 avatars
         {
-            id: 'onepiece_45',
-            name: 'Descendant du Siècle Oublié',
-            description: 'Le savoir interdit coule en toi.',
-            price: 500,
+            id: 'new_avatar_27',
+            name: 'Savant Audacieux',
+            description: 'Ses théories bousculent les idées reçues.',
+            price: 630,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.37 (1).jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127551860864949.jpg'
         },
         {
-            id: 'onepiece_46',
-            name: 'Ancien Dieu Vivant',
-            description: 'Les légendes parlent de toi.',
-            price: 600,
+            id: 'new_avatar_28',
+            name: 'Esprit Encyclopédique',
+            description: 'Mémoire photographique et soif inextinguible de culture.',
+            price: 680,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.37.jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127552773607047.jpg'
         },
         {
-            id: 'onepiece_47',
-            name: 'Porteur du Will of D',
-            description: 'Le destin du monde repose sur toi.',
-            price: 700,
+            id: 'new_avatar_29',
+            name: 'Penseur Libre',
+            description: 'Indépendant et rigoureux dans ses analyses.',
+            price: 720,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.38.jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127552952997302.jpg'
         },
         {
-            id: 'onepiece_48',
-            name: 'Roi des Dieux',
-            description: 'Mary Geoise reconnaît ta suprématie.',
-            price: 750,
+            id: 'new_avatar_30',
+            name: 'Génie Flamboyant',
+            description: 'Une intelligence étincelante qui illumine la ligue.',
+            price: 770,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.39.jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127890621523256.jpg'
         },
         {
-            id: 'onepiece_49',
-            name: 'Dieu du Soleil',
-            description: 'Illumine le monde de ta puissance.',
-            price: 800,
+            id: 'new_avatar_31',
+            name: 'Stratège des Quiz',
+            description: 'Il a réponse à tout, particulièrement sous pression.',
+            price: 810,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.40.jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127893893895981.jpg'
         },
         {
-            id: 'onepiece_50',
-            name: 'Dragon Céleste Rebelle',
-            description: 'Défie l\'ordre mondial établi.',
-            price: 800,
+            id: 'new_avatar_32',
+            name: 'Guide de l\'Élite',
+            description: 'Il montre le chemin de la réussite aux autres apprenants.',
+            price: 860,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.42.jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127894054003681.jpg'
         },
-
-        // Avatars - Ultimate Tier (900-1000 coins) - 4 avatars
         {
-            id: 'onepiece_51',
-            name: 'Joyboy Réincarné',
-            description: 'La promesse millénaire s\'accomplit.',
-            price: 900,
+            id: 'new_avatar_33',
+            name: 'Mentor Lumineux',
+            description: 'Sa clarté d\'esprit éclaire les concepts les plus obscurs.',
+            price: 910,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.43 (1).jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127895288365274.jpg'
         },
         {
-            id: 'onepiece_52',
-            name: 'Gear 5 Awakened',
-            description: 'La liberté incarnée en puissance.',
+            id: 'new_avatar_34',
+            name: 'Héros Académique',
+            description: 'Il surmonte toutes les difficultés scolaires avec bravoure.',
             price: 950,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.43.jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127900336464599.jpg'
         },
         {
-            id: 'onepiece_53',
-            name: 'Roi des Pirates',
-            description: 'Le One Piece t\'attend au bout du voyage.',
+            id: 'new_avatar_35',
+            name: 'Docteur Honoris Causa',
+            description: 'Une distinction honorifique pour ses contributions exceptionnelles.',
             price: 1000,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.44.jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127900486638603.jpg'
         },
         {
-            id: 'onepiece_54',
-            name: 'L\'Homme le Plus Libre',
-            description: 'Personne ne peut entraver ta volonté.',
-            price: 1000,
+            id: 'new_avatar_36',
+            name: 'Doyen d\'Exception',
+            description: 'Un pilier d\'expérience et de sagesse académique.',
+            price: 1100,
             category: 'avatar',
-            image: '/assets/les avatars de one peace/WhatsApp Image 2026-01-30 at 23.05.45.jpeg'
+            image: '/assets/avatars_shop/FB_IMG_17127900552890878.jpg'
         },
+        {
+            id: 'new_avatar_37',
+            name: 'Grand Chancelier',
+            description: 'Il veille au respect des normes d\'excellence intellectuelle.',
+            price: 1300,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17127900598036734.jpg'
+        },
+        {
+            id: 'new_avatar_38',
+            name: 'Phénix de l\'Élite',
+            description: 'Il renaît toujours plus fort après chaque erreur.',
+            price: 1500,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17127908261890232.jpg'
+        },
+        {
+            id: 'new_avatar_39',
+            name: 'Oracle du Savoir',
+            description: 'Il anticipe les questions et maîtrise tous les sujets.',
+            price: 1750,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17127908536965226.jpg'
+        },
+        {
+            id: 'new_avatar_40',
+            name: 'Sagesse Éternelle',
+            description: 'La somme de toutes les connaissances acquises au fil du temps.',
+            price: 1950,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17127908756665390.jpg'
+        },
+        {
+            id: 'new_avatar_41',
+            name: 'Génie Inspiré',
+            description: 'Il trouve des solutions là où d\'autres voient des impasses.',
+            price: 2150,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17130292446534572-1.jpg'
+        },
+        {
+            id: 'new_avatar_42',
+            name: 'Maître Suprême',
+            description: 'Au sommet de la hiérarchie des étudiants de LEVELMAK.',
+            price: 2350,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17130292531605757-1.jpg'
+        },
+        {
+            id: 'new_avatar_43',
+            name: 'Esprit Universel',
+            description: 'Un savoir global qui transcende les matières classiques.',
+            price: 2600,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17130292928222418-1.jpg'
+        },
+        {
+            id: 'new_avatar_44',
+            name: 'Divinité Scolaire',
+            description: 'Une compréhension si vaste qu\'elle frôle le mystique.',
+            price: 2800,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17130293010839735-1.jpg'
+        },
+        {
+            id: 'new_avatar_45',
+            name: 'Ultime Champion',
+            description: 'Le grand vainqueur de tous les duels intellectuels.',
+            price: 3000,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17130293237014158-1.jpg'
+        },
+        {
+            id: 'new_avatar_46',
+            name: 'Légende du Campus',
+            description: 'Son nom est gravé dans l\'histoire de la communauté.',
+            price: 3200,
+            category: 'avatar',
+            image: '/assets/avatars_shop/FB_IMG_17130293333823761.jpg'
+        },
+        {
+            id: 'new_avatar_47',
+            name: 'Empereur Académique',
+            description: 'Souverain absolu sur le royaume de la connaissance.',
+            price: 3400,
+            category: 'avatar',
+            image: '/assets/avatars_shop/IMG_1372.JPG.jpg'
+        },
+        {
+            id: 'new_avatar_48',
+            name: 'Gardien du Temple',
+            description: 'Il protège et conserve le patrimoine culturel de l\'humanité.',
+            price: 3600,
+            category: 'avatar',
+            image: '/assets/avatars_shop/real_1.jpg'
+        },
+        {
+            id: 'new_avatar_49',
+            name: 'Vanguard Académique',
+            description: 'Toujours à la pointe de l\'innovation et de l\'apprentissage.',
+            price: 3800,
+            category: 'avatar',
+            image: '/assets/avatars_shop/real_2.jpg'
+        },
+        {
+            id: 'new_avatar_50',
+            name: 'Archimède Moderne',
+            description: 'Donnez-lui un point d\'appui et il soulèvera le classement.',
+            price: 4000,
+            category: 'avatar',
+            image: '/assets/avatars_shop/real_3.jpg'
+        },
+        {
+            id: 'new_avatar_51',
+            name: 'Galilée Inspiré',
+            description: 'Il observe le monde pour en décrypter les lois célestes.',
+            price: 4200,
+            category: 'avatar',
+            image: '/assets/avatars_shop/real_4.jpg'
+        },
+        {
+            id: 'new_avatar_52',
+            name: 'Socrate du Web',
+            description: 'Une sagesse basée sur le dialogue et le questionnement permanent.',
+            price: 4400,
+            category: 'avatar',
+            image: '/assets/avatars_shop/real_5.jpg'
+        },
+        {
+            id: 'new_avatar_53',
+            name: 'Hypatie du Futur',
+            description: 'Une brillante mathématicienne qui inspire les générations futures.',
+            price: 4600,
+            category: 'avatar',
+            image: '/assets/avatars_shop/Screenshot_20250206-224921_WhatsApp.jpg'
+        },
+        {
+            id: 'new_avatar_54',
+            name: 'Mansa Musa du Savoir',
+            description: 'Il possède la richesse inestimable d\'un savoir partagé.',
+            price: 4800,
+            category: 'avatar',
+            image: '/assets/avatars_shop/temp_image_213F4E6A-2AE5-4B55-82F2-9962A8FA70A2.webp'
+        },
+        {
+            id: 'new_avatar_55',
+            name: 'Einstein de la Tech',
+            description: 'Il redéfinit la physique de l\'apprentissage moderne.',
+            price: 5000,
+            category: 'avatar',
+            image: '/assets/avatars_shop/temp_image_6B850500-CE6B-42AB-9940-33B2A286381A.webp'
+        },
+
         // Badges
         {
             id: 'badge_elite',
@@ -605,38 +596,55 @@ export const HARDCODED_SHOP_ITEMS = [
             category: 'badge',
             color: '#8B5CF6'
         },
+
         // Wallpapers
         {
-            id: 'wall_galaxy',
-            name: 'Nébuleuse lointaine',
-            description: 'Un fond d\'écran spatial pour tes révisions stellaires.',
-            price: 150,
+            id: 'new_wall_1',
+            name: 'Aurore Boréale',
+            description: 'Des lueurs vertes magiques pour illuminer ton espace d\'apprentissage.',
+            price: 250,
             category: 'wallpaper',
-            image: 'https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=2070&auto=format&fit=crop'
+            image: '/assets/avatars_shop/1000103980.png'
         },
         {
-            id: 'wall_forest',
-            name: 'Forêt Zen',
-            description: 'Retrouve ton calme avec ce paysage apaisant.',
-            price: 120,
+            id: 'new_wall_2',
+            name: 'Dunes Dorées',
+            description: 'Le calme infini du désert sous un soleil couchant flamboyant.',
+            price: 500,
             category: 'wallpaper',
-            image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2071&auto=format&fit=crop'
+            image: '/assets/avatars_shop/pexels-alamsaim-29280658.jpg'
         },
         {
-            id: 'wall_tech',
-            name: 'Code Matrix',
-            description: 'Plonge dans le flux des données.',
-            price: 200,
+            id: 'new_wall_3',
+            name: 'Forêt Mystique',
+            description: 'Un sentier boisé paisible propice à la concentration et au calme.',
+            price: 1000,
             category: 'wallpaper',
-            image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2070&auto=format&fit=crop'
+            image: '/assets/avatars_shop/pexels-danieljschwarz-37326386.jpg'
         },
         {
-            id: 'wall_sunset',
-            name: 'Coucher de soleil',
-            description: 'Une lueur dorée pour finir tes devoirs.',
-            price: 100,
+            id: 'new_wall_4',
+            name: 'Sommet Enneigé',
+            description: 'Un grand bol d\'air frais au sommet des montagnes de la connaissance.',
+            price: 1500,
             category: 'wallpaper',
-            image: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=2070&auto=format&fit=crop'
+            image: '/assets/avatars_shop/pexels-nanda-gopal-lakshman-1548481679-27667695.jpg'
+        },
+        {
+            id: 'new_wall_5',
+            name: 'Canyon Sublime',
+            description: 'La majesté des roches sculptées par le temps et la persévérance.',
+            price: 2500,
+            category: 'wallpaper',
+            image: '/assets/avatars_shop/pexels-steve-29738253.jpg'
+        },
+        {
+            id: 'new_wall_6',
+            name: 'Océan de Nuages',
+            description: 'Prends de la hauteur et révise tes cours au-dessus du monde.',
+            price: 4000,
+            category: 'wallpaper',
+            image: '/assets/avatars_shop/pexels-wenxiang-83911323-37138139.jpg'
         }
 ];
 

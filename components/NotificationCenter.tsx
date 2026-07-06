@@ -25,8 +25,11 @@ interface NotificationCenterProps {
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
     const { notifications, markNotificationAsRead, clearNotifications, settings, updateSettings, t } = useStore();
 
-    const getIcon = (type: AppNotification['type']) => {
-        switch (type) {
+    const getIcon = (notif: AppNotification) => {
+        if (notif.title.includes('PRO') || notif.title.includes('Levelmak') || notif.title.includes('Abonnement') || notif.title.includes('Reçu')) {
+            return <img src="/logo.png" className="w-5 h-5 object-contain" alt="Levelmak Logo" />;
+        }
+        switch (notif.type) {
             case 'achievement': return <Trophy className="text-amber-500" size={18} />;
             case 'mission_available': return <Target className="text-secondary" size={18} />;
             case 'study_reminder': return <Clock className="text-primary" size={18} />;
@@ -118,7 +121,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                             <div className="shrink-0 mt-1">
                                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${notif.read ? 'bg-slate-100 dark:bg-white/5' : 'bg-white shadow-sm'
                                                     }`}>
-                                                    {getIcon(notif.type)}
+                                                    {getIcon(notif)}
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Quiz, Story, Book, Flashcard, FlashcardDeck, User } from '../../types';
+import { triggerPremiumAlert } from '../../utils/premiumAlert';
 
 export const useContentStore = (
     language: 'fr' | 'en' | 'ar' = 'fr',
@@ -768,7 +769,14 @@ export const useContentStore = (
                 : language === 'ar'
                 ? "تم الوصول إلى الحد الأقصى: يمكنك إنشاء 3 اختبارات مخصصة فقط في الخطة المجانية. يرجى الاشتراك لإنشاء عدد غير محدود!"
                 : "Limit reached: You can only create 3 custom quizzes in the free plan. Please subscribe to create unlimited ones!";
-            alert(msg);
+            triggerPremiumAlert(
+                language === 'fr' ? "Limite Atteinte ⏳" : "Limit Reached ⏳",
+                msg,
+                language === 'fr' ? "S'abonner" : "Subscribe",
+                () => {
+                    window.dispatchEvent(new CustomEvent('nav_change', { detail: 'pricing' }));
+                }
+            );
             return;
         }
 
@@ -790,7 +798,14 @@ export const useContentStore = (
                     : language === 'ar'
                     ? "النسخ الاحتياطي السحابي ميزة مدفوعة. تم حفظ تقدمك محلياً. اشترك لحفظه عبر الإنترنت!"
                     : "Cloud backup is a Premium feature. Your progress is saved locally. Subscribe to save it online!";
-                alert(msg);
+                triggerPremiumAlert(
+                    language === 'fr' ? "Sauvegarde Locale Uniquement 💾" : "Local Backup Only 💾",
+                    msg,
+                    language === 'fr' ? "Activer le Cloud" : "Activate Cloud Backup",
+                    () => {
+                        window.dispatchEvent(new CustomEvent('nav_change', { detail: 'pricing' }));
+                    }
+                );
             }
         }
     }, [userId, user?.is_premium, user?.premium_until, language, quizzes, getDefaultQuizzes]);
@@ -830,7 +845,14 @@ export const useContentStore = (
                     : language === 'ar'
                     ? "النسخ الاحتياطي السحابي ميزة مدفوعة. تم حفظ قصتك محلياً. اشترك لحفظها عبر الإنترنت!"
                     : "Cloud backup is a Premium feature. Your story is saved locally. Subscribe to save it online!";
-                alert(msg);
+                triggerPremiumAlert(
+                    language === 'fr' ? "Sauvegarde Locale Uniquement 💾" : "Local Backup Only 💾",
+                    msg,
+                    language === 'fr' ? "Activer le Cloud" : "Activate Cloud Backup",
+                    () => {
+                        window.dispatchEvent(new CustomEvent('nav_change', { detail: 'pricing' }));
+                    }
+                );
             }
         }
     }, [userId, user?.is_premium, user?.premium_until, language]);
@@ -884,7 +906,14 @@ export const useContentStore = (
                 : language === 'ar'
                 ? "تم الوصول إلى الحد الأقصى: يمكنك إنشاء 3 مجموعات بطاقات تعليمية مخصصة فقط في الخطة المجانية. يرجى الاشتراك لإنشاء عدد غير محدود!"
                 : "Limit reached: You can only create 3 custom flashcard decks in the free plan. Please subscribe to create unlimited ones!";
-            alert(msg);
+            triggerPremiumAlert(
+                language === 'fr' ? "Limite de Cartes Atteinte ⏳" : "Deck Limit Reached ⏳",
+                msg,
+                language === 'fr' ? "S'abonner" : "Subscribe",
+                () => {
+                    window.dispatchEvent(new CustomEvent('nav_change', { detail: 'pricing' }));
+                }
+            );
             return;
         }
 
@@ -912,7 +941,14 @@ export const useContentStore = (
                     : language === 'ar'
                     ? "النسخ الاحتياطي السحابي ميزة مدفوعة. تم حفظ بطاقاتك تعليمية محلياً. اشترك لحفظها عبر الإنترنت!"
                     : "Cloud backup is a Premium feature. Your flashcards are saved locally. Subscribe to save them online!";
-                alert(msg);
+                triggerPremiumAlert(
+                    language === 'fr' ? "Sauvegarde Locale Uniquement 💾" : "Local Backup Only 💾",
+                    msg,
+                    language === 'fr' ? "Activer le Cloud" : "Activate Cloud Backup",
+                    () => {
+                        window.dispatchEvent(new CustomEvent('nav_change', { detail: 'pricing' }));
+                    }
+                );
             }
         }
     }, [userId, user?.is_premium, user?.premium_until, language, decks, getDefaultDecks]);

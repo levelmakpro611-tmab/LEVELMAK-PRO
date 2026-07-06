@@ -251,6 +251,7 @@ export interface OfflinePack {
 export interface ShopItem {
   id: string;
   firestoreId?: string;
+  originalId?: string;
   name: string;
   description: string;
   price: number;

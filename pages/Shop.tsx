@@ -20,11 +20,11 @@ import {
 import { useStore } from '../hooks/useStore';
 import { POTIONS, HARDCODED_SHOP_ITEMS } from '../constants';
 import { ShopItem } from '../types';
-import { getAllShopItems } from '../services/adminService';
+import { getAllShopItems, getDeterministicUUID } from '../services/adminService';
 
 const Shop: React.FC = () => {
     const { user, purchaseItem, equipItem, purchasePotion, usePotion, t } = useStore();
-    const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'potion' | 'wallpaper'>('all');
+    const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'potion' | 'wallpaper' | 'owned'>('all');
     const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
     const [items, setItems] = useState<ShopItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -61,25 +61,46 @@ const Shop: React.FC = () => {
                     firestoreItems = [];
                 }
 
-                const potionIds = new Set(POTIONS.map(p => p.id));
+                const potionIds = new Set(POTIONS.map(p => getDeterministicUUID(p.id)));
                 const potionItems: ShopItem[] = POTIONS.map(p => ({
                     ...p,
+                    originalId: p.id,
+                    id: getDeterministicUUID(p.id),
                     category: 'potion' as const
                 }));
 
-                // Fusionner les items de la DB avec les items statiques
-                // Les items de la DB (firestoreItems) ont la priorité pour permettre l'édition des prix par l'admin
+                const hardcodedItemsWithUuid = HARDCODED_ITEMS.map(item => ({
+                    ...item,
+                    originalId: item.id,
+                    id: getDeterministicUUID(item.id)
+                }));
+
+                // Filter out deleted items from firestoreItems
+                const activeDbItems = firestoreItems.filter(item => !item.description?.startsWith('__DELETED__') && item.price !== -1);
+
+                // All DB IDs (active and deleted placeholders)
                 const dbIds = new Set(firestoreItems.map(i => i.id));
                 const mergedItems = [
-                    ...firestoreItems.map(item => potionIds.has(item.id) ? { ...item, category: 'potion' as const } : item),
-                    ...HARDCODED_ITEMS.filter(item => !dbIds.has(item.id)),
+                    ...activeDbItems.map(item => potionIds.has(item.id) ? { ...item, category: 'potion' as const } : item),
+                    ...hardcodedItemsWithUuid.filter(item => !dbIds.has(item.id)),
                     ...potionItems.filter(item => !dbIds.has(item.id))
                 ];
                 
                 setItems(mergedItems);
             } catch (error) {
                 console.error('Error loading shop items:', error);
-                setItems([...HARDCODED_ITEMS, ...POTIONS.map(p => ({ ...p, category: 'potion' as const }))]);
+                const potionItems: ShopItem[] = POTIONS.map(p => ({
+                    ...p,
+                    originalId: p.id,
+                    id: getDeterministicUUID(p.id),
+                    category: 'potion' as const
+                }));
+                const hardcodedItemsWithUuid = HARDCODED_ITEMS.map(item => ({
+                    ...item,
+                    originalId: item.id,
+                    id: getDeterministicUUID(item.id)
+                }));
+                setItems([...hardcodedItemsWithUuid, ...potionItems]);
             } finally {
                 clearTimeout(safetyTimeout);
                 setLoading(false);
@@ -92,7 +113,9 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
 
     const filteredItems = activeTab === 'all'
         ? items
-        : items.filter(item => activeTab === 'wallpaper' ? (item.category === 'wallpaper' || item.category === 'theme') : item.category === activeTab);
+        : activeTab === 'owned'
+            ? items.filter(item => inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId)))
+            : items.filter(item => activeTab === 'wallpaper' ? (item.category === 'wallpaper' || item.category === 'theme') : item.category === activeTab);
 
     const handlePurchase = (item: ShopItem) => {
         const translatedName = t(`items.${item.id}.name`);
@@ -109,7 +132,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
             return;
         }
 
-        if (inventory.includes(item.id)) return;
+        if (inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId))) return;
 
         const success = purchaseItem(item.id, item.price);
         if (success) {
@@ -154,10 +177,15 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                         </div>
                     </div>
                     <div className="w-px h-8 md:h-10 bg-white/10" />
-                    <div className="flex flex-col items-end">
-                        <span className="text-[8px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest">{t('shop.items')}</span>
-                        <span className="text-lg md:text-2xl font-display font-black text-slate-900 dark:text-white">{inventory.length}</span>
-                    </div>
+                    <button
+                        onClick={() => setActiveTab(activeTab === 'owned' ? 'all' : 'owned')}
+                        className="flex flex-col items-end group cursor-pointer select-none focus:outline-none transition-all active:scale-95"
+                    >
+                        <span className="text-[8px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest group-hover:text-secondary transition-colors">{t('shop.items')}</span>
+                        <span className={`text-lg md:text-2xl font-display font-black transition-colors ${activeTab === 'owned' ? 'text-secondary' : 'text-slate-900 dark:text-white group-hover:text-secondary'}`}>
+                            {inventory.length}
+                        </span>
+                    </button>
                 </div>
             </div>
 
@@ -165,6 +193,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
             <div className="flex flex-nowrap md:flex-wrap gap-2 md:gap-4 overflow-x-auto pb-2 md:pb-0 scrollbar-hide -mx-4 px-4">
                 {[
                     { id: 'all', icon: Gem },
+                    { id: 'owned', icon: Check },
                     { id: 'avatar', icon: UserCircle },
                     { id: 'badge', icon: BadgeCheck },
                     { id: 'wallpaper', icon: ImageIcon },
@@ -212,11 +241,11 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                         <motion.div
                             layout
                             key={item.id}
-                            className={`group relative overflow-hidden bg-slate-900 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-3 md:p-6 transition-all hover:border-secondary/50 ${inventory.includes(item.id) ? 'opacity-75' : ''
+                            className={`group relative overflow-hidden bg-slate-900 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-3 md:p-6 transition-all hover:border-secondary/50 ${(inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId))) ? 'opacity-75' : ''
                                 }`}
                         >
                             {/* Status Label */}
-                            {inventory.includes(item.id) && (
+                            {(inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId))) && (
                                 <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-success/20 text-success rounded-full text-[10px] font-black uppercase flex items-center gap-1">
                                     <Check size={12} /> {t('shop.owned')}
                                 </div>
@@ -258,9 +287,9 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                             </div>
 
                             {/* Inventory Count for consumables */}
-                            {item.category === 'potion' && user?.consumables?.[item.id] && (
+                            {item.category === 'potion' && (user?.consumables?.[item.id] || (item.originalId && user?.consumables?.[item.originalId])) && (
                                 <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-secondary/20 text-secondary-light rounded-full text-[10px] font-black uppercase flex items-center gap-1">
-                                    {t('shop.stock')}: {user.consumables[item.id]}
+                                    {t('shop.stock')}: {user.consumables[item.id] || (item.originalId ? user.consumables[item.originalId] : 0)}
                                 </div>
                             )}
 
@@ -282,17 +311,17 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                                         <span className="opacity-50 text-[8px] md:text-[10px]">{t('shop.buy')}</span>
                                     </button>
                                     
-                                    {user?.consumables?.[item.id] > 0 && !['water_can', 'fertilizer', 'potion_shield', 'potion_skip', 'potion_inspiration'].includes(item.id) && (
+                                    {((user?.consumables?.[item.id] || 0) > 0 || (item.originalId && (user?.consumables?.[item.originalId] || 0) > 0)) && !['water_can', 'fertilizer', 'potion_shield', 'potion_skip', 'potion_inspiration'].includes(item.originalId || item.id) && (
                                         <button
                                             onClick={() => handleUse(item)}
                                             className="w-full py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 text-[8px] md:text-xs font-black uppercase tracking-wider transition-all bg-secondary/20 text-secondary hover:bg-secondary/30 active:scale-95 border border-secondary/30"
                                         >
                                             <FlaskConical size={12} md={14} />
-                                            {t('shop.use')} ({user.consumables[item.id]})
+                                            {t('shop.use')} ({user.consumables[item.id] || (item.originalId ? user.consumables[item.originalId] : 0)})
                                         </button>
                                     )}
                                 </div>
-                            ) : item.category !== 'potion' && inventory.includes(item.id) ? (
+                            ) : item.category !== 'potion' && (inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId))) ? (
                                 <button
                                     onClick={() => equipItem(item.id, item.category, item.image)}
                                     className={`w-full py-2.5 md:py-4 rounded-xl md:rounded-2xl flex items-center justify-center gap-2 md:gap-3 text-[9px] md:text-xs font-black uppercase tracking-[0.15em] md:tracking-[0.2em] transition-all ${

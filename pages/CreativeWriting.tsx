@@ -65,6 +65,8 @@ const CreativeWriting: React.FC = () => {
     // AI Suggestions state
     const [aiSuggestions, setAiSuggestions] = useState<{ id: string, text: string, type: 'suggestion' | 'review' }[]>([]);
     const [aiError, setAiError] = useState<string | null>(null);
+    const [activeAiModal, setActiveAiModal] = useState<'review' | 'help' | null>(null);
+    const [aiModalContent, setAiModalContent] = useState<string>('');
 
     // Writing Lab State
     const [writingAnalysis, setWritingAnalysis] = useState<{
@@ -577,7 +579,7 @@ const CreativeWriting: React.FC = () => {
     };
 
     const handleAiAction = async (mode: 'write' | 'review' | 'help') => {
-        if (mode !== 'help' && !content && !title) return;
+        if (!content.trim()) return;
         setIsAiLoading(true);
         setAiError(null);
         try {
@@ -593,6 +595,12 @@ const CreativeWriting: React.FC = () => {
                 { id: `ai_${Date.now()}`, text: response, type: (mode === 'write' || mode === 'help') ? 'suggestion' : 'review' },
                 ...prev
             ]);
+
+            if (mode === 'review' || mode === 'help') {
+                setAiModalContent(response);
+                setActiveAiModal(mode);
+            }
+
             addXp(mode === 'help' ? 5 : 10);
         } catch (e: any) {
             console.error("AI Action failed", e);
@@ -905,16 +913,28 @@ const CreativeWriting: React.FC = () => {
                                     <div className="flex flex-col gap-3">
                                         <div className="flex gap-3">
                                             <button
-                                                onClick={() => handleAiAction('review')}
-                                                disabled={isAiLoading || (!content && !title)}
-                                                className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${isAiLoading ? 'opacity-50 grayscale' : 'bg-white/5 border-white/10 hover:bg-white/10 text-white shadow-lg shadow-black/20 active:scale-95'}`}
+                                                onClick={() => {
+                                                    if (!content.trim()) {
+                                                        alert("Veuillez d'abord écrire du contenu avant de demander un avis.");
+                                                        return;
+                                                    }
+                                                    handleAiAction('review');
+                                                }}
+                                                disabled={isAiLoading || !content.trim()}
+                                                className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${isAiLoading || !content.trim() ? 'opacity-50 cursor-not-allowed bg-white/5 border-white/5 text-slate-500' : 'bg-white/5 border-white/10 hover:bg-white/10 text-white shadow-lg shadow-black/20 active:scale-95'}`}
                                             >
                                                 AVIS
                                             </button>
                                             <button
-                                                onClick={() => handleAiAction('help')}
-                                                disabled={isAiLoading}
-                                                className={`flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-glow shadow-purple-500/20`}
+                                                onClick={() => {
+                                                    if (!content.trim()) {
+                                                        alert("Veuillez d'abord écrire du contenu avant de demander de l'aide.");
+                                                        return;
+                                                    }
+                                                    handleAiAction('help');
+                                                }}
+                                                disabled={isAiLoading || !content.trim()}
+                                                className={`flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-glow shadow-purple-500/20`}
                                             >
                                                 {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
                                                 M'AIDER
@@ -947,12 +967,16 @@ const CreativeWriting: React.FC = () => {
                                                             {sugg.type === 'suggestion' ? 'Idée' : 'Avis du Coach'}
                                                         </span>
                                                     </div>
-                                                    <p className="text-sm text-slate-200 font-medium leading-relaxed mb-3 whitespace-pre-wrap">{sugg.text}</p>
-                                                    {sugg.type === 'suggestion' && (
-                                                        <button onClick={() => applySuggestion(sugg.text)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-light transition-colors flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">
-                                                            <Plus size={12} /> Ajouter au texte
-                                                        </button>
-                                                    )}
+                                                    <p className="text-sm text-slate-200 font-medium leading-relaxed mb-3 whitespace-pre-wrap line-clamp-3">{sugg.text}</p>
+                                                    <button
+                                                        onClick={() => {
+                                                            setAiModalContent(sugg.text);
+                                                            setActiveAiModal(sugg.type === 'suggestion' ? 'help' : 'review');
+                                                        }}
+                                                        className="text-[9px] font-black uppercase tracking-widest text-secondary hover:text-white transition-colors flex items-center gap-1 bg-secondary/10 px-3 py-1.5 rounded-lg border border-secondary/20 mt-2"
+                                                    >
+                                                        Lire la suite
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
@@ -1740,6 +1764,77 @@ const CreativeWriting: React.FC = () => {
                                     </div>
                                 )}
                             </AnimatePresence>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+            {/* Coach IA Modal (Avis / Aide) */}
+            <AnimatePresence>
+                {activeAiModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setActiveAiModal(null)}
+                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[2.5rem] p-6 md:p-10 flex flex-col shadow-2xl overflow-hidden max-h-[85vh] z-10"
+                        >
+                            {/* Decorative background glow */}
+                            <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden">
+                                <div className={`absolute -top-40 -left-40 w-96 h-96 rounded-full blur-3xl opacity-20 transition-all ${
+                                    activeAiModal === 'review' ? 'bg-primary' : 'bg-secondary'
+                                }`} />
+                            </div>
+
+                            <button
+                                onClick={() => setActiveAiModal(null)}
+                                className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors z-30"
+                            >
+                                <X size={18} />
+                            </button>
+
+                            <div className="relative z-10 flex items-center gap-3 border-b border-white/10 pb-4 mb-6">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${
+                                    activeAiModal === 'review' 
+                                        ? 'bg-primary/20 border-primary/20 text-primary-light' 
+                                        : 'bg-secondary/20 border-secondary/20 text-secondary'
+                                }`}>
+                                    {activeAiModal === 'review' ? <Sparkles size={20} /> : <Zap size={20} />}
+                                </div>
+                                <div>
+                                    <h3 className="text-base md:text-xl font-display font-black text-white dark:text-white leading-tight">
+                                        {activeAiModal === 'review' ? "Avis du Coach IA" : "Aide & Suite du Récit"}
+                                    </h3>
+                                    <p className="text-[8px] md:text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5 animate-pulse">
+                                        {activeAiModal === 'review' 
+                                            ? "Analyse pédagogique et retours sur votre écrit" 
+                                            : "Conseils, inspirations et idées pour continuer"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar pr-2 mb-6 text-slate-300 dark:text-slate-300 text-sm md:text-base leading-relaxed space-y-4 font-serif">
+                                {aiModalContent.split('\n').map((line, idx) => {
+                                    let trimmed = line.trim();
+                                    if (trimmed === '') return <div key={idx} className="h-2" />;
+                                    return <p key={idx} className="text-justify whitespace-pre-wrap">{parseInlineStyles(line)}</p>;
+                                })}
+                            </div>
+
+                            <div className="relative z-10 flex justify-end border-t border-white/5 pt-6">
+                                <button
+                                    onClick={() => setActiveAiModal(null)}
+                                    className="px-8 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+                                >
+                                    Retour à mon écriture
+                                </button>
+                            </div>
                         </motion.div>
                     </div>
                 )}

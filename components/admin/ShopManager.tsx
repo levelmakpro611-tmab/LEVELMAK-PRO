@@ -17,7 +17,7 @@ import {
     FlaskConical,
     Palette
 } from 'lucide-react';
-import { getAllShopItems, addShopItem, updateShopItem, deleteShopItem } from '../../services/adminService';
+import { getAllShopItems, addShopItem, updateShopItem, deleteShopItem, getDeterministicUUID } from '../../services/adminService';
 import { ShopItem } from '../../types';
 import { POTIONS, HARDCODED_SHOP_ITEMS } from '../../constants';
 
@@ -52,17 +52,30 @@ const ShopManager: React.FC = () => {
             const dbItems = await getAllShopItems();
             
             // Map hardcoded POTIONS to force their category to 'potion', matching Shop.tsx student logic
-            const potionIds = new Set(POTIONS.map(p => p.id));
+            const potionIds = new Set(POTIONS.map(p => getDeterministicUUID(p.id)));
             const potionItems: ShopItem[] = POTIONS.map(p => ({
                 ...p,
+                originalId: p.id,
+                id: getDeterministicUUID(p.id),
                 category: 'potion' as const
             }));
 
-            // Merge with hardcoded to show everything
+            const hardcodedItemsWithUuid = HARDCODED_ITEMS.map(item => ({
+                ...item,
+                originalId: item.id,
+                id: getDeterministicUUID(item.id)
+            }));
+
+            // Filter out deleted items from dbItems
+            const activeDbItems = dbItems.filter(item => !item.description?.startsWith('__DELETED__') && item.price !== -1);
+            
+            // All DB IDs (active and deleted placeholders)
             const dbIds = new Set(dbItems.map(i => i.id));
+
+            // Merge with hardcoded to show everything
             const merged = [
-                ...dbItems,
-                ...HARDCODED_ITEMS.filter(i => !dbIds.has(i.id!)) as ShopItem[],
+                ...activeDbItems,
+                ...hardcodedItemsWithUuid.filter(i => !dbIds.has(i.id!)) as ShopItem[],
                 ...potionItems.filter(i => !dbIds.has(i.id)) as ShopItem[]
             ];
             
@@ -72,9 +85,16 @@ const ShopManager: React.FC = () => {
             // Fallback to hardcoded if DB fails
             const potionItems: ShopItem[] = POTIONS.map(p => ({
                 ...p,
+                originalId: p.id,
+                id: getDeterministicUUID(p.id),
                 category: 'potion' as const
             }));
-            setItems([...HARDCODED_ITEMS, ...potionItems] as any);
+            const hardcodedItemsWithUuid = HARDCODED_ITEMS.map(item => ({
+                ...item,
+                originalId: item.id,
+                id: getDeterministicUUID(item.id)
+            }));
+            setItems([...hardcodedItemsWithUuid, ...potionItems] as any);
         } finally {
             setLoading(false);
         }
@@ -125,13 +145,12 @@ const ShopManager: React.FC = () => {
         setSaving(true);
         try {
             if (editingItem && editingItem.id) {
-                // If it has a firestoreId, it's already in the DB
+                // If it has a firestoreId, it's already in the DB.
+                // For hardcoded items, we pass its deterministic UUID id to addShopItem
                 if (editingItem.firestoreId) {
                     await updateShopItem(editingItem.id, formData, imageFile || undefined);
                 } else {
-                    // It's a hardcoded item being saved to DB for the first time
-                    // Omit the string ID to let Supabase generate a valid UUID
-                    await addShopItem({ ...formData } as ShopItem, imageFile || undefined);
+                    await addShopItem({ ...formData, id: editingItem.id } as ShopItem, imageFile || undefined);
                 }
             } else {
                 // New item: Omit ID to let Supabase generate a valid UUID
@@ -151,10 +170,9 @@ const ShopManager: React.FC = () => {
         if (!confirm(`Supprimer "${item.name}" ?`)) return;
 
         try {
-            if (item.firestoreId) {
-                await deleteShopItem(item.firestoreId, item.image);
-                await loadItems();
-            }
+            const deleteId = item.firestoreId || item.id;
+            await deleteShopItem(deleteId, item.image);
+            await loadItems();
         } catch (error) {
             console.error('Error deleting item:', error);
             alert('Erreur lors de la suppression');

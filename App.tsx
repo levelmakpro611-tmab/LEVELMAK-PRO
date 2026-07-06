@@ -34,10 +34,11 @@ const TutorHub = lazy(() => import('./pages/TutorHub'));
 const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
 
 import AppShell from './components/AppShell';
+import { PremiumAlertModal } from './components/PremiumAlertModal';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
-import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw, Check } from 'lucide-react';
 import { aiService } from './services/aiService';
-import { initializeNativeFeatures } from './services/nativeAdapters';
+import { initializeNativeFeatures, isNativePlatform } from './services/nativeAdapters';
 import { App as CapacitorApp } from '@capacitor/app';
 
 // ERROR BOUNDARY COMPONENT
@@ -133,19 +134,93 @@ const PageLoader = ({ message = "Synchronisation...", fullScreen = true }: { mes
 const AppContent: React.FC = () => {
   const { user, loading, settings, t, updateProfile } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('success') === 'true') {
+        setActiveTab('pricing');
+      }
+    }
+  }, []);
+
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
   const [currentDeck, setCurrentDeck] = useState<{ deck: FlashcardDeck, cards: Flashcard[] } | null>(null);
   const [currentBook, setCurrentBook] = useState<BookType | null>(null);
   const [sessionChosenPlan, setSessionChosenPlan] = useState(false);
+  const [globalReceiptData, setGlobalReceiptData] = useState<{
+    transactionId: string;
+    planName: string;
+    amount: number;
+    purchasedAt: string;
+    startsAt: string;
+    expiresAt: string;
+    userName?: string;
+    userPhone?: string;
+  } | null>(null);
+
+  // Custom premium warning modal state
+  const [premiumAlert, setPremiumAlert] = useState<{
+    title: string;
+    message: string;
+    actionText?: string;
+    onAction?: () => void;
+  } | null>(null);
+
+  // Global custom event listener to show luxury premium alerts from anywhere in the app
+  useEffect(() => {
+    const handleAlert = (e: any) => {
+      const { title, message, actionText, onAction } = e.detail;
+      setPremiumAlert({
+        title,
+        message,
+        actionText,
+        onAction
+      });
+    };
+    window.addEventListener('show_premium_alert', handleAlert);
+    return () => window.removeEventListener('show_premium_alert', handleAlert);
+  }, []);
 
   // Strict premium check: user must have is_premium=true AND a valid non-expired premium_until date
   const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
 
   const handleSetActiveTab = (tab: string) => {
+    const isMobile = isNativePlatform();
+    
+    if (isMobile && tab === 'pricing') {
+      setPremiumAlert({
+        title: "Espace Premium 🌟",
+        message: "Cette partie n'est pas accessible depuis l'application mobile. Il vous suffira d'aller sur notre page web pour plus d'explications.",
+        actionText: "Copier l'adresse de notre site",
+        onAction: () => {
+          navigator.clipboard.writeText('https://levelmak.app');
+        }
+      });
+      return;
+    }
+
     const freeTabs = ['dashboard', 'quiz', 'flashcards', 'settings', 'pricing', 'flashcard_mode'];
     if (!isPremiumActive && !freeTabs.includes(tab)) {
-      alert("Veuillez souscrire à un forfait Premium pour accéder à cette fonctionnalité.");
-      setActiveTab('pricing');
+      if (isMobile) {
+        setPremiumAlert({
+          title: "Espace Premium 🌟",
+          message: "Cette partie n'est pas accessible depuis l'application mobile. Il vous suffira d'aller sur notre page web pour plus d'explications.",
+          actionText: "Copier l'adresse de notre site",
+          onAction: () => {
+            navigator.clipboard.writeText('https://levelmak.app');
+          }
+        });
+      } else {
+        setPremiumAlert({
+          title: "Espace Privilège Requis 🌟",
+          message: "Cet onglet contient des outils exclusifs pour booster vos notes. Abonnez-vous à LEVELMAK PRO pour y accéder sans aucune limite !",
+          actionText: "Découvrir les Offres",
+          onAction: () => {
+            setActiveTab('pricing');
+          }
+        });
+      }
     } else {
       setActiveTab(tab);
     }
@@ -178,7 +253,15 @@ const AppContent: React.FC = () => {
           is_premium: false,
           premium_until: null
         });
-        alert('Votre abonnement Premium est arrivé à expiration. Votre compte a été configuré sur le plan gratuit.');
+
+        setPremiumAlert({
+          title: "Abonnement Terminé ⏳",
+          message: "Votre abonnement Premium est arrivé à expiration. Votre compte a été configuré sur la formule gratuite.\n\nRenouvelez dès maintenant pour ne pas perdre l'accès à vos fonctionnalités exclusives.",
+          actionText: "Renouveler mon forfait",
+          onAction: () => {
+            setActiveTab('pricing');
+          }
+        });
       }
     };
 
@@ -414,11 +497,12 @@ const AppContent: React.FC = () => {
         <Suspense fallback={<PageLoader message="Chargement de l'accès..." fullScreen={false} />}>
           <Auth />
         </Suspense>
-      ) : user && !isPremiumActive && !sessionChosenPlan ? (
+      ) : user && !isPremiumActive && !sessionChosenPlan && !isNativePlatform() ? (
         <Suspense fallback={<PageLoader message="Chargement des forfaits..." fullScreen={true} />}>
           <Pricing 
             onChooseFree={() => setSessionChosenPlan(true)} 
-            onChoosePremium={() => setSessionChosenPlan(true)} 
+            onChoosePremium={() => setSessionChosenPlan(true)}
+            onPaymentSuccess={(data: any) => setGlobalReceiptData({ ...data, userName: user?.name, userPhone: user?.phoneNumber })}
             isFullScreen={true}
           />
         </Suspense>
@@ -453,6 +537,97 @@ const AppContent: React.FC = () => {
           </Suspense>
         </AppShell>
       )}
+      <PremiumAlertModal
+        isOpen={premiumAlert !== null}
+        title={premiumAlert?.title || ''}
+        message={premiumAlert?.message || ''}
+        actionText={premiumAlert?.actionText}
+        onAction={premiumAlert?.onAction}
+        onClose={() => setPremiumAlert(null)}
+      />
+
+      {/* ===== GLOBAL RECEIPT MODAL ===== */}
+      <AnimatePresence>
+        {globalReceiptData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[99999] bg-black"
+          >
+            {/* Inner card with rounded blue border — like the photo */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 240 }}
+              className="absolute inset-3 sm:inset-6 rounded-[2.5rem] border-[3px] border-blue-500 bg-[#09101e] flex flex-col overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.4),inset_0_0_40px_rgba(59,130,246,0.05)]"
+            >
+              <div className="flex-1 flex flex-col items-center justify-between px-5 py-5 sm:py-7">
+
+                {/* Green check */}
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-900/50 border-2 border-emerald-500/60 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)] shrink-0">
+                  <Check className="w-7 h-7 sm:w-8 sm:h-8 text-emerald-400" strokeWidth={3} />
+                </div>
+
+                {/* Title */}
+                <div className="text-center shrink-0">
+                  <h2 className="text-[20px] sm:text-[24px] font-black text-white uppercase tracking-wide leading-tight">Reçu d'Abonnement</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.15em] mt-0.5">LEVELMAK PRO • ORDONNANCE ÉLITE</p>
+                </div>
+
+                {/* Dashed separator */}
+                <div className="w-full border-t-2 border-dashed border-slate-700 shrink-0" />
+
+                {/* Congrats box */}
+                <div className="w-full p-2.5 sm:p-3 bg-emerald-950/30 border border-emerald-500/40 rounded-xl text-center shrink-0">
+                  <p className="text-emerald-300 text-[11px] sm:text-[12px] font-bold leading-snug">
+                    Félicitations ! Votre abonnement <span className="text-white font-black">LEVELMAK PRO</span> est maintenant actif et prêt à l'emploi.
+                  </p>
+                </div>
+
+                {/* Billing Info */}
+                <div className="w-full shrink-0">
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center mb-1.5">Informations de Facturation</p>
+                  <div className="w-full bg-[#0d1425] border border-slate-800 rounded-xl overflow-hidden">
+                    {[
+                      { label: 'Étudiant :', value: globalReceiptData.userName || 'Étudiant', cls: 'text-white' },
+                      { label: 'Téléphone :', value: globalReceiptData.userPhone || 'N/A', cls: 'text-white' },
+                      { label: 'Forfait :', value: `PRO ${globalReceiptData.planName}`, cls: 'text-blue-400 font-bold' },
+                      { label: 'Montant payé :', value: `${globalReceiptData.amount.toLocaleString()} FG`, cls: 'text-white' },
+                      { label: "Date d'achat :", value: globalReceiptData.purchasedAt, cls: 'text-white' },
+                      { label: 'Référence :', value: globalReceiptData.transactionId, cls: 'text-white font-mono text-[9px] sm:text-[10px]' },
+                    ].map((row, i, arr) => (
+                      <div key={i} className={`flex justify-between items-center px-3 sm:px-4 py-1.5 sm:py-2 ${i < arr.length - 1 ? 'border-b border-slate-800/70' : ''}`}>
+                        <span className="text-slate-400 text-[10px] sm:text-[11px]">{row.label}</span>
+                        <span className={`${row.cls} text-[10px] sm:text-[11px] text-right ml-3`}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Period of Validity */}
+                <div className="w-full bg-[#0d1425] border border-slate-800 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 shrink-0">
+                  <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1.5">Période de Validité</p>
+                  <p className="text-[11px] text-white font-bold">Du : <span className="underline underline-offset-2">{globalReceiptData.startsAt}</span></p>
+                  <p className="text-[11px] text-white font-bold mb-1.5">Au : <span className="underline underline-offset-2">{globalReceiptData.expiresAt}</span></p>
+                  <p className="text-[10px] text-slate-500 leading-snug">À cette échéance, votre accès repassera automatiquement au mode gratuit.</p>
+                </div>
+
+                {/* CTA Button */}
+                <button
+                  onClick={() => setGlobalReceiptData(null)}
+                  className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white rounded-2xl font-black uppercase tracking-widest text-[12px] sm:text-[13px] transition-all shadow-lg shadow-blue-900/40 shrink-0"
+                >
+                  Commencer à Réviser
+                </button>
+
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

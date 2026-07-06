@@ -1117,6 +1117,30 @@ export const updateShopItem = async (
     }
 };
 
+export const getDeterministicUUID = (id: string): string => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(id)) return id;
+
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    const hex = Math.abs(hash).toString(16).padStart(8, '0');
+    const part2 = id.length.toString(16).padStart(4, '0');
+    const part3 = '4' + (id.charCodeAt(0) || 0).toString(16).padStart(3, '0');
+    const part4 = '8' + (id.charCodeAt(id.length - 1) || 0).toString(16).padStart(3, '0');
+    
+    let part5 = '';
+    for (let i = 0; i < 6; i++) {
+        const charCode = id.charCodeAt(i % id.length) || 0;
+        part5 += charCode.toString(16).padStart(2, '0');
+    }
+    part5 = part5.substring(0, 12).padEnd(12, '0');
+
+    return `${hex}-${part2.substring(0, 4)}-${part3.substring(0, 4)}-${part4.substring(0, 4)}-${part5}`;
+};
+
 export const deleteShopItem = async (id: string, imageUrl?: string): Promise<void> => {
     try {
         if (imageUrl && imageUrl.includes('supabase')) {
@@ -1131,8 +1155,37 @@ export const deleteShopItem = async (id: string, imageUrl?: string): Promise<voi
             }
         }
 
-        const { error } = await supabase.from('shop_items').delete().eq('id', id);
-        if (error) throw error;
+        // Check if the item already exists in DB
+        const { data: existing, error: selectError } = await supabase
+            .from('shop_items')
+            .select('id')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (selectError) throw selectError;
+
+        if (existing) {
+            // Update to mark as deleted
+            const { error: updateError } = await supabase
+                .from('shop_items')
+                .update({ description: '__DELETED__', price: -1 })
+                .eq('id', id);
+            if (updateError) throw updateError;
+        } else {
+            // It's a hardcoded item without a DB row yet
+            // Insert a placeholder to mark it as deleted
+            const { error: insertError } = await supabase
+                .from('shop_items')
+                .insert({
+                    id,
+                    name: 'Deleted Hardcoded Item',
+                    description: '__DELETED__',
+                    price: -1,
+                    category: 'avatar',
+                    created_at: new Date().toISOString()
+                });
+            if (insertError) throw insertError;
+        }
     } catch (error) {
         console.error('Error deleting shop item:', error);
         throw error;

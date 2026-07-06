@@ -816,6 +816,7 @@ export const translations: Record<string, any> = {
             "items": "Items",
             "tabs": {
                 "all": "Tout",
+                "owned": "Mes achats",
                 "avatar": "Avatars",
                 "badge": "Badges",
                 "theme": "Thèmes",
@@ -2205,6 +2206,7 @@ export const translations: Record<string, any> = {
             "items": "Items",
             "tabs": {
                 "all": "All",
+                "owned": "My Purchases",
                 "avatar": "Avatars",
                 "badge": "Badges",
                 "theme": "Themes",
@@ -3262,6 +3264,7 @@ export const translations: Record<string, any> = {
             "items": "العناصر",
             "tabs": {
                 "all": "الكل",
+                "owned": "مشترياتي",
                 "avatar": "أفاتار",
                 "badge": "شارات",
                 "theme": "سمات",
