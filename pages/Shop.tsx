@@ -122,7 +122,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
         const displayName = translatedName.startsWith('items.') ? item.name : translatedName;
 
         if (item.category === 'potion') {
-            const success = purchasePotion(item.id);
+            const success = purchasePotion(item.id, item.originalId);
             if (success) {
                 setPurchaseSuccess(displayName);
                 setTimeout(() => setPurchaseSuccess(null), 3000);
@@ -134,7 +134,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
 
         if (inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId))) return;
 
-        const success = purchaseItem(item.id, item.price);
+        const success = purchaseItem(item.id, item.price, item.originalId);
         if (success) {
             setPurchaseSuccess(displayName);
             setTimeout(() => setPurchaseSuccess(null), 3000);
@@ -147,7 +147,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
         const translatedName = t(`items.${item.id}.name`);
         const displayName = translatedName.startsWith('items.') ? item.name : translatedName;
 
-        usePotion(item.id);
+        usePotion(item.id, item.originalId);
         setPurchaseSuccess(`${t('shop.active')}: ${displayName}`);
         setTimeout(() => setPurchaseSuccess(null), 3000);
     };
@@ -323,7 +323,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                                 </div>
                             ) : item.category !== 'potion' && (inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId))) ? (
                                 <button
-                                    onClick={() => equipItem(item.id, item.category, item.image)}
+                                    onClick={() => equipItem(item.id, item.category, item.image, item.originalId)}
                                     className={`w-full py-2.5 md:py-4 rounded-xl md:rounded-2xl flex items-center justify-center gap-2 md:gap-3 text-[9px] md:text-xs font-black uppercase tracking-[0.15em] md:tracking-[0.2em] transition-all ${
                                         ((item.category === 'avatar' && user?.avatar?.image === item.image) || (item.category === 'wallpaper' && user?.wallpaper === item.image))
                                             ? 'bg-success text-white shadow-glow'

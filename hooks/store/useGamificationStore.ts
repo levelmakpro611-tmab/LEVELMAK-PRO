@@ -129,9 +129,9 @@ export const useGamificationStore = (
         });
     }, [setUser]);
 
-    const purchaseItem = useCallback((itemId: string, price: number) => {
+    const purchaseItem = useCallback((itemId: string, price: number, originalId?: string) => {
         if (!user || (user.levelCoins || 0) < price) return false;
-        if (user.inventory?.includes(itemId)) return false;
+        if (user.inventory?.includes(itemId) || (originalId && user.inventory?.includes(originalId))) return false;
 
         setUser(prev => {
             if (!prev) return null;
@@ -146,9 +146,13 @@ export const useGamificationStore = (
         return true;
     }, [user, setUser]);
 
-    const equipItem = useCallback((itemId: string, category: string, image?: string) => {
+    const equipItem = useCallback((itemId: string, category: string, image?: string, originalId?: string) => {
         setUser(prev => {
-            if (!prev || !prev.inventory?.includes(itemId)) return prev;
+            if (!prev) return prev;
+            
+            const hasItem = prev.inventory?.includes(itemId) || 
+                            (originalId && prev.inventory?.includes(originalId));
+            if (!hasItem) return prev;
             
             let updated = { ...prev };
             if (category === 'avatar' && image) {
@@ -170,18 +174,19 @@ export const useGamificationStore = (
         });
     }, [setUser]);
 
-    const purchasePotion = useCallback((potionId: string) => {
-        const potion = POTIONS.find(p => p.id === potionId);
+    const purchasePotion = useCallback((potionId: string, originalId?: string) => {
+        const potion = POTIONS.find(p => p.id === (originalId || potionId));
         if (!user || !potion || (user.levelCoins || 0) < potion.price) return false;
 
         setUser(prev => {
             if (!prev) return null;
+            const key = originalId || potionId;
             const updated = {
                 ...prev,
                 levelCoins: prev.levelCoins - potion.price,
                 consumables: {
                     ...prev.consumables,
-                    [potionId]: (prev.consumables?.[potionId] || 0) + 1
+                    [key]: (prev.consumables?.[key] || 0) + 1
                 }
             };
             localStorage.setItem('levelmak_user', JSON.stringify(updated));
@@ -190,15 +195,19 @@ export const useGamificationStore = (
         return true;
     }, [user, setUser]);
 
-    const usePotion = useCallback((potionId: string) => {
+    const usePotion = useCallback((potionId: string, originalId?: string) => {
         setUser(prev => {
-            if (!prev || !prev.consumables?.[potionId] || prev.consumables[potionId] <= 0) return prev;
+            const key = (prev?.consumables?.[potionId] && prev.consumables[potionId] > 0)
+                ? potionId
+                : originalId;
+
+            if (!prev || !key || !prev.consumables?.[key] || prev.consumables[key] <= 0) return prev;
             
             const updated = {
                 ...prev,
                 consumables: {
                     ...prev.consumables,
-                    [potionId]: prev.consumables[potionId] - 1
+                    [key]: prev.consumables[key] - 1
                 }
             };
             localStorage.setItem('levelmak_user', JSON.stringify(updated));
