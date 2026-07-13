@@ -37,7 +37,7 @@ const Auth: React.FC = () => {
   const [activePolicyTab, setActivePolicyTab] = useState<'privacy' | 'terms'>('privacy');
   const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
   const [resetSuccess, setResetSuccess] = useState(false);
-  const [registerStep, setRegisterStep] = useState<number>(0);
+  const [registerStep, setRegisterStep] = useState<number>(1);
   const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -80,7 +80,7 @@ const Auth: React.FC = () => {
     setEmail('');
     setPhone('');
     setPassword('');
-    setRegisterStep(0);
+    setRegisterStep(1);
     setError(null);
     setResetSuccess(false);
     setRecoveryStep(1);
@@ -326,11 +326,18 @@ const Auth: React.FC = () => {
 
           {mode === 'register' && (
             <div className="flex justify-center gap-2 mb-4">
-              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 0 ? (role === 'teacher' ? 'bg-purple-500 shadow-glow-purple' : 'bg-blue-500 shadow-glow') : 'bg-white/10'}`} />
-              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 1 ? (role === 'teacher' ? 'bg-purple-500 shadow-glow-purple' : 'bg-blue-500 shadow-glow') : 'bg-white/10'}`} />
-              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 2 ? (role === 'teacher' ? 'bg-purple-500 shadow-glow-purple' : 'bg-blue-500 shadow-glow') : 'bg-white/10'}`} />
-              {role === 'teacher' && (
-                <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 3 ? 'bg-purple-500 shadow-glow-purple' : 'bg-white/10'}`} />
+              {role === 'teacher' ? (
+                <>
+                  <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 0 ? 'bg-purple-500 shadow-glow-purple' : 'bg-white/10'}`} />
+                  <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 1 ? 'bg-purple-500 shadow-glow-purple' : 'bg-white/10'}`} />
+                  <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 2 ? 'bg-purple-500 shadow-glow-purple' : 'bg-white/10'}`} />
+                  <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 3 ? 'bg-purple-500 shadow-glow-purple' : 'bg-white/10'}`} />
+                </>
+              ) : (
+                <>
+                  <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 1 ? 'bg-blue-500 shadow-glow' : 'bg-white/10'}`} />
+                  <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 2 ? 'bg-blue-500 shadow-glow' : 'bg-white/10'}`} />
+                </>
               )}
             </div>
           )}
@@ -1004,7 +1011,7 @@ const Auth: React.FC = () => {
                   )}
                 </button>
 
-                {mode === 'register' && registerStep > 0 && (
+                {mode === 'register' && registerStep > (role === 'teacher' ? 0 : 1) && (
                   <button
                     type="button"
                     onClick={() => setRegisterStep((registerStep - 1) as any)}
