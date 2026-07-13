@@ -195,7 +195,9 @@ export const useGamificationStore = (
         return true;
     }, [user, setUser]);
 
-    const usePotion = useCallback((potionId: string, originalId?: string) => {
+    // ✅ Renamed from usePotion to consumePotion — functions starting with 'use' are
+    // treated as hooks by React's static analysis, causing false 'conditional hook' errors.
+    const consumePotion = useCallback((potionId: string, originalId?: string) => {
         setUser(prev => {
             const key = (prev?.consumables?.[potionId] && prev.consumables[potionId] > 0)
                 ? potionId
@@ -227,6 +229,6 @@ export const useGamificationStore = (
         purchaseItem,
         equipItem,
         purchasePotion,
-        usePotion
+        consumePotion
     };
 };

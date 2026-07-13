@@ -348,6 +348,27 @@
                 color: #1e293b !important;
             }
         }
+        /* ✅ Accessibility: WCAG 2.3.3 — Respect system preference for reduced motion.
+           Disables animations and transitions for users who have enabled
+           "Reduce Motion" in their OS/browser accessibility settings.           */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+
+            /* Keep background blobs static */
+            .animate-pulse,
+            .animate-bounce,
+            .animate-spin,
+            .animate-ping {
+                animation: none !important;
+            }
+        }
     </style>
 </head>
 

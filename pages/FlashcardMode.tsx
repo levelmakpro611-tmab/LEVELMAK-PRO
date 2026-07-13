@@ -138,9 +138,10 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
       {/* Progress Bar */}
       <div className="w-full max-w-2xl mx-auto h-1 bg-white/10 rounded-full mb-10 overflow-hidden">
         <motion.div 
-          className="h-full bg-purple-500"
-          initial={{ width: 0 }}
-          animate={{ width: `${((currentIndex) / cardsToReview.length) * 100}%` }}
+          className="h-full bg-purple-500 w-full"
+          style={{ originX: 0 }}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: cardsToReview.length > 0 ? currentIndex / cardsToReview.length : 0 }}
         />
       </div>
       <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full relative perspective-[2000px]">

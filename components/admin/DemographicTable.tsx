@@ -26,6 +26,9 @@ interface DemographicTableProps {
 const COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B'];
 
 const DemographicTable: React.FC<DemographicTableProps> = ({ stats }) => {
+    // ✅ Hook called unconditionally at the top level (React Rules of Hooks)
+    const [exporting, setExporting] = React.useState(false);
+
     if (!stats) return <div className="p-8 text-center text-slate-400">Chargement des données démographiques...</div>;
 
     const genderData = [
@@ -33,8 +36,6 @@ const DemographicTable: React.FC<DemographicTableProps> = ({ stats }) => {
         { name: 'Femmes', value: stats.byGender.FEMME },
         { name: 'Autre', value: stats.byGender.AUTRE || 0 }
     ];
-
-    const [exporting, setExporting] = React.useState(false);
 
     const handlePrint = async () => {
         if (!stats || !stats.crossTable || stats.crossTable.length === 0) {
@@ -225,8 +226,8 @@ const DemographicTable: React.FC<DemographicTableProps> = ({ stats }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {stats.crossTable.map((row, index) => (
-                                <tr key={index} className="hover:bg-white/5 transition-colors">
+                            {stats.crossTable.map((row) => (
+                                <tr key={row.ageRange} className="hover:bg-white/5 transition-colors">
                                     <td className="p-4 font-bold text-slate-200 whitespace-nowrap">
                                         <span className={`px-2 py-1 rounded-lg text-xs whitespace-nowrap ${row.ageRange === 'Non spécifié' ? 'bg-slate-700' : 'bg-primary/20 text-primary-light'}`}>
                                             {row.ageRange}

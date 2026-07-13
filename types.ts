@@ -488,6 +488,7 @@ export interface Teacher {
   ratingAvg: number;
   ratingCount: number;
   createdAt: string;
+  teacher_proofs?: any[];
 }
 
 export interface Consultation {

@@ -1,7 +1,7 @@
 
 // Force redeploy - build: 2026-04-07 14:35
 import React, { useState, useEffect, Suspense, lazy, Component, ErrorInfo, ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { AppProvider, useStore } from './hooks/useStore';
 
 
@@ -134,6 +134,7 @@ const PageLoader = ({ message = "Synchronisation...", fullScreen = true }: { mes
 const AppContent: React.FC = () => {
   const { user, loading, settings, t, updateProfile } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const shouldReduceMotion = useReducedMotion();
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -599,7 +600,7 @@ const AppContent: React.FC = () => {
                       { label: "Date d'achat :", value: globalReceiptData.purchasedAt, cls: 'text-white' },
                       { label: 'Référence :', value: globalReceiptData.transactionId, cls: 'text-white font-mono text-[9px] sm:text-[10px]' },
                     ].map((row, i, arr) => (
-                      <div key={i} className={`flex justify-between items-center px-3 sm:px-4 py-1.5 sm:py-2 ${i < arr.length - 1 ? 'border-b border-slate-800/70' : ''}`}>
+                      <div key={row.label} className={`flex justify-between items-center px-3 sm:px-4 py-1.5 sm:py-2 ${i < arr.length - 1 ? 'border-b border-slate-800/70' : ''}`}>
                         <span className="text-slate-400 text-[10px] sm:text-[11px]">{row.label}</span>
                         <span className={`${row.cls} text-[10px] sm:text-[11px] text-right ml-3`}>{row.value}</span>
                       </div>

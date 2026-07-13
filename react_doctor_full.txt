@@ -1,0 +1,3200 @@
+﻿[1mReact Doctor[22m [2mv0.7.4[22m
+
+[90m  [39m
+node.exe : [32mÔêÜ[39m Scanned 122 files in 0.8s [2m[~4 workers][22m
+Au caractère Ligne:1 : 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([32mÔêÜ[39m S...4 workers][22m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+  [31mÔ£û[39m [31mAccessibility: react-doctor/require-reduced-motion[39m
+    Project uses a motion library but has no
+    prefers-reduced-motion handling ÔÇö required for
+    accessibility (WCAG 2.3.3)
+[2m    ÔåÆ Add `useReducedMotion()` from your animation library, or[22m
+[2m    a `@media (prefers-reduced-motion: reduce)` CSS query[22m
+
+[90m    package.json[39m
+
+  [33mÔÜá[39m [33mSecurity: Secret-like public env variable[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/public-env-secret-name[39m
+    Client code references a public env variable whose name
+    looks like a secret or privileged credential.
+[2m    ÔåÆ Public env prefixes are inlined into browser bundles.[22m
+[2m    Rename public values to non-secret names, and keep tokens,[22m
+[2m    passwords, private keys, and service-role credentials[22m
+[2m    server-only.[22m
+
+[90m    services/adminService.ts:20[39m
+
+  [31mÔ£û[39m [31mSecurity: Client writes Supabase authorization field[39m [90m├ù7[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/supabase-client-owned-authz-field[39m
+    Client Supabase code appears to write user, tenant, owner,
+    or role fields that should be enforced by RLS.
+[2m    ÔåÆ Use RLS policies based on `auth.uid()` and server-owned[22m
+[2m    membership rows; do not trust client-provided owner, org,[22m
+[2m    or role columns.[22m
+
+[90m    components/WorldBrainMap.tsx:43[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 42 |[39m [90m// Helper: push ghost status to Supabase so other cl[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 43 |[39m [36mconst[39m pushGhostStatus [33m=[39m [36masync[39m (userId[33m:[39m string[33m,[39m isGho[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m    |[39m                                [31m[1m^[22m[39m                      [2mÔöé[22m
+    [2mÔöé[22m  [90m 44 |[39m   [36mif[39m ([33m![39muserId [33m||[39m userId[33m.[39mincludes([32m'anon'[39m)) [36mreturn[39m[33m;[39m[0m     [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    services/activityService.ts:7[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 6 |[39m     id[33m?[39m[33m:[39m string[33m;[39m                                       [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 7 |[39m     userId[33m:[39m string[33m;[39m                                    [2mÔöé[22m
+    [2mÔöé[22m  [90m   |[39m     [31m[1m^[22m[39m                                                  [2mÔöé[22m
+    [2mÔöé[22m  [90m 8 |[39m     userName[33m:[39m string[33m;[39m[0m                                  [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    services/adminService.ts:28[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 27 |[39m         [36mconst[39m { error } [33m=[39m [36mawait[39m supabase[33m.[39m[36mfrom[39m([32m'user_[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 28 |[39m             user_id[33m:[39m comment[33m.[39muserId[33m,[39m                  [2mÔöé[22m
+    [2mÔöé[22m  [90m    |[39m                              [31m[1m^[22m[39m                        [2mÔöé[22m
+    [2mÔöé[22m  [90m 29 |[39m             user_name[33m:[39m comment[33m.[39muserName[33m,[39m[0m              [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    services/authService.ts:33[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 32 |[39m     [90m// Check for demo premium overrides stored local[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 33 |[39m     [36mconst[39m userId [33m=[39m profile[33m.[39mid[33m;[39m                        [2mÔöé[22m
+    [2mÔöé[22m  [90m    |[39m           [31m[1m^[22m[39m                                           [2mÔöé[22m
+    [2mÔöé[22m  [90m 34 |[39m     [36mconst[39m localDemoPremium [33m=[39m localStorage[33m.[39mgetItem([32m`l[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    services/communityService.ts:16[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 15 |[39m     id[33m:[39m string[33m;[39m                                       [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 16 |[39m     userId[33m:[39m string[33m;[39m                                   [2mÔöé[22m
+    [2mÔöé[22m  [90m    |[39m     [31m[1m^[22m[39m                                                 [2mÔöé[22m
+    [2mÔöé[22m  [90m 17 |[39m     userName[33m:[39m string[33m;[39m[0m                                 [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    services/contentService.ts:6[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 5 |[39m   [90m// --- QUIZZES ---[39m                                   [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 6 |[39m   [36masync[39m saveQuiz(userId[33m:[39m string[33m,[39m quiz[33m:[39m [33mQuiz[39m)[33m:[39m [33mPromise[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m   |[39m                  [31m[1m^[22m[39m                                     [2mÔöé[22m
+    [2mÔöé[22m  [90m 7 |[39m     [36mtry[39m {[0m                                              [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    services/tutorService.ts:25[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 24 |[39m [36mexport[39m [36mconst[39m applyAsTeacher [33m=[39m [36masync[39m (                 [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 25 |[39m   userId[33m:[39m string[33m,[39m                                     [2mÔöé[22m
+    [2mÔöé[22m  [90m    |[39m   [31m[1m^[22m[39m                                                   [2mÔöé[22m
+    [2mÔöé[22m  [90m 26 |[39m   teacherData[33m:[39m [33mOmit[39m[33m<[39m[33mTeacher[39m[33m,[39m [32m'id'[39m [33m|[39m [32m'status'[39m [33m|[39m [32m'rati[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+  [33mÔÜá[39m [33mSecurity: Weak cryptography in security context[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/insecure-crypto-risk[39m
+    Code uses weak hashes, deprecated ciphers, timing-unsafe
+    comparisons, or Math.random in a security-shaped context.
+[2m    ÔåÆ Use modern primitives, `crypto.randomBytes` / Web Crypto[22m
+[2m    randomness, and timing-safe comparisons for signatures,[22m
+[2m    digests, tokens, and auth material.[22m
+
+[90m    supabase/functions/djomy-payment/index.ts:76[39m
+
+  [33mÔÜá[39m [33mSecurity: Public debug artifact[39m [90m├ù2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/public-debug-artifact[39m
+    A browser-reachable debug, log, dump, report, or env
+    artifact is present.
+[2m    ÔåÆ Remove debug artifacts from public output; logs and dumps[22m
+[2m    often reveal source paths, internal routes, tokens, or[22m
+[2m    environment snapshots.[22m
+
+[90m    android/app/build/intermediates/merged_res_blame_folder/debug/out/multi-v2/debug.json:1[39m
+
+[90m    android/app/build/intermediates/merged_res_blame_folder/debug/out/single/debug.json:1[39m
+
+  [33mÔÜá[39m [33mBugs: Missing effect dependencies[39m [90m├ù47[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/exhaustive-deps[39m
+    `useEffect` can run with a stale `user, user.id` & show
+    your users old data.
+[2m    ÔåÆ Don't blindly add missing dependencies. Read the hook[22m
+[2m    callback first.[22m
+[2m    [22m
+[2m    Bad:[22m
+[2m    useEffect(() => {[22m
+[2m      setCount(count + 1);[22m
+[2m    }, [count]);[22m
+[2m    [22m
+[2m    Better:[22m
+[2m    useEffect(() => {[22m
+[2m      setCount((currentCount) => currentCount + 1);[22m
+[2m    }, []);[22m
+[2m    [22m
+[2m    If the missing value is recreated every render, move it[22m
+[2m    inside the hook or stabilize it before adding it to deps.[22m
+
+[90m    App.tsx:271[39m
+
+[90m    App.tsx:329[39m
+
+[90m    App.tsx:348[39m
+
+[90m    components/AILab.tsx:143[39m
+
+[90m    components/AILab.tsx:423[39m
+
+[90m    components/AppShell.tsx:195[39m
+
+[90m    components/BubbleWrap.tsx:45[39m
+
+[90m    components/BubbleWrap.tsx:103[39m
+
+[90m    components/CollaborativeDoodle.tsx:53[39m
+
+[90m    components/CollaborativeDoodle.tsx:119[39m
+
+[90m    components/CollaborativeDoodle.tsx:146[39m
+
+[90m    components/LevelBot.tsx:131[39m
+
+[90m    components/QuizBattle.tsx:70[39m
+
+[90m    components/QuizBattle.tsx:151[39m
+
+[90m    components/QuizBattle.tsx:159[39m
+
+[90m    components/QuizBattle.tsx:172[39m
+
+[90m    components/QuizBattle.tsx:176[39m
+
+[90m    components/QuizBattle.tsx:196[39m
+
+[90m    components/QuizBattle.tsx:244[39m
+
+[90m    components/TicTacToe.tsx:121[39m
+
+[90m    components/TicTacToe.tsx:155[39m
+
+[90m    components/WorldBrainMap.tsx:133[39m
+
+[90m    components/WorldBrainMap.tsx:233[39m
+
+[90m    components/WorldBrainMap.tsx:303[39m
+
+[90m    components/WorldBrainMap.tsx:357[39m
+
+[90m    components/admin/SecurityPanel.tsx:17[39m
+
+[90m    components/admin/TeacherModeration.tsx:49[39m
+
+[90m    components/community/CallOverlay.tsx:154[39m
+
+[90m    components/community/StoriesView.tsx:142[39m
+
+[90m    components/community/TeachersView.tsx:212[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:156[39m
+
+[90m    hooks/store/useAuthStore.ts:420[39m
+
+[90m    hooks/store/useCoachStore.ts:37[39m
+
+[90m    hooks/store/useContentStore.ts:757[39m
+
+[90m    hooks/store/useContentStore.ts:811[39m
+
+[90m    hooks/store/useContentStore.ts:858[39m
+
+[90m    hooks/store/useContentStore.ts:954[39m
+
+[90m    pages/AdminDashboard.tsx:162[39m
+
+[90m    pages/AdminDashboard.tsx:166[39m
+
+[90m    pages/CreativeWriting.tsx:447[39m
+
+[90m    pages/Dashboard.tsx:112[39m
+
+[90m    pages/Pricing.tsx:62[39m
+
+[90m    pages/Shop.tsx:124[39m
+
+[90m    pages/TeacherDashboard.tsx:72[39m
+
+[90m    pages/TutorHub.tsx:51[39m
+
+  [33mÔÜá[39m [33mBugs: Array index used as a key[39m [90m├ù42[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-array-index-as-key[39m
+    Your users can see & submit the wrong data when this list
+    reorders or filters, so use a stable id like
+    `key={item.id}`, not the array index "i".
+[2m    ÔåÆ Use a stable id from the item, like `key={item.id}` or[22m
+[2m    `key={item.slug}`. Index keys break when the list reorders[22m
+[2m    or filters.[22m
+
+[90m    components/AILab.tsx:39[39m
+
+[90m    components/AILab.tsx:53[39m
+
+[90m    components/AILab.tsx:104[39m
+
+[90m    components/AILab.tsx:119[39m
+
+[90m    components/AILab.tsx:230[39m
+
+[90m    components/AILab.tsx:566[39m
+
+[90m    components/AppShell.tsx:725[39m
+
+[90m    components/BubbleWrap.tsx:150[39m
+
+[90m    components/CollaborativeDoodle.tsx:421[39m
+
+[90m    components/LevelBot.tsx:17-20[39m
+
+[90m    components/LevelBot.tsx:26[39m
+
+[90m    components/LevelBot.tsx:37[39m
+
+[90m    components/LevelBot.tsx:46[39m
+
+[90m    components/LevelBot.tsx:57-60[39m
+
+[90m    components/QuizBattle.tsx:537[39m
+
+[90m    components/TicTacToe.tsx:261[39m
+
+[90m    components/admin/StatisticsPanel.tsx:383[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:59[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:423[39m
+
+[90m    pages/AISummary.tsx:457[39m
+
+[90m    pages/AdminDashboard.tsx:882[39m
+
+[90m    pages/AdminDashboard.tsx:903[39m
+
+[90m    pages/AdminDashboard.tsx:924[39m
+
+[90m    pages/Auth.tsx:802[39m
+
+[90m    pages/Auth.tsx:1133[39m
+
+[90m    pages/Auth.tsx:1157[39m
+
+[90m    pages/CreativeWriting.tsx:294-296[39m
+
+[90m    pages/CreativeWriting.tsx:317-326[39m
+
+[90m    pages/CreativeWriting.tsx:331[39m
+
+[90m    pages/CreativeWriting.tsx:1836[39m
+
+[90m    pages/Flashcards.tsx:151[39m
+
+[90m    pages/Library.tsx:764[39m
+
+[90m    pages/QuizPlayer.tsx:554[39m
+
+[90m    pages/QuizPlayer.tsx:737[39m
+
+[90m    pages/StudyPlanner.tsx:242[39m
+
+[90m    pages/TutorRegistration.tsx:380[39m
+
+  [33mÔÜá[39m [33mSecurity: BaaS authority map shipped in browser artifact[39m [90m├ù5[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/artifact-baas-authority-surface[39m
+    A browser artifact exposes Firebase/Supabase config
+    together with sensitive collections or authorization fields.
+[2m    ÔåÆ Client BaaS config is often public, but shipped[22m
+[2m    collection names plus owner, role, tenant, or admin fields[22m
+[2m    give attackers a precise authorization map. Verify[22m
+[2m    rules/RLS enforce every boundary server-side.[22m
+
+[90m    android/app/build/intermediates/assets/debug/public/assets/index-CJg9X95R.js:100[39m
+
+[90m    android/app/build/intermediates/assets/release/public/assets/index-CJg9X95R.js:100[39m
+
+[90m    android/app/src/main/assets/public/assets/index-CJg9X95R.js:100[39m
+
+[90m    dist/assets/index-DvgI_CC1.js:100[39m
+
+[90m    ios/App/App/public/assets/index-CJg9X95R.js:100[39m
+
+  [33mÔÜá[39m [33mSecurity: iframe missing sandbox attribute[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/iframe-missing-sandbox[39m
+    Combining `allow-scripts` & `allow-same-origin` lets the
+    iframe remove its own sandbox, defeating the protection.
+[2m    ÔåÆ Add `sandbox=""` or a curated value so embedded pages[22m
+[2m    cannot get full access to your site by default.[22m
+
+[90m    components/BookReader.tsx:155[39m
+
+  [33mÔÜá[39m [33mAccessibility: Label missing associated control[39m [90m├ù95[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/label-has-associated-control[39m
+    Screen reader users can't tell which input this label names
+    because it's tied to none, so add `htmlFor` or wrap the
+    input inside it.
+[2m    ÔåÆ Tie every label to a control with `htmlFor`, or by[22m
+[2m    nesting the input.[22m
+
+[90m    components/AppShell.tsx:772[39m
+
+[90m    components/AppShell.tsx:782[39m
+
+[90m    components/PaymentSimulatorModal.tsx:296[39m
+
+[90m    components/PaymentSimulatorModal.tsx:309[39m
+
+[90m    components/PaymentSimulatorModal.tsx:319[39m
+
+[90m    components/PaymentSimulatorModal.tsx:330[39m
+
+[90m    components/PaymentSimulatorModal.tsx:340[39m
+
+[90m    components/admin/SecurityPanel.tsx:166[39m
+
+[90m    components/admin/ShopManager.tsx:330[39m
+
+[90m    components/admin/ShopManager.tsx:354[39m
+
+[90m    components/admin/ShopManager.tsx:367[39m
+
+[90m    components/admin/ShopManager.tsx:381[39m
+
+[90m    components/admin/ShopManager.tsx:393[39m
+
+[90m    components/admin/ShopManager.tsx:412[39m
+
+[90m    components/admin/ShopManager.tsx:430[39m
+
+[90m    components/admin/TeacherModeration.tsx:406[39m
+
+[90m    components/admin/TeacherModeration.tsx:417[39m
+
+[90m    components/admin/UserManagement.tsx:420[39m
+
+[90m    components/admin/UserManagement.tsx:523[39m
+
+[90m    components/admin/UserManagement.tsx:536[39m
+
+[90m    components/admin/UserManagement.tsx:616[39m
+
+[90m    components/admin/UserManagement.tsx:637[39m
+
+[90m    components/admin/UserManagement.tsx:648[39m
+
+[90m    components/community/TeachersView.tsx:372[39m
+
+[90m    pages/AdminDashboard.tsx:709[39m
+
+[90m    pages/AdminDashboard.tsx:720[39m
+
+[90m    pages/AdminDashboard.tsx:737[39m
+
+[90m    pages/AdminDashboard.tsx:747[39m
+
+[90m    pages/Analytics.tsx:528[39m
+
+[90m    pages/Analytics.tsx:818[39m
+
+[90m    pages/Analytics.tsx:839[39m
+
+[90m    pages/Analytics.tsx:901[39m
+
+[90m    pages/Analytics.tsx:922[39m
+
+[90m    pages/Auth.tsx:381[39m
+
+[90m    pages/Auth.tsx:397[39m
+
+[90m    pages/Auth.tsx:499[39m
+
+[90m    pages/Auth.tsx:513[39m
+
+[90m    pages/Auth.tsx:527[39m
+
+[90m    pages/Auth.tsx:544[39m
+
+[90m    pages/Auth.tsx:555[39m
+
+[90m    pages/Auth.tsx:567[39m
+
+[90m    pages/Auth.tsx:581[39m
+
+[90m    pages/Auth.tsx:601[39m
+
+[90m    pages/Auth.tsx:619[39m
+
+[90m    pages/Auth.tsx:645[39m
+
+[90m    pages/Auth.tsx:667[39m
+
+[90m    pages/Auth.tsx:683[39m
+
+[90m    pages/Auth.tsx:694[39m
+
+[90m    pages/Auth.tsx:709[39m
+
+[90m    pages/Auth.tsx:725[39m
+
+[90m    pages/Auth.tsx:741[39m
+
+[90m    pages/Auth.tsx:764[39m
+
+[90m    pages/Auth.tsx:828[39m
+
+[90m    pages/Auth.tsx:887[39m
+
+[90m    pages/Auth.tsx:902[39m
+
+[90m    pages/CreativeWriting.tsx:767[39m
+
+[90m    pages/CreativeWriting.tsx:779[39m
+
+[90m    pages/CreativeWriting.tsx:1133[39m
+
+[90m    pages/CreativeWriting.tsx:1171[39m
+
+[90m    pages/Pricing.tsx:1028[39m
+
+[90m    pages/QuizGenerator.tsx:502[39m
+
+[90m    pages/QuizGenerator.tsx:517[39m
+
+[90m    pages/QuizPlayer.tsx:403[39m
+
+[90m    pages/QuizPlayer.tsx:418[39m
+
+[90m    pages/Settings.tsx:230[39m
+
+[90m    pages/Settings.tsx:240[39m
+
+[90m    pages/Settings.tsx:253[39m
+
+[90m    pages/Settings.tsx:566[39m
+
+[90m    pages/Settings.tsx:576[39m
+
+[90m    pages/Settings.tsx:740[39m
+
+[90m    pages/Settings.tsx:751[39m
+
+[90m    pages/StudyPlanner.tsx:253[39m
+
+[90m    pages/StudyPlanner.tsx:263[39m
+
+[90m    pages/StudyPlanner.tsx:307[39m
+
+[90m    pages/TeacherDashboard.tsx:617[39m
+
+[90m    pages/TeacherDashboard.tsx:627[39m
+
+[90m    pages/TeacherDashboard.tsx:639[39m
+
+[90m    pages/TeacherDashboard.tsx:651[39m
+
+[90m    pages/TeacherDashboard.tsx:661[39m
+
+[90m    pages/TeacherDashboard.tsx:673[39m
+
+[90m    pages/TeacherDashboard.tsx:683[39m
+
+[90m    pages/TeacherDashboard.tsx:722[39m
+
+[90m    pages/TeacherDashboard.tsx:735[39m
+
+[90m    pages/TeacherDashboard.tsx:775[39m
+
+[90m    pages/TeacherDashboard.tsx:791[39m
+
+[90m    pages/TutorRegistration.tsx:173[39m
+
+[90m    pages/TutorRegistration.tsx:184[39m
+
+[90m    pages/TutorRegistration.tsx:197[39m
+
+[90m    pages/TutorRegistration.tsx:211[39m
+
+[90m    pages/TutorRegistration.tsx:224[39m
+
+[90m    pages/TutorRegistration.tsx:252[39m
+
+[90m    pages/TutorRegistration.tsx:270[39m
+
+[90m    pages/TutorRegistration.tsx:285[39m
+
+[90m    pages/TutorRegistration.tsx:316[39m
+
+[90m    pages/TutorRegistration.tsx:326[39m
+
+  [33mÔÜá[39m [33mBugs: Derived state stored in an effect[39m [90m├ù3[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-derived-state-effect[39m
+    Your users briefly see stale state on every prop change.
+[2m    ÔåÆ Work out derived values while rendering: `const x =[22m
+[2m    fn(dep)`. To reset a component's state when a prop changes,[22m
+[2m    give it a key prop: `<Component key={prop} />`. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect[22m
+
+[90m    App.tsx:230[39m
+
+[90m    pages/Dashboard.tsx:159[39m
+
+[90m    pages/TeacherDashboard.tsx:75[39m
+
+  [33mÔÜá[39m [33mPerformance: await inside a loop[39m [90m├ù10[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/async-await-in-loop[39m
+    This makes the forÔÇªof loop slow because each await runs one
+    after another, so collect the independent calls & run them
+    together with `await Promise.all(items.map(...))`
+[2m    ÔåÆ Collect the items, then use `await[22m
+[2m    Promise.all(items.map(...))` so independent work runs at[22m
+[2m    the same time[22m
+
+[90m    pages/AISummary.tsx:68[39m
+
+[90m    pages/AISummary.tsx:109[39m
+
+[90m    pages/QuizGenerator.tsx:179[39m
+
+[90m    pages/StudyPlanner.tsx:64[39m
+
+[90m    pages/StudyPlanner.tsx:203[39m
+
+[90m    services/livre21.ts:79[39m
+
+[90m    services/storage.ts:125[39m
+
+[90m    services/syncService.ts:52[39m
+
+[90m    services/syncService.ts:80[39m
+
+[90m    services/syncService.ts:115[39m
+
+  [33mÔÜá[39m [33mPerformance: Heavy library loaded eagerly[39m [90m├ù2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-dynamic-import[39m
+    "recharts" ships extra code to your users up front & slows
+    page load. Load it on demand with React.lazy() or
+    next/dynamic.
+[2m    ÔåÆ Load it only when needed: `const Component = dynamic(()[22m
+[2m    => import('library'), { ssr: false })` from next/dynamic,[22m
+[2m    or React.lazy().[22m
+
+[90m    components/admin/DemographicTable.tsx:2[39m
+
+[90m    components/admin/StatisticsPanel.tsx:2[39m
+
+  [33mÔÜá[39m [33mPerformance: array.find() inside a loop[39m [90m├ù2[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/js-index-maps[39m
+    This gets slow as your list grows because array.find() runs
+    inside a loop, so build a Map once before the loop for
+    instant lookups
+[2m    ÔåÆ Build a `Map` once before the loop instead of calling[22m
+[2m    `array.find(...)` inside it[22m
+
+[90m    pages/Analytics.tsx:380[39m
+
+[90m    services/activityService.ts:179[39m
+
+  [33mÔÜá[39m [33mAccessibility: Control missing accessible label[39m [90m├ù212[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/control-has-associated-label[39m
+    Blind users can't tell what this control does because
+    screen readers find no label, so add visible text,
+    `aria-label`, or `aria-labelledby`.
+[2m    ÔåÆ Give every interactive control a label screen readers can[22m
+[2m    read.[22m
+
+[90m    components/AILab.tsx:243[39m
+
+[90m    components/AILab.tsx:265[39m
+
+[90m    components/AILab.tsx:277[39m
+
+[90m    components/AILab.tsx:298[39m
+
+[90m    components/AILab.tsx:589[39m
+
+[90m    components/AILab.tsx:611[39m
+
+[90m    components/AILab.tsx:623[39m
+
+[90m    components/AILab.tsx:644[39m
+
+[90m    components/AILab.tsx:779[39m
+
+[90m    components/AILab.tsx:835[39m
+
+[90m    components/AppShell.tsx:254[39m
+
+[90m    components/AppShell.tsx:266[39m
+
+[90m    components/AppShell.tsx:360[39m
+
+[90m    components/AppShell.tsx:427[39m
+
+[90m    components/AppShell.tsx:498[39m
+
+[90m    components/AppShell.tsx:638[39m
+
+[90m    components/AtlasLibrary.tsx:164[39m
+
+[90m    components/AtlasLibrary.tsx:191[39m
+
+[90m    components/BookReader.tsx:102[39m
+
+[90m    components/BookReader.tsx:120[39m
+
+[90m    components/BookReader.tsx:210[39m
+
+[90m    components/BubbleWrap.tsx:114[39m
+
+[90m    components/CallHandler.tsx:154[39m
+
+[90m    components/CallHandler.tsx:160[39m
+
+[90m    components/CollaborativeDoodle.tsx:361[39m
+
+[90m    components/DebugConsole.tsx:59[39m
+
+[90m    components/DebugConsole.tsx:75-81[39m
+
+[90m    components/LevelBot.tsx:279[39m
+
+[90m    components/LevelBot.tsx:303[39m
+
+[90m    components/LevelBot.tsx:321[39m
+
+[90m    components/LevelBot.tsx:325[39m
+
+[90m    components/LevelBot.tsx:355[39m
+
+[90m    components/LevelBot.tsx:435[39m
+
+[90m    components/LevelBot.tsx:476[39m
+
+[90m    components/LevelBot.tsx:494[39m
+
+[90m    components/LevelBot.tsx:530[39m
+
+[90m    components/NotificationCenter.tsx:78[39m
+
+[90m    components/NotificationCenter.tsx:86[39m
+
+[90m    components/NotificationCenter.tsx:98[39m
+
+[90m    components/NotificationCenter.tsx:134[39m
+
+[90m    components/PaymentSimulatorModal.tsx:230[39m
+
+[90m    components/PremiumAlertModal.tsx:71[39m
+
+[90m    components/QuizBattle.tsx:457[39m
+
+[90m    components/TicTacToe.tsx:209[39m
+
+[90m    components/WorldBrainMap.tsx:396[39m
+
+[90m    components/WorldBrainMap.tsx:417[39m
+
+[90m    components/WorldBrainMap.tsx:450-451[39m
+
+[90m    components/WorldBrainMap.tsx:569[39m
+
+[90m    components/WorldBrainMap.tsx:637[39m
+
+[90m    components/WorldBrainMap.tsx:701[39m
+
+[90m    components/admin/ActivityMonitor.tsx:310-316[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:101[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:109[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:118[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:130[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:179[39m
+
+[90m    components/admin/CommentManagement.tsx:176[39m
+
+[90m    components/admin/CommentManagement.tsx:246[39m
+
+[90m    components/admin/CommentManagement.tsx:253[39m
+
+[90m    components/admin/CommentManagement.tsx:262[39m
+
+[90m    components/admin/CommentManagement.tsx:270[39m
+
+[90m    components/admin/ExportTools.tsx:816[39m
+
+[90m    components/admin/ReportManagement.tsx:173[39m
+
+[90m    components/admin/ReportManagement.tsx:259[39m
+
+[90m    components/admin/ReportManagement.tsx:268[39m
+
+[90m    components/admin/ReportManagement.tsx:275[39m
+
+[90m    components/admin/ReportManagement.tsx:321[39m
+
+[90m    components/admin/SecurityPanel.tsx:110[39m
+
+[90m    components/admin/ShopManager.tsx:318[39m
+
+[90m    components/admin/ShopManager.tsx:382[39m
+
+[90m    components/admin/ShopManager.tsx:394[39m
+
+[90m    components/admin/TeacherModeration.tsx:231[39m
+
+[90m    components/admin/UserManagement.tsx:226[39m
+
+[90m    components/admin/UserManagement.tsx:244[39m
+
+[90m    components/admin/UserManagement.tsx:268[39m
+
+[90m    components/admin/UserManagement.tsx:321[39m
+
+[90m    components/admin/UserManagement.tsx:331[39m
+
+[90m    components/admin/UserManagement.tsx:338[39m
+
+[90m    components/admin/UserManagement.tsx:345[39m
+
+[90m    components/admin/UserManagement.tsx:354[39m
+
+[90m    components/admin/UserManagement.tsx:363[39m
+
+[90m    components/admin/UserManagement.tsx:421[39m
+
+[90m    components/admin/UserManagement.tsx:524[39m
+
+[90m    components/admin/UserManagement.tsx:617[39m
+
+[90m    components/community/CallOverlay.tsx:268[39m
+
+[90m    components/community/CallOverlay.tsx:355[39m
+
+[90m    components/community/CallOverlay.tsx:367[39m
+
+[90m    components/community/CallOverlay.tsx:378[39m
+
+[90m    components/community/CallsView.tsx:149[39m
+
+[90m    components/community/ChatDetailView.tsx:101[39m
+
+[90m    components/community/ChatDetailView.tsx:141[39m
+
+[90m    components/community/ChatDetailView.tsx:147[39m
+
+[90m    components/community/ChatDetailView.tsx:154[39m
+
+[90m    components/community/ChatDetailView.tsx:270[39m
+
+[90m    components/community/ChatDetailView.tsx:282[39m
+
+[90m    components/community/ChatDetailView.tsx:289[39m
+
+[90m    components/community/FeedView.tsx:138[39m
+
+[90m    components/community/FeedView.tsx:149[39m
+
+[90m    components/community/FeedView.tsx:155[39m
+
+[90m    components/community/FeedView.tsx:211[39m
+
+[90m    components/community/FeedView.tsx:284[39m
+
+[90m    components/community/FeedView.tsx:333[39m
+
+[90m    components/community/GroupCallOverlay.tsx:194[39m
+
+[90m    components/community/GroupCallOverlay.tsx:200[39m
+
+[90m    components/community/GroupCallOverlay.tsx:206[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:86[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:168[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:172[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:176[39m
+
+[90m    components/community/StoriesView.tsx:382[39m
+
+[90m    components/community/StoriesView.tsx:477[39m
+
+[90m    components/community/StoriesView.tsx:490[39m
+
+[90m    components/community/StoriesView.tsx:494[39m
+
+[90m    components/community/StoriesView.tsx:519[39m
+
+[90m    components/community/StoriesView.tsx:588[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:199-201[39m
+
+[90m    components/visuals/MechanicsLab.tsx:163[39m
+
+[90m    pages/AISummary.tsx:306[39m
+
+[90m    pages/AISummary.tsx:348[39m
+
+[90m    pages/AISummary.tsx:357[39m
+
+[90m    pages/AdminDashboard.tsx:409[39m
+
+[90m    pages/AdminDashboard.tsx:468[39m
+
+[90m    pages/AdminDashboard.tsx:494[39m
+
+[90m    pages/AdminDashboard.tsx:502[39m
+
+[90m    pages/AdminDashboard.tsx:510[39m
+
+[90m    pages/AdminDashboard.tsx:518[39m
+
+[90m    pages/AdminDashboard.tsx:527[39m
+
+[90m    pages/AdminDashboard.tsx:630[39m
+
+[90m    pages/AdminDashboard.tsx:684[39m
+
+[90m    pages/Analytics.tsx:787[39m
+
+[90m    pages/Analytics.tsx:801[39m
+
+[90m    pages/Analytics.tsx:828[39m
+
+[90m    pages/Analytics.tsx:845[39m
+
+[90m    pages/Analytics.tsx:891[39m
+
+[90m    pages/Analytics.tsx:911[39m
+
+[90m    pages/Analytics.tsx:954[39m
+
+[90m    pages/Analytics.tsx:968[39m
+
+[90m    pages/Auth.tsx:410[39m
+
+[90m    pages/Auth.tsx:602[39m
+
+[90m    pages/Auth.tsx:621[39m
+
+[90m    pages/Auth.tsx:726[39m
+
+[90m    pages/Auth.tsx:812[39m
+
+[90m    pages/Auth.tsx:841[39m
+
+[90m    pages/Auth.tsx:852[39m
+
+[90m    pages/Auth.tsx:917[39m
+
+[90m    pages/Auth.tsx:1086[39m
+
+[90m    pages/Community.tsx:452[39m
+
+[90m    pages/Community.tsx:458[39m
+
+[90m    pages/CreativeWriting.tsx:825[39m
+
+[90m    pages/CreativeWriting.tsx:833[39m
+
+[90m    pages/CreativeWriting.tsx:842[39m
+
+[90m    pages/CreativeWriting.tsx:850[39m
+
+[90m    pages/CreativeWriting.tsx:859[39m
+
+[90m    pages/CreativeWriting.tsx:867[39m
+
+[90m    pages/CreativeWriting.tsx:971[39m
+
+[90m    pages/CreativeWriting.tsx:1074[39m
+
+[90m    pages/CreativeWriting.tsx:1192[39m
+
+[90m    pages/CreativeWriting.tsx:1272[39m
+
+[90m    pages/CreativeWriting.tsx:1279[39m
+
+[90m    pages/CreativeWriting.tsx:1285[39m
+
+[90m    pages/CreativeWriting.tsx:1391[39m
+
+[90m    pages/CreativeWriting.tsx:1489[39m
+
+[90m    pages/CreativeWriting.tsx:1562[39m
+
+[90m    pages/CreativeWriting.tsx:1735[39m
+
+[90m    pages/CreativeWriting.tsx:1805[39m
+
+[90m    pages/Dashboard.tsx:392[39m
+
+[90m    pages/Dashboard.tsx:411[39m
+
+[90m    pages/Dashboard.tsx:434[39m
+
+[90m    pages/FlashcardMode.tsx:119[39m
+
+[90m    pages/FlashcardPlayer.tsx:160[39m
+
+[90m    pages/Flashcards.tsx:157[39m
+
+[90m    pages/Flashcards.tsx:214[39m
+
+[90m    pages/Flashcards.tsx:227[39m
+
+[90m    pages/Flashcards.tsx:378[39m
+
+[90m    pages/Flashcards.tsx:391[39m
+
+[90m    pages/Library.tsx:650[39m
+
+[90m    pages/Library.tsx:720[39m
+
+[90m    pages/Library.tsx:747[39m
+
+[90m    pages/Pricing.tsx:988[39m
+
+[90m    pages/QuizGenerator.tsx:352[39m
+
+[90m    pages/QuizGenerator.tsx:416[39m
+
+[90m    pages/QuizGenerator.tsx:422[39m
+
+[90m    pages/QuizGenerator.tsx:461[39m
+
+[90m    pages/QuizGenerator.tsx:503[39m
+
+[90m    pages/QuizPlayer.tsx:691[39m
+
+[90m    pages/StudyPlanner.tsx:254[39m
+
+[90m    pages/StudyPlanner.tsx:273[39m
+
+[90m    pages/StudyPlanner.tsx:291[39m
+
+[90m    pages/StudyPlanner.tsx:319[39m
+
+[90m    pages/StudyPlanner.tsx:454[39m
+
+[90m    pages/TeacherDashboard.tsx:331[39m
+
+[90m    pages/TeacherDashboard.tsx:618[39m
+
+[90m    pages/TeacherDashboard.tsx:628[39m
+
+[90m    pages/TeacherDashboard.tsx:640[39m
+
+[90m    pages/TeacherDashboard.tsx:652[39m
+
+[90m    pages/TeacherDashboard.tsx:662[39m
+
+[90m    pages/TeacherDashboard.tsx:674[39m
+
+[90m    pages/TeacherDashboard.tsx:684[39m
+
+[90m    pages/TeacherDashboard.tsx:723[39m
+
+[90m    pages/TutorHub.tsx:116[39m
+
+[90m    pages/TutorHub.tsx:129[39m
+
+[90m    pages/TutorHub.tsx:139[39m
+
+[90m    pages/TutorHub.tsx:259[39m
+
+[90m    pages/TutorRegistration.tsx:317[39m
+
+[90m    pages/TutorRegistration.tsx:330[39m
+
+[90m    pages/TutorRegistration.tsx:382[39m
+
+  [33mÔÜá[39m [33mBugs: Effect re-subscribes on a changing callback[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-use-effect-event[39m
+    Your effect re-subscribes whenever "onClose" changes, even
+    though it's only used inside `addEventListener`.
+[2m    ÔåÆ Wrap the callback with `useEffectEvent(callback)` (React[22m
+[2m    19+) and call it inside the sub-handler. An Effect Event[22m
+[2m    always sees the latest props and state but isn't a[22m
+[2m    dependency, so the effect won't re-subscribe every time the[22m
+[2m    parent redraws. See[22m
+[2m    https://react.dev/reference/react/useEffectEvent[22m
+
+[90m    components/CallHandler.tsx:73[39m
+
+  [33mÔÜá[39m [33mBugs: Derived value copied into state[39m [90m├ù8[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-derived-state[39m
+    Storing "messages" in state when you can derive it from
+    other values costs an extra render.
+[2m    ÔåÆ Work out the value while rendering (or with useMemo if[22m
+[2m    it's expensive) instead of copying it into useState through[22m
+[2m    a useEffect. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#updating-state-based-on-props-or-state[22m
+
+[90m    components/AILab.tsx:141[39m
+
+[90m    components/AILab.tsx:412[39m
+
+[90m    components/TicTacToe.tsx:154[39m
+
+[90m    hooks/store/useContentStore.ts:672[39m
+
+[90m    hooks/store/useContentStore.ts:688[39m
+
+[90m    hooks/store/useContentStore.ts:704[39m
+
+[90m    pages/Dashboard.tsx:161[39m
+
+[90m    pages/TeacherDashboard.tsx:84[39m
+
+  [33mÔÜá[39m [33mBugs: Multiple setState calls in one effect[39m [90m├ù7[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-cascading-set-state[39m
+    6 setState calls in one useEffect redraw your screen each
+    time they run together.
+[2m    ÔåÆ Combine related updates in `useReducer` so one effect[22m
+[2m    does not redraw the screen once per `setState` call.[22m
+
+[90m    components/PaymentSimulatorModal.tsx:33[39m
+
+[90m    components/QuizBattle.tsx:154[39m
+
+[90m    components/TicTacToe.tsx:153[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:156[39m
+
+[90m    hooks/store/useContentStore.ts:642[39m
+
+[90m    pages/CreativeWriting.tsx:97[39m
+
+[90m    pages/TeacherDashboard.tsx:75[39m
+
+  [33mÔÜá[39m [33mBugs: Live state pushed to parent via effect[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-pass-live-state-to-parent[39m
+    Pushing state up to a parent from a useEffect costs your
+    users an extra render.
+[2m    ÔåÆ Move the state up to the parent (or return it from the[22m
+[2m    hook), instead of handing it back up through a prop[22m
+[2m    callback in a useEffect. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#notifying-parent-components-about-state-changes[22m
+
+[90m    components/TicTacToe.tsx:154[39m
+
+  [33mÔÜá[39m [33mPerformance: Full Framer Motion import[39m [90m├ù59[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/use-lazy-motion[39m
+    Importing "motion" ships about 30 kb of extra code and
+    slows page load. Use "m" with LazyMotion instead.
+[2m    ÔåÆ Use `import { LazyMotion, m } from "framer-motion"` with[22m
+[2m    `domAnimation` features. Saves about 30kb.[22m
+
+[90m    App.tsx:4[39m
+
+[90m    components/AILab.tsx:3[39m
+
+[90m    components/AppShell.tsx:66[39m
+
+[90m    components/AtlasLibrary.tsx:3[39m
+
+[90m    components/BookReader.tsx:3[39m
+
+[90m    components/BubbleWrap.tsx:2[39m
+
+[90m    components/CallHandler.tsx:3[39m
+
+[90m    components/CollaborativeDoodle.tsx:2[39m
+
+[90m    components/FloatingBubble.tsx:2[39m
+
+[90m    components/NotificationCenter.tsx:2[39m
+
+[90m    components/OfflineIndicator.tsx:3[39m
+
+[90m    components/PaymentSimulatorModal.tsx:2[39m
+
+[90m    components/PremiumAlertModal.tsx:2[39m
+
+[90m    components/QuizBattle.tsx:2[39m
+
+[90m    components/Skeleton.tsx:2[39m
+
+[90m    components/TicTacToe.tsx:2[39m
+
+[90m    components/WorldBrainMap.tsx:2[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:2[39m
+
+[90m    components/admin/ExportTools.tsx:10[39m
+
+[90m    components/admin/GamificationPanel.tsx:6[39m
+
+[90m    components/admin/ReportManagement.tsx:2[39m
+
+[90m    components/admin/RetentionChart.tsx:4[39m
+
+[90m    components/admin/SecurityPanel.tsx:5[39m
+
+[90m    components/admin/ShopManager.tsx:2[39m
+
+[90m    components/admin/TeacherModeration.tsx:2[39m
+
+[90m    components/community/CallOverlay.tsx:3[39m
+
+[90m    components/community/CallsView.tsx:3[39m
+
+[90m    components/community/ChatDetailView.tsx:3[39m
+
+[90m    components/community/DiscussionsView.tsx:3[39m
+
+[90m    components/community/FeedView.tsx:3[39m
+
+[90m    components/community/GroupCallOverlay.tsx:3[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:3[39m
+
+[90m    components/community/StoriesView.tsx:3[39m
+
+[90m    components/community/TeachersView.tsx:2[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:2[39m
+
+[90m    components/visuals/ElectricityLab.tsx:2[39m
+
+[90m    components/visuals/MechanicsLab.tsx:2[39m
+
+[90m    components/visuals/OpticsLab.tsx:2[39m
+
+[90m    pages/AISummary.tsx:21[39m
+
+[90m    pages/AdminDashboard.tsx:6[39m
+
+[90m    pages/Analytics.tsx:2[39m
+
+[90m    pages/Auth.tsx:4[39m
+
+[90m    pages/Community.tsx:3[39m
+
+[90m    pages/CreativeWriting.tsx:37[39m
+
+[90m    pages/Dashboard.tsx:42[39m
+
+[90m    pages/FlashcardMode.tsx:2[39m
+
+[90m    pages/FlashcardPlayer.tsx:2[39m
+
+[90m    pages/Flashcards.tsx:3[39m
+
+[90m    pages/Library.tsx:2[39m
+
+[90m    pages/Pricing.tsx:2[39m
+
+[90m    pages/QuizGenerator.tsx:21[39m
+
+[90m    pages/QuizPlayer.tsx:21[39m
+
+[90m    pages/Ranking.tsx:3[39m
+
+[90m    pages/Settings.tsx:3[39m
+
+[90m    pages/Shop.tsx:2[39m
+
+[90m    pages/StudyPlanner.tsx:2[39m
+
+[90m    pages/TeacherDashboard.tsx:2[39m
+
+[90m    pages/TutorHub.tsx:2[39m
+
+[90m    pages/TutorRegistration.tsx:2[39m
+
+  [33mÔÜá[39m [33mAccessibility: Interaction on static element[39m [90m├ù37[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-static-element-interactions[39m
+    Screen reader users can't tell this click handler is
+    interactive because it has no `role`, so add a `role` or
+    use a button or link.
+[2m    ÔåÆ Give clickable static elements a `role`, or use a button[22m
+[2m    or link.[22m
+
+[90m    components/AppShell.tsx:373[39m
+
+[90m    components/BookReader.tsx:132[39m
+
+[90m    components/LevelBot.tsx:342[39m
+
+[90m    components/MindGarden.tsx:48[39m
+
+[90m    components/WorldBrainMap.tsx:587[39m
+
+[90m    components/admin/CommentManagement.tsx:298[39m
+
+[90m    components/admin/UserManagement.tsx:389[39m
+
+[90m    components/admin/UserManagement.tsx:602[39m
+
+[90m    components/community/StoriesView.tsx:392-393[39m
+
+[90m    components/community/StoriesView.tsx:623[39m
+
+[90m    pages/AdminDashboard.tsx:372[39m
+
+[90m    pages/AdminDashboard.tsx:669[39m
+
+[90m    pages/AdminDashboard.tsx:882[39m
+
+[90m    pages/AdminDashboard.tsx:903[39m
+
+[90m    pages/AdminDashboard.tsx:924[39m
+
+[90m    pages/AdminDashboard.tsx:937[39m
+
+[90m    pages/AdminDashboard.tsx:963[39m
+
+[90m    pages/Auth.tsx:862[39m
+
+[90m    pages/Auth.tsx:866[39m
+
+[90m    pages/Auth.tsx:870[39m
+
+[90m    pages/Auth.tsx:928[39m
+
+[90m    pages/CreativeWriting.tsx:1134[39m
+
+[90m    pages/CreativeWriting.tsx:1359[39m
+
+[90m    pages/CreativeWriting.tsx:1457[39m
+
+[90m    pages/Dashboard.tsx:208[39m
+
+[90m    pages/Settings.tsx:361[39m
+
+[90m    pages/Settings.tsx:377[39m
+
+[90m    pages/Settings.tsx:396[39m
+
+[90m    pages/Settings.tsx:429[39m
+
+[90m    pages/Settings.tsx:472[39m
+
+[90m    pages/Settings.tsx:538[39m
+
+[90m    pages/Settings.tsx:622[39m
+
+[90m    pages/TeacherDashboard.tsx:392[39m
+
+  [33mÔÜá[39m [33mPerformance: Array lookup inside a loop[39m [90m├ù19[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/js-set-map-lookups[39m
+    This scales poorly because `array.includes()` inside a loop
+    scans the whole list every time. Use a Set for
+    constant-time lookups.
+[2m    ÔåÆ Use a `Set` or `Map` when you check for the same items[22m
+[2m    over and over. `Array.includes`/`find` scans the whole list[22m
+[2m    each time[22m
+
+[90m    components/admin/UserManagement.tsx:270[39m
+
+[90m    components/community/GroupCallOverlay.tsx:123[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:137[39m
+
+[90m    pages/Analytics.tsx:932[39m
+
+[90m    pages/CreativeWriting.tsx:1275-1277[39m
+
+[90m    pages/CreativeWriting.tsx:1394-1396[39m
+
+[90m    pages/CreativeWriting.tsx:1447[39m
+
+[90m    pages/Flashcards.tsx:383[39m
+
+[90m    pages/Flashcards.tsx:389[39m
+
+[90m    pages/Shop.tsx:132[39m
+
+[90m    pages/Shop.tsx:259[39m
+
+[90m    pages/Shop.tsx:263[39m
+
+[90m    pages/Shop.tsx:339[39m
+
+  [33mÔÜá[39m [33mBugs: State synced to a prop inside an effect[39m [90m├ù9[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-adjust-state-on-prop-change[39m
+    This effect adjusts state after a prop changes, so users
+    briefly see the stale value.
+[2m    ÔåÆ Adjust the state inline during render with a `prev`-prop[22m
+[2m    comparison (`if (prop !== prevProp) { setPrevProp(prop);[22m
+[2m    setX(...); }`), or refactor to remove the duplicated state.[22m
+[2m    Routing the adjustment through a useEffect forces an extra[22m
+[2m    render with a stale UI between the two commits. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes[22m
+
+[90m    components/PaymentSimulatorModal.tsx:35-40[39m
+
+[90m    components/TicTacToe.tsx:160[39m
+
+[90m    hooks/store/useCoachStore.ts:28[39m
+
+[90m    hooks/store/useCoachStore.ts:35[39m
+
+  [33mÔÜá[39m [33mAccessibility: Text is too small[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-tiny-text[39m
+    Your users strain to read 10px text, so use at least 12px
+    for body text, & 16px is best.
+[2m    ÔåÆ Use at least 12px for body text, and 16px is best. Small[22m
+[2m    text is hard to read, especially on phones.[22m
+
+[90m    components/admin/StatisticsPanel.tsx:334[39m
+
+  [33mÔÜá[39m [33mBugs: Button missing explicit type[39m [90m├ù494[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/button-has-type[39m
+    Your users can submit the form by accident because a
+    `<button>` with no `type` defaults to submit.
+[2m    ÔåÆ Set an explicit button `type` so plain buttons do not[22m
+[2m    submit forms by accident: `type="button"`, `"submit"`, or[22m
+[2m    `"reset"`.[22m
+
+[90m    App.tsx:75[39m
+
+[90m    App.tsx:357[39m
+
+[90m    App.tsx:619[39m
+
+[90m    components/AILab.tsx:197[39m
+
+[90m    components/AILab.tsx:223[39m
+
+[90m    components/AILab.tsx:243[39m
+
+[90m    components/AILab.tsx:501[39m
+
+[90m    components/AILab.tsx:589[39m
+
+[90m    components/AILab.tsx:719[39m
+
+[90m    components/AILab.tsx:779[39m
+
+[90m    components/AILab.tsx:796[39m
+
+[90m    components/AILab.tsx:809[39m
+
+[90m    components/AILab.tsx:835[39m
+
+[90m    components/AppShell.tsx:254[39m
+
+[90m    components/AppShell.tsx:258[39m
+
+[90m    components/AppShell.tsx:266[39m
+
+[90m    components/AppShell.tsx:285[39m
+
+[90m    components/AppShell.tsx:310[39m
+
+[90m    components/AppShell.tsx:314[39m
+
+[90m    components/AppShell.tsx:318[39m
+
+[90m    components/AppShell.tsx:323[39m
+
+[90m    components/AppShell.tsx:355[39m
+
+[90m    components/AppShell.tsx:360[39m
+
+[90m    components/AppShell.tsx:405[39m
+
+[90m    components/AppShell.tsx:427[39m
+
+[90m    components/AppShell.tsx:437[39m
+
+[90m    components/AppShell.tsx:452[39m
+
+[90m    components/AppShell.tsx:498-501[39m
+
+[90m    components/AppShell.tsx:606[39m
+
+[90m    components/AppShell.tsx:621[39m
+
+[90m    components/AppShell.tsx:638[39m
+
+[90m    components/AppShell.tsx:650[39m
+
+[90m    components/AtlasLibrary.tsx:123[39m
+
+[90m    components/AtlasLibrary.tsx:164[39m
+
+[90m    components/AtlasLibrary.tsx:181[39m
+
+[90m    components/AtlasLibrary.tsx:191[39m
+
+[90m    components/AtlasLibrary.tsx:207[39m
+
+[90m    components/AtlasLibrary.tsx:221[39m
+
+[90m    components/AtlasLibrary.tsx:256[39m
+
+[90m    components/AtlasLibrary.tsx:303[39m
+
+[90m    components/BookReader.tsx:102[39m
+
+[90m    components/BookReader.tsx:120[39m
+
+[90m    components/BookReader.tsx:162[39m
+
+[90m    components/BookReader.tsx:207-210[39m
+
+[90m    components/BubbleWrap.tsx:114[39m
+
+[90m    components/BubbleWrap.tsx:179[39m
+
+[90m    components/CallHandler.tsx:117[39m
+
+[90m    components/CallHandler.tsx:124[39m
+
+[90m    components/CallHandler.tsx:154[39m
+
+[90m    components/CallHandler.tsx:160[39m
+
+[90m    components/CallHandler.tsx:207[39m
+
+[90m    components/CollaborativeDoodle.tsx:288[39m
+
+[90m    components/CollaborativeDoodle.tsx:330[39m
+
+[90m    components/CollaborativeDoodle.tsx:361[39m
+
+[90m    components/CollaborativeDoodle.tsx:474[39m
+
+[90m    components/CollaborativeDoodle.tsx:480[39m
+
+[90m    components/CollaborativeDoodle.tsx:519[39m
+
+[90m    components/DebugConsole.tsx:59[39m
+
+[90m    components/DebugConsole.tsx:75-81[39m
+
+[90m    components/FloatingBubble.tsx:38[39m
+
+[90m    components/LevelBot.tsx:279[39m
+
+[90m    components/LevelBot.tsx:303[39m
+
+[90m    components/LevelBot.tsx:321[39m
+
+[90m    components/LevelBot.tsx:325[39m
+
+[90m    components/LevelBot.tsx:355[39m
+
+[90m    components/LevelBot.tsx:409[39m
+
+[90m    components/LevelBot.tsx:435[39m
+
+[90m    components/MindGarden.tsx:77[39m
+
+[90m    components/MindGarden.tsx:91[39m
+
+[90m    components/NotificationCenter.tsx:78[39m
+
+[90m    components/NotificationCenter.tsx:86[39m
+
+[90m    components/NotificationCenter.tsx:98[39m
+
+[90m    components/NotificationCenter.tsx:134[39m
+
+[90m    components/PaymentSimulatorModal.tsx:230[39m
+
+[90m    components/PaymentSimulatorModal.tsx:265[39m
+
+[90m    components/PaymentSimulatorModal.tsx:283[39m
+
+[90m    components/PaymentSimulatorModal.tsx:355[39m
+
+[90m    components/PaymentSimulatorModal.tsx:361[39m
+
+[90m    components/PremiumAlertModal.tsx:71[39m
+
+[90m    components/PremiumAlertModal.tsx:103[39m
+
+[90m    components/PremiumAlertModal.tsx:115[39m
+
+[90m    components/QuizBattle.tsx:364[39m
+
+[90m    components/QuizBattle.tsx:385-388[39m
+
+[90m    components/QuizBattle.tsx:444[39m
+
+[90m    components/QuizBattle.tsx:457[39m
+
+[90m    components/QuizBattle.tsx:537[39m
+
+[90m    components/TicTacToe.tsx:209[39m
+
+[90m    components/TicTacToe.tsx:300[39m
+
+[90m    components/TicTacToe.tsx:307[39m
+
+[90m    components/TicTacToe.tsx:340[39m
+
+[90m    components/TicTacToe.tsx:346[39m
+
+[90m    components/TicTacToe.tsx:385[39m
+
+[90m    components/WorldBrainMap.tsx:396[39m
+
+[90m    components/WorldBrainMap.tsx:406[39m
+
+[90m    components/WorldBrainMap.tsx:417[39m
+
+[90m    components/WorldBrainMap.tsx:450-451[39m
+
+[90m    components/WorldBrainMap.tsx:455[39m
+
+[90m    components/WorldBrainMap.tsx:500[39m
+
+[90m    components/WorldBrainMap.tsx:536[39m
+
+[90m    components/WorldBrainMap.tsx:569[39m
+
+[90m    components/WorldBrainMap.tsx:610[39m
+
+[90m    components/WorldBrainMap.tsx:637[39m
+
+[90m    components/WorldBrainMap.tsx:644[39m
+
+[90m    components/WorldBrainMap.tsx:650[39m
+
+[90m    components/WorldBrainMap.tsx:656[39m
+
+[90m    components/WorldBrainMap.tsx:665[39m
+
+[90m    components/WorldBrainMap.tsx:701-702[39m
+
+[90m    components/admin/ActivityMonitor.tsx:291[39m
+
+[90m    components/admin/ActivityMonitor.tsx:310-319[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:101[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:109[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:118[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:130[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:145[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:179[39m
+
+[90m    components/admin/CommentManagement.tsx:142[39m
+
+[90m    components/admin/CommentManagement.tsx:165[39m
+
+[90m    components/admin/CommentManagement.tsx:176[39m
+
+[90m    components/admin/CommentManagement.tsx:246[39m
+
+[90m    components/admin/CommentManagement.tsx:253[39m
+
+[90m    components/admin/CommentManagement.tsx:262[39m
+
+[90m    components/admin/CommentManagement.tsx:270[39m
+
+[90m    components/admin/CommentManagement.tsx:336[39m
+
+[90m    components/admin/CommentManagement.tsx:345[39m
+
+[90m    components/admin/CommentManagement.tsx:358[39m
+
+[90m    components/admin/CommentManagement.tsx:383[39m
+
+[90m    components/admin/CommentManagement.tsx:389[39m
+
+[90m    components/admin/DemographicTable.tsx:122[39m
+
+[90m    components/admin/ExportTools.tsx:816[39m
+
+[90m    components/admin/ExportTools.tsx:823[39m
+
+[90m    components/admin/ExportTools.tsx:840[39m
+
+[90m    components/admin/ExportTools.tsx:858[39m
+
+[90m    components/admin/ExportTools.tsx:902[39m
+
+[90m    components/admin/GamificationPanel.tsx:82[39m
+
+[90m    components/admin/GamificationPanel.tsx:88[39m
+
+[90m    components/admin/GamificationPanel.tsx:94[39m
+
+[90m    components/admin/GamificationPanel.tsx:108[39m
+
+[90m    components/admin/GamificationPanel.tsx:174[39m
+
+[90m    components/admin/GamificationPanel.tsx:216[39m
+
+[90m    components/admin/GamificationPanel.tsx:223[39m
+
+[90m    components/admin/GamificationPanel.tsx:240[39m
+
+[90m    components/admin/ReportManagement.tsx:164[39m
+
+[90m    components/admin/ReportManagement.tsx:173[39m
+
+[90m    components/admin/ReportManagement.tsx:259[39m
+
+[90m    components/admin/ReportManagement.tsx:268[39m
+
+[90m    components/admin/ReportManagement.tsx:275[39m
+
+[90m    components/admin/ReportManagement.tsx:321[39m
+
+[90m    components/admin/ReportManagement.tsx:369[39m
+
+[90m    components/admin/ReportManagement.tsx:375[39m
+
+[90m    components/admin/RetentionChart.tsx:112[39m
+
+[90m    components/admin/RetentionChart.tsx:120[39m
+
+[90m    components/admin/RetentionChart.tsx:128[39m
+
+[90m    components/admin/SecurityPanel.tsx:62[39m
+
+[90m    components/admin/SecurityPanel.tsx:69[39m
+
+[90m    components/admin/SecurityPanel.tsx:75[39m
+
+[90m    components/admin/SecurityPanel.tsx:110-116[39m
+
+[90m    components/admin/SecurityPanel.tsx:144[39m
+
+[90m    components/admin/SecurityPanel.tsx:175[39m
+
+[90m    components/admin/ShopManager.tsx:194[39m
+
+[90m    components/admin/ShopManager.tsx:211[39m
+
+[90m    components/admin/ShopManager.tsx:280[39m
+
+[90m    components/admin/ShopManager.tsx:286[39m
+
+[90m    components/admin/ShopManager.tsx:318[39m
+
+[90m    components/admin/ShopManager.tsx:444[39m
+
+[90m    components/admin/ShopManager.tsx:451[39m
+
+[90m    components/admin/StatisticsPanel.tsx:202[39m
+
+[90m    components/admin/StatisticsPanel.tsx:218[39m
+
+[90m    components/admin/StatisticsPanel.tsx:227[39m
+
+[90m    components/admin/TeacherModeration.tsx:126[39m
+
+[90m    components/admin/TeacherModeration.tsx:225[39m
+
+[90m    components/admin/TeacherModeration.tsx:231[39m
+
+[90m    components/admin/TeacherModeration.tsx:246[39m
+
+[90m    components/admin/TeacherModeration.tsx:443[39m
+
+[90m    components/admin/TeacherModeration.tsx:450[39m
+
+[90m    components/admin/TeacherModeration.tsx:460[39m
+
+[90m    components/admin/TeacherModeration.tsx:467[39m
+
+[90m    components/admin/TeacherModeration.tsx:477[39m
+
+[90m    components/admin/TeacherModeration.tsx:484[39m
+
+[90m    components/admin/UserManagement.tsx:215[39m
+
+[90m    components/admin/UserManagement.tsx:226[39m
+
+[90m    components/admin/UserManagement.tsx:321[39m
+
+[90m    components/admin/UserManagement.tsx:331[39m
+
+[90m    components/admin/UserManagement.tsx:338[39m
+
+[90m    components/admin/UserManagement.tsx:345[39m
+
+[90m    components/admin/UserManagement.tsx:354[39m
+
+[90m    components/admin/UserManagement.tsx:363[39m
+
+[90m    components/admin/UserManagement.tsx:453[39m
+
+[90m    components/admin/UserManagement.tsx:464[39m
+
+[90m    components/admin/UserManagement.tsx:470[39m
+
+[90m    components/admin/UserManagement.tsx:479[39m
+
+[90m    components/admin/UserManagement.tsx:550[39m
+
+[90m    components/admin/UserManagement.tsx:556[39m
+
+[90m    components/admin/UserManagement.tsx:580[39m
+
+[90m    components/admin/UserManagement.tsx:590[39m
+
+[90m    components/admin/UserManagement.tsx:660[39m
+
+[90m    components/admin/UserManagement.tsx:666[39m
+
+[90m    components/community/CallOverlay.tsx:268[39m
+
+[90m    components/community/CallOverlay.tsx:355[39m
+
+[90m    components/community/CallOverlay.tsx:367[39m
+
+[90m    components/community/CallOverlay.tsx:378[39m
+
+[90m    components/community/CallsView.tsx:69[39m
+
+[90m    components/community/CallsView.tsx:149[39m
+
+[90m    components/community/ChatDetailView.tsx:101[39m
+
+[90m    components/community/ChatDetailView.tsx:141[39m
+
+[90m    components/community/ChatDetailView.tsx:147[39m
+
+[90m    components/community/ChatDetailView.tsx:154[39m
+
+[90m    components/community/ChatDetailView.tsx:209[39m
+
+[90m    components/community/ChatDetailView.tsx:270[39m
+
+[90m    components/community/ChatDetailView.tsx:282[39m
+
+[90m    components/community/ChatDetailView.tsx:289[39m
+
+[90m    components/community/DiscussionsView.tsx:151[39m
+
+[90m    components/community/FeedView.tsx:138[39m
+
+[90m    components/community/FeedView.tsx:149[39m
+
+[90m    components/community/FeedView.tsx:155[39m
+
+[90m    components/community/FeedView.tsx:163[39m
+
+[90m    components/community/FeedView.tsx:211[39m
+
+[90m    components/community/FeedView.tsx:227[39m
+
+[90m    components/community/FeedView.tsx:234[39m
+
+[90m    components/community/FeedView.tsx:263[39m
+
+[90m    components/community/FeedView.tsx:273[39m
+
+[90m    components/community/FeedView.tsx:284[39m
+
+[90m    components/community/FeedView.tsx:333[39m
+
+[90m    components/community/GroupCallOverlay.tsx:194[39m
+
+[90m    components/community/GroupCallOverlay.tsx:200[39m
+
+[90m    components/community/GroupCallOverlay.tsx:206[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:86[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:120[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:124[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:168[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:172[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:176[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:191[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:214[39m
+
+[90m    components/community/StoriesView.tsx:186[39m
+
+[90m    components/community/StoriesView.tsx:221[39m
+
+[90m    components/community/StoriesView.tsx:227[39m
+
+[90m    components/community/StoriesView.tsx:382[39m
+
+[90m    components/community/StoriesView.tsx:477[39m
+
+[90m    components/community/StoriesView.tsx:490[39m
+
+[90m    components/community/StoriesView.tsx:494[39m
+
+[90m    components/community/StoriesView.tsx:519[39m
+
+[90m    components/community/StoriesView.tsx:530[39m
+
+[90m    components/community/StoriesView.tsx:588[39m
+
+[90m    components/community/StoriesView.tsx:668[39m
+
+[90m    components/community/StoriesView.tsx:676[39m
+
+[90m    components/community/TeachersView.tsx:313[39m
+
+[90m    components/community/TeachersView.tsx:362[39m
+
+[90m    components/community/TeachersView.tsx:375[39m
+
+[90m    components/community/TeachersView.tsx:392[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:189[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:199-201[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:222[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:403[39m
+
+[90m    components/visuals/ElectricityLab.tsx:156[39m
+
+[90m    components/visuals/ElectricityLab.tsx:191[39m
+
+[90m    components/visuals/MechanicsLab.tsx:96[39m
+
+[90m    components/visuals/MechanicsLab.tsx:106[39m
+
+[90m    components/visuals/MechanicsLab.tsx:156[39m
+
+[90m    components/visuals/MechanicsLab.tsx:163[39m
+
+[90m    components/visuals/OpticsLab.tsx:35[39m
+
+[90m    components/visuals/OpticsLab.tsx:44[39m
+
+[90m    pages/AISummary.tsx:179[39m
+
+[90m    pages/AISummary.tsx:185[39m
+
+[90m    pages/AISummary.tsx:251[39m
+
+[90m    pages/AISummary.tsx:257[39m
+
+[90m    pages/AISummary.tsx:306[39m
+
+[90m    pages/AISummary.tsx:318[39m
+
+[90m    pages/AISummary.tsx:329[39m
+
+[90m    pages/AISummary.tsx:391[39m
+
+[90m    pages/AISummary.tsx:425[39m
+
+[90m    pages/AISummary.tsx:431[39m
+
+[90m    pages/AISummary.tsx:504[39m
+
+[90m    pages/AISummary.tsx:510[39m
+
+[90m    pages/AdminDashboard.tsx:409[39m
+
+[90m    pages/AdminDashboard.tsx:420[39m
+
+[90m    pages/AdminDashboard.tsx:451[39m
+
+[90m    pages/AdminDashboard.tsx:468[39m
+
+[90m    pages/AdminDashboard.tsx:494[39m
+
+[90m    pages/AdminDashboard.tsx:502[39m
+
+[90m    pages/AdminDashboard.tsx:510[39m
+
+[90m    pages/AdminDashboard.tsx:518[39m
+
+[90m    pages/AdminDashboard.tsx:527[39m
+
+[90m    pages/AdminDashboard.tsx:568[39m
+
+[90m    pages/AdminDashboard.tsx:574[39m
+
+[90m    pages/AdminDashboard.tsx:582[39m
+
+[90m    pages/AdminDashboard.tsx:630[39m
+
+[90m    pages/AdminDashboard.tsx:642[39m
+
+[90m    pages/AdminDashboard.tsx:684[39m
+
+[90m    pages/Analytics.tsx:532[39m
+
+[90m    pages/Analytics.tsx:560[39m
+
+[90m    pages/Analytics.tsx:581[39m
+
+[90m    pages/Analytics.tsx:734[39m
+
+[90m    pages/Analytics.tsx:745[39m
+
+[90m    pages/Analytics.tsx:787[39m
+
+[90m    pages/Analytics.tsx:828[39m
+
+[90m    pages/Analytics.tsx:845[39m
+
+[90m    pages/Analytics.tsx:859[39m
+
+[90m    pages/Analytics.tsx:891[39m
+
+[90m    pages/Analytics.tsx:911[39m
+
+[90m    pages/Analytics.tsx:939[39m
+
+[90m    pages/Analytics.tsx:954[39m
+
+[90m    pages/Analytics.tsx:986[39m
+
+[90m    pages/Auth.tsx:341[39m
+
+[90m    pages/Auth.tsx:347[39m
+
+[90m    pages/Community.tsx:301[39m
+
+[90m    pages/Community.tsx:452[39m
+
+[90m    pages/Community.tsx:458[39m
+
+[90m    pages/CreativeWriting.tsx:726[39m
+
+[90m    pages/CreativeWriting.tsx:739[39m
+
+[90m    pages/CreativeWriting.tsx:925[39m
+
+[90m    pages/CreativeWriting.tsx:938[39m
+
+[90m    pages/CreativeWriting.tsx:954[39m
+
+[90m    pages/CreativeWriting.tsx:971[39m
+
+[90m    pages/CreativeWriting.tsx:981[39m
+
+[90m    pages/CreativeWriting.tsx:1022[39m
+
+[90m    pages/CreativeWriting.tsx:1032[39m
+
+[90m    pages/CreativeWriting.tsx:1038[39m
+
+[90m    pages/CreativeWriting.tsx:1074[39m
+
+[90m    pages/CreativeWriting.tsx:1104[39m
+
+[90m    pages/CreativeWriting.tsx:1115[39m
+
+[90m    pages/CreativeWriting.tsx:1174[39m
+
+[90m    pages/CreativeWriting.tsx:1192[39m
+
+[90m    pages/CreativeWriting.tsx:1204[39m
+
+[90m    pages/CreativeWriting.tsx:1212[39m
+
+[90m    pages/CreativeWriting.tsx:1246[39m
+
+[90m    pages/CreativeWriting.tsx:1272[39m
+
+[90m    pages/CreativeWriting.tsx:1279[39m
+
+[90m    pages/CreativeWriting.tsx:1285[39m
+
+[90m    pages/CreativeWriting.tsx:1297[39m
+
+[90m    pages/CreativeWriting.tsx:1304[39m
+
+[90m    pages/CreativeWriting.tsx:1312[39m
+
+[90m    pages/CreativeWriting.tsx:1336[39m
+
+[90m    pages/CreativeWriting.tsx:1343[39m
+
+[90m    pages/CreativeWriting.tsx:1391[39m
+
+[90m    pages/CreativeWriting.tsx:1411[39m
+
+[90m    pages/CreativeWriting.tsx:1418[39m
+
+[90m    pages/CreativeWriting.tsx:1489[39m
+
+[90m    pages/CreativeWriting.tsx:1509[39m
+
+[90m    pages/CreativeWriting.tsx:1516[39m
+
+[90m    pages/CreativeWriting.tsx:1562[39m
+
+[90m    pages/CreativeWriting.tsx:1582[39m
+
+[90m    pages/CreativeWriting.tsx:1591[39m
+
+[90m    pages/CreativeWriting.tsx:1630[39m
+
+[90m    pages/CreativeWriting.tsx:1697[39m
+
+[90m    pages/CreativeWriting.tsx:1703[39m
+
+[90m    pages/CreativeWriting.tsx:1735[39m
+
+[90m    pages/CreativeWriting.tsx:1754[39m
+
+[90m    pages/CreativeWriting.tsx:1805[39m
+
+[90m    pages/CreativeWriting.tsx:1841[39m
+
+[90m    pages/Dashboard.tsx:392[39m
+
+[90m    pages/Dashboard.tsx:411[39m
+
+[90m    pages/Dashboard.tsx:434[39m
+
+[90m    pages/Dashboard.tsx:511[39m
+
+[90m    pages/Dashboard.tsx:616[39m
+
+[90m    pages/Dashboard.tsx:650[39m
+
+[90m    pages/Dashboard.tsx:674[39m
+
+[90m    pages/Dashboard.tsx:728[39m
+
+[90m    pages/FlashcardMode.tsx:65[39m
+
+[90m    pages/FlashcardMode.tsx:119[39m
+
+[90m    pages/FlashcardMode.tsx:211[39m
+
+[90m    pages/FlashcardMode.tsx:219[39m
+
+[90m    pages/FlashcardMode.tsx:225[39m
+
+[90m    pages/FlashcardPlayer.tsx:146[39m
+
+[90m    pages/FlashcardPlayer.tsx:160[39m
+
+[90m    pages/FlashcardPlayer.tsx:257[39m
+
+[90m    pages/FlashcardPlayer.tsx:263[39m
+
+[90m    pages/Flashcards.tsx:157[39m
+
+[90m    pages/Flashcards.tsx:378[39m
+
+[90m    pages/Flashcards.tsx:391[39m
+
+[90m    pages/Library.tsx:349[39m
+
+[90m    pages/Library.tsx:394[39m
+
+[90m    pages/Library.tsx:413[39m
+
+[90m    pages/Library.tsx:419[39m
+
+[90m    pages/Library.tsx:476[39m
+
+[90m    pages/Library.tsx:519[39m
+
+[90m    pages/Library.tsx:548[39m
+
+[90m    pages/Library.tsx:555[39m
+
+[90m    pages/Library.tsx:581[39m
+
+[90m    pages/Library.tsx:599[39m
+
+[90m    pages/Library.tsx:605[39m
+
+[90m    pages/Library.tsx:644[39m
+
+[90m    pages/Library.tsx:650[39m
+
+[90m    pages/Library.tsx:680[39m
+
+[90m    pages/Library.tsx:686[39m
+
+[90m    pages/Library.tsx:692[39m
+
+[90m    pages/Library.tsx:699[39m
+
+[90m    pages/Library.tsx:706[39m
+
+[90m    pages/Library.tsx:720[39m
+
+[90m    pages/Library.tsx:747[39m
+
+[90m    pages/Library.tsx:808[39m
+
+[90m    pages/Library.tsx:817[39m
+
+[90m    pages/Library.tsx:823[39m
+
+[90m    pages/Pricing.tsx:277[39m
+
+[90m    pages/Pricing.tsx:425[39m
+
+[90m    pages/Pricing.tsx:468[39m
+
+[90m    pages/Pricing.tsx:586[39m
+
+[90m    pages/Pricing.tsx:701[39m
+
+[90m    pages/Pricing.tsx:710[39m
+
+[90m    pages/Pricing.tsx:787[39m
+
+[90m    pages/Pricing.tsx:865[39m
+
+[90m    pages/Pricing.tsx:943[39m
+
+[90m    pages/Pricing.tsx:988[39m
+
+[90m    pages/Pricing.tsx:1048[39m
+
+[90m    pages/Pricing.tsx:1176[39m
+
+[90m    pages/Pricing.tsx:1185[39m
+
+[90m    pages/Pricing.tsx:1263[39m
+
+[90m    pages/QuizGenerator.tsx:283[39m
+
+[90m    pages/QuizGenerator.tsx:289[39m
+
+[90m    pages/QuizGenerator.tsx:346[39m
+
+[90m    pages/QuizGenerator.tsx:352[39m
+
+[90m    pages/QuizGenerator.tsx:373[39m
+
+[90m    pages/QuizGenerator.tsx:379[39m
+
+[90m    pages/QuizGenerator.tsx:416[39m
+
+[90m    pages/QuizGenerator.tsx:422[39m
+
+[90m    pages/QuizGenerator.tsx:429[39m
+
+[90m    pages/QuizGenerator.tsx:435[39m
+
+[90m    pages/QuizGenerator.tsx:461[39m
+
+[90m    pages/QuizGenerator.tsx:520[39m
+
+[90m    pages/QuizGenerator.tsx:531[39m
+
+[90m    pages/QuizPlayer.tsx:99[39m
+
+[90m    pages/QuizPlayer.tsx:406[39m
+
+[90m    pages/QuizPlayer.tsx:421[39m
+
+[90m    pages/QuizPlayer.tsx:434[39m
+
+[90m    pages/QuizPlayer.tsx:440[39m
+
+[90m    pages/QuizPlayer.tsx:585[39m
+
+[90m    pages/QuizPlayer.tsx:601[39m
+
+[90m    pages/QuizPlayer.tsx:618[39m
+
+[90m    pages/QuizPlayer.tsx:630[39m
+
+[90m    pages/QuizPlayer.tsx:638[39m
+
+[90m    pages/QuizPlayer.tsx:666[39m
+
+[90m    pages/QuizPlayer.tsx:679[39m
+
+[90m    pages/QuizPlayer.tsx:691[39m
+
+[90m    pages/QuizPlayer.tsx:736[39m
+
+[90m    pages/QuizPlayer.tsx:789[39m
+
+[90m    pages/Ranking.tsx:60[39m
+
+[90m    pages/Ranking.tsx:178[39m
+
+[90m    pages/Ranking.tsx:189[39m
+
+[90m    pages/Settings.tsx:180[39m
+
+[90m    pages/Settings.tsx:272[39m
+
+[90m    pages/Settings.tsx:292[39m
+
+[90m    pages/Settings.tsx:335[39m
+
+[90m    pages/Settings.tsx:502[39m
+
+[90m    pages/Settings.tsx:598[39m
+
+[90m    pages/Settings.tsx:676[39m
+
+[90m    pages/Settings.tsx:684[39m
+
+[90m    pages/Settings.tsx:706[39m
+
+[90m    pages/Settings.tsx:767[39m
+
+[90m    pages/Shop.tsx:195[39m
+
+[90m    pages/Shop.tsx:217[39m
+
+[90m    pages/Shop.tsx:320[39m
+
+[90m    pages/Shop.tsx:330[39m
+
+[90m    pages/Shop.tsx:340[39m
+
+[90m    pages/Shop.tsx:354[39m
+
+[90m    pages/StudyPlanner.tsx:273[39m
+
+[90m    pages/StudyPlanner.tsx:291[39m
+
+[90m    pages/StudyPlanner.tsx:319[39m
+
+[90m    pages/StudyPlanner.tsx:344[39m
+
+[90m    pages/StudyPlanner.tsx:402[39m
+
+[90m    pages/StudyPlanner.tsx:411[39m
+
+[90m    pages/StudyPlanner.tsx:454[39m
+
+[90m    pages/StudyPlanner.tsx:490[39m
+
+[90m    pages/TeacherDashboard.tsx:297[39m
+
+[90m    pages/TeacherDashboard.tsx:303[39m
+
+[90m    pages/TeacherDashboard.tsx:331[39m
+
+[90m    pages/TeacherDashboard.tsx:365[39m
+
+[90m    pages/TeacherDashboard.tsx:381[39m
+
+[90m    pages/TeacherDashboard.tsx:510[39m
+
+[90m    pages/TutorHub.tsx:150[39m
+
+[90m    pages/TutorHub.tsx:156[39m
+
+[90m    pages/TutorHub.tsx:179[39m
+
+[90m    pages/TutorHub.tsx:259[39m
+
+[90m    pages/TutorHub.tsx:295[39m
+
+[90m    pages/TutorHub.tsx:306[39m
+
+[90m    pages/TutorHub.tsx:312[39m
+
+[90m    pages/TutorRegistration.tsx:254[39m
+
+[90m    pages/TutorRegistration.tsx:260[39m
+
+[90m    pages/TutorRegistration.tsx:273[39m
+
+[90m    pages/TutorRegistration.tsx:382[39m
+
+[90m    pages/TutorRegistration.tsx:402[39m
+
+[90m    pages/TutorRegistration.tsx:413[39m
+
+[90m    pages/TutorRegistration.tsx:420[39m
+
+  [33mÔÜá[39m [33mPerformance: State only used in handlers[39m [90m├ù26[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/rerender-state-only-in-handlers[39m
+    Each update to "isEditingName" redraws your component for
+    nothing because this useState is set but never shown on
+    screen.
+[2m    ÔåÆ Use useRef instead of useState when the value is only set[22m
+[2m    and never shown on screen. `ref.current = ...` updates it[22m
+[2m    without redrawing the component.[22m
+
+[90m    components/AppShell.tsx:92[39m
+
+[90m    components/BookReader.tsx:29[39m
+
+[90m    components/CollaborativeDoodle.tsx:29[39m
+
+[90m    components/CollaborativeDoodle.tsx:34[39m
+
+[90m    components/PaymentSimulatorModal.tsx:29[39m
+
+[90m    components/QuizBattle.tsx:23[39m
+
+[90m    components/QuizBattle.tsx:30[39m
+
+[90m    components/QuizBattle.tsx:34[39m
+
+[90m    components/TicTacToe.tsx:30[39m
+
+[90m    components/TicTacToe.tsx:35[39m
+
+[90m    components/WorldBrainMap.tsx:117[39m
+
+[90m    components/community/CallOverlay.tsx:37[39m
+
+[90m    components/community/ChatDetailView.tsx:17[39m
+
+[90m    components/community/GroupInfoDrawer.tsx:15[39m
+
+[90m    components/community/StoriesView.tsx:34[39m
+
+[90m    components/community/TeachersView.tsx:205-208[39m
+
+[90m    pages/AdminDashboard.tsx:57[39m
+
+[90m    pages/CreativeWriting.tsx:67[39m
+
+[90m    pages/CreativeWriting.tsx:114[39m
+
+[90m    pages/Library.tsx:46[39m
+
+[90m    pages/Settings.tsx:49[39m
+
+[90m    pages/StudyPlanner.tsx:46[39m
+
+[90m    pages/TeacherDashboard.tsx:58[39m
+
+  [33mÔÜá[39m [33mAccessibility: Media missing captions[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/media-has-caption[39m
+    Deaf and hard-of-hearing users need captions for this
+    media. Add a `<track kind="captions">` inside the `<audio>`
+    or `<video>`.
+[2m    ÔåÆ Add `<track kind="captions">` inside every `<audio>` /[22m
+[2m    `<video>`.[22m
+
+[90m    components/community/CallOverlay.tsx:238[39m
+
+  [33mÔÜá[39m [33mBugs: Event logic handled in an effect[39m [90m├ù31[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-event-handler[39m
+    Faking an event handler with a prop plus a useEffect costs
+    an extra render & runs late.
+[2m    ÔåÆ Run the side effect in the event handler that triggers[22m
+[2m    it, instead of watching its state from a useEffect. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#sharing-logic-between-event-handlers[22m
+
+[90m    components/AILab.tsx:128[39m
+
+[90m    components/AILab.tsx:139[39m
+
+[90m    components/AILab.tsx:390[39m
+
+[90m    components/AILab.tsx:405[39m
+
+[90m    components/AppShell.tsx:118[39m
+
+[90m    components/CollaborativeDoodle.tsx:24[39m
+
+[90m    components/CollaborativeDoodle.tsx:164[39m
+
+[90m    components/CollaborativeDoodle.tsx:179[39m
+
+[90m    components/LevelBot.tsx:95[39m
+
+[90m    components/LevelBot.tsx:128[39m
+
+[90m    components/PaymentSimulatorModal.tsx:34[39m
+
+[90m    components/QuizBattle.tsx:271[39m
+
+[90m    components/QuizBattle.tsx:306[39m
+
+[90m    components/TicTacToe.tsx:159[39m
+
+[90m    components/admin/CommentManagement.tsx:18[39m
+
+[90m    components/community/GroupCallOverlay.tsx:25[39m
+
+[90m    components/visuals/ElectricityLab.tsx:27[39m
+
+[90m    hooks/store/useAuthStore.ts:279[39m
+
+[90m    hooks/store/useCoachStore.ts:8[39m
+
+[90m    hooks/store/useContentStore.ts:10[39m
+
+[90m    pages/AdminDashboard.tsx:991[39m
+
+[90m    pages/TeacherDashboard.tsx:76[39m
+
+  [33mÔÜá[39m [33mBugs: State updates chained through effects[39m [90m├ù5[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-chain-state-updates[39m
+    Chaining state updates triggers an extra render each step.
+[2m    ÔåÆ Set all the related state together in the event handler[22m
+[2m    that starts it, instead of having one useEffect react to a[22m
+[2m    state change and set more state. See[22m
+[2m    https://react.dev/learn/you-might-not-need-an-effect#chains-of-computations[22m
+
+[90m    components/LevelBot.tsx:99[39m
+
+[90m    components/QuizBattle.tsx:156-158[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:156[39m
+
+  [33mÔÜá[39m [33mBugs: State initialized from a mount effect[39m [90m├ù11[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-initialize-state[39m
+    Your users see an extra render with empty "activeTab"
+    because a useEffect sets its starting value.
+[2m    ÔåÆ Pass the initial value directly to useState() instead of[22m
+[2m    setting it from a mount-only useEffect. For SSR hydration,[22m
+[2m    prefer useSyncExternalStore().[22m
+
+[90m    App.tsx:142[39m
+
+[90m    components/BubbleWrap.tsx:44[39m
+
+[90m    components/WorldBrainMap.tsx:131[39m
+
+[90m    hooks/store/useUIStore.ts:31[39m
+
+[90m    pages/AdminDashboard.tsx:143-149[39m
+
+  [33mÔÜá[39m [33mAccessibility: Click handler missing keyboard handler[39m [90m├ù58[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/click-events-have-key-events[39m
+    Keyboard users can't trigger this click handler because
+    there's no keyboard one, so add `onKeyUp`, `onKeyDown`, or
+    `onKeyPress`.
+[2m    ÔåÆ Pair `onClick` with a key handler so keyboard users can[22m
+[2m    trigger it.[22m
+
+[90m    components/AILab.tsx:516[39m
+
+[90m    components/AILab.tsx:732[39m
+
+[90m    components/AILab.tsx:743[39m
+
+[90m    components/AppShell.tsx:373[39m
+
+[90m    components/AppShell.tsx:422[39m
+
+[90m    components/AppShell.tsx:448[39m
+
+[90m    components/AppShell.tsx:492[39m
+
+[90m    components/AppShell.tsx:551[39m
+
+[90m    components/AppShell.tsx:616[39m
+
+[90m    components/AppShell.tsx:630[39m
+
+[90m    components/AppShell.tsx:851[39m
+
+[90m    components/BookReader.tsx:132[39m
+
+[90m    components/CollaborativeDoodle.tsx:420[39m
+
+[90m    components/MindGarden.tsx:48[39m
+
+[90m    components/NotificationCenter.tsx:52[39m
+
+[90m    components/PremiumAlertModal.tsx:50[39m
+
+[90m    components/admin/AdminNotifPanel.tsx:70[39m
+
+[90m    components/admin/CommentManagement.tsx:298[39m
+
+[90m    components/admin/ExportTools.tsx:796[39m
+
+[90m    components/admin/ReportManagement.tsx:297[39m
+
+[90m    components/admin/TeacherModeration.tsx:153[39m
+
+[90m    components/community/StoriesView.tsx:392-393[39m
+
+[90m    components/community/StoriesView.tsx:623[39m
+
+[90m    pages/AISummary.tsx:208[39m
+
+[90m    pages/AdminDashboard.tsx:372[39m
+
+[90m    pages/AdminDashboard.tsx:882[39m
+
+[90m    pages/AdminDashboard.tsx:903[39m
+
+[90m    pages/AdminDashboard.tsx:924[39m
+
+[90m    pages/AdminDashboard.tsx:937[39m
+
+[90m    pages/AdminDashboard.tsx:963[39m
+
+[90m    pages/Analytics.tsx:770[39m
+
+[90m    pages/Analytics.tsx:874[39m
+
+[90m    pages/Auth.tsx:862[39m
+
+[90m    pages/Auth.tsx:866[39m
+
+[90m    pages/Auth.tsx:870[39m
+
+[90m    pages/Auth.tsx:928[39m
+
+[90m    pages/Auth.tsx:1064[39m
+
+[90m    pages/Community.tsx:350[39m
+
+[90m    pages/CreativeWriting.tsx:1134[39m
+
+[90m    pages/CreativeWriting.tsx:1539[39m
+
+[90m    pages/CreativeWriting.tsx:1717[39m
+
+[90m    pages/CreativeWriting.tsx:1785[39m
+
+[90m    pages/Dashboard.tsx:208[39m
+
+[90m    pages/FlashcardMode.tsx:147[39m
+
+[90m    pages/FlashcardPlayer.tsx:183[39m
+
+[90m    pages/Flashcards.tsx:301[39m
+
+[90m    pages/Settings.tsx:361[39m
+
+[90m    pages/Settings.tsx:377[39m
+
+[90m    pages/Settings.tsx:396[39m
+
+[90m    pages/Settings.tsx:429[39m
+
+[90m    pages/Settings.tsx:472[39m
+
+[90m    pages/Settings.tsx:538[39m
+
+[90m    pages/Settings.tsx:622[39m
+
+[90m    pages/TeacherDashboard.tsx:392[39m
+
+  [33mÔÜá[39m [33mPerformance: State initializer runs on every render[39m [90m├ù3[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/rerender-lazy-state-init[39m
+    useState(fill()) re-runs fill() on every render & throws
+    the result away.
+[2m    ÔåÆ Wrap expensive initial state in an arrow function so the[22m
+[2m    initializer does not rerun and get thrown away on every[22m
+[2m    render.[22m
+
+[90m    components/BubbleWrap.tsx:24[39m
+
+[90m    components/TicTacToe.tsx:26[39m
+
+[90m    pages/Dashboard.tsx:157[39m
+
+  [33mÔÜá[39m [33mMaintainability: Static value rebuilt every render[39m [90m├ù7[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-module-scope-static-value[39m
+    `BUBBLE_GRADIENTS` inside `BubbleWrap` uses no local state
+    but is rebuilt every render, so it looks new each time &
+    breaks memoized children. Move it to the top of the file,
+    outside the component.
+[2m    ÔåÆ Move the value above the component, at the top of the[22m
+[2m    file. It doesn't use local state, so rebuilding it each[22m
+[2m    update is wasted and makes it look new every time.[22m
+
+[90m    components/BubbleWrap.tsx:13[39m
+
+[90m    components/admin/ExportTools.tsx:893[39m
+
+[90m    components/admin/UserManagement.tsx:683[39m
+
+[90m    pages/AdminDashboard.tsx:121[39m
+
+[90m    pages/Auth.tsx:59-60[39m
+
+[90m    pages/Pricing.tsx:293[39m
+
+  [31mÔ£û[39m [31mPerformance: Animating a layout property[39m [90m├ù51[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-layout-property-animation[39m
+    This stutters because animating "height" makes the browser
+    redo page layout every frame, so animate transform or scale
+    instead, or use the layout prop
+[2m    ÔåÆ Use `transform: translateX()` or `scale()` instead. They[22m
+[2m    animate smoothly without making the browser redo layout or[22m
+[2m    repaint[22m
+
+[90m    components/AppShell.tsx:745-747[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 744 |[39m                                         [33m<[39m[33mmotion[39m[33m.[39mdiv  [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 745 |[39m                                           initial[33m=[39m{[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 746 |[39m                                           animate[33m=[39m{[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 747 |[39m                                           exit[33m=[39m{{ h[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 748 |[39m                                           transitio[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/BubbleWrap.tsx:135-136[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 134 |[39m               className[33m=[39m[32m"h-full bg-gradient-to-r fr[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 135 |[39m               initial[33m=[39m{{ width[33m:[39m [32m'100%'[39m }}            [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 136 |[39m               animate[33m=[39m{{ width[33m:[39m [32m`${(timeLeft / 60) [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 137 |[39m               transition[33m=[39m{{ duration[33m:[39m [35m1[39m[33m,[39m ease[33m:[39m [32m'lin[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/CallHandler.tsx:143-148[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 142 |[39m                         scale[33m:[39m [35m1[39m[33m,[39m                    [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 143 |[39m                         width[33m:[39m isMinimized [33m?[39m [32m'300px[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 144 |[39m                         height[33m:[39m isMinimized [33m?[39m [32m'200p[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 145 |[39m                         top[33m:[39m isMinimized [33m?[39m [32m'auto'[39m [33m:[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 146 |[39m                         bottom[33m:[39m isMinimized [33m?[39m [32m'2rem[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 147 |[39m                         right[33m:[39m isMinimized [33m?[39m [32m'2rem'[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 148 |[39m                         left[33m:[39m isMinimized [33m?[39m [32m'auto'[39m [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 149 |[39m                         borderRadius[33m:[39m isMinimized [33m?[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/FloatingBubble.tsx:57-58[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 56 |[39m                 className[33m=[39m[32m"absolute bottom-0 left-0 [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 57 |[39m                 initial[33m=[39m{{ height[33m:[39m [35m0[39m }}               [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 58 |[39m                 animate[33m=[39m{{ height[33m:[39m [32m`${displayProgres[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 59 |[39m                 transition[33m=[39m{{ duration[33m:[39m [35m1[39m }}[0m          [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/QuizBattle.tsx:498-499[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 497 |[39m             [33m<[39m[33mmotion[39m[33m.[39mdiv                              [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 498 |[39m               initial[33m=[39m{{ width[33m:[39m [32m'100%'[39m }}            [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 499 |[39m               animate[33m=[39m{{ width[33m:[39m [32m`${(timeLeft / 15) [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 500 |[39m               transition[33m=[39m{{ duration[33m:[39m [35m1[39m[33m,[39m ease[33m:[39m [32m'lin[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/community/FeedView.tsx:293-295[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 292 |[39m                                             [33m<[39m[33mmotion[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 293 |[39m                                                 ini[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 294 |[39m                                                 ani[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 295 |[39m                                                 exi[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 296 |[39m                                                 cla[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/community/StoriesView.tsx:355-357[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 354 |[39m                                         className[33m=[39m[32m"[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 355 |[39m                                         initial[33m=[39m{{ [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 356 |[39m                                         animate[33m=[39m{{   [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 357 |[39m                                             width[33m:[39m [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 358 |[39m                                         }}[0m           [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/community/TeachersView.tsx:355-357[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 354 |[39m                         [33m<[39m[33mmotion[39m[33m.[39mdiv                  [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 355 |[39m                             initial[33m=[39m{{ opacity[33m:[39m [35m0[39m[33m,[39m [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 356 |[39m                             animate[33m=[39m{{ opacity[33m:[39m [35m1[39m[33m,[39m [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 357 |[39m                             exit[33m=[39m{{ opacity[33m:[39m [35m0[39m[33m,[39m hei[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 358 |[39m                             className[33m=[39m[32m"overflow-hid[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/visuals/ChemistryTitration.tsx:55[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 54 |[39m       {hasPrecipitate[33m&&[39mliq[33m>[39m[35m0[39m[33m&&[39m(                       [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 55 |[39m         [33m<[39m[33mmotion[39m[33m.[39mrect initial[33m=[39m{{height[33m:[39m[35m0[39m[33m,[39mopacity[33m:[39m[35m0[39m}} [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 56 |[39m           x[33m=[39m[32m"13"[39m y[33m=[39m[32m"130"[39m width[33m=[39m[32m"94"[39m height[33m=[39m[32m"18"[39m fill[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    components/visuals/ChemistryTitration.tsx:216[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 215 |[39m         {mode[33m===[39m[32m'custom'[39m[33m&&[39m[33m![39mhasReacted[33m&&[39m(             [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 216 |[39m           [33m<[39m[33mmotion[39m[33m.[39mdiv initial[33m=[39m{{height[33m:[39m[35m0[39m[33m,[39mopacity[33m:[39m[35m0[39m}[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 217 |[39m             className[33m=[39m[32m"overflow-hidden border-b bor[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/Analytics.tsx:472-473[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 471 |[39m                                     [33m<[39m[33mmotion[39m[33m.[39mdiv      [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 472 |[39m                                         initial[33m=[39m{{ [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 473 |[39m                                         animate[33m=[39m{{ [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 474 |[39m                                         transition[33m=[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/Analytics.tsx:510-511[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 509 |[39m                                     [33m<[39m[33mmotion[39m[33m.[39mdiv      [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 510 |[39m                                         initial[33m=[39m{{ [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 511 |[39m                                         animate[33m=[39m{{ [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 512 |[39m                                         className[33m=[39m[32m"[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/Analytics.tsx:614-615[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 613 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 614 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 615 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 616 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/Analytics.tsx:726-727[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 725 |[39m                                             [33m<[39m[33mmotion[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 726 |[39m                                                 ini[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 727 |[39m                                                 ani[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 728 |[39m                                                 cla[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/FlashcardMode.tsx:142-143[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 141 |[39m           className[33m=[39m[32m"h-full bg-purple-500"[39m           [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 142 |[39m           initial[33m=[39m{{ width[33m:[39m [35m0[39m }}                     [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 143 |[39m           animate[33m=[39m{{ width[33m:[39m [32m`${((currentIndex) / ca[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 144 |[39m         [33m/[39m[33m>[39m[0m                                           [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/FlashcardPlayer.tsx:175-176[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 174 |[39m                 [33m<[39m[33mmotion[39m[33m.[39mdiv                          [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 175 |[39m                     initial[33m=[39m{{ width[33m:[39m [35m0[39m }}           [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 176 |[39m                     animate[33m=[39m{{ width[33m:[39m [32m`${progress}%[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 177 |[39m                     className[33m=[39m[32m"h-full bg-gradient-t[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/QuizPlayer.tsx:702-703[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 701 |[39m               className[33m=[39m[32m"h-full bg-gradient-to-r fr[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 702 |[39m               initial[33m=[39m{{ width[33m:[39m [35m0[39m }}                 [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 703 |[39m               animate[33m=[39m{{ width[33m:[39m [32m`${((currentIdx + 1[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 704 |[39m               transition[33m=[39m{{ duration[33m:[39m [35m0.5[39m }}[0m         [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/Settings.tsx:202-204[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 201 |[39m                                     [33m<[39m[33mmotion[39m[33m.[39mdiv      [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 202 |[39m                                         initial[33m=[39m{{ [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 203 |[39m                                         animate[33m=[39m{{ [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 204 |[39m                                         exit[33m=[39m{{ hei[0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 205 |[39m                                         transition[33m=[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/Settings.tsx:417-419[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 416 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 417 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 418 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 419 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 420 |[39m                                                    [0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+[90m    pages/Settings.tsx:728-730[39m
+    [2mÔöî[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÉ[22m
+    [2mÔöé[22m [0m [90m 727 |[39m                             [33m<[39m[33mmotion[39m[33m.[39mdiv              [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 728 |[39m                                 initial[33m=[39m{{ height[33m:[39m [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 729 |[39m                                 animate[33m=[39m{{ height[33m:[39m [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m [31m[1m>[22m[39m[90m 730 |[39m                                 exit[33m=[39m{{ height[33m:[39m [35m0[39m[33m,[39m [0mÔÇª [2mÔöé[22m
+    [2mÔöé[22m  [90m 731 |[39m                                 transition[33m=[39m{{ durat[0mÔÇª [2mÔöé[22m
+    [2mÔöö[22m[2mÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m[2mÔöÿ[22m
+
+  [33mÔÜá[39m [33mAccessibility: Gray text on colored background[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-gray-on-colored-background[39m
+    Your users see washed-out gray text (text-slate-950) on a
+    colored background (bg-yellow-600), so use white or a
+    darker shade of the background color.
+[2m    ÔåÆ Use white or near-white text, or a darker shade of the[22m
+[2m    background color. Gray text on colored backgrounds looks[22m
+[2m    washed out.[22m
+
+[90m    pages/TeacherDashboard.tsx:800[39m
+
+  [33mÔÜá[39m [33mMaintainability: Pure function rebuilt every render[39m [90m├ù31[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-module-scope-pure-function[39m
+    `getViewerUrl` inside `BookReader` uses no local state but
+    is rebuilt on every render, so it wastes work & breaks
+    memoized children. Move it to the top of the file, outside
+    the component.
+[2m    ÔåÆ Move the function above the component, at the top of the[22m
+[2m    file. It doesn't use local state, so rebuilding it each[22m
+[2m    update is wasted work.[22m
+
+[90m    components/BookReader.tsx:43[39m
+
+[90m    components/BubbleWrap.tsx:47[39m
+
+[90m    components/CollaborativeDoodle.tsx:201[39m
+
+[90m    components/LevelBot.tsx:133[39m
+
+[90m    components/NotificationCenter.tsx:28[39m
+
+[90m    components/PaymentSimulatorModal.tsx:51[39m
+
+[90m    components/PaymentSimulatorModal.tsx:195[39m
+
+[90m    components/PaymentSimulatorModal.tsx:205[39m
+
+[90m    components/admin/ActivityMonitor.tsx:136[39m
+
+[90m    components/admin/ActivityMonitor.tsx:148[39m
+
+[90m    components/admin/ExportTools.tsx:62[39m
+
+[90m    components/admin/ReportManagement.tsx:122[39m
+
+[90m    components/admin/RetentionChart.tsx:33[39m
+
+[90m    components/community/CallOverlay.tsx:189[39m
+
+[90m    components/community/CallsView.tsx:40[39m
+
+[90m    components/community/ChatDetailView.tsx:78-81[39m
+
+[90m    components/community/DiscussionsView.tsx:30[39m
+
+[90m    components/community/GroupCallOverlay.tsx:60[39m
+
+[90m    pages/AISummary.tsx:54[39m
+
+[90m    pages/AdminDashboard.tsx:322[39m
+
+[90m    pages/Analytics.tsx:41[39m
+
+[90m    pages/Analytics.tsx:56[39m
+
+[90m    pages/Analytics.tsx:267[39m
+
+[90m    pages/CreativeWriting.tsx:288[39m
+
+[90m    pages/Pricing.tsx:506[39m
+
+[90m    pages/Pricing.tsx:578[39m
+
+[90m    pages/QuizGenerator.tsx:40[39m
+
+[90m    pages/QuizGenerator.tsx:139[39m
+
+[90m    pages/QuizGenerator.tsx:143[39m
+
+[90m    pages/StudyPlanner.tsx:48[39m
+
+  [33mÔÜá[39m [33mMaintainability: Large component is hard to read and change[39m [90m├ù41[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-giant-component[39m
+    Component "AppContent" is 500 lines long, which is hard to
+    read & change. Split it into a few smaller components.
+[2m    ÔåÆ Pull each section into its own component so the parent is[22m
+[2m    easier to read, test, and change.[22m
+
+[90m    App.tsx:134[39m
+
+[90m    components/AILab.tsx:357[39m
+
+[90m    components/AppShell.tsx:85[39m
+
+[90m    components/AtlasLibrary.tsx:27[39m
+
+[90m    components/CollaborativeDoodle.tsx:18[39m
+
+[90m    components/LevelBot.tsx:66[39m
+
+[90m    components/PaymentSimulatorModal.tsx:17[39m
+
+[90m    components/QuizBattle.tsx:17[39m
+
+[90m    components/TicTacToe.tsx:22[39m
+
+[90m    components/WorldBrainMap.tsx:89[39m
+
+[90m    components/admin/ActivityMonitor.tsx:55[39m
+
+[90m    components/admin/CommentManagement.tsx:16[39m
+
+[90m    components/admin/ExportTools.tsx:20[39m
+
+[90m    components/admin/ReportManagement.tsx:15[39m
+
+[90m    components/admin/ShopManager.tsx:26[39m
+
+[90m    components/admin/StatisticsPanel.tsx:18[39m
+
+[90m    components/admin/TeacherModeration.tsx:34[39m
+
+[90m    components/admin/UserManagement.tsx:44[39m
+
+[90m    components/community/CallOverlay.tsx:30[39m
+
+[90m    components/community/FeedView.tsx:7[39m
+
+[90m    components/community/StoriesView.tsx:26[39m
+
+[90m    components/visuals/ChemistryTitration.tsx:108[39m
+
+[90m    hooks/useStore.tsx:61[39m
+
+[90m    pages/AISummary.tsx:27[39m
+
+[90m    pages/AdminDashboard.tsx:45[39m
+
+[90m    pages/Analytics.tsx:23[39m
+
+[90m    pages/Auth.tsx:18[39m
+
+[90m    pages/Community.tsx:18[39m
+
+[90m    pages/CreativeWriting.tsx:49[39m
+
+[90m    pages/Dashboard.tsx:65[39m
+
+[90m    pages/Flashcards.tsx:35[39m
+
+[90m    pages/Library.tsx:39[39m
+
+[90m    pages/Pricing.tsx:23[39m
+
+[90m    pages/QuizGenerator.tsx:27[39m
+
+[90m    pages/QuizPlayer.tsx:38[39m
+
+[90m    pages/Settings.tsx:38[39m
+
+[90m    pages/Shop.tsx:25[39m
+
+[90m    pages/StudyPlanner.tsx:31[39m
+
+[90m    pages/TeacherDashboard.tsx:40[39m
+
+[90m    pages/TutorHub.tsx:36[39m
+
+[90m    pages/TutorRegistration.tsx:35[39m
+
+  [33mÔÜá[39m [33mPerformance: .map().filter(Boolean) loops twice[39m [90m├ù6[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/js-flatmap-filter[39m
+    This loops over your list twice because
+    .map().filter(Boolean) makes two passes, so use .flatMap()
+    to change & drop items in one pass
+[2m    ÔåÆ Use `.flatMap(item => condition ? [value] : [])` to[22m
+[2m    change and drop items in one pass, instead of building a[22m
+[2m    throwaway array in between[22m
+
+[90m    pages/Auth.tsx:166[39m
+
+[90m    pages/TeacherDashboard.tsx:100[39m
+
+[90m    pages/TeacherDashboard.tsx:132[39m
+
+[90m    services/aiService.ts:145[39m
+
+[90m    services/tutorService.ts:282[39m
+
+[90m    services/tutorService.ts:443[39m
+
+  [33mÔÜá[39m [33mPerformance: Chained array iterations[39m [90m├ù7[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/js-combine-iterations[39m
+    This loops over your list twice because .filter().map()
+    makes two passes, so do it in one pass with .reduce() or a
+    for...of loop
+[2m    ÔåÆ Combine `.map().filter()` style chains into one pass with[22m
+[2m    `.reduce()` or a `for...of` loop, so you only loop over the[22m
+[2m    list once[22m
+
+[90m    components/WorldBrainMap.tsx:476[39m
+
+[90m    components/admin/ShopManager.tsx:226[39m
+
+[90m    pages/CreativeWriting.tsx:511[39m
+
+[90m    pages/Dashboard.tsx:696[39m
+
+[90m    pages/Ranking.tsx:218[39m
+
+[90m    services/adminService.ts:728[39m
+
+[90m    supabase/functions/gemini/index.ts:30[39m
+
+  [33mÔÜá[39m [33mBugs: Unversioned localStorage key[39m [90m├ù23[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/client-localstorage-no-version[39m
+    localStorage.setItem("levelmak_user", JSON.stringify(...))
+    has no version, so changing the data shape later crashes
+    your users' saved sessions. Add one to the key (e.g.
+    "levelmak_user:v1").
+[2m    ÔåÆ Put a version in the storage key (e.g. "myKey:v1"). If[22m
+[2m    you change the data shape later, old saved data can be[22m
+[2m    ignored instead of crashing the app.[22m
+
+[90m    hooks/store/useAuthStore.ts:79[39m
+
+[90m    hooks/store/useAuthStore.ts:105[39m
+
+[90m    hooks/store/useAuthStore.ts:159[39m
+
+[90m    hooks/store/useAuthStore.ts:176[39m
+
+[90m    hooks/store/useAuthStore.ts:190[39m
+
+[90m    hooks/store/useAuthStore.ts:204[39m
+
+[90m    hooks/store/useAuthStore.ts:224[39m
+
+[90m    hooks/store/useAuthStore.ts:238[39m
+
+[90m    hooks/store/useAuthStore.ts:272[39m
+
+[90m    hooks/store/useAuthStore.ts:281[39m
+
+[90m    hooks/store/useAuthStore.ts:391[39m
+
+[90m    hooks/store/useGamificationStore.ts:143[39m
+
+[90m    hooks/store/useGamificationStore.ts:172[39m
+
+[90m    hooks/store/useGamificationStore.ts:192[39m
+
+[90m    hooks/store/useGamificationStore.ts:215[39m
+
+[90m    hooks/store/useUIStore.ts:38[39m
+
+[90m    hooks/useStore.tsx:113[39m
+
+[90m    hooks/useStore.tsx:150[39m
+
+[90m    hooks/useStore.tsx:167[39m
+
+[90m    hooks/useStore.tsx:183[39m
+
+[90m    hooks/useStore.tsx:292[39m
+
+[90m    pages/AdminDashboard.tsx:238[39m
+
+[90m    services/adminNotificationService.ts:33[39m
+
+  [33mÔÜá[39m [33mBugs: Many related useState calls[39m [90m├ù5[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/prefer-useReducer[39m
+    "PaymentSimulatorModal" updates 6 separate useState values
+    in one place ÔÇö state that changes together is easier to
+    keep consistent as a single useReducer action.
+[2m    ÔåÆ Group state that always changes together into[22m
+[2m    `useReducer` so one dispatched action describes the whole[22m
+[2m    transition instead of a list of setter calls.[22m
+
+[90m    components/PaymentSimulatorModal.tsx:24[39m
+
+[90m    components/admin/ShopManager.tsx:26[39m
+
+[90m    pages/AdminDashboard.tsx:45[39m
+
+[90m    pages/CreativeWriting.tsx:49[39m
+
+[90m    pages/TeacherDashboard.tsx:40[39m
+
+  [33mÔÜá[39m [33mMaintainability: JSX nested too deeply[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/jsx-max-depth[39m
+    This JSX is hard to read at 15 levels deep, past the limit
+    of 14.
+[2m    ÔåÆ Pull deeply nested JSX into smaller components so it's[22m
+[2m    easier to read.[22m
+
+[90m    components/AppShell.tsx:739[39m
+
+  [33mÔÜá[39m [33mPerformance: Bouncy easing animation[39m [90m├ù8[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-inline-bounce-easing[39m
+    Your users see a dated, tacky animate-bounce, so use a
+    subtle ease-out transform for a smoother finish.
+[2m    ÔåÆ Use `cubic-bezier(0.16, 1, 0.3, 1)` (ease-out-expo) for a[22m
+[2m    natural finish. Real objects don't bounce.[22m
+
+[90m    components/CollaborativeDoodle.tsx:281[39m
+
+[90m    components/CollaborativeDoodle.tsx:505[39m
+
+[90m    components/QuizBattle.tsx:350[39m
+
+[90m    components/TicTacToe.tsx:371[39m
+
+[90m    pages/Auth.tsx:992[39m
+
+[90m    pages/Dashboard.tsx:274[39m
+
+[90m    pages/Pricing.tsx:234[39m
+
+[90m    pages/TutorRegistration.tsx:123[39m
+
+  [33mÔÜá[39m [33mPerformance: Animating scale from zero[39m [90m├ù14[39m
+    [36mLearn more: https://react.doctor/docs/rules/react-doctor/no-scale-from-zero[39m
+    This looks abrupt to your users because scale: 0 pops the
+    element in from a single point, so use scale: 0.95 with
+    opacity: 0 for a smoother entrance
+[2m    ÔåÆ Use `initial={{ scale: 0.95, opacity: 0 }}`. Elements[22m
+[2m    should gently shrink and fade, not vanish into a point[22m
+
+[90m    components/CollaborativeDoodle.tsx:306[39m
+
+[90m    components/CollaborativeDoodle.tsx:433[39m
+
+[90m    components/CollaborativeDoodle.tsx:501[39m
+
+[90m    components/FloatingBubble.tsx:20[39m
+
+[90m    components/FloatingBubble.tsx:26[39m
+
+[90m    components/QuizBattle.tsx:349[39m
+
+[90m    components/QuizBattle.tsx:412[39m
+
+[90m    components/TicTacToe.tsx:269[39m
+
+[90m    components/TicTacToe.tsx:274[39m
+
+[90m    components/TicTacToe.tsx:367[39m
+
+[90m    components/community/DiscussionsView.tsx:124[39m
+
+[90m    pages/QuizPlayer.tsx:462[39m
+
+[90m    pages/QuizPlayer.tsx:753-754[39m
+
+
+[2m  ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m
+
+  [1mAll 1397 issues[22m
+
+  [1mSecurity[22m [2m>[22m [31m7 errors[39m[2m, [22m[33m[2m10 warnings[22m[39m
+  [1mBugs[22m [2m>[22m [33m[2m687 warnings[22m[39m
+  [1mPerformance[22m [2m>[22m [31m51 errors[39m[2m, [22m[33m[2m156 warnings[22m[39m
+  [1mAccessibility[22m [2m>[22m [31m1 error[39m[2m, [22m[33m[2m405 warnings[22m[39m
+  [1mMaintainability[22m [2m>[22m [33m[2m80 warnings[22m[39m
+
+  [33mÔÜá[39m [1mMigration-scale change[22m[2m: sample before you sweep[22m
+    Button missing explicit type [90m├ù494 across 65 files[39m
+    Full Framer Motion import [90m├ù59 across 59 files[39m
+    Control missing accessible label [90m├ù212 across 51 files[39m
+[90m    +1 more rule at this scale[39m
+[2m    Fixing all of them at once is hard to review and prone to[22m
+[2m    subtle mistakes across the whole repo. Fix a representative[22m
+[2m    few first and confirm the recipe holds. Then get the code[22m
+[2m    owner's sign-off before changing the rest.[22m
+    [2mScope it down one area at a time:[22m [36mnpx react-doctor@latest <path>[39m
+
+  [31mÔöîÔöÇÔöÇÔöÇÔöÇÔöÇÔöÉ[39m  [31m0[39m [2m/ 100[22m [31mCritical[39m
+  [31mÔöé x x Ôöé[39m  [31m[39m[2m[31mÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûôÔûô[39m[22m[2mÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæÔûæ[22m
+  [31mÔöé  Ôû¢  Ôöé[39m  React Doctor [2m(https://react.doctor)[22m
+  [31mÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÿ[39m
+
+[90m  You could improve [39m[31m+39%[39m[90m by fixing the top 3 issues[39m
+[90m  Full diagnostics written to C:\Users\DELL\AppData\Local\Temp\react-doctor-984b6fe4-da89-48ee-8fb3-a578f5421f0b[39m
+
+[2m  ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ[22m
+
+  [1mShare:[22m [36mhttps://react.doctor/share?p=levelmak-pro-v1&s=0&e=59&w=1338&f=94[39m
+[2m  Tell others how you did on socials[22m
+
+  [1mDocs:[22m [36mhttps://react.doctor/docs[39m
+[2m  Learn more about fixing issues, setting up CI/CD, and[22m
+[2m  configuring rules with a config file[22m
+
+  [1mGitHub:[22m [36mhttps://github.com/millionco/react-doctor[39m
+[2m  Report issues and star the repository![22m
+

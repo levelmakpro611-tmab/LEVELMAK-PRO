@@ -139,73 +139,114 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
         return cachedStats.data;
     }
 
+    let totalUsersClean = 0;
+    let activeUsersClean = 0;
+    let newUsersToday = 0;
+    let newUsersWeek = 0;
+    let newUsersMonth = 0;
+    let newUsersYear = 0;
+    let quizzesGenerated = 0;
+    let quizzesToday = 0;
+    let flashcardsCreated = 0;
+    let flashcardsToday = 0;
+    let storiesWritten = 0;
+    let storiesToday = 0;
+    let booksRead = 0;
+    let booksToday = 0;
+    let totalLearningHours = 0;
+    let flowData: any[] = [];
+    let growthData: any[] = [];
+
+    // 1. Fetch total users count
     try {
-        // 1. Total and Active Users (Efficient counts)
-        const { count: totalUsers, error: tError } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        
+        const { count, error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        if (error) {
+            console.error('Error fetching total users count (Supabase):', error);
+        } else if (count !== null) {
+            totalUsersClean = count;
+        }
+    } catch (e) {
+        console.error('Exception fetching total users count:', e);
+    }
+
+    // 2. Fetch active users count
+    try {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const { count: activeUsers, error: aError } = await supabase
+        const { count, error } = await supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true })
             .or(`last_active.gt.${sevenDaysAgo.toISOString()},created_at.gt.${sevenDaysAgo.toISOString()}`);
-
-        // Fallback or Diagnostic for RLS: if count is 0 but we have a session, try a manual fetch
-        let statsFallbackCount = 0;
-        if ((totalUsers === 0 || totalUsers === null) && !tError) {
-             console.log('--- ADMIN RLS CHECK ---');
-             const { data: testRows, error: testError } = await supabase.from('profiles').select('id').limit(100);
-             if (testRows && testRows.length > 0) {
-                 console.warn(`ADMIN ALERT: count:exact returned 0, but select found ${testRows.length} rows. Using fallback count.`);
-                 statsFallbackCount = testRows.length;
-             } else if (testError) {
-                 console.error('ADMIN RLS ERROR during test fetch:', testError);
-             }
+        if (error) {
+            console.error('Error fetching active users count (Supabase):', error);
+        } else if (count !== null) {
+            activeUsersClean = count;
         }
+    } catch (e) {
+        console.error('Exception fetching active users count:', e);
+    }
 
-        const { data: summaryData, error: summaryError } = await supabase
+    // 3. Fetch summary data
+    let summaryData: any[] = [];
+    try {
+        const { data: dbData, error } = await supabase
             .from('profiles')
             .select('total_xp, stats, created_at, last_active')
             .limit(2000);
-        
-        // Detailed Diagnostic Logs
-        if (tError || aError || summaryError) {
-            console.error('--- Supabase Stats Diagnostic ---');
-            if (tError) console.error('Total Users Error:', tError);
-            if (aError) console.error('Active Users Error:', aError);
-            if (summaryError) console.error('Summary Data Error:', summaryError);
+        if (error) {
+            console.error('Error fetching summary data (Supabase):', error);
+        } else if (dbData) {
+            summaryData = dbData;
         }
+    } catch (e) {
+        console.error('Exception fetching summary data:', e);
+    }
 
-        // 2. New Users Today
+    // 4. Fetch new users today
+    try {
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
-        const { count: newUsersToday } = await supabase
+        const { count, error } = await supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true })
             .gt('created_at', startOfToday.toISOString());
+        if (error) {
+            console.error('Error fetching new users today (Supabase):', error);
+        } else if (count !== null) {
+            newUsersToday = count;
+        }
+    } catch (e) {
+        console.error('Exception fetching new users today:', e);
+    }
 
-        // Use empty array if data fetch failed or returned nothing
-        const data = summaryData || [];
+    // Calculate user stats from summaryData
+    const data = summaryData || [];
+    if (data.length > 0) {
+        newUsersWeek = data.filter(u => isInPeriod(u.created_at, 7)).length;
+        newUsersMonth = data.filter(u => isInPeriod(u.created_at, 30)).length;
+        newUsersYear = data.filter(u => isInPeriod(u.created_at, 365)).length;
+        quizzesGenerated = data.reduce((sum, u) => sum + (u.stats?.quizzesCompleted || 0), 0);
+        quizzesToday = data.reduce((sum, u) => sum + (isToday(u.stats?.lastQuizDate) ? 1 : 0), 0);
+        flashcardsCreated = data.reduce((sum, u) => sum + (u.stats?.flashcardsCreated || 0), 0);
+        flashcardsToday = data.reduce((sum, u) => sum + (isToday(u.stats?.lastFlashcardDate) ? 1 : 0), 0);
+        storiesWritten = data.reduce((sum, u) => sum + (u.stats?.storiesWritten || 0), 0);
+        storiesToday = data.reduce((sum, u) => sum + (isToday(u.stats?.lastStoryDate) ? 1 : 0), 0);
+        booksRead = data.reduce((sum, u) => sum + (u.stats?.booksRead || 0), 0);
+        booksToday = data.reduce((sum, u) => sum + (isToday(u.stats?.lastBookDate) ? 1 : 0), 0);
+        totalLearningHours = data.reduce((sum, u) => sum + (u.stats?.hoursLearned || 0), 0);
+    }
 
-        const quizzesGenerated = data.reduce((sum, u) => sum + (u.stats?.quizzesCompleted || 0), 0);
-        const storiesWritten = data.reduce((sum, u) => sum + (u.stats?.storiesWritten || 0), 0);
-        const booksRead = data.reduce((sum, u) => sum + (u.stats?.booksRead || 0), 0);
-        const totalLearningHours = data.reduce((sum, u) => sum + (u.stats?.hoursLearned || 0), 0);
-
-        const totalUsersClean = totalUsers || statsFallbackCount || 0;
-        const activeUsersClean = activeUsers || (statsFallbackCount > 0 ? statsFallbackCount : 0);
-
-        // Compute real flowData (last 24h)
+    // 5. Fetch flow data
+    try {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const { data: recentActivities } = await supabase
+        const { data: recentActivities, error } = await supabase
             .from('admin_logs')
             .select('timestamp')
             .eq('action', 'user_activity')
             .gt('timestamp', yesterday.toISOString());
             
         const flowMap: Record<string, number> = {};
-
         for(let i=23; i>=0; i--) {
             const d = new Date();
             d.setHours(d.getHours() - i);
@@ -213,16 +254,19 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             flowMap[`${hour}h`] = 0;
         }
 
-        if (recentActivities && recentActivities.length > 0) {
+        if (!error && recentActivities && recentActivities.length > 0) {
             recentActivities.forEach(act => {
                 const h = new Date(act.timestamp).getHours();
                 if (flowMap[`${h}h`] !== undefined) flowMap[`${h}h`]++;
             });
         }
+        flowData = Object.keys(flowMap).map(hour => ({ hour, activity: flowMap[hour] }));
+    } catch (e) {
+        console.error('Error fetching flow data:', e);
+    }
 
-        const flowData = Object.keys(flowMap).map(hour => ({ hour, activity: flowMap[hour] }));
-
-        // Compute real growthData (last 7 days registrations)
+    // 6. Growth data
+    try {
         const growthMap: Record<string, number> = {};
         for(let i=6; i>=0; i--) {
             const d = new Date();
@@ -230,6 +274,8 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             const dateStr = d.toLocaleDateString('fr-FR', { weekday: 'short' });
             growthMap[dateStr] = 0;
         }
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         data.forEach(u => {
             if (u.created_at) {
                 const d = new Date(u.created_at);
@@ -240,63 +286,55 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             }
         });
         
-        // Calculate base cumulative users from before 7 days
         const recentRegCount = data.filter(u => u.created_at && new Date(u.created_at) >= sevenDaysAgo).length;
         let cumulative = Math.max(0, totalUsersClean - recentRegCount);
-        const growthData = Object.keys(growthMap).map(date => {
+        growthData = Object.keys(growthMap).map(date => {
             cumulative += growthMap[date];
             return { date, users: cumulative };
         });
-
-        const stats: AdminStats = {
-            totalUsers: totalUsersClean,
-            activeUsers: activeUsersClean,
-            newUsersToday: newUsersToday || 0,
-            newUsersWeek: data.filter(u => isInPeriod(u.created_at, 7)).length,
-            newUsersMonth: data.filter(u => isInPeriod(u.created_at, 30)).length,
-            newUsersYear: data.filter(u => isInPeriod(u.created_at, 365)).length,
-            quizzesGenerated: quizzesGenerated || 0,
-            quizzesToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastQuizDate) ? 1 : 0), 0),
-            flashcardsCreated: data.reduce((sum, u) => sum + (u.stats?.flashcardsCreated || 0), 0),
-            flashcardsToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastFlashcardDate) ? 1 : 0), 0),
-            storiesWritten: storiesWritten || 0,
-            storiesToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastStoryDate) ? 1 : 0), 0),
-            booksRead: booksRead || 0,
-            booksToday: data.reduce((sum, u) => sum + (isToday(u.stats?.lastBookDate) ? 1 : 0), 0),
-            totalLearningHours: totalLearningHours || 0,
-            averageEngagementRate: totalUsersClean > 0 ? Number(((activeUsersClean / totalUsersClean) * 100).toFixed(1)) : 0,
-            flowData,
-            growthData
-        };
-
-        console.log(`--- [ADMIN STATS] Success --- Users: ${stats.totalUsers}, Active: ${stats.activeUsers}`);
-        cachedStats = { data: stats, timestamp: now.getTime() };
-        return stats;
-    } catch (error) {
-        console.error('CRITICAL: Error getting global stats:', error);
-        // Return blank stats instead of throwing to prevent Admin UI from breaking
-        return {
-            totalUsers: 0,
-            activeUsers: 0,
-            newUsersToday: 0,
-            newUsersWeek: 0,
-            newUsersMonth: 0,
-            newUsersYear: 0,
-            quizzesGenerated: 0,
-            quizzesToday: 0,
-            flashcardsCreated: 0,
-            flashcardsToday: 0,
-            storiesWritten: 0,
-            storiesToday: 0,
-            booksRead: 0,
-            booksToday: 0,
-            totalLearningHours: 0,
-            averageEngagementRate: 0,
-            flowData: [],
-            growthData: []
-        };
+    } catch (e) {
+        console.error('Error calculating growth data:', e);
     }
-}
+
+    // If counts are still 0 but we have summaryData, use summaryData length as fallback
+    if (totalUsersClean === 0 && data.length > 0) {
+        totalUsersClean = data.length;
+    }
+    if (activeUsersClean === 0 && data.length > 0) {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        activeUsersClean = data.filter(u => {
+            if (!u.last_active) return false;
+            return new Date(u.last_active) >= sevenDaysAgo;
+        }).length;
+        if (activeUsersClean === 0) activeUsersClean = totalUsersClean;
+    }
+
+    const stats: AdminStats = {
+        totalUsers: totalUsersClean,
+        activeUsers: activeUsersClean,
+        newUsersToday: newUsersToday || 0,
+        newUsersWeek,
+        newUsersMonth,
+        newUsersYear,
+        quizzesGenerated,
+        quizzesToday,
+        flashcardsCreated,
+        flashcardsToday,
+        storiesWritten,
+        storiesToday,
+        booksRead,
+        booksToday,
+        totalLearningHours,
+        averageEngagementRate: totalUsersClean > 0 ? Number(((activeUsersClean / totalUsersClean) * 100).toFixed(1)) : 0,
+        flowData,
+        growthData
+    };
+
+    console.log(`--- [ADMIN STATS] Success --- Users: ${stats.totalUsers}, Active: ${stats.activeUsers}`);
+    cachedStats = { data: stats, timestamp: now.getTime() };
+    return stats;
+};
 
 // ========== USER ANALYTICS ==========
 

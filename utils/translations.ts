@@ -128,6 +128,7 @@ export const translations: Record<string, any> = {
             "aiCalculator": "Calculatrice IA",
             "feedback": "Commentaire",
             "rating": "Note App",
+            "tutorHub": "Tuteurs & Coachs",
             "short": {
                 "dashboard": "Home",
                 "quiz": "Quiz",
@@ -142,7 +143,8 @@ export const translations: Record<string, any> = {
                 "planner": "Planif",
                 "social": "Social",
                 "feedback": "Avis",
-                "rating": "Note"
+                "rating": "Note",
+                "tutorHub": "Tuteurs"
             }
         },
         "aiCalculator": {
@@ -1440,6 +1442,7 @@ export const translations: Record<string, any> = {
             "aiCalculator": "AI Calculator",
             "feedback": "Feedback",
             "rating": "App Rating",
+            "tutorHub": "Tutors & Coaches",
             "short": {
                 "dashboard": "Home",
                 "quiz": "Quiz",
@@ -1454,7 +1457,8 @@ export const translations: Record<string, any> = {
                 "atlas": "Atlas",
                 "aiCalculator": "AI Calc",
                 "feedback": "Feedback",
-                "rating": "Rating"
+                "rating": "Rating",
+                "tutorHub": "Tutors"
             }
         },
         "aiCalculator": {
@@ -2693,6 +2697,7 @@ export const translations: Record<string, any> = {
             "atlas": "الأطلس الجغرافي",
             "feedback": "الآراء",
             "rating": "تقييم التطبيق",
+            "tutorHub": "المعلمون والمدربون",
             "short": {
                 "dashboard": "الرئيسية",
                 "quiz": "اختبار",
@@ -2706,7 +2711,8 @@ export const translations: Record<string, any> = {
                 "planner": "تخطيط",
                 "social": "مجتمع",
                 "feedback": "رأي",
-                "rating": "تقييم"
+                "rating": "تقييم",
+                "tutorHub": "المعلمون"
             }
         },
         "atlas": {

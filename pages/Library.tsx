@@ -490,7 +490,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {searchResults.map((book: any, idx) => (
-                            <div key={idx} className="glass p-6 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-2xl hover:border-blue-500/30 transition-all group relative overflow-hidden flex flex-col hover:-translate-y-1">
+                            <div key={book.uri || book.title || idx} className="glass p-6 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-2xl hover:border-blue-500/30 transition-all group relative overflow-hidden flex flex-col hover:-translate-y-1">
                                 <div className="absolute top-4 left-4 z-10 flex gap-2">
                                     <span className="px-2.5 py-1 bg-blue-600 text-white rounded-full text-[8px] font-black uppercase tracking-widest shadow-glow flex items-center gap-1">
                                         <Zap size={10} /> {t('library.reco')}
@@ -582,7 +582,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {livre21Books.map((book, idx) => (
-                            <div key={idx} className="glass p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-xl hover:border-green-500/30 transition-all group relative overflow-hidden flex flex-col">
+                            <div key={book.pdfUrl || book.title || idx} className="glass p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-xl hover:border-green-500/30 transition-all group relative overflow-hidden flex flex-col">
                                 <div className="absolute top-4 right-4 z-10">
                                     <span className="px-2.5 py-1 bg-green-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest">
                                         {book.category}
@@ -761,7 +761,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                                             </h4>
                                             <ul className="space-y-2">
                                                 {activeSummary.keyTakeaways.map((item: string, i: number) => (
-                                                    <li key={i} className="flex gap-2 text-sm text-slate-600 dark:text-slate-400 font-medium">
+                                                    <li key={`kt-${i}`} className="flex gap-2 text-sm text-slate-600 dark:text-slate-400 font-medium">
                                                         <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                                                         {item}
                                                     </li>
@@ -792,7 +792,7 @@ const Library: React.FC<LibraryProps> = ({ onNavigate, onQuizGenerated, onFlashc
                                                     </h4>
                                                     <div className="space-y-3">
                                                         {activeSummary.definitions.slice(0, 3).map((def: any, i: number) => (
-                                                            <div key={i}>
+                                                            <div key={def.term || `ldef-${i}`}>
                                                                 <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter">{def.term}</p>
                                                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">{def.definition}</p>
                                                             </div>

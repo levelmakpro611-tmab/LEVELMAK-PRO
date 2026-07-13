@@ -56,7 +56,7 @@ const BeakerSVG: React.FC<{
           x="13" y="130" width="94" height="18" fill={precipColor} rx="2" clipPath="url(#bc)"/>
       )}
       {hasBubbles&&isReceiving&&[18,36,58,80].map((_,i)=>(
-        <motion.circle key={i} cx={22+i*20} cy={140} r="3" fill="rgba(255,255,255,0.55)"
+        <motion.circle key={`bubble-${i}`} cx={22+i*20} cy={140} r="3" fill="rgba(255,255,255,0.55)"
           animate={{cy:[140,top+15,top-5],opacity:[0,0.8,0]}}
           transition={{duration:1.1,repeat:Infinity,delay:i*0.22,ease:'easeOut'}} clipPath="url(#bc)"/>
       ))}
@@ -420,7 +420,7 @@ export const ChemistryTitration: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {(mode==='preset' ? (t(`chemistry.reactions.${preset.id}.keyFacts`, { returnObjects: true }) as string[]) : activeResult.keyFacts).map((fact,i)=>(
-                  <div key={i} className="flex items-start gap-1.5 bg-slate-900/60 border border-white/5 rounded-xl p-2.5">
+                  <div key={`fact-${i}`} className="flex items-start gap-1.5 bg-slate-900/60 border border-white/5 rounded-xl p-2.5">
                     <span className="text-emerald-500 font-black text-xs shrink-0">✓</span>
                     <span className="text-slate-400 text-[10px] font-medium leading-relaxed">{fact}</span>
                   </div>

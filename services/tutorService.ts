@@ -9,6 +9,15 @@ import { Teacher, TeacherRating } from '../types';
 // 1. Inscription & Profil
 // ======================================================
 
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
+
 /**
  * Soumet une candidature pour devenir enseignant
  */
@@ -19,41 +28,79 @@ export const applyAsTeacher = async (
   avatarFile?: File
 ): Promise<{ data: Teacher | null; error: any }> => {
   try {
-    // 1. Créer l'entrée dans la table 'teachers'
-    const newTeacher: any = {
-      user_id: userId,
-      name: `${teacherData.firstName} ${teacherData.lastName}`,
-      first_name: teacherData.firstName,
-      last_name: teacherData.lastName,
-      bio: teacherData.bio,
-      whatsapp_number: teacherData.whatsappNumber,
-      city: teacherData.city,
-      neighborhood: teacherData.neighborhood,
-      subjects: teacherData.subjects,
-      schools: teacherData.schools,
-      type: teacherData.type,
-      status: 'pending',
-      is_available: false,
-      rating_avg: 0,
-      rating_count: 0,
-      created_at: new Date().toISOString()
-    };
-
-    // Upload Avatar if present
+    // 1. Convert avatar to Base64 Data URL if present
+    let avatarUrl = '';
     if (avatarFile) {
+      try {
+        avatarUrl = await fileToBase64(avatarFile);
+      } catch (avatarError) {
+        console.error('Error converting avatar to base64, trying fallback upload:', avatarError);
         const fileExt = avatarFile.name.split('.').pop();
         const fileName = `${userId}_${Date.now()}.${fileExt}`;
         const filePath = `avatars/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-            .from('teacher-documents')
+        let uploadBucket = 'teacher-documents';
+        let uploadResult = await supabase.storage
+            .from(uploadBucket)
             .upload(filePath, avatarFile);
 
-        if (!uploadError) {
-            const { data: publicUrl } = supabase.storage.from('teacher-documents').getPublicUrl(filePath);
-            newTeacher.avatar_url = publicUrl.publicUrl;
+        if (uploadResult.error) {
+            console.warn(`Avatar upload to ${uploadBucket} failed, trying fallback to 'assets'...`, uploadResult.error);
+            uploadBucket = 'assets';
+            uploadResult = await supabase.storage
+                .from(uploadBucket)
+                .upload(filePath, avatarFile);
         }
+
+        if (!uploadResult.error) {
+            const { data: publicUrl } = supabase.storage.from(uploadBucket).getPublicUrl(filePath);
+            avatarUrl = publicUrl.publicUrl;
+        }
+      }
     }
+
+    // 2. Convert all proofs to Base64 Data URLs
+    // ✅ Use Promise.allSettled so all files convert in parallel instead of one by one
+    const serializedProofs: any[] = [];
+    if (proofFiles && proofFiles.length > 0) {
+      const proofResults = await Promise.allSettled(
+        proofFiles.map((file, i) =>
+          fileToBase64(file).then(base64Proof => ({
+            id: `proof_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+            teacher_id: '',
+            file_url: base64Proof,
+            file_path: file.name
+          }))
+        )
+      );
+      proofResults.forEach((result, i) => {
+        if (result.status === 'fulfilled') {
+          serializedProofs.push(result.value);
+        } else {
+          console.error('Error processing proof file:', result.reason);
+        }
+      });
+    }
+
+    // 3. Build bioText including serialized proofs
+    const bioText = (teacherData.bio || '') + '||' + 
+                    (teacherData.schools || []).filter(Boolean).join(',') + '||' + 
+                    JSON.stringify(serializedProofs);
+
+    const newTeacher: any = {
+      user_id: userId,
+      name: `${teacherData.firstName} ${teacherData.lastName}`,
+      bio: bioText,
+      whatsapp_number: teacherData.whatsappNumber,
+      city: teacherData.city,
+      neighborhood: teacherData.neighborhood,
+      subjects: teacherData.subjects || [],
+      type: teacherData.type,
+      status: 'pending',
+      rating_avg: 0,
+      rating_count: 0,
+      created_at: new Date().toISOString(),
+      avatar_url: avatarUrl || null
+    };
 
     const { data: teacher, error } = await supabase
       .from('teachers')
@@ -68,38 +115,32 @@ export const applyAsTeacher = async (
         throw error;
     }
 
-    // 2. Upload des preuves dans Supabase Storage
-    if (proofFiles.length > 0) {
-      for (const file of proofFiles) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${teacher.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `proofs/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('teacher-documents')
-          .upload(filePath, file);
-
-        if (uploadError) {
-          console.error('Error uploading proof:', uploadError);
-          continue;
-        }
-
-        // Enregistrer le lien dans une table 'teacher_proofs' (optionnel, ou juste garder le chemin)
-        const { data: publicUrl } = supabase.storage.from('teacher-documents').getPublicUrl(filePath);
-        
-        const { error: proofError } = await supabase.from('teacher_proofs').insert({
-          teacher_id: teacher.id,
-          file_url: publicUrl.publicUrl,
-          file_path: filePath
-        });
-
-        if (proofError && proofError.code === '42P01') {
-            console.warn('Warning: teacher_proofs table missing. Evidence link not saved to DB.');
-        }
-      }
+    // 4. Also attempt to insert to database table for backward compatibility/admin query redundancy, but ignore errors if RLS blocks it!
+    // ✅ Insert all proofs in parallel instead of one by one in a loop
+    if (serializedProofs.length > 0) {
+      await Promise.allSettled(
+        serializedProofs.map(proof =>
+          supabase.from('teacher_proofs').insert({
+            teacher_id: teacher.id,
+            file_url: proof.file_url
+          }).then(({ error }) => {
+            if (error) console.warn('Redundant insert to teacher_proofs table skipped/failed:', error);
+          })
+        )
+      );
     }
 
-    return { data: mapToTeacher(teacher), error: null };
+    // Set correct teacher_id on mapped objects
+    const finalProofs = serializedProofs.map(p => ({ ...p, teacher_id: teacher.id }));
+    const mappedTeacher = mapToTeacher(teacher);
+    
+    return { 
+      data: {
+        ...mappedTeacher,
+        teacher_proofs: finalProofs
+      }, 
+      error: null 
+    };
   } catch (error) {
     console.error('applyAsTeacher error:', error);
     return { data: null, error };
@@ -109,7 +150,7 @@ export const applyAsTeacher = async (
 /**
  * Récupère le profil enseignant d'un utilisateur
  */
-export const getMyTeacherProfile = async (userId: string): Promise<Teacher | null> => {
+export const getMyTeacherProfile = async (userId: string): Promise<any | null> => {
   const { data, error } = await supabase
     .from('teachers')
     .select('*')
@@ -117,7 +158,24 @@ export const getMyTeacherProfile = async (userId: string): Promise<Teacher | nul
     .maybeSingle();
   
   if (error || !data) return null;
-  return mapToTeacher(data);
+  const mapped = mapToTeacher(data);
+
+  // Fetch proofs from database table for backward compatibility
+  let dbProofs: any[] = [];
+  try {
+    const { data: proofs } = await supabase
+      .from('teacher_proofs')
+      .select('*')
+      .eq('teacher_id', data.id);
+    if (proofs) dbProofs = proofs;
+  } catch (e) {
+    console.error('Error fetching db proofs:', e);
+  }
+
+  return {
+    ...mapped,
+    teacher_proofs: [...(mapped.teacher_proofs || []), ...dbProofs]
+  };
 };
 
 // ======================================================
@@ -131,18 +189,21 @@ export const getTeachers = async (filters: {
   subject?: string;
   city?: string;
   type?: 'professional' | 'benevolent';
+  neighborhood?: string;
 }): Promise<Teacher[]> => {
   let query = supabase
     .from('teachers')
     .select('*')
-    .eq('status', 'verified')
-    .eq('is_available', true);
+    .eq('status', 'verified');
 
   if (filters.subject) {
     query = query.contains('subjects', [filters.subject]);
   }
   if (filters.city) {
     query = query.eq('city', filters.city);
+  }
+  if (filters.neighborhood) {
+    query = query.eq('neighborhood', filters.neighborhood);
   }
   if (filters.type) {
     query = query.eq('type', filters.type);
@@ -184,28 +245,298 @@ export const updateAvailability = async (teacherId: string, isAvailable: boolean
  * Récupère les candidatures en attente
  */
 export const getPendingApplications = async (): Promise<any[]> => {
-  const { data, error } = await supabase
-    .from('teachers')
-    .select('*')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error('getPendingApplications error:', error);
+  try {
+    const { data: teachers, error: tError } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    
+    if (tError) {
+      console.error('getPendingApplications error:', tError);
+      return [];
+    }
+
+    if (!teachers || teachers.length === 0) return [];
+
+    const teacherIds = teachers.map(t => t.id);
+
+    // Fetch proofs for these teachers
+    let proofs: any[] = [];
+    try {
+      const { data: proofsData, error: pError } = await supabase
+        .from('teacher_proofs')
+        .select('*')
+        .in('teacher_id', teacherIds);
+
+      if (pError) {
+        console.error('Error fetching proofs:', pError);
+      } else if (proofsData) {
+        proofs = proofsData;
+      }
+    } catch (e) {
+      console.error('Error in proofs query:', e);
+    }
+
+    // Map proofs back to teachers safely
+    return teachers.map(teacher => {
+      try {
+        const mapped = mapToTeacher(teacher);
+        const dbProofsForTeacher = proofs.filter(p => p.teacher_id === teacher.id);
+        return {
+          ...mapped,
+          teacher_proofs: [...(mapped.teacher_proofs || []), ...dbProofsForTeacher]
+        };
+      } catch (e) {
+        console.error('Error mapping teacher row:', teacher, e);
+        return null;
+      }
+    }).filter(Boolean);
+  } catch (error) {
+    console.error('getPendingApplications critical error:', error);
     return [];
   }
-  return data || [];
 };
 
 /**
  * Valide ou rejette un professeur
  */
 export const moderateTeacher = async (teacherId: string, status: 'verified' | 'rejected'): Promise<void> => {
-  const { error } = await supabase
+  // 1. Get user_id first
+  const { data: teacher, error: fetchError } = await supabase
+    .from('teachers')
+    .select('user_id')
+    .eq('id', teacherId)
+    .single();
+
+  if (fetchError || !teacher) throw fetchError || new Error("Teacher not found");
+
+  const userId = teacher.user_id;
+
+  // 2. Update status in teachers table
+  const { error: updateError } = await supabase
     .from('teachers')
     .update({ status })
     .eq('id', teacherId);
   
+  if (updateError) throw updateError;
+
+  // 3. Update profiles table role
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ role: status === 'verified' ? 'teacher' : 'student' })
+    .eq('id', userId);
+
+  if (profileError) throw profileError;
+};
+
+/**
+ * Suspend un enseignant (bloque son compte au niveau profile + passe son statut en rejeté)
+ */
+export const suspendTeacher = async (teacherId: string): Promise<void> => {
+  const { data: teacher, error: fetchError } = await supabase
+    .from('teachers')
+    .select('user_id')
+    .eq('id', teacherId)
+    .single();
+
+  if (fetchError || !teacher) throw fetchError || new Error("Teacher not found");
+
+  const userId = teacher.user_id;
+
+  // 1. Passer le statut en rejeté
+  await supabase
+    .from('teachers')
+    .update({ status: 'rejected' })
+    .eq('id', teacherId);
+
+  // 2. Suspendre le compte utilisateur
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ 
+      status: 'suspended',
+      role: 'student'
+    })
+    .eq('id', userId);
+
+  if (profileError) throw profileError;
+};
+
+/**
+ * Supprime un enseignant de la base de données
+ */
+export const deleteTeacher = async (teacherId: string): Promise<void> => {
+  const { data: teacher, error: fetchError } = await supabase
+    .from('teachers')
+    .select('user_id')
+    .eq('id', teacherId)
+    .single();
+
+  if (fetchError || !teacher) throw fetchError || new Error("Teacher not found");
+
+  const userId = teacher.user_id;
+
+  // 1. Supprimer les justificatifs
+  await supabase
+    .from('teacher_proofs')
+    .delete()
+    .eq('teacher_id', teacherId);
+
+  // 2. Supprimer les notes
+  await supabase
+    .from('teacher_ratings')
+    .delete()
+    .eq('teacher_id', teacherId);
+
+  // 3. Supprimer les consultations
+  await supabase
+    .from('consultations')
+    .delete()
+    .eq('teacher_id', teacherId);
+
+  // 4. Supprimer la fiche enseignant
+  const { error: deleteError } = await supabase
+    .from('teachers')
+    .delete()
+    .eq('id', teacherId);
+
+  if (deleteError) throw deleteError;
+
+  // 5. Rétablir le rôle d'étudiant
+  await supabase
+    .from('profiles')
+    .update({ role: 'student' })
+    .eq('id', userId);
+};
+
+/**
+ * Récupère les enseignants par leur statut
+ */
+export const getTeachersByStatus = async (status: 'pending' | 'verified' | 'rejected'): Promise<any[]> => {
+  try {
+    const { data: teachers, error: tError } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('status', status)
+      .order('created_at', { ascending: false });
+    
+    if (tError) {
+      console.error(`getTeachersByStatus error for ${status}:`, tError);
+      return [];
+    }
+
+    if (!teachers || teachers.length === 0) return [];
+
+    const teacherIds = teachers.map(t => t.id);
+
+    let proofs: any[] = [];
+    try {
+      const { data: proofsData } = await supabase
+        .from('teacher_proofs')
+        .select('*')
+        .in('teacher_id', teacherIds);
+      if (proofsData) proofs = proofsData;
+    } catch (e) {
+      console.error('Error fetching proofs:', e);
+    }
+
+    return teachers.map(teacher => {
+      try {
+        const mapped = mapToTeacher(teacher);
+        const dbProofsForTeacher = proofs.filter(p => p.teacher_id === teacher.id);
+        return {
+          ...mapped,
+          teacher_proofs: [...(mapped.teacher_proofs || []), ...dbProofsForTeacher]
+        };
+      } catch (e) {
+        console.error('Error mapping teacher row:', teacher, e);
+        return null;
+      }
+    }).filter(Boolean);
+  } catch (error) {
+    console.error('getTeachersByStatus critical error:', error);
+    return [];
+  }
+};
+
+/**
+ * Envoie une notification/avertissement directement au profil d'un enseignant
+ */
+export const sendTeacherNotification = async (userId: string, title: string, message: string): Promise<void> => {
+  try {
+    const { data: profile, error: getError } = await supabase
+      .from('profiles')
+      .select('stats')
+      .eq('id', userId)
+      .single();
+
+    if (getError) throw getError;
+
+    const currentStats = profile?.stats || {};
+    const currentNotifications = currentStats.notifications || [];
+
+    const newNotification = {
+      id: `admin_notif_${Date.now()}`,
+      title,
+      message,
+      read: false,
+      timestamp: new Date().toISOString(),
+      sender: 'Administration Levelmak'
+    };
+
+    const updatedStats = {
+      ...currentStats,
+      notifications: [newNotification, ...currentNotifications]
+    };
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ stats: updatedStats })
+      .eq('id', userId);
+
+    if (updateError) throw updateError;
+  } catch (error) {
+    console.error('Error sending teacher notification:', error);
+    throw error;
+  }
+};
+
+/**
+ * Permet à un enseignant d'envoyer un commentaire de feedback
+ */
+export const submitPlatformComment = async (userId: string, userName: string, userPhone: string, content: string, category: string = 'general'): Promise<void> => {
+  const { error } = await supabase.from('user_comments').insert({
+    user_id: userId,
+    user_name: userName,
+    user_phone: userPhone,
+    content: content,
+    rating: 5,
+    category: category,
+    timestamp: new Date().toISOString(),
+    status: 'pending'
+  });
+  if (error) throw error;
+};
+
+/**
+ * Permet à un enseignant de noter l'application
+ */
+export const submitPlatformRating = async (userId: string, userName: string, score: number, comment: string): Promise<void> => {
+  const { error } = await supabase.from('user_ratings').insert({
+    user_id: userId,
+    user_name: userName,
+    overall: score,
+    comment: comment,
+    features: {
+      interface: score,
+      quiz: score,
+      coach: score,
+      flashcards: score,
+      library: score,
+      offline: score
+    },
+    timestamp: new Date().toISOString()
+  });
   if (error) throw error;
 };
 
@@ -280,26 +611,16 @@ export const getTeacherDashboardData = async (teacherId: string): Promise<{
         avgRating: number;
     }
 }> => {
-    // 1. Consultations
-    const { data: consultations } = await supabase
-        .from('consultations')
-        .select('*')
-        .eq('teacher_id', teacherId)
-        .order('timestamp', { ascending: false });
+    // ✅ Run all 3 independent queries in parallel instead of sequentially
+    const [consultationsResult, ratingsResult, teacherResult] = await Promise.all([
+        supabase.from('consultations').select('*').eq('teacher_id', teacherId).order('timestamp', { ascending: false }),
+        supabase.from('teacher_ratings').select('*').eq('teacher_id', teacherId).order('timestamp', { ascending: false }),
+        supabase.from('teachers').select('rating_avg, rating_count').eq('id', teacherId).single()
+    ]);
 
-    // 2. Ratings
-    const { data: ratings } = await supabase
-        .from('teacher_ratings')
-        .select('*')
-        .eq('teacher_id', teacherId)
-        .order('timestamp', { ascending: false });
-
-    // 3. Teacher profile for direct stats
-    const { data: teacher } = await supabase
-        .from('teachers')
-        .select('rating_avg, rating_count')
-        .eq('id', teacherId)
-        .single();
+    const consultations = consultationsResult.data;
+    const ratings = ratingsResult.data;
+    const teacher = teacherResult.data;
 
     return {
         consultations: consultations || [],
@@ -319,25 +640,99 @@ export const getTeacherDashboardData = async (teacherId: string): Promise<{
  * Transforme les données de la DB en objet Teacher (camelCase)
  */
 const mapToTeacher = (dbData: any): Teacher => {
+  const nameParts = dbData.name ? dbData.name.split(' ') : [];
+  const firstName = dbData.first_name || nameParts[0] || '';
+  const lastName = dbData.last_name || nameParts.slice(1).join(' ') || '';
+
+  const bioParts = dbData.bio ? dbData.bio.split('||') : [];
+  const bio = bioParts[0] || '';
+  const schools = bioParts[1] ? bioParts[1].split(',') : (dbData.schools || []);
+
+  let parsedProofs: any[] = [];
+  if (bioParts[2]) {
+    try {
+      parsedProofs = JSON.parse(bioParts[2]);
+    } catch (e) {
+      console.error('Error parsing embedded proofs:', e);
+    }
+  }
+
   return {
     id: dbData.id,
     userId: dbData.user_id,
     name: dbData.name,
-    firstName: dbData.first_name,
-    lastName: dbData.last_name,
-    bio: dbData.bio,
+    firstName,
+    lastName,
+    bio,
     whatsappNumber: dbData.whatsapp_number,
     city: dbData.city,
     neighborhood: dbData.neighborhood,
     subjects: dbData.subjects || [],
-    schools: dbData.schools || [],
+    schools: schools.filter(Boolean),
     type: dbData.type,
     status: dbData.status,
-    isAvailable: dbData.is_available,
+    isAvailable: dbData.is_available ?? true,
     avatar: dbData.avatar_url,
     avatarUrl: dbData.avatar_url,
     ratingAvg: dbData.rating_avg || 0,
     ratingCount: dbData.rating_count || 0,
-    createdAt: dbData.created_at
-  };
+    createdAt: dbData.created_at,
+    teacher_proofs: parsedProofs
+  } as any;
+};
+
+export const getTotalTeachersCount = async (): Promise<number> => {
+  try {
+    const { count, error } = await supabase.from('teachers').select('*', { count: 'exact', head: true });
+    if (error) throw error;
+    return count || 0;
+  } catch (error) {
+    console.error('Error fetching total teachers count:', error);
+    return 0;
+  }
+};
+
+export const updateTeacherProfile = async (
+  teacherId: string,
+  userId: string,
+  data: {
+    firstName: string;
+    lastName: string;
+    whatsappNumber: string;
+    city: string;
+    neighborhood: string;
+    bio: string;
+    schools: string[];
+    subjects: string[];
+  }
+): Promise<void> => {
+  const bioText = data.bio + '||' + data.schools.filter(Boolean).join(',');
+  
+  // 1. Update teachers table
+  const { error: teacherError } = await supabase
+    .from('teachers')
+    .update({
+      first_name: data.firstName,
+      last_name: data.lastName,
+      name: `${data.firstName} ${data.lastName}`,
+      whatsapp_number: data.whatsappNumber,
+      city: data.city,
+      neighborhood: data.neighborhood,
+      subjects: data.subjects,
+      bio: bioText
+    })
+    .eq('id', teacherId);
+
+  if (teacherError) throw teacherError;
+
+  // 2. Also sync to profiles table (name, phone_number)
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      name: `${data.firstName} ${data.lastName}`,
+      phone_number: data.whatsappNumber
+    })
+    .eq('id', userId);
+
+  if (profileError) throw profileError;
 };

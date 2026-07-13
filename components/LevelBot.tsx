@@ -14,16 +14,16 @@ const MessageFormatter: React.FC<{ text: string }> = ({ text }) => {
       {lines.map((line, idx) => {
         // Headers (## or ###)
         if (line.startsWith('### ')) {
-          return <h4 key={idx} className="text-base font-black text-accent mt-4 mb-2">{line.replace('### ', '')}</h4>;
+          return <h4 key={`line-${idx}`} className="text-base font-black text-accent mt-4 mb-2">{line.replace('### ', '')}</h4>;
         }
         if (line.startsWith('## ')) {
-          return <h3 key={idx} className="text-lg font-black text-white mt-6 mb-3 border-b border-white/10 pb-1">{line.replace('## ', '')}</h3>;
+          return <h3 key={`line-${idx}`} className="text-lg font-black text-white mt-6 mb-3 border-b border-white/10 pb-1">{line.replace('## ', '')}</h3>;
         }
 
         // List items
         if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
           return (
-            <div key={idx} className="flex gap-2 ml-2">
+            <div key={`line-${idx}`} className="flex gap-2 ml-2">
               <span className="text-primary-light">•</span>
               <span className="flex-1">{formatInline(line.trim().substring(2))}</span>
             </div>
@@ -31,32 +31,33 @@ const MessageFormatter: React.FC<{ text: string }> = ({ text }) => {
         }
 
         // Numbered lists
-        const numberedMatch = line.trim().match(/^(\d+)\.\s+(.*)/);
+        const numberedMatch = line.trim().match(/(\d+)\.\s+(.*)/);
         if (numberedMatch) {
           return (
-            <div key={idx} className="flex gap-2 ml-2">
+            <div key={`line-${idx}`} className="flex gap-2 ml-2">
               <span className="text-primary-light font-black underline decoration-accent/30">{numberedMatch[1]}.</span>
               <span className="flex-1">{formatInline(numberedMatch[2])}</span>
             </div>
           );
         }
 
-        if (line.trim() === '') return <div key={idx} className="h-2" />;
+        if (line.trim() === '') return <div key={`line-${idx}`} className="h-2" />;
 
-        return <p key={idx}>{formatInline(line)}</p>;
+        return <p key={`line-${idx}`}>{formatInline(line)}</p>;
       })}
     </div>
   );
 };
 
+
 const formatInline = (text: string) => {
   const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-black text-white decoration-primary/50 underline-offset-2">{part.slice(2, -2)}</strong>;
+      return <strong key={`part-${i}`} className="font-black text-white decoration-primary/50 underline-offset-2">{part.slice(2, -2)}</strong>;
     }
     if (part.startsWith('*') && part.endsWith('*')) {
-      return <em key={i} className="italic text-slate-300">{part.slice(1, -1)}</em>;
+      return <em key={`part-${i}`} className="italic text-slate-300">{part.slice(1, -1)}</em>;
     }
     return part;
   });
@@ -289,7 +290,7 @@ const LevelBot: React.FC = () => {
 
   return (
     <div className={`
-      fixed transition-all duration-300 z-[2000]
+      fixed transition-[opacity,transform] duration-300 z-[2000]
       bottom-0 right-0 md:bottom-6 md:right-6 
       w-full md:w-[450px] md:max-w-[calc(100vw-3rem)]
       h-[calc(100dvh-env(safe-area-inset-top))] md:h-auto md:max-h-[calc(100dvh-3rem)]
@@ -364,8 +365,8 @@ const LevelBot: React.FC = () => {
         ) : (
           <>
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 custom-scrollbar">
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                   {msg.role === 'bot' && (
                     <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/20 flex items-center justify-center mr-3 mt-1 shrink-0">
                       <Sparkles size={14} className="text-primary-light" />

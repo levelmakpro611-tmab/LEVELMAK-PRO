@@ -339,20 +339,23 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         setActiveAtlasCategory(f.type as any);
         const coords = Array.isArray(f.coords[0]) ? (f.coords as any)[0] : f.coords;
         if (typeof coords[0] === 'number') {
-            setTimeout(() => {
-                if (isMountedRef.current && mapRef.current) {
-                    try {
-                        mapRef.current.flyTo(coords, 10, { animate: true });
-                    } catch (err) {
-                        console.warn("flyTo failed in focus logic:", err);
-                    }
-                }
-                setMapFocusFeatureId(null);
-            }, 500);
+          // ✅ Store timer ID and clear on cleanup to avoid memory leaks
+          const timer = setTimeout(() => {
+              if (isMountedRef.current && mapRef.current) {
+                  try {
+                      mapRef.current.flyTo(coords, 10, { animate: true });
+                  } catch (err) {
+                      console.warn("flyTo failed in focus logic:", err);
+                  }
+              }
+              setMapFocusFeatureId(null);
+          }, 500);
+          return () => clearTimeout(timer);
         }
       }
     }
   }, [map, mapFocusFeatureId]);
+
 
   const startBattle = (request: any, isHost: boolean) => {
       setActiveBattle({ state: { ...request, status: 'active' }, questions: request.questions, isHost });
@@ -511,9 +514,9 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 );
             })}
 
-            {activeAtlasCategory === 'none' && finalUsers.map((u, i) => (
+            {activeAtlasCategory === 'none' && finalUsers.map((u) => (
                 <Marker 
-                  key={`${u.user_id}-${i}`} 
+                  key={u.user_id} 
                   position={[u.lat, u.lng]} 
                   icon={StudentIcon}
                   eventHandlers={{
@@ -580,9 +583,9 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 {filteredUsers.length === 0 ? (
                   <p className="text-center text-slate-500 text-[10px] mt-10">Aucun élève trouvé</p>
                 ) : (
-                  filteredUsers.map((u, idx) => (
+                  filteredUsers.map((u) => (
                     <div 
-                      key={`${u.user_id}-${idx}`}
+                      key={u.user_id}
                       onClick={() => {
                         if (mapRef.current) {
                             try {

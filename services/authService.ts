@@ -98,11 +98,10 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
     const conversionPromise = (async () => {
         try {
         // 1. Check for existing profile FIRST
-        const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', supabaseUser.id)
-            .single();
+        const [ { data: profile, error }, { data: teacher } ] = await Promise.all([
+            supabase.from('profiles').select('*').eq('id', supabaseUser.id).single(),
+            supabase.from('teachers').select('id, status').eq('user_id', supabaseUser.id).maybeSingle()
+        ]);
 
         if (error && error.code !== 'PGRST116') {
             console.error('Error fetching profile:', error);
@@ -128,6 +127,9 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
             }
 
             const appUser = mapProfileToUser(profile);
+            if (teacher && teacher.status === 'pending') {
+                appUser.role = 'teacher';
+            }
             return appUser;
         }
 

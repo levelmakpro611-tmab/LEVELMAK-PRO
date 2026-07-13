@@ -37,22 +37,41 @@ const Auth: React.FC = () => {
   const [activePolicyTab, setActivePolicyTab] = useState<'privacy' | 'terms'>('privacy');
   const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
   const [resetSuccess, setResetSuccess] = useState(false);
-  const [registerStep, setRegisterStep] = useState<0 | 1 | 2>(1);
+  const [registerStep, setRegisterStep] = useState<number>(0);
   const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [activateBiometric, setActivateBiometric] = useState(false);
   const [canShowBiometricToggle, setCanShowBiometricToggle] = useState(false);
 
+  // States for Teacher registration
+  const [bio, setBio] = useState('');
+  const [city, setCity] = useState('Conakry');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [tutorType, setTutorType] = useState<'professional' | 'benevolent'>('professional');
+  const [schoolsText, setSchoolsText] = useState('');
+
+  const toggleSubject = (subject: string) => {
+    setSubjects(prev => prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]);
+  };
+
+  const CONAKRY_COMMUNES = ['Kaloum', 'Dixinn', 'Matam', 'Ratoma', 'Matoto', 'Kassa', 'Gbessia', 'Lambanyi', 'Tombolia'];
+  const SUBJECTS = ['Mathématiques', 'Physique', 'Chimie', 'Biologie', 'Français', 'Anglais', 'Histoire', 'Géographie', 'Philosophie', 'Économie'];
+
   React.useEffect(() => {
     const checkBiometrics = async () => {
-      const isEnabled = await biometricService.isEnabled();
-      const isHardwareAvailable = await biometricService.isAvailable();
+      // ✅ Run both independent checks in parallel instead of sequentially
+      const [isEnabled, isHardwareAvailable] = await Promise.all([
+        biometricService.isEnabled(),
+        biometricService.isAvailable()
+      ]);
       setBiometricAvailable(isEnabled);
       setCanShowBiometricToggle(isHardwareAvailable);
     };
     checkBiometrics();
   }, []);
+
 
   const isLoading = storeLoading || localLoading;
 
@@ -61,12 +80,18 @@ const Auth: React.FC = () => {
     setEmail('');
     setPhone('');
     setPassword('');
-    setRegisterStep(1);
+    setRegisterStep(0);
     setError(null);
     setResetSuccess(false);
     setRecoveryStep(1);
     setAcceptedPolicies(false);
     setShowPolicyDetail(false);
+    setBio('');
+    setCity('Conakry');
+    setNeighborhood('');
+    setSubjects([]);
+    setTutorType('professional');
+    setSchoolsText('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,25 +114,57 @@ const Auth: React.FC = () => {
         if (role === 'teacher') {
             // Logic for Teacher
             if (registerStep === 1) {
-                if (!firstName.trim() || !lastName.trim() || (!email.trim() && !phone.trim())) {
-                    throw new Error("Veuillez remplir votre nom, prénom et contact.");
+                if (!firstName.trim() || !lastName.trim()) {
+                    throw new Error("Veuillez remplir votre nom et prénom.");
+                }
+                if (!email.trim()) {
+                    throw new Error("Veuillez renseigner votre e-mail personnel.");
+                }
+                if (!phone.trim()) {
+                    throw new Error("Veuillez renseigner votre numéro WhatsApp.");
                 }
                 setRegisterStep(2);
                 return;
             }
 
+            if (registerStep === 2) {
+                if (!city.trim()) {
+                    throw new Error("Veuillez choisir une ville.");
+                }
+                if (!neighborhood.trim()) {
+                    throw new Error("Veuillez renseigner votre commune / quartier.");
+                }
+                if (subjects.length === 0) {
+                    throw new Error("Veuillez sélectionner au moins une matière.");
+                }
+                if (!bio.trim()) {
+                    throw new Error("Veuillez rédiger une courte biographie.");
+                }
+                setRegisterStep(3);
+                return;
+            }
+
             if (!password.trim()) throw new Error(t('auth.pwRequired'));
-            if (!acceptedPolicies) throw new Error(t('auth.acceptRequired'));
             if (password.length < 6) throw new Error(t('auth.pwShort'));
+            if (proofFiles.length === 0) {
+                throw new Error("Veuillez fournir au moins un justificatif (diplômes, CV, etc.).");
+            }
+            if (!acceptedPolicies) throw new Error(t('auth.acceptRequired'));
             
             await registerTeacher({
-                firstName,
-                lastName,
-                email: email.trim() || `${phone.replace(/\D/g, '')}@levelmak.app`,
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                email: email.trim(),
                 password,
                 phone: phone.trim(),
                 avatarFile: avatarFile || undefined,
-                proofFiles
+                proofFiles,
+                bio: bio.trim(),
+                city,
+                neighborhood: neighborhood.trim(),
+                subjects,
+                schools: schoolsText.split(',').map(s => s.trim()).filter(Boolean),
+                type: tutorType
             });
 
         } else {
@@ -255,7 +312,9 @@ const Auth: React.FC = () => {
             <div className="space-y-1">
               <h1 className="text-2xl md:text-3xl font-display font-black text-white leading-tight tracking-tighter">
                 {mode === 'register' ? (
-                  <>{t('auth.joinElite').split(' ')[0]} <span className="text-blue-400 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]">{t('auth.joinElite').split(' ')[1]}</span></>
+                  <>{t('auth.joinElite').split(' ')[0]} <span className="text-blue-400 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]">{t('auth.joinElite').split(' ')[1]}</span>
+                    {role === 'teacher' && <span className="ml-2 text-[9px] bg-purple-500/20 text-purple-400 px-2.5 py-1 rounded-full font-black uppercase tracking-widest align-middle">v2</span>}
+                  </>
                 ) : mode === 'login' ? (
                   <>{t('auth.championReturn').split(' ').slice(0, 2).join(' ')} <span className="text-purple-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">{t('auth.championReturn').split(' ').slice(2).join(' ')}</span></>
                 ) : (
@@ -267,8 +326,12 @@ const Auth: React.FC = () => {
 
           {mode === 'register' && (
             <div className="flex justify-center gap-2 mb-4">
-              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 1 ? 'bg-blue-500 shadow-glow' : 'bg-white/10'}`} />
-              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 2 ? 'bg-blue-500 shadow-glow' : 'bg-white/10'}`} />
+              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 0 ? (role === 'teacher' ? 'bg-purple-500 shadow-glow-purple' : 'bg-blue-500 shadow-glow') : 'bg-white/10'}`} />
+              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 1 ? (role === 'teacher' ? 'bg-purple-500 shadow-glow-purple' : 'bg-blue-500 shadow-glow') : 'bg-white/10'}`} />
+              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 2 ? (role === 'teacher' ? 'bg-purple-500 shadow-glow-purple' : 'bg-blue-500 shadow-glow') : 'bg-white/10'}`} />
+              {role === 'teacher' && (
+                <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 3 ? 'bg-purple-500 shadow-glow-purple' : 'bg-white/10'}`} />
+              )}
             </div>
           )}
 
@@ -502,32 +565,144 @@ const Auth: React.FC = () => {
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                                  <Phone size={12} className="text-purple-500" />
-                                  {t('auth.email')}
+                                  <Mail size={12} className="text-purple-500" />
+                                  E-mail Personnel
                                 </label>
                                 <input
-                                  type="text"
+                                  type="email"
                                   required
-                                  value={phone || email}
-                                  onChange={(e) => {
-                                      const val = e.target.value;
-                                      if (val.includes('@')) {
-                                          setEmail(val);
-                                          setPhone('');
-                                      } else {
-                                          setPhone(val);
-                                          setEmail('');
-                                      }
-                                  }}
-                                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all"
-                                  placeholder="Email"
+                                  value={email}
+                                  onChange={(e) => setEmail(e.target.value)}
+                                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700"
+                                  placeholder="votre_adresse@email.com"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                                  <Phone size={12} className="text-purple-500" />
+                                  Numéro WhatsApp
+                                </label>
+                                <input
+                                  type="tel"
+                                  required
+                                  value={phone}
+                                  onChange={(e) => setPhone(e.target.value)}
+                                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700"
+                                  placeholder="Ex: +224 611 22 33 44"
                                 />
                               </div>
                             </>
                           )}
                         </div>
-                    ) : (
-                      <div className="space-y-4">
+                      ) : registerStep === 2 && role === 'teacher' ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Ville</label>
+                              <select
+                                value={city}
+                                onChange={(e) => {
+                                    setCity(e.target.value);
+                                    setNeighborhood('');
+                                }}
+                                className="w-full px-4 py-4 bg-[#0a0f1d] border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all appearance-none cursor-pointer"
+                              >
+                                <option value="Conakry" className="bg-slate-950">Conakry</option>
+                                <option value="Kindia" className="bg-slate-950">Kindia</option>
+                                <option value="Labé" className="bg-slate-950">Labé</option>
+                                <option value="Kankan" className="bg-slate-950">Kankan</option>
+                                <option value="Nzérékoré" className="bg-slate-950">Nzérékoré</option>
+                                <option value="Boké" className="bg-slate-950">Boké</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Commune / Quartier</label>
+                              {city === 'Conakry' ? (
+                                <select
+                                  value={neighborhood}
+                                  onChange={(e) => setNeighborhood(e.target.value)}
+                                  className="w-full px-4 py-4 bg-[#0a0f1d] border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all appearance-none cursor-pointer"
+                                >
+                                  <option value="" disabled className="bg-slate-950">Sélectionnez la commune</option>
+                                  {CONAKRY_COMMUNES.map(c => (
+                                      <option key={c} value={c} className="bg-slate-950">{c}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  required
+                                  value={neighborhood}
+                                  onChange={(e) => setNeighborhood(e.target.value)}
+                                  className="w-full px-5 py-4 bg-[#0a0f1d] border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all"
+                                  placeholder="Quartier..."
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex justify-between">
+                              <span>Matières Enseignées</span>
+                              <span className="text-[8px] text-purple-400">{subjects.length} sélectionnée(s)</span>
+                            </label>
+                            <div className="flex flex-wrap gap-1.5 p-1 bg-white/5 rounded-2xl max-h-[120px] overflow-y-auto custom-scrollbar">
+                              {SUBJECTS.map((sub) => {
+                                const isSelected = subjects.includes(sub);
+                                return (
+                                  <button
+                                    key={sub}
+                                    type="button"
+                                    onClick={() => toggleSubject(sub)}
+                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border ${isSelected ? 'bg-purple-600 border-purple-500 text-white shadow-glow-purple' : 'bg-white/5 border-white/10 text-slate-400'}`}
+                                  >
+                                    {sub}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Type d'Engagement</label>
+                            <div className="flex gap-2">
+                              {(['professional', 'benevolent'] as const).map((tType) => (
+                                <button
+                                  key={tType}
+                                  type="button"
+                                  onClick={() => setTutorType(tType)}
+                                  className={`flex-1 py-3.5 rounded-xl text-[10px] font-black transition-all border uppercase tracking-widest ${tutorType === tType ? 'bg-purple-600 border-purple-500 text-white shadow-glow-purple' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                                >
+                                  {tType === 'benevolent' ? 'Bénévole (Gratuit)' : 'Professionnel (Payant)'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Présentation & Bio</label>
+                            <textarea
+                              value={bio}
+                              onChange={(e) => setBio(e.target.value)}
+                              rows={2}
+                              className="w-full px-5 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-xs outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700 resize-none"
+                              placeholder="Présentez brièvement vos qualifications, diplômes et passion d'enseignement..."
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Établissements / Écoles fréquentés (Optionnel)</label>
+                            <input
+                              type="text"
+                              value={schoolsText}
+                              onChange={(e) => setSchoolsText(e.target.value)}
+                              className="w-full px-5 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-xs outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700"
+                              placeholder="Ex: École Donka, Lycée Français (séparés par des virgules)"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
                           {role === 'student' ? (
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
@@ -580,7 +755,7 @@ const Auth: React.FC = () => {
                                             ) : (
                                                 <>
                                                     <UserIcon size={20} className="text-slate-600" />
-                                                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{t('auth.uploadDoc')?.split(' ')[0]}</span>
+                                                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{t('auth.uploadDoc')?.split(' ')[0] || 'AJOUTER'}</span>
                                                 </>
                                             )}
                                         </label>
@@ -588,27 +763,64 @@ const Auth: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
                                             <Book size={12} className="text-purple-500" />
-                                            {t('auth.proofDocs')}
+                                            {t('auth.proofDocs') || 'Preuves / Justificatifs'}
                                         </label>
                                         <input 
                                             type="file" 
                                             multiple
-                                            onChange={(e) => setProofFiles(Array.from(e.target.files || []))}
+                                            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                            onChange={(e) => {
+                                                const files = Array.from(e.target.files || []);
+                                                if (proofFiles.length + files.length > 5) {
+                                                    alert("Vous ne pouvez pas charger plus de 5 justificatifs.");
+                                                    return;
+                                                }
+                                                setProofFiles(prev => [...prev, ...files]);
+                                            }}
                                             className="hidden" 
                                             id="proof-upload" 
                                         />
                                         <label htmlFor="proof-upload" className="w-full px-4 py-4 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-purple-500/50 transition-all text-center">
                                             {proofFiles.length > 0 ? (
-                                                <span className="text-[10px] text-purple-400 font-bold">{proofFiles.length} fichiers</span>
+                                                <span className="text-[10px] text-purple-400 font-bold truncate max-w-full px-2">{proofFiles.length}/5 Docs chargés</span>
                                             ) : (
                                                 <>
                                                     <Rocket size={20} className="text-slate-600" />
-                                                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Dossier</span>
+                                                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Docs (PDF, Word, Image)</span>
                                                 </>
                                             )}
                                         </label>
                                     </div>
                                 </div>
+                                {proofFiles.length > 0 && (
+                                  <div className="flex flex-col gap-2 mt-3 w-full max-h-[160px] overflow-y-auto custom-scrollbar p-1">
+                                    {proofFiles.map((file, i) => {
+                                      const isPdf = file.name.toLowerCase().endsWith('.pdf');
+                                      const isWord = file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx');
+                                      const fileSizeKB = Math.round(file.size / 1024);
+                                      return (
+                                        <div key={`${file.name}-${i}`} className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl relative group overflow-hidden w-full transition-all hover:bg-emerald-500/15">
+                                          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                                            <Book size={18} />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-black text-white truncate">{file.name}</p>
+                                            <p className="text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider mt-0.5">
+                                              {isPdf ? 'Document PDF' : isWord ? 'Document Word' : 'Image'} • {fileSizeKB} KB
+                                            </p>
+                                          </div>
+                                          <button 
+                                            type="button" 
+                                            onClick={() => setProofFiles(prev => prev.filter((_, idx) => idx !== i))} 
+                                            className="p-1 hover:bg-red-500/20 text-slate-500 hover:text-red-500 rounded-lg transition-all"
+                                          >
+                                            <X size={14} />
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
                             </div>
                           )}
 
@@ -765,8 +977,8 @@ const Auth: React.FC = () => {
               <div className="space-y-4">
                 <button
                   type="submit"
-                  disabled={isLoading || (mode === 'register' && registerStep === 2 && !acceptedPolicies)}
-                  className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all relative z-30 shadow-2xl hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-4 ${isLoading || (mode === 'register' && registerStep === 2 && !acceptedPolicies)
+                  disabled={isLoading || (mode === 'register' && ((role === 'student' && registerStep === 2) || (role === 'teacher' && registerStep === 3)) && !acceptedPolicies)}
+                  className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all relative z-30 shadow-2xl hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-4 ${isLoading || (mode === 'register' && ((role === 'student' && registerStep === 2) || (role === 'teacher' && registerStep === 3)) && !acceptedPolicies)
                     ? 'bg-slate-800 text-slate-500'
                     : mode === 'register'
                       ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40'
@@ -777,14 +989,14 @@ const Auth: React.FC = () => {
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
-                      {mode === 'register' ? (registerStep === 1 ? <ArrowRight size={20} /> : <Rocket size={20} className="animate-bounce" />) : <ArrowRight size={20} />}
+                      {mode === 'register' ? (((role === 'student' && registerStep === 1) || (role === 'teacher' && (registerStep === 1 || registerStep === 2))) ? <ArrowRight size={20} /> : <Rocket size={20} className="animate-bounce" />) : <ArrowRight size={20} />}
                       <span>
                         {mode === 'login'
                           ? t('auth.accessDashboard')
-                          : registerStep === 1
+                          : (role === 'student' && registerStep === 1) || (role === 'teacher' && (registerStep === 1 || registerStep === 2))
                             ? t('auth.continue')
                             : role === 'teacher' 
-                                ? t('auth.successTeacher')
+                                ? (t('auth.successTeacher') || "Inscription Envoyée ! 🚀")
                                 : t('auth.propelKnowledge')
                         }
                       </span>
@@ -792,7 +1004,7 @@ const Auth: React.FC = () => {
                   )}
                 </button>
 
-                {mode === 'register' && registerStep > 1 && (
+                {mode === 'register' && registerStep > 0 && (
                   <button
                     type="button"
                     onClick={() => setRegisterStep((registerStep - 1) as any)}

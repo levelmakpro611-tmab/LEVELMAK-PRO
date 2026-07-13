@@ -29,8 +29,12 @@ export const useAuthStore = () => {
 
     // Load user from LocalStorage and verify with Supabase on mount
     useEffect(() => {
+        // ✅ Keep ref to timers so we can clear them on cleanup (prevents memory leaks)
+        let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+        let loadingTimer: ReturnType<typeof setTimeout> | null = null;
+
         const initAuth = async () => {
-            const timeoutId = setTimeout(() => {
+            safetyTimer = setTimeout(() => {
                 setLoading(false);
                 console.warn("Auth initialization timed out");
             }, 5000);
@@ -45,37 +49,45 @@ export const useAuthStore = () => {
                     setUser(parsedUser);
                     
                     // Background fetch and verify latest profile status & details
-                    supabase.from('profiles').select('*').eq('id', session.user.id).single()
-                        .then(({ data, error }) => {
-                            if (error && (error.status === 401 || error.code === 'PGRST301')) {
-                                console.warn("Session is unauthorized (401), signing out...");
+                    Promise.all([
+                        supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+                        supabase.from('teachers').select('id, status').eq('user_id', session.user.id).maybeSingle()
+                    ]).then(([{ data, error }, { data: teacher }]) => {
+                        if (error && (error.status === 401 || error.code === 'PGRST301')) {
+                            console.warn("Session is unauthorized (401), signing out...");
+                            signOutUser().then(() => {
+                                setUser(null);
+                                localStorage.removeItem('levelmak_user');
+                                window.location.reload();
+                            });
+                            return;
+                        }
+                        if (data) {
+                            if (data.status === 'blocked' || data.status === 'suspended') {
                                 signOutUser().then(() => {
                                     setUser(null);
                                     localStorage.removeItem('levelmak_user');
+                                    alert("ALERTE SÉCURITÉ: Ton compte a été bloqué.");
                                     window.location.reload();
                                 });
-                                return;
-                            }
-                            if (data) {
-                                if (data.status === 'blocked' || data.status === 'suspended') {
-                                    signOutUser().then(() => {
-                                        setUser(null);
-                                        localStorage.removeItem('levelmak_user');
-                                        alert("ALERTE SÉCURITÉ: Ton compte a été bloqué.");
-                                        window.location.reload();
-                                    });
-                                } else {
-                                    const appUser = mapProfileToUser(data);
-                                    setUser(appUser);
-                                    localStorage.setItem('levelmak_user', JSON.stringify(appUser));
-                                    triggerSync(appUser.id);
+                            } else {
+                                const appUser = mapProfileToUser(data);
+                                if (teacher && teacher.status === 'pending') {
+                                    appUser.role = 'teacher';
                                 }
+                                setUser(appUser);
+                                localStorage.setItem('levelmak_user', JSON.stringify(appUser));
+                                triggerSync(appUser.id);
                             }
-                        }).catch(e => console.warn("Background check skipped", e));
+                        }
+                    }).catch(e => console.warn("Background check skipped", e));
 
                 } else if (session && !storedUser) {
                     // Session exists but local cache is gone (re-install or clear cache)
-                    const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                    const [ { data: profile, error }, { data: teacher } ] = await Promise.all([
+                        supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+                        supabase.from('teachers').select('id, status').eq('user_id', session.user.id).maybeSingle()
+                    ]);
                     if (error && (error.status === 401 || error.code === 'PGRST301')) {
                         console.warn("Session is unauthorized (401) on empty cache, signing out...");
                         await signOutUser();
@@ -86,6 +98,9 @@ export const useAuthStore = () => {
                     }
                     if (profile) {
                         const user = mapProfileToUser(profile);
+                        if (teacher && teacher.status === 'pending') {
+                            user.role = 'teacher';
+                        }
                         setUser(user);
                         localStorage.setItem('levelmak_user', JSON.stringify(user));
                         triggerSync(user.id);
@@ -99,16 +114,23 @@ export const useAuthStore = () => {
                 console.error("Auth init error:", e);
                 setUser(null);
             } finally {
-                clearTimeout(timeoutId);
+                if (safetyTimer) clearTimeout(safetyTimer);
                 // Minimum delay to present the logo beautifully
-                setTimeout(() => {
+                loadingTimer = setTimeout(() => {
                     setLoading(false);
                 }, 1500);
             }
         };
 
         initAuth();
+
+        // ✅ Cleanup: cancel pending timers if the effect re-runs or component unmounts
+        return () => {
+            if (safetyTimer) clearTimeout(safetyTimer);
+            if (loadingTimer) clearTimeout(loadingTimer);
+        };
     }, [triggerSync]);
+
 
     const addActivity = useCallback((type: Activity['type'], title: string, description: string) => {
         setUser(prev => {
@@ -327,6 +349,9 @@ export const useAuthStore = () => {
 
                         // Map database row to App User
                         const mappedUser = mapProfileToUser(dbProfile);
+                        if (user?.role === 'teacher' || localStorage.getItem('levelmak_signing_up_teacher') === 'true') {
+                            mappedUser.role = 'teacher';
+                        }
 
                         // Compare key values to prevent infinite update loop
                         const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'badges'];

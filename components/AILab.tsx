@@ -36,7 +36,7 @@ const formatAILabInline = (text: string, theme: 'light' | 'dark' = 'dark') => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
         <strong 
-          key={i} 
+          key={`part-${i}`} 
           className={`font-black underline-offset-2 ${
             theme === 'light' 
               ? 'text-slate-950 decoration-slate-950/50' 
@@ -50,7 +50,7 @@ const formatAILabInline = (text: string, theme: 'light' | 'dark' = 'dark') => {
     if (part.startsWith('*') && part.endsWith('*')) {
       return (
         <em 
-          key={i} 
+          key={`part-${i}`} 
           className={`italic ${
             theme === 'light' ? 'text-slate-600' : 'text-slate-300'
           }`}
@@ -100,8 +100,8 @@ const AILabMessageFormatter: React.FC<{
               : 'text-slate-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]'
           }`}>
             {dialogueLines.map((line, idx) => {
-              if (line.trim() === '') return <div key={idx} className="h-2" />;
-              return <p key={idx}>{formatAILabInline(line, theme === 'light' ? 'light' : 'dark')}</p>;
+              if (line.trim() === '') return <div key={`dline-${idx}`} className="h-2" />;
+              return <p key={`dline-${idx}`}>{formatAILabInline(line, theme === 'light' ? 'light' : 'dark')}</p>;
             })}
           </div>
         )}
@@ -115,8 +115,8 @@ const AILabMessageFormatter: React.FC<{
       theme === 'light' ? 'text-slate-800' : 'text-slate-200'
     }`}>
       {lines.map((line, idx) => {
-        if (line.trim() === '') return <div key={idx} className="h-2" />;
-        return <p key={idx}>{formatAILabInline(line, theme === 'light' ? 'light' : 'dark')}</p>;
+        if (line.trim() === '') return <div key={`line-${idx}`} className="h-2" />;
+        return <p key={`line-${idx}`}>{formatAILabInline(line, theme === 'light' ? 'light' : 'dark')}</p>;
       })}
     </div>
   );
@@ -227,7 +227,7 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
         <div className="flex-1 flex flex-col bg-slate-900/50 rounded-[2.5rem] border border-white/5 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar pb-40">
             {messages.map((msg, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }} animate={{ opacity: 1, x: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <motion.div key={`${msg.role}-${i}`} initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }} animate={{ opacity: 1, x: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] p-4 md:p-5 rounded-3xl text-sm md:text-base font-medium leading-relaxed ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none shadow-lg' : 'bg-white/5 text-slate-200 rounded-tl-none border border-white/5'}`}>
                   {msg.content}
                 </div>
@@ -563,7 +563,7 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
         <div className="flex-1 flex flex-col bg-slate-900/50 rounded-[2.5rem] border border-white/5 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar pb-40">
             {messages.map((msg, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: msg.role === 'assistant' ? -20 : 20 }} animate={{ opacity: 1, x: 0 }} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'} animate-fade-in`}>
+              <motion.div key={`${msg.role}-${i}`} initial={{ opacity: 0, x: msg.role === 'assistant' ? -20 : 20 }} animate={{ opacity: 1, x: 0 }} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'} animate-fade-in`}>
                 {msg.role === 'assistant' && (
                   <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/20 flex items-center justify-center mr-3 mt-1 shrink-0">
                     <Sparkles size={14} className="text-purple-400" />

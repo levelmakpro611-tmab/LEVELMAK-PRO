@@ -111,23 +111,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return () => clearInterval(interval);
   }, [user?.is_premium, user?.premium_until, user?.id]);
 
-  if (!user) {
-    console.warn('[Dashboard] User is null, showing inner loader');
-    return <WidgetLoader label="Chargement de votre profil" />;
-  }
-
-  const prevLevelRef = React.useRef(user.avatar?.currentLevel || 1);
+  // ✅ All hooks must be declared unconditionally before any early return
+  const prevLevelRef = React.useRef(user?.avatar?.currentLevel || 1);
 
   React.useEffect(() => {
-    if ((user.avatar?.currentLevel || 1) > prevLevelRef.current) {
+    if ((user?.avatar?.currentLevel || 1) > prevLevelRef.current) {
       feedbackService.fullSuccess();
-      prevLevelRef.current = user.avatar?.currentLevel || 1;
+      prevLevelRef.current = user?.avatar?.currentLevel || 1;
     }
-  }, [user.avatar?.currentLevel]);
+  }, [user?.avatar?.currentLevel]);
 
   const currentLevelInfo = React.useMemo(() =>
-    AVATAR_LEVELS.find(l => l.level === (user.avatar?.currentLevel || 1)) || AVATAR_LEVELS[0],
-    [user.avatar?.currentLevel]
+    AVATAR_LEVELS.find(l => l.level === (user?.avatar?.currentLevel || 1)) || AVATAR_LEVELS[0],
+    [user?.avatar?.currentLevel]
   );
 
   const handleToggleGoal = React.useCallback((goalId: string) => {
@@ -151,9 +147,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }, [user, updateProfile]);
 
   const xpPercentage = React.useMemo(() => {
-    const xpNeeded = getXpForNextLevel(user.avatar?.currentLevel || 1);
-    return Math.min(100, Math.max(0, (user.xp / xpNeeded) * 100));
-  }, [user.xp, user.avatar?.currentLevel]);
+    const xpNeeded = getXpForNextLevel(user?.avatar?.currentLevel || 1);
+    return Math.min(100, Math.max(0, ((user?.xp || 0) / xpNeeded) * 100));
+  }, [user?.xp, user?.avatar?.currentLevel]);
 
   const today = React.useMemo(() => new Date().toISOString().split('T')[0], []);
   
@@ -180,8 +176,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return decks.filter(d => deckIds.has(d.id));
   }, [dueFlashcards, decks]);
 
-
-
   const formatTime = React.useCallback((hours: number) => {
     if (!hours || hours === 0) return `0 ${t('dashboard.time.min')}`;
     const totalMinutes = Math.floor(hours * 60);
@@ -196,6 +190,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return `${m} ${mUnit}`;
   }, [t]);
 
+  if (!user) {
+    console.warn('[Dashboard] User is null, showing inner loader');
+    return <WidgetLoader label="Chargement de votre profil" />;
+  }
+
   return (
     <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-0 pb-24 md:pb-0">
       {/* Stats Summary Card */}
@@ -205,9 +204,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           { label: t('dashboard.stats.quiz'), value: quizzes.length, icon: BookOpenCheck, color: 'text-blue-500', glow: 'shadow-[0_0_15px_rgba(37,99,235,0.15)]', border: 'border-blue-500/10' },
           { label: t('dashboard.stats.time'), value: formatTime(user.stats?.hoursLearned || 0), icon: Clock, color: 'text-purple-500', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]', border: 'border-purple-500/10', tab: 'analytics' },
           { label: t('dashboard.stats.badges'), value: (user.badges || []).length, icon: Award, color: 'text-rose-500', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]', border: 'border-rose-500/10' },
-        ].map((stat, i) => (
+        ].map((stat) => (
           <div
-            key={i}
+            key={stat.label}
             onClick={() => stat.tab && onNavigate(stat.tab)}
             className={`glass p-3 md:p-6 rounded-xl md:rounded-[2rem] border ${stat.border} flex items-center gap-2 md:gap-5 transition-all duration-300 ${stat.tab ? 'hover:scale-[1.05] cursor-pointer' : 'hover:scale-[1.02]'} ${stat.glow} group relative overflow-hidden`}
           >
@@ -466,8 +465,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   </div>
                 ))
               ) : dailyVocab.words && dailyVocab.words.length > 0 ? (
-                dailyVocab.words.map((item, idx) => (
-                  <div key={idx} className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-blue-500/30 transition-all group">
+                dailyVocab.words.map((item) => (
+                  <div key={item.word} className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-blue-500/30 transition-all group">
                     <div className="flex items-start justify-between mb-4 md:mb-6">
                       <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
                         <BookMarked size={20} className="md:w-6 md:h-6" />

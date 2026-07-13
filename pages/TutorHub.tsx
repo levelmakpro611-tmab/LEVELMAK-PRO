@@ -29,21 +29,27 @@ const SUBJECTS = [
   'Anglais', 'Histoire', 'Géographie'
 ];
 
+const CONAKRY_COMMUNES = [
+  'Kaloum', 'Dixinn', 'Matam', 'Ratoma', 'Matoto', 'Kassa', 'Gbessia', 'Lambanyi', 'Tombolia'
+];
+
 const TutorHub: React.FC = () => {
   const { user, t } = useStore();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
+  const [selectedCommune, setSelectedCommune] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedType, setSelectedType] = useState<'professional' | 'benevolent' | ''>('');
   const [ratingTeacher, setRatingTeacher] = useState<Teacher | null>(null);
   const [userRating, setUserRating] = useState(10);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [expandedTeacherId, setExpandedTeacherId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTeachers();
-  }, [selectedCity, selectedSubject, selectedType]);
+  }, [selectedCity, selectedCommune, selectedSubject, selectedType]);
 
   const fetchTeachers = async () => {
     setLoading(true);
@@ -51,7 +57,8 @@ const TutorHub: React.FC = () => {
       const data = await getTeachers({
         city: selectedCity || undefined,
         subject: selectedSubject || undefined,
-        type: selectedType || undefined
+        type: selectedType || undefined,
+        neighborhood: selectedCommune || undefined
       });
       setTeachers(data);
     } catch (error) {
@@ -109,12 +116,26 @@ const TutorHub: React.FC = () => {
           
           <select 
             value={selectedCity} 
-            onChange={(e) => setSelectedCity(e.target.value)}
+            onChange={(e) => {
+              setSelectedCity(e.target.value);
+              setSelectedCommune('');
+            }}
             className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-[10px] font-bold outline-none focus:border-primary/50 cursor-pointer"
           >
             <option value="" className="bg-slate-900">Toutes les Villes</option>
             {GUINEA_CITIES.map(c => <option key={c} value={c} className="bg-slate-900">{c}</option>)}
           </select>
+
+          {selectedCity === 'Conakry' && (
+            <select 
+              value={selectedCommune} 
+              onChange={(e) => setSelectedCommune(e.target.value)}
+              className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-[10px] font-bold outline-none focus:border-primary/50 cursor-pointer animate-fade-in"
+            >
+              <option value="" className="bg-slate-900">Toutes les Communes</option>
+              {CONAKRY_COMMUNES.map(c => <option key={c} value={c} className="bg-slate-900">{c}</option>)}
+            </select>
+          )}
 
           <select 
             value={selectedSubject} 
@@ -157,7 +178,7 @@ const TutorHub: React.FC = () => {
             </div>
             <p className="text-slate-500 font-medium">Aucun professeur ne correspond à vos critères.</p>
             <button 
-              onClick={() => { setSelectedCity(''); setSelectedSubject(''); setSelectedType(''); setSearchQuery(''); }}
+              onClick={() => { setSelectedCity(''); setSelectedCommune(''); setSelectedSubject(''); setSelectedType(''); setSearchQuery(''); }}
               className="text-primary font-bold text-xs uppercase tracking-widest hover:underline"
             >
               Réinitialiser les filtres
@@ -179,12 +200,20 @@ const TutorHub: React.FC = () => {
 
               {/* Profile */}
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 border border-white/10 flex items-center justify-center overflow-hidden ring-4 ring-white/5">
+                <div 
+                  onClick={() => setExpandedTeacherId(expandedTeacherId === teacher.id ? null : teacher.id)}
+                  title="Cliquer pour voir la description"
+                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 border border-white/10 flex items-center justify-center overflow-hidden ring-4 ring-white/5 cursor-pointer hover:scale-105 active:scale-95 transition-all relative group/avatar"
+                >
                   {teacher.avatar ? (
                     <img src={teacher.avatar} alt={teacher.name} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-2xl font-black text-white">{teacher.name.charAt(0)}</span>
                   )}
+                  {/* Subtle info indicator overlay */}
+                  <div className="absolute inset-0 bg-black/55 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-black text-white uppercase tracking-wider">
+                    Bio ℹ️
+                  </div>
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-white flex items-center gap-2">
@@ -198,31 +227,54 @@ const TutorHub: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bio */}
-              <p className="text-xs text-slate-400 line-clamp-3 mb-6 leading-relaxed flex-grow italic">
-                "{teacher.bio}"
-              </p>
-
-              {/* Tags & Location */}
-              <div className="space-y-4 mb-8">
-                <div className="flex flex-wrap gap-1.5">
-                  {teacher.subjects.map(s => (
-                    <span key={s} className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-bold text-slate-300 border border-white/5">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin size={14} className="text-primary" />
-                    {teacher.neighborhood}, {teacher.city}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <BookOpen size={14} className="text-secondary" />
-                    {teacher.schools[0] || 'Expert Levelmak'}
-                  </div>
-                </div>
+              {/* Tags (always visible) */}
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                {teacher.subjects.map(s => (
+                  <span key={s} className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-bold text-slate-300 border border-white/5">
+                    {s}
+                  </span>
+                ))}
               </div>
+
+              {/* Collapsible Info (Bio, Location, Schools) */}
+              <AnimatePresence>
+                {expandedTeacherId === teacher.id && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="overflow-hidden mb-6 flex-grow"
+                  >
+                    {/* Bio */}
+                    <p className="text-xs text-slate-400 leading-relaxed italic mb-4">
+                      "{teacher.bio}"
+                    </p>
+
+                    {/* Location & School */}
+                    <div className="flex flex-col gap-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white/5 p-4 rounded-[1.5rem] border border-white/5">
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-primary shrink-0" />
+                        <span className="truncate">{teacher.city === 'Conakry' ? `Commune de ${teacher.neighborhood}, Conakry` : `${teacher.neighborhood}, ${teacher.city}`}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <BookOpen size={14} className="text-secondary shrink-0" />
+                        <span className="truncate">{teacher.schools[0] || 'Expert Levelmak'}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Helper notice if not expanded */}
+              {expandedTeacherId !== teacher.id && (
+                <div 
+                  onClick={() => setExpandedTeacherId(teacher.id)}
+                  className="text-[9px] font-black text-slate-600 hover:text-slate-400 uppercase tracking-wider mb-6 text-center cursor-pointer transition-colors flex-grow flex items-center justify-center"
+                >
+                  ℹ️ Cliquez sur la photo pour voir la bio & l'adresse
+                </div>
+              )}
 
               {/* Action */}
               <div className="flex gap-2">

@@ -172,9 +172,10 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
             {/* Progress Bar */}
             <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                 <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    className="h-full bg-gradient-to-r from-primary to-secondary shadow-glow"
+                    style={{ originX: 0 }}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: progress / 100 }}
+                    className="h-full bg-gradient-to-r from-primary to-secondary shadow-glow w-full"
                 />
             </div>
 

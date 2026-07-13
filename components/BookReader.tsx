@@ -147,7 +147,14 @@ const BookReader: React.FC<BookReaderProps> = ({ book, onClose }) => {
                     title={book.title}
                     allowFullScreen
                     onLoad={() => setIsLoading(false)}
+                    // ✅ Security: sandbox restricts iframe capabilities.
+                    // allow-scripts: needed for PDF viewer JS
+                    // allow-same-origin: needed for Google Docs viewer cookies
+                    // allow-forms: needed for viewer controls
+                    // allow-popups: needed for external links
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                 />
+
 
                 {/* Forced Fallback if it keeps being blank */}
                 {!isLoading && (

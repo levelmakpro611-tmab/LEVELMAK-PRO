@@ -23,7 +23,7 @@ import { ShopItem } from '../types';
 import { getAllShopItems, getDeterministicUUID } from '../services/adminService';
 
 const Shop: React.FC = () => {
-    const { user, purchaseItem, equipItem, purchasePotion, usePotion, t } = useStore();
+    const { user, purchaseItem, equipItem, purchasePotion, consumePotion, t } = useStore();
     const [activeTab, setActiveTab] = useState<'all' | 'avatar' | 'badge' | 'potion' | 'wallpaper' | 'owned'>('all');
     const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
     const [items, setItems] = useState<ShopItem[]>([]);
@@ -34,13 +34,16 @@ const Shop: React.FC = () => {
 
     // Load items from Firestore
     useEffect(() => {
-        const loadItems = async () => {
-            // Safety timeout to ensure loader disappears no matter what
-            const safetyTimeout = setTimeout(() => {
+        // ✅ Declare outside the async fn so we can clear in cleanup
+        let cancelled = false;
+        const safetyTimeout = setTimeout(() => {
+            if (!cancelled) {
                 setLoading(false);
                 console.warn('Shop: Safety timeout triggered');
-            }, 10000);
+            }
+        }, 10000);
 
+        const loadItems = async () => {
             try {
                 // Timeout logic to avoid hanging indefinitely
                 const fetchWithTimeout = (promise: Promise<any>, ms: number) => {
@@ -60,6 +63,8 @@ const Shop: React.FC = () => {
                     console.warn('Shop fetch timed out or failed, using fallbacks', e);
                     firestoreItems = [];
                 }
+
+                if (cancelled) return;
 
                 const potionIds = new Set(POTIONS.map(p => getDeterministicUUID(p.id)));
                 const potionItems: ShopItem[] = POTIONS.map(p => ({
@@ -85,29 +90,39 @@ const Shop: React.FC = () => {
                     ...hardcodedItemsWithUuid.filter(item => !dbIds.has(item.id)),
                     ...potionItems.filter(item => !dbIds.has(item.id))
                 ];
-                
-                setItems(mergedItems);
+
+                if (!cancelled) setItems(mergedItems);
             } catch (error) {
                 console.error('Error loading shop items:', error);
-                const potionItems: ShopItem[] = POTIONS.map(p => ({
-                    ...p,
-                    originalId: p.id,
-                    id: getDeterministicUUID(p.id),
-                    category: 'potion' as const
-                }));
-                const hardcodedItemsWithUuid = HARDCODED_ITEMS.map(item => ({
-                    ...item,
-                    originalId: item.id,
-                    id: getDeterministicUUID(item.id)
-                }));
-                setItems([...hardcodedItemsWithUuid, ...potionItems]);
+                if (!cancelled) {
+                    const potionItems: ShopItem[] = POTIONS.map(p => ({
+                        ...p,
+                        originalId: p.id,
+                        id: getDeterministicUUID(p.id),
+                        category: 'potion' as const
+                    }));
+                    const hardcodedItemsWithUuid = HARDCODED_ITEMS.map(item => ({
+                        ...item,
+                        originalId: item.id,
+                        id: getDeterministicUUID(item.id)
+                    }));
+                    setItems([...hardcodedItemsWithUuid, ...potionItems]);
+                }
             } finally {
                 clearTimeout(safetyTimeout);
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
+
         loadItems();
+
+        // ✅ Cleanup: cancel state updates and clear timer on unmount
+        return () => {
+            cancelled = true;
+            clearTimeout(safetyTimeout);
+        };
     }, []);
+
 
 const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
 
@@ -147,7 +162,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
         const translatedName = t(`items.${item.id}.name`);
         const displayName = translatedName.startsWith('items.') ? item.name : translatedName;
 
-        usePotion(item.id, item.originalId);
+        consumePotion(item.id, item.originalId);
         setPurchaseSuccess(`${t('shop.active')}: ${displayName}`);
         setTimeout(() => setPurchaseSuccess(null), 3000);
     };

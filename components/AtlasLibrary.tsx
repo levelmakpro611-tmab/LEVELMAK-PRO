@@ -38,9 +38,12 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
         setSelectedLesson(lesson);
       }
       // Reset after a short delay so user can go back and forth
-      setTimeout(() => setAtlasFocusFeatureId(null), 1000);
+      // ✅ Store timer ID and clear it on cleanup to avoid memory leaks
+      const timer = setTimeout(() => setAtlasFocusFeatureId(null), 1000);
+      return () => clearTimeout(timer);
     }
   }, [atlasFocusFeatureId, setAtlasFocusFeatureId]);
+
 
   const categories = [
     { id: 'all', label: t('atlas.all'), icon: Globe, color: 'text-slate-400' },
@@ -267,8 +270,8 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
 
                   {/* Fact Cards */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
-                    {selectedLesson.keyFacts.map((fact, i) => (
-                      <div key={i} className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5">
+                    {selectedLesson.keyFacts.map((fact) => (
+                      <div key={fact.label} className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5">
                         <p className="text-[10px] font-black uppercase text-slate-400 mb-1 tracking-wider">
                           {t(`atlas.labels.${fact.label}`)}
                         </p>

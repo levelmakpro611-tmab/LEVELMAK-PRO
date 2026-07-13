@@ -239,7 +239,7 @@ const StudyPlanner: React.FC = () => {
                         <Calendar size={14} className="animate-pulse" /> {t('planner.strategic')}
                     </div>
                     <h1 className="text-3xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">
-                        {t('planner.successScheduled').split(' ').map((word, i) => i === 1 ? <span key={i} className="text-gradient-primary"> {word} </span> : word + ' ')}
+                        {t('planner.successScheduled').split(' ').map((word, i) => i === 1 ? <span key={`word-${i}`} className="text-gradient-primary"> {word} </span> : word + ' ')}
                     </h1>
                     <p className="text-slate-400 max-w-xl font-medium leading-relaxed">
                         {t('planner.subtitle')}
@@ -284,7 +284,7 @@ const StudyPlanner: React.FC = () => {
                                                 initial={{ opacity: 0, scale: 0.8 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 exit={{ opacity: 0, scale: 0.8 }}
-                                                key={i}
+                                                key={sub}
                                                 className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] text-white font-bold flex items-center gap-2 group"
                                             >
                                                 {sub}
@@ -309,7 +309,7 @@ const StudyPlanner: React.FC = () => {
                                     {files.map((f) => (
                                         <div key={f.id} className="relative aspect-square rounded-xl overflow-hidden group border border-white/10 bg-white/5">
                                             {f.type === 'image' ? (
-                                                <img src={f.preview} className="w-full h-full object-cover" />
+                                                <img src={f.preview} alt="Aperçu du fichier" className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
                                                     <FileText size={20} className="text-primary mb-1" />
@@ -393,8 +393,8 @@ const StudyPlanner: React.FC = () => {
                                 <div className="hidden md:flex flex-col items-end gap-2">
                                     <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{t('planner.topicsIdentified')}</span>
                                     <div className="flex gap-2">
-                                        {plan.extractedTopics.slice(0, 3).map((topic, i) => (
-                                            <span key={i} className="px-3 py-1 bg-accent/10 border border-accent/20 text-accent-light rounded-lg text-[9px] font-bold">{topic}</span>
+                                        {plan.extractedTopics.slice(0, 3).map((topic) => (
+                                            <span key={topic} className="px-3 py-1 bg-accent/10 border border-accent/20 text-accent-light rounded-lg text-[9px] font-bold">{topic}</span>
                                         ))}
                                     </div>
                                 </div>

@@ -46,11 +46,14 @@ export const syncService = {
       const customDbQuizzes = dbQuizzes || [];
 
       // Push custom local quizzes not in DB
-      for (const localQ of customLocalQuizzes) {
-        if (!customDbQuizzes.some(dbQ => dbQ.id === localQ.id)) {
-          console.log(`[Sync] Pushing new local quiz: ${localQ.title}`);
-          await contentService.saveQuiz(userId, localQ);
-        }
+      const quizzesToPush = customLocalQuizzes.filter(localQ => !customDbQuizzes.some(dbQ => dbQ.id === localQ.id));
+      if (quizzesToPush.length > 0) {
+        await Promise.all(
+          quizzesToPush.map(localQ => {
+            console.log(`[Sync] Pushing new local quiz: ${localQ.title}`);
+            return contentService.saveQuiz(userId, localQ);
+          })
+        );
       }
 
       // Merge: Union of local and DB quizzes
@@ -74,11 +77,14 @@ export const syncService = {
       const dbStoriesList = dbStories || [];
 
       // Push local stories not in DB
-      for (const localS of localStories) {
-        if (!dbStoriesList.some(dbS => dbS.id === localS.id)) {
-          console.log(`[Sync] Pushing new local story: ${localS.title}`);
-          await contentService.saveStory(userId, localS);
-        }
+      const storiesToPush = localStories.filter(localS => !dbStoriesList.some(dbS => dbS.id === localS.id));
+      if (storiesToPush.length > 0) {
+        await Promise.all(
+          storiesToPush.map(localS => {
+            console.log(`[Sync] Pushing new local story: ${localS.title}`);
+            return contentService.saveStory(userId, localS);
+          })
+        );
       }
 
       // Merge stories
@@ -108,12 +114,15 @@ export const syncService = {
       const dbCards = dbDecksAndCards?.cards || [];
 
       // Push local decks and their cards to DB
-      for (const localD of customLocalDecks) {
-        if (!dbDecks.some(dbD => dbD.id === localD.id)) {
-          console.log(`[Sync] Pushing new local deck: ${localD.title}`);
-          const deckCards = customLocalCards.filter(c => c.deckId === localD.id);
-          await contentService.saveFlashcardDeck(userId, localD, deckCards);
-        }
+      const decksToPush = customLocalDecks.filter(localD => !dbDecks.some(dbD => dbD.id === localD.id));
+      if (decksToPush.length > 0) {
+        await Promise.all(
+          decksToPush.map(localD => {
+            console.log(`[Sync] Pushing new local deck: ${localD.title}`);
+            const deckCards = customLocalCards.filter(c => c.deckId === localD.id);
+            return contentService.saveFlashcardDeck(userId, localD, deckCards);
+          })
+        );
       }
 
       // Merge decks

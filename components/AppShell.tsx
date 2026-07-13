@@ -228,6 +228,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     { id: 'shop', label: t('nav.shop'), shortLabel: t('nav.short.shop'), icon: ShoppingBag },
     { id: 'planner', label: t('nav.planner'), shortLabel: t('nav.short.planner'), icon: Calendar, hideOnMobile: true },
     { id: 'social', label: t('nav.social'), shortLabel: t('nav.short.social'), icon: Layers, hideOnMobile: true },
+    { id: 'tutor_hub', label: t('nav.tutorHub'), shortLabel: t('nav.short.tutorHub'), icon: GraduationCap },
     { id: 'feedback', label: t('nav.feedback'), shortLabel: t('nav.short.feedback'), icon: MessageSquare, onClick: () => setIsFeedbackOpen(true) },
     { id: 'rating', label: t('nav.rating'), shortLabel: t('nav.short.rating'), icon: Star, onClick: () => setIsRatingOpen(true) },
   ];
@@ -235,7 +236,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !Capacitor.isNativePlatform();
   let navItems = isLocal
     ? navItemsRaw
-    : navItemsRaw.filter(item => !['tutor_hub', 'planner', 'library'].includes(item.id));
+    : navItemsRaw.filter(item => !['planner', 'library', 'tutor_hub'].includes(item.id));
 
   if (!user) return <>{children}</>;
 

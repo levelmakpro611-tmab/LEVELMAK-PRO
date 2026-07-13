@@ -28,6 +28,10 @@ const SUBJECTS = [
   'Anglais', 'Histoire', 'Géographie', 'Informatique'
 ];
 
+const CONAKRY_COMMUNES = [
+  'Kaloum', 'Dixinn', 'Matam', 'Ratoma', 'Matoto', 'Kassa', 'Gbessia', 'Lambanyi', 'Tombolia'
+];
+
 const TutorRegistration: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const { user, t } = useStore();
   const [step, setStep] = useState(1);
@@ -68,7 +72,12 @@ const TutorRegistration: React.FC<{ onComplete: () => void }> = ({ onComplete })
       if (type === 'avatar') {
         setAvatar(e.target.files[0]);
       } else {
-        setProofs(prev => [...prev, ...Array.from(e.target.files!)]);
+        const newFiles = Array.from(e.target.files);
+        if (proofs.length + newFiles.length > 5) {
+          setError("Vous ne pouvez pas charger plus de 5 justificatifs.");
+          return;
+        }
+        setProofs(prev => [...prev, ...newFiles]);
       }
     }
   };
@@ -79,6 +88,14 @@ const TutorRegistration: React.FC<{ onComplete: () => void }> = ({ onComplete })
 
   const handleSubmit = async () => {
     if (!user) return;
+    if (formData.city === 'Conakry' && !formData.neighborhood) {
+        setError("Veuillez sélectionner votre commune de Conakry.");
+        return;
+    }
+    if (!formData.neighborhood || !formData.neighborhood.trim()) {
+        setError("Veuillez renseigner votre commune ou secteur.");
+        return;
+    }
     if (proofs.length === 0) {
         setError("Veuillez ajouter au moins une preuve (diplôme ou attestation).");
         return;
@@ -299,21 +316,34 @@ const TutorRegistration: React.FC<{ onComplete: () => void }> = ({ onComplete })
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">Ville</label>
                   <select 
                     value={formData.city}
-                    onChange={e => setFormData({...formData, city: e.target.value})}
+                    onChange={e => setFormData({...formData, city: e.target.value, neighborhood: ''})}
                     className="w-full p-4 bg-black/5 dark:bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-primary/50 text-white font-bold accent-primary"
                   >
                     {GUINEA_CITIES.map(c => <option key={c} value={c} className="bg-slate-900">{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">Quartier / Zone</label>
-                  <input 
-                    type="text"
-                    value={formData.neighborhood}
-                    onChange={e => setFormData({...formData, neighborhood: e.target.value})}
-                    className="w-full p-4 bg-black/5 dark:bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-primary/50 text-white font-bold"
-                    placeholder="Ex: Kaloum, Kaporo, Sangoyah..."
-                  />
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">
+                    {formData.city === 'Conakry' ? 'Commune de Conakry' : 'Commune / Secteur'}
+                  </label>
+                  {formData.city === 'Conakry' ? (
+                    <select
+                      value={formData.neighborhood}
+                      onChange={e => setFormData({...formData, neighborhood: e.target.value})}
+                      className="w-full p-4 bg-black/5 dark:bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-primary/50 text-white font-bold accent-primary"
+                    >
+                      <option value="" className="bg-slate-900">Sélectionner une commune...</option>
+                      {CONAKRY_COMMUNES.map(c => <option key={c} value={c} className="bg-slate-900">{c}</option>)}
+                    </select>
+                  ) : (
+                    <input 
+                      type="text"
+                      value={formData.neighborhood}
+                      onChange={e => setFormData({...formData, neighborhood: e.target.value})}
+                      className="w-full p-4 bg-black/5 dark:bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-primary/50 text-white font-bold"
+                      placeholder="Ex: Commune Urbaine, Centre-ville..."
+                    />
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -333,7 +363,7 @@ const TutorRegistration: React.FC<{ onComplete: () => void }> = ({ onComplete })
               </div>
               
               <p className="text-xs text-slate-500">
-                Veuillez télécharger une photo de votre diplôme ou d'une attestation d'enseignement. Ces documents resteront confidentiels et ne serviront qu'à votre validation par l'équipe Levelmak.
+                Veuillez télécharger les photos ou documents (PDF, Word, etc.) de vos diplômes ou attestations d'enseignement. Ces documents resteront confidentiels et ne serviront qu'à votre validation par l'équipe Levelmak.
               </p>
 
               <div className="space-y-4">
@@ -341,13 +371,13 @@ const TutorRegistration: React.FC<{ onComplete: () => void }> = ({ onComplete })
                   <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
                     <Upload size={24} />
                   </div>
-                  <span className="text-xs font-bold text-slate-400">Cliquez pour ajouter des photos</span>
-                  <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleFileChange(e, 'proof')} />
+                  <span className="text-xs font-bold text-slate-400">Cliquez pour ajouter des fichiers (Image, PDF, Word...)</span>
+                  <input type="file" multiple accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={e => handleFileChange(e, 'proof')} />
                 </label>
 
                 <div className="grid grid-cols-2 gap-2">
                   {proofs.map((file, i) => (
-                    <div key={i} className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between">
+                    <div key={`${file.name}-${i}`} className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between">
                       <span className="text-[10px] font-bold text-slate-300 truncate max-w-[80px]">{file.name}</span>
                       <button onClick={() => removeFile(i)} className="text-danger hover:scale-110 transition-transform">
                         <X size={14} />

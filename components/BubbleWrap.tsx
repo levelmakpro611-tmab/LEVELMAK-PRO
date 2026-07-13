@@ -94,11 +94,14 @@ export const BubbleWrap: React.FC<BubbleWrapProps> = ({ onClose }) => {
         spread: 70,
         origin: { y: 0.6 }
       });
-      setTimeout(() => {
+      // ✅ Store timer ID and clear on cleanup to avoid memory leaks
+      const timer = setTimeout(() => {
         resetWrap();
       }, 1500);
+      return () => clearTimeout(timer);
     }
   }, [poppedCount, GRID_SIZE]);
+
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
@@ -128,9 +131,10 @@ export const BubbleWrap: React.FC<BubbleWrapProps> = ({ onClose }) => {
           </div>
           <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
             <motion.div 
-              className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
-              initial={{ width: '100%' }}
-              animate={{ width: `${(timeLeft / 60) * 100}%` }}
+              className="h-full bg-gradient-to-r from-blue-500 to-purple-600 w-full"
+              style={{ originX: 0 }}
+              initial={{ scaleX: 1 }}
+              animate={{ scaleX: timeLeft / 60 }}
               transition={{ duration: 1, ease: 'linear' }}
             />
           </div>
@@ -144,7 +148,7 @@ export const BubbleWrap: React.FC<BubbleWrapProps> = ({ onClose }) => {
               
               return (
                 <motion.button
-                  key={idx}
+                  key={`cell-${idx}`}
                   whileTap={{ scale: 0.8 }}
                   onClick={() => handlePop(idx)}
                   className={`aspect-square rounded-full transition-all duration-200 flex items-center justify-center relative overflow-hidden shadow-inner ${

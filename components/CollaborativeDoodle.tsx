@@ -418,7 +418,7 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
         >
           {grid.map((color, i) => (
             <motion.div
-              key={i}
+              key={`pixel-${i}`}
               whileHover={battle.status === 'active' && grid[i] === '#ffffff' && !abandonedByOpponent ? { scale: 1.1, backgroundColor: '#334155', zIndex: 10 } : {}}
               onClick={() => handlePixelClick(i)}
               className={`w-full h-full cursor-pointer relative transition-colors duration-200 ${grid[i] === '#ffffff' ? 'hover:shadow-lg' : ''}`}

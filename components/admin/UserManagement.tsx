@@ -97,9 +97,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
     };
 
     const filteredUsers = users.filter(user => {
-        const matchesSearch = user.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (user.phoneNumber && user.phoneNumber.includes(searchTerm));
+        const uName = user.userName || '';
+        const uEmail = user.email || '';
+        const uPhone = user.phoneNumber || '';
+        const matchesSearch = uName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            uEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            uPhone.includes(searchTerm);
         const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
         return matchesSearch && matchesStatus;
     });
@@ -278,11 +281,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black shadow-lg">
-                                                {user.userName.substring(0, 2).toUpperCase()}
+                                                {(user.userName || 'Utilisateur').substring(0, 2).toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{user.userName}</p>
-                                                <p className="text-[10px] text-slate-500">{user.email}</p>
+                                                <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{user.userName || 'Utilisateur'}</p>
+                                                <p className="text-[10px] text-slate-500">{user.email || 'N/A'}</p>
                                                 {user.phoneNumber && <p className="text-[10px] text-slate-500 font-bold">{user.phoneNumber}</p>}
                                             </div>
                                         </div>
@@ -387,12 +390,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                     <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl space-y-6 md:space-y-8 animate-in zoom-in-95 duration-300 my-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 text-center sm:text-left">
                             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-3xl sm:text-4xl text-white font-black shadow-2xl shrink-0">
-                                {selectedUser.userName.substring(0, 2).toUpperCase()}
+                                {(selectedUser.userName || 'Utilisateur').substring(0, 2).toUpperCase()}
                             </div>
                             <div className="min-w-0 w-full">
-                                <h3 className="text-2xl sm:text-3xl font-black text-white break-words">{selectedUser.userName}</h3>
+                                <h3 className="text-2xl sm:text-3xl font-black text-white break-words">{selectedUser.userName || 'Utilisateur'}</h3>
                                 <p className="text-slate-400 flex items-center justify-center sm:justify-start gap-2 mt-1 truncate">
-                                    <Mail size={14} className="shrink-0" /> <span className="truncate">{selectedUser.email}</span>
+                                    <Mail size={14} className="shrink-0" /> <span className="truncate">{selectedUser.email || 'N/A'}</span>
                                 </p>
                                 <p className="text-slate-400 flex items-center justify-center sm:justify-start gap-2 mt-0.5">
                                     <Phone size={14} className="shrink-0" /> {selectedUser.phoneNumber || 'Non renseigné'}

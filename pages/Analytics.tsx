@@ -466,7 +466,7 @@ const Analytics: React.FC = () => {
 
                     <div className="flex items-end justify-between h-48 md:h-64 gap-2 md:gap-4 relative z-10">
                         {weeklyData.map((day, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
+                            <div key={day.label} className="flex-1 flex flex-col items-center gap-3 group">
                                 <div className="w-full relative flex flex-col justify-end h-full">
                                     <motion.div
                                         initial={{ height: 0 }}

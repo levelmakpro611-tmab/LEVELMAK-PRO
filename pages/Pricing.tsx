@@ -360,7 +360,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">Ce qui est inclus dans votre accès PRO :</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {premiumFeatures.map((f, i) => (
-                                <div key={i} className="backdrop-blur-xl bg-slate-950/40 p-5 rounded-3xl border border-white/5 flex flex-col gap-3 hover:border-blue-500/20 transition-all duration-350 shadow-lg shadow-black/10 group">
+                                <div key={f.title} className="backdrop-blur-xl bg-slate-950/40 p-5 rounded-3xl border border-white/5 flex flex-col gap-3 hover:border-blue-500/20 transition-all duration-350 shadow-lg shadow-black/10 group">
                                     <div className="flex justify-between items-center">
                                         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${f.color}`}>
                                             <f.icon className="w-5 h-5" />
@@ -1238,7 +1238,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                     { label: "Date d'achat :", value: receiptData.purchasedAt, cls: 'text-white' },
                                     { label: 'Référence :', value: receiptData.transactionId, cls: 'text-white font-mono text-[10px]' },
                                 ].map((row, i, arr) => (
-                                    <div key={i} className={`flex justify-between items-center px-4 py-3 ${i < arr.length - 1 ? 'border-b border-slate-800/70' : ''}`}>
+                                    <div key={row.label} className={`flex justify-between items-center px-4 py-3 ${i < arr.length - 1 ? 'border-b border-slate-800/70' : ''}`}>
                                         <span className="text-slate-400 text-[12px]">{row.label}</span>
                                         <span className={`${row.cls} text-[12px] text-right ml-4`}>{row.value}</span>
                                     </div>

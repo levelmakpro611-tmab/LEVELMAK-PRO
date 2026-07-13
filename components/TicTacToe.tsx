@@ -258,7 +258,7 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                     const isWinningCell = winningLine?.includes(i);
                     return (
                         <motion.button
-                            key={i}
+                            key={`cell-${i}`}
                             whileHover={{ scale: cell ? 1 : 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleMove(i)}

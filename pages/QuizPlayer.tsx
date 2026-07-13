@@ -36,7 +36,7 @@ interface QuizPlayerProps {
 }
 
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
-  const { user, addXp, addActivity, trackTime, usePotion, betLevelCoins, addLevelCoins, updateSRSMetadata, plantInGarden, saveQuiz, t, updateProfile } = useStore();
+  const { user, addXp, addActivity, trackTime, consumePotion, betLevelCoins, addLevelCoins, updateSRSMetadata, plantInGarden, saveQuiz, t, updateProfile } = useStore();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isSaved, setIsSaved] = useState(false);
@@ -137,9 +137,9 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     }
   };
 
-  const useSkipPotion = () => {
+  const handleSkipPotion = () => {
     if (isAnswered || !consumables['potion_skip']) return;
-    usePotion('potion_skip');
+    consumePotion('potion_skip');
     setEncouragement(t('quiz.player.feedback.skip'));
     setIsAnswered(true);
     setTimeout(nextQuestion, 1500);
@@ -220,9 +220,9 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     doc.save(`Resultats_Quiz_${title.replace(/\s+/g, '_')}.pdf`);
   };
 
-  const useShieldPotion = () => {
+  const handleShieldPotion = () => {
     if (isAnswered || shieldActive || !consumables['potion_shield']) return;
-    usePotion('potion_shield');
+    consumePotion('potion_shield');
     setShieldActive(true);
   };
 
@@ -511,7 +511,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              key={i}
+              key={stat.label}
               className="glass p-6 rounded-[2rem] border border-white/5 text-center space-y-2"
             >
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{stat.label}</p>
@@ -551,7 +551,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                     </h4>
                     <ul className="space-y-3">
                       {quiz.keyPoints.map((pt, i) => (
-                        <li key={i} className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 group hover:border-primary/30 transition-colors">
+                        <li key={`pt-${i}`} className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 group hover:border-primary/30 transition-colors">
                           <Check className="text-primary mt-1 shrink-0" size={14} />
                           <span className="text-xs text-slate-300 font-medium group-hover:text-white transition-colors">{pt}</span>
                         </li>
@@ -566,7 +566,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                       </h4>
                       <div className="space-y-3">
                         {quiz.definitions.map((def, i) => (
-                          <div key={i} className="bg-white/5 p-3 rounded-xl border border-white/5 group hover:border-secondary/30 transition-colors">
+                          <div key={def.term || `def-${i}`} className="bg-white/5 p-3 rounded-xl border border-white/5 group hover:border-secondary/30 transition-colors">
                             <p className="font-bold text-white text-xs mb-1 group-hover:text-secondary-light transition-colors">{def.term}</p>
                             <p className="text-[10px] text-slate-500 font-medium leading-relaxed uppercase tracking-wide">{def.definition}</p>
                           </div>
@@ -664,7 +664,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
             {/* Potion Buttons */}
             {consumables['potion_shield'] > 0 && (
               <button
-                onClick={useShieldPotion}
+                onClick={handleShieldPotion}
                 disabled={isAnswered || shieldActive}
                 className={`p-1 rounded-xl border flex items-center gap-1.5 transition-all overflow-hidden ${shieldActive ? 'bg-primary/20 border-primary/40 text-primary animate-pulse' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
                 title={t('quiz.player.potions.shield')}
@@ -677,7 +677,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
             )}
             {consumables['potion_skip'] > 0 && (
               <button
-                onClick={useSkipPotion}
+                onClick={handleSkipPotion}
                 disabled={isAnswered}
                 className="p-1 bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl flex items-center gap-1.5 transition-all overflow-hidden"
                 title={t('quiz.player.potions.skip')}
@@ -698,9 +698,10 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         <div className="px-4 mb-4 md:px-8 md:mb-8">
           <div className="h-1.5 md:h-2 w-full bg-white/5 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-primary to-secondary"
-              initial={{ width: 0 }}
-              animate={{ width: `${((currentIdx + 1) / quiz.questions.length) * 100}%` }}
+              className="h-full bg-gradient-to-r from-primary to-secondary w-full"
+              style={{ originX: 0 }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: quiz.questions.length > 0 ? (currentIdx + 1) / quiz.questions.length : 0 }}
               transition={{ duration: 0.5 }}
             />
           </div>
@@ -734,7 +735,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
                   return (
                     <button
-                      key={i}
+                      key={`opt-${i}`}
                       disabled={isAnswered}
                       onClick={() => handleOptionClick(i)}
                       className={`
@@ -803,7 +804,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         <div className="p-4 md:p-6 bg-slate-950/50 border-t border-white/5 flex items-center justify-between relative z-0">
           <div className="flex gap-1 overflow-x-auto max-w-[60%] py-1">
             {quiz.questions.map((_, i) => (
-              <div key={i} className={`h-1.5 w-4 md:w-6 rounded-full transition-colors flex-shrink-0 ${i < currentIdx ? 'bg-success' : i === currentIdx ? 'bg-primary animate-pulse' : 'bg-white/5'}`}></div>
+              <div key={`dot-${i}`} className={`h-1.5 w-4 md:w-6 rounded-full transition-colors flex-shrink-0 ${i < currentIdx ? 'bg-success' : i === currentIdx ? 'bg-primary animate-pulse' : 'bg-white/5'}`}></div>
             ))}
           </div>
           <div className="flex items-center gap-2">

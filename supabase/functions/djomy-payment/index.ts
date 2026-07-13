@@ -395,6 +395,19 @@ serve(async (req) => {
     // ACTION: CREATE CHECKOUT SESSION
     const { planId, amount, payerNumber, returnUrl, duration, simulate } = requestBody;
 
+    // Verify user is not a teacher (teachers cannot purchase subscriptions)
+    const [ { data: dbProfile }, { data: dbTeacher } ] = await Promise.all([
+      supabaseAdmin.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+      supabaseAdmin.from("teachers").select("id").eq("user_id", user.id).maybeSingle()
+    ]);
+
+    if (dbProfile?.role === "teacher" || dbTeacher) {
+      return new Response(JSON.stringify({ error: "Les enseignants ne peuvent pas souscrire d'abonnement." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!amount || !payerNumber || !returnUrl || !duration) {
       return new Response(JSON.stringify({ error: "Champs obligatoires manquants" }), {
         status: 400,

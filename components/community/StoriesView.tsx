@@ -4,6 +4,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { chatService, LearningStory } from '../../services/communityService';
 import { useStore } from '../../hooks/useStore';
 
+// ✅ Moved to module scope to avoid re-creation on every render (was causing remounts & state loss)
+const StoryRing = ({ size = 64, active = true }: { size?: number; active?: boolean }) => {
+    return (
+        <div className="absolute inset-0 flex items-center justify-center p-1">
+            <motion.div
+                animate={active ? { rotate: 360 } : {}}
+                transition={active ? { duration: 8, repeat: Infinity, ease: "linear" } : {}}
+                className="w-full h-full rounded-full border-2 border-transparent bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500"
+                style={{ 
+                    WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                    WebkitMaskComposite: "xor",
+                    maskComposite: "exclude",
+                    padding: '2px'
+                }}
+            />
+        </div>
+    );
+};
+
 const StoriesView: React.FC = () => {
     const { user } = useStore();
     const [stories, setStories] = useState<LearningStory[]>([]);
@@ -146,25 +165,6 @@ const StoriesView: React.FC = () => {
             setCurrentStoryIndex(0);
             setProgress(0);
         }
-    };
-
-    // Premium Gradient Ring SVG
-    const StoryRing = ({ size = 64, active = true }: { size?: number; active?: boolean }) => {
-        return (
-            <div className="absolute inset-0 flex items-center justify-center p-1">
-                <motion.div
-                    animate={active ? { rotate: 360 } : {}}
-                    transition={active ? { duration: 8, repeat: Infinity, ease: "linear" } : {}}
-                    className="w-full h-full rounded-full border-2 border-transparent bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500"
-                    style={{ 
-                        WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-                        WebkitMaskComposite: "xor",
-                        maskComposite: "exclude",
-                        padding: '2px'
-                    }}
-                />
-            </div>
-        );
     };
 
     return (
@@ -348,8 +348,8 @@ const StoriesView: React.FC = () => {
                     >
                         {/* Bars */}
                         <div className="absolute top-4 inset-x-4 z-20 flex gap-1.5 px-2">
-                            {groupedStories[viewingUser].stories.map((_: any, idx: number) => (
-                                <div key={idx} className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+                            {groupedStories[viewingUser].stories.map((story: any, idx: number) => (
+                                <div key={story.id || `bar-${idx}`} className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
                                     <motion.div
                                         className="h-full bg-white rounded-full"
                                         initial={{ width: 0 }}
@@ -517,7 +517,7 @@ const StoriesView: React.FC = () => {
                                 <div className="flex items-center justify-center gap-2 py-3">
                                     {['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#a18cd1', '#fccb90', '#0c3483', '#1e293b', '#000'].map((color, i) => (
                                         <button
-                                            key={i}
+                                            key={color}
                                             onClick={() => setBgColorIndex(i)}
                                             className={`w-6 h-6 rounded-full border-2 transition-all ${bgColorIndex === i ? 'border-white scale-125' : 'border-transparent scale-100'}`}
                                             style={{ backgroundColor: color }}

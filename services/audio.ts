@@ -30,7 +30,8 @@ class AudioService {
             // Initialize AudioContext on first user interaction to comply with autoplay policies
             window.addEventListener('click', () => this.initContext(), { once: true });
             window.addEventListener('keydown', () => this.initContext(), { once: true });
-            window.addEventListener('touchstart', () => this.initContext(), { once: true });
+            // ✅ { passive: true } prevents scroll jank — initContext never calls preventDefault()
+            window.addEventListener('touchstart', () => this.initContext(), { once: true, passive: true });
         }
     }
 

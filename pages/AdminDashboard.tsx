@@ -17,7 +17,7 @@ import {
     exportUserData,
     resetAllRatings
 } from '../services/adminService';
-import { getPendingApplications } from '../services/tutorService';
+import { getPendingApplications, getTotalTeachersCount } from '../services/tutorService';
 import {
     AdminStats,
     AdminUserAnalytics,
@@ -50,6 +50,7 @@ const AdminDashboard: React.FC = () => {
     const [comments, setComments] = useState<UserComment[]>([]);
     const [ratings, setRatings] = useState<PlatformRating[]>([]);
     const [teacherApps, setTeacherApps] = useState<any[]>([]);
+    const [totalTeachers, setTotalTeachers] = useState(0);
     const [averageRatings, setAverageRatings] = useState<any>(null);
     const [demographicStats, setDemographicStats] = useState<any>(null);
     const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
@@ -138,11 +139,12 @@ const AdminDashboard: React.FC = () => {
         const cachedOverview = localStorage.getItem('admin_cache_overview');
         if (cachedOverview) {
             try {
-                const { stats, comments, ratings, teacherApps, averageRatings } = JSON.parse(cachedOverview);
+                const { stats, comments, ratings, teacherApps, totalTeachers: cachedTotalTeachers, averageRatings } = JSON.parse(cachedOverview);
                 if (stats) setStats(stats);
                 if (comments) setComments(comments);
                 if (ratings) setRatings(ratings);
                 if (teacherApps) setTeacherApps(teacherApps);
+                if (cachedTotalTeachers !== undefined) setTotalTeachers(cachedTotalTeachers);
                 if (averageRatings) setAverageRatings(averageRatings);
                 setLoading(false);
             } catch (e) { console.error("Error parsing admin cache", e); }
@@ -202,19 +204,28 @@ const AdminDashboard: React.FC = () => {
         try {
             switch (tab) {
                 case 'overview':
-                    const [sData, cData, rData, avgR, tData] = await Promise.allSettled([
+                    const [sData, cData, rData, avgR, tData, teachersCountResult] = await Promise.allSettled([
                         getGlobalStats(period), 
                         getAllComments(50), 
                         getAllRatings(50), 
                         getAverageRatings(),
-                        getPendingApplications()
+                        getPendingApplications(),
+                        getTotalTeachersCount()
                     ]);
                     
+                    if (sData.status === 'rejected') console.error('getGlobalStats rejected:', sData.reason);
+                    if (cData.status === 'rejected') console.error('getAllComments rejected:', cData.reason);
+                    if (rData.status === 'rejected') console.error('getAllRatings rejected:', rData.reason);
+                    if (avgR.status === 'rejected') console.error('getAverageRatings rejected:', avgR.reason);
+                    if (tData.status === 'rejected') console.error('getPendingApplications rejected:', tData.reason);
+                    if (teachersCountResult.status === 'rejected') console.error('getTotalTeachersCount rejected:', teachersCountResult.reason);
+
                     const newStats = sData.status === 'fulfilled' ? sData.value : null;
                     const newComments = cData.status === 'fulfilled' ? cData.value : [];
                     const newRatings = rData.status === 'fulfilled' ? rData.value : [];
                     const newTeacherApps = tData.status === 'fulfilled' ? tData.value : [];
                     const newAvgR = avgR.status === 'fulfilled' ? avgR.value : null;
+                    const newTotalTeachers = teachersCountResult.status === 'fulfilled' ? teachersCountResult.value : 0;
 
                     if (newStats) setStats(newStats);
                     else if (!stats) setStats(DEFAULT_STATS); // Prevent infinite skeleton state
@@ -222,29 +233,45 @@ const AdminDashboard: React.FC = () => {
                     setComments(newComments);
                     setRatings(newRatings);
                     setTeacherApps(newTeacherApps);
+                    setTotalTeachers(newTotalTeachers);
                     setAverageRatings(newAvgR || { overall: 0, totalRatings: 0, features: {} });
-
-                    // Sync to cache
                     localStorage.setItem('admin_cache_overview', JSON.stringify({
                         stats: newStats || DEFAULT_STATS,
                         comments: newComments,
                         ratings: newRatings,
                         teacherApps: newTeacherApps,
+                        totalTeachers: newTotalTeachers,
                         averageRatings: newAvgR || { overall: 0, totalRatings: 0, features: {} },
                         timestamp: Date.now()
                     }));
                     break;
                 case 'users':
-                    try { setUsers(await getUserAnalytics(100)); } catch { setUsers([]); }
+                    try {
+                        const result = await getUserAnalytics(100);
+                        setUsers(result);
+                    } catch (e) {
+                        console.error('getUserAnalytics failed:', e);
+                        setUsers([]);
+                    }
                     break;
                 case 'comments':
-                    try { setComments(await getAllComments(50)); } catch { setComments([]); }
+                    try {
+                        const result = await getAllComments(50);
+                        setComments(result);
+                    } catch (e) {
+                        console.error('getAllComments failed:', e);
+                        setComments([]);
+                    }
                     break;
                 case 'ratings':
                     try {
                         const [ratingsData, avgRatingsData] = await Promise.all([getAllRatings(50), getAverageRatings()]);
-                        setRatings(ratingsData); setAverageRatings(avgRatingsData);
-                    } catch { setRatings([]); }
+                        setRatings(ratingsData);
+                        setAverageRatings(avgRatingsData);
+                    } catch (e) {
+                        console.error('ratings/averageRatings load failed:', e);
+                        setRatings([]);
+                    }
                     break;
                 case 'stats':
                     if (!demographicStats) {
@@ -780,6 +807,8 @@ const AdminDashboard: React.FC = () => {
                                             comments={comments} 
                                             averageRatings={averageRatings} 
                                             onNavigate={setActiveTab}
+                                            teacherApps={teacherApps}
+                                            totalTeachers={totalTeachers}
                                         />
                                     ) : (
                                         <div className="space-y-6">
@@ -822,21 +851,24 @@ interface OverviewTabProps {
     users: AdminUserAnalytics[];
     comments: UserComment[];
     averageRatings: any;
+    teacherApps: any[];
+    totalTeachers: number;
     onNavigate: (tab: Tab) => void;
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, averageRatings, onNavigate }) => (
+const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, averageRatings, teacherApps, totalTeachers, onNavigate }) => (
     <div className="space-y-4 md:space-y-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
             <StatCard onClick={() => onNavigate('users')} title="Utilisateurs" value={stats.totalUsers} subtitle={`${stats.activeUsers} actifs`} icon={<Users size={20} />} color="from-blue-500 to-cyan-500" trend="+12%" />
             <StatCard onClick={() => onNavigate('monitor')} title="Quiz Générés" value={stats.quizzesGenerated} subtitle={`${stats.quizzesToday} aujourd'hui`} icon={<Activity size={20} />} color="from-purple-500 to-pink-500" trend="+8%" />
             <StatCard onClick={() => onNavigate('stats')} title="Flashcards" value={stats.flashcardsCreated} subtitle={`${stats.flashcardsToday} aujourd'hui`} icon={<BarChart3 size={20} />} color="from-orange-500 to-red-500" trend="+15%" />
             <StatCard onClick={() => onNavigate('retention')} title="Engagement" value={`${stats.averageEngagementRate.toFixed(1)}%`} subtitle="Taux d'activité" icon={<TrendingUp size={20} />} color="from-green-500 to-emerald-500" trend="+5%" />
+            <StatCard onClick={() => onNavigate('teachers')} title="Enseignants" value={totalTeachers} subtitle={`${teacherApps.length} en attente`} icon={<Shield size={20} />} color="from-yellow-500 to-amber-500" trend="Nouveau" />
         </div>
 
         {/* Activity Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-background-card backdrop-blur-xl rounded-2xl border border-black/5 dark:border-white/10 p-4 md:p-6 transition-colors shadow-sm">
                 <h3 className="text-sm md:text-base font-black text-slate-900 dark:text-white mb-3 flex items-center gap-2 transition-colors">
                     <Activity size={18} className="text-blue-500 dark:text-blue-400" /> Activité Récente
@@ -869,6 +901,27 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ stats, users, comments, avera
                         { label: 'Rejetés', value: comments.filter(c => c.status === 'rejected').length, color: 'bg-red-500' },
                     ].map((item, idx) => (
                         <div key={idx} className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-white/5 rounded-lg px-2 transition-all" onClick={() => onNavigate('comments')}>
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${item.color} shrink-0`}></div>
+                                <span className="text-xs md:text-sm text-slate-600 dark:text-slate-300 transition-colors">{item.label}</span>
+                            </div>
+                            <span className="text-slate-900 dark:text-white font-bold text-sm transition-colors">{item.value}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="bg-background-card backdrop-blur-xl rounded-2xl border border-black/5 dark:border-white/10 p-4 md:p-6 transition-colors shadow-sm">
+                <h3 className="text-sm md:text-base font-black text-slate-900 dark:text-white mb-3 flex items-center gap-2 transition-colors">
+                    <Shield size={18} className="text-yellow-500" /> Enseignants
+                </h3>
+                <div className="space-y-2">
+                    {[
+                        { label: 'Candidatures en attente', value: teacherApps.length, color: 'bg-yellow-500' },
+                        { label: 'Enseignants Validés', value: Math.max(0, totalTeachers - teacherApps.length), color: 'bg-green-500' },
+                        { label: 'Total Enseignants', value: totalTeachers, color: 'bg-blue-500' },
+                    ].map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-white/5 rounded-lg px-2 transition-all" onClick={() => onNavigate('teachers')}>
                             <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${item.color} shrink-0`}></div>
                                 <span className="text-xs md:text-sm text-slate-600 dark:text-slate-300 transition-colors">{item.label}</span>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, X, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 
 const DebugConsole: React.FC = () => {
-  const [logs, setLogs] = useState<{ type: string, message: string, timestamp: string }[]>([]);
+  const [logs, setLogs] = useState<{ id: number, type: string, message: string, timestamp: string }[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -12,12 +12,14 @@ const DebugConsole: React.FC = () => {
     const originalError = console.error;
     const originalWarn = console.warn;
 
+    let logId = 0;
     const addLog = (type: string, args: any[]) => {
       const message = args.map(arg => 
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
       ).join(' ');
       
       setLogs(prev => [...prev, { 
+        id: ++logId,
         type, 
         message, 
         timestamp: new Date().toLocaleTimeString() 
@@ -84,8 +86,8 @@ const DebugConsole: React.FC = () => {
 
       {!isMinimized && (
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-[10px] custom-scrollbar bg-black/50">
-          {logs.map((log, i) => (
-            <div key={i} className={`flex gap-3 pb-2 border-b border-white/5 ${log.type === 'error' ? 'text-red-400' : log.type === 'warn' ? 'text-amber-400' : 'text-slate-300'}`}>
+          {logs.map((log) => (
+            <div key={log.id} className={`flex gap-3 pb-2 border-b border-white/5 ${log.type === 'error' ? 'text-red-400' : log.type === 'warn' ? 'text-amber-400' : 'text-slate-300'}`}>
               <span className="opacity-30 shrink-0">[{log.timestamp}]</span>
               <span className="break-words whitespace-pre-wrap">{log.message}</span>
             </div>

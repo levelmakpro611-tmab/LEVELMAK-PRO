@@ -251,7 +251,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [auth]);
 
   // 2. Specialized Actions (that bridge multiple slices)
-  const changePassword = async (oldPw: string, newPw: string) => {
+  // ✅ Wrapped in useCallback so its reference is stable between renders.
+  // Without this, the useMemo that assembles the context value runs every render
+  // because changePassword would be a brand-new function object each time.
+  const changePassword = useCallback(async (oldPw: string, newPw: string) => {
     auth.setLoading(true);
     try {
       await apiChangePassword(oldPw, newPw);
@@ -259,11 +262,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } finally {
       auth.setLoading(false);
     }
-  };
+  }, [auth]);
+
 
   const registerTeacher = useCallback(async (data: any) => {
     auth.setLoading(true);
     try {
+      localStorage.setItem('levelmak_signing_up_teacher', 'true');
       const { signUpWithEmail } = await import('../services/authService');
       const { applyAsTeacher } = await import('../services/tutorService');
 
@@ -274,19 +279,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           name: `${data.firstName} ${data.lastName}`,
           firstName: data.firstName,
           lastName: data.lastName,
-          bio: '',
+          bio: data.bio || '',
           whatsappNumber: data.phone,
-          city: '',
-          neighborhood: '',
-          subjects: [],
-          schools: [],
-          type: 'professional'
+          city: data.city || '',
+          neighborhood: data.neighborhood || '',
+          subjects: data.subjects || [],
+          schools: data.schools || [],
+          type: data.type || 'professional'
         }, data.proofFiles, data.avatarFile);
 
         auth.setUser({ ...newUser, role: 'teacher' } as any);
         localStorage.setItem('levelmak_user', JSON.stringify({ ...newUser, role: 'teacher' }));
       }
+      localStorage.removeItem('levelmak_signing_up_teacher');
     } catch (e: any) {
+      localStorage.removeItem('levelmak_signing_up_teacher');
       addNotification({ type: 'error', title: 'Erreur d\'inscription', message: e.message || 'Impossible de créer le compte enseignant.' });
       throw e;
     } finally {

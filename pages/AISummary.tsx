@@ -296,7 +296,7 @@ const AISummary: React.FC<{
                                                         className="relative aspect-square rounded-xl md:rounded-3xl border border-white/10 overflow-hidden group/item bg-white/5"
                                                     >
                                                         {f.type === 'image' ? (
-                                                            <img src={f.preview} className="w-full h-full object-cover" />
+                                                            <img src={f.preview} alt="Aperçu du fichier" className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full flex flex-col items-center justify-center space-y-2 p-4">
                                                                 <FileText className="w-6 h-6 md:w-8 md:h-8 text-blue-500" />
@@ -454,7 +454,7 @@ const AISummary: React.FC<{
                                     </h3>
                                     <div className="grid gap-3">
                                         {(summary?.keyPoints || []).map((point: string, i: number) => (
-                                            <div key={i} className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-blue-500/20 transition-all group">
+                                            <div key={`kp-${i}`} className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-blue-500/20 transition-all group">
                                                 <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center text-[10px] font-black shrink-0">
                                                     {i + 1}
                                                 </div>
@@ -491,7 +491,7 @@ const AISummary: React.FC<{
                                         </h3>
                                         <div className="space-y-4">
                                             {(summary?.definitions || []).map((def: any, i: number) => (
-                                                <div key={i} className="space-y-1">
+                                                <div key={def?.term || `def-${i}`} className="space-y-1">
                                                     <p className="text-sm font-black text-white">{def?.term}</p>
                                                     <p className="text-xs text-slate-500 font-medium leading-relaxed italic">"{def?.definition}"</p>
                                                 </div>

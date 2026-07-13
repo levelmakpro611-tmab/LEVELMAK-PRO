@@ -264,6 +264,19 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                         </div>
                                                     </div>
 
+                                                    <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                        <div>
+                                                            <h4 className="font-bold text-sm text-white">Vous êtes enseignant ?</h4>
+                                                            <p className="text-xs text-slate-500">Candidater pour proposer vos cours et soutenir les élèves de Levelmak.</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => onNavigate?.('tutor_registration')}
+                                                            className="px-6 py-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl font-bold text-xs transition-all uppercase tracking-wider"
+                                                        >
+                                                            Devenir Enseignant
+                                                        </button>
+                                                    </div>
+
                                                     <div className="pt-4 flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             {showSuccess && (

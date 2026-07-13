@@ -495,10 +495,11 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
         <div className="mb-4 md:mb-6 w-full max-w-sm mx-auto">
           <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
             <motion.div
-              initial={{ width: '100%' }}
-              animate={{ width: `${(timeLeft / 15) * 100}%` }}
+              style={{ originX: 0 }}
+              initial={{ scaleX: 1 }}
+              animate={{ scaleX: timeLeft / 15 }}
               transition={{ duration: 1, ease: 'linear' }}
-              className={`h-full ${timeLeft <= 5 ? 'bg-red-500' : 'bg-emerald-500'}`}
+              className={`h-full w-full ${timeLeft <= 5 ? 'bg-red-500' : 'bg-emerald-500'}`}
             />
           </div>
           <p className={`mt-1.5 font-black text-xl md:text-2xl ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>{timeLeft}s</p>
@@ -534,7 +535,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
             }
             
             return (
-              <button key={idx} disabled={showResult} onClick={() => submitAnswer(idx)}
+              <button key={`option-${idx}`} disabled={showResult} onClick={() => submitAnswer(idx)}
                 className={`w-full p-3.5 md:p-4 rounded-xl md:rounded-2xl border-2 font-bold text-sm text-left transition-all flex items-center justify-between active:scale-[0.98] ${btnStyle}`}>
                 <div className="flex items-center gap-3">
                   <span>{option}</span>

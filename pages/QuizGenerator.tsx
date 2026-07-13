@@ -457,7 +457,7 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
                             exit={{ opacity: 0, scale: 0.8 }}
                             className="relative aspect-square rounded-2xl md:rounded-3xl border border-white/10 overflow-hidden group/item bg-white/5"
                           >
-                            <img src={f.preview} className="w-full h-full object-cover" />
+                            <img src={f.preview} alt="Aperçu du fichier" className="w-full h-full object-cover" />
                             <button
                               onClick={() => removeFile(f.id)}
                               className="absolute top-2 right-2 p-2 bg-red-500/80 text-white rounded-xl md:opacity-0 md:group-hover/item:opacity-100 transition-opacity z-20"

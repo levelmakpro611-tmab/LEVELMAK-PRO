@@ -47,7 +47,7 @@ import { supabase } from '../services/supabase';
 const CATEGORY_KEYS = ['story', 'poem', 'column', 'essay', 'other'] as const;
 
 const CreativeWriting: React.FC = () => {
-        const { user, stories, saveStory, deleteStory, addXp, usePotion, t, settings, addNotification } = useStore();
+        const { user, stories, saveStory, deleteStory, addXp, consumePotion, t, settings, addNotification } = useStore();
     const language = settings.language;
     const consumables = user?.consumables || {};
     const [activeTab, setActiveTab] = useState<'write' | 'my-stories' | 'discover' | 'saved'>('write');
@@ -282,15 +282,25 @@ const CreativeWriting: React.FC = () => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     const [editorMode, setEditorMode] = React.useState<'edit' | 'preview'>('edit');
 
+    // ✅ Security: replaced dangerouslySetInnerHTML with proper React nodes.
+    // Splits on **bold** and *italic* markers to produce <strong>/<em> elements
+    // with no XSS surface — user content is never injected as raw HTML.
     const parseInlineStyles = (text: string) => {
-        let html = text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>');
-        return <span dangerouslySetInnerHTML={{ __html: html }} />;
+        const segments = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+        return (
+            <span>
+                {segments.map((segment, i) => {
+                    if (segment.startsWith('**') && segment.endsWith('**') && segment.length > 4) {
+                        return <strong key={i}>{segment.slice(2, -2)}</strong>;
+                    } else if (segment.startsWith('*') && segment.endsWith('*') && segment.length > 2) {
+                        return <em key={i}>{segment.slice(1, -1)}</em>;
+                    }
+                    return segment || null;
+                })}
+            </span>
+        );
     };
+
 
     const renderMarkdown = (text: string) => {
         if (!text.trim()) {
@@ -634,7 +644,7 @@ const CreativeWriting: React.FC = () => {
                 if (jsonMatch) data = JSON.parse(jsonMatch[0]);
             } catch (e) { console.error("JSON parse failed", e); }
 
-            usePotion('potion_inspiration');
+            consumePotion('potion_inspiration');
             setTitle(data.title);
             setContent(data.content);
             setAiSuggestions(prev => [
@@ -1054,7 +1064,7 @@ const CreativeWriting: React.FC = () => {
                                                         </div>
                                                     ) : (
                                                         writingAnalysis.corrections.map((corr, i) => (
-                                                            <div key={i} className="p-5 bg-danger/5 border border-danger/10 rounded-2xl space-y-3 group hover:border-danger/30 transition-all relative overflow-hidden">
+                                                            <div key={corr.original || `corr-${i}`} className="p-5 bg-danger/5 border border-danger/10 rounded-2xl space-y-3 group hover:border-danger/30 transition-all relative overflow-hidden">
                                                                 <div className="absolute top-0 right-0 w-16 h-16 bg-danger/5 rounded-bl-full -mr-8 -mt-8 group-hover:bg-danger/10 transition-colors"></div>
                                                                 <div className="flex items-start justify-between gap-2 relative z-10">
                                                                     <div className="space-y-1">
@@ -1083,7 +1093,7 @@ const CreativeWriting: React.FC = () => {
                                             ) : (
                                                 <div className="space-y-4">
                                                     {writingAnalysis.synonyms.map((syn, i) => (
-                                                        <div key={i} className="p-5 bg-primary/5 border border-primary/10 rounded-2xl space-y-3">
+                                                        <div key={syn.word || `syn-${i}`} className="p-5 bg-primary/5 border border-primary/10 rounded-2xl space-y-3">
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <Languages size={14} className="text-primary" />
                                                                 <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest transition-colors">{syn.word}</span>
@@ -1248,7 +1258,7 @@ const CreativeWriting: React.FC = () => {
                                         {/* Cover Image Background */}
                                         <div className="absolute inset-0 z-0">
                                             {story.coverImage ? (
-                                                <img src={story.coverImage} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-700" />
+                                                <img src={story.coverImage} alt={`Couverture : ${story.title}`} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-700" />
                                             ) : (
                                                 <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-950" />
                                             )}
