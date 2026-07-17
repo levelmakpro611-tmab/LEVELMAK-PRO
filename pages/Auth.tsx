@@ -11,7 +11,7 @@ import { supabase } from '../services/supabase';
 
 const getLegalUrl = (anchor: string) => {
   const isNative = window.location.origin.includes('https://localhost') || window.location.origin.startsWith('capacitor://');
-  const base = isNative ? 'https://levelmak.app' : window.location.origin;
+  const base = isNative ? 'https://levelmak-pro.vercel.app' : window.location.origin;
   return `${base}/legal.html${anchor}`;
 };
 
