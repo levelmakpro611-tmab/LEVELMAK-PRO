@@ -342,7 +342,7 @@ export const getUserAnalytics = async (limitCount: number = 50): Promise<AdminUs
     try {
         const { data: users, error } = await supabase
             .from('profiles')
-            .select('id, name, email, phone_number, age_range, gender, status, level, total_xp, stats, created_at, last_active')
+            .select('id, name, email, phone_number, age_range, gender, status, level, total_xp, stats, created_at, last_active, role')
             .limit(limitCount);
 
         if (error) throw error;
@@ -365,7 +365,8 @@ export const getUserAnalytics = async (limitCount: number = 50): Promise<AdminUs
             xp: user.total_xp || 0,
             quizzesCompleted: user.stats?.quizzesCompleted || 0,
             flashcardsStudied: 0,
-            storiesWritten: user.stats?.storiesWritten || 0
+            storiesWritten: user.stats?.storiesWritten || 0,
+            role: user.role || 'student'
         }));
     } catch (error) {
         console.error('Error getting user analytics:', error);

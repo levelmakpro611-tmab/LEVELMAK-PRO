@@ -39,8 +39,9 @@ const GamificationPanel = React.lazy(() => import('../components/admin/Gamificat
 const SecurityPanel = React.lazy(() => import('../components/admin/SecurityPanel'));
 const ShopManager = React.lazy(() => import('../components/admin/ShopManager'));
 const TeacherModeration = React.lazy(() => import('../components/admin/TeacherModeration'));
+const NotificationsManager = React.lazy(() => import('../components/admin/NotificationsManager'));
 
-type Tab = 'overview' | 'stats' | 'users' | 'comments' | 'ratings' | 'export' | 'monitor' | 'retention' | 'gamification' | 'security' | 'shop' | 'teachers';
+type Tab = 'overview' | 'stats' | 'users' | 'comments' | 'ratings' | 'export' | 'monitor' | 'retention' | 'gamification' | 'security' | 'shop' | 'teachers' | 'notifications';
 
 const AdminDashboard: React.FC = () => {
     const { user, logout, changePassword, updateProfile } = useStore();
@@ -62,7 +63,7 @@ const AdminDashboard: React.FC = () => {
     const [adminNotifCount, setAdminNotifCount] = useState(0);
     const [loadingStates, setLoadingStates] = useState<Record<Tab, boolean>>({
         overview: false, stats: false, users: false, comments: false, ratings: false,
-        export: false, monitor: false, retention: false, gamification: false, security: false, shop: false, teachers: false
+        export: false, monitor: false, retention: false, gamification: false, security: false, shop: false, teachers: false, notifications: false
     });
     const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
 
@@ -182,7 +183,7 @@ const AdminDashboard: React.FC = () => {
     const handleNotificationClick = (notif: any) => {
         setHighlightItemId(null); // Reset first
 
-        if (notif.type === 'new_comment') {
+        if (notif.type === 'new_comment' || notif.type === 'system') {
             setActiveTab('comments');
             if (notif.metadata?.commentId) setHighlightItemId(notif.metadata.commentId);
         } else if (notif.type === 'new_rating') {
@@ -344,6 +345,7 @@ const AdminDashboard: React.FC = () => {
 
     const navItems = [
         { id: 'overview' as Tab, icon: Home, label: "Vue d'ensemble", badge: null },
+        { id: 'notifications' as Tab, icon: Bell, label: 'Notifications', badge: adminNotifCount },
         { id: 'monitor' as Tab, icon: Activity, label: 'Spy Mode', badge: null },
         { id: 'retention' as Tab, icon: Magnet, label: 'Rétention', badge: null },
         { id: 'gamification' as Tab, icon: Trophy, label: 'Gamification', badge: null },
@@ -820,6 +822,7 @@ const AdminDashboard: React.FC = () => {
                                         </div>
                                     )
                                 )}
+                                {activeTab === 'notifications' && <NotificationsManager onNavigate={handleNotificationClick} />}
                                 {activeTab === 'stats' && (
                                     <div className="space-y-6">
                                         <StatisticsPanel stats={stats} period={period} onPeriodChange={setPeriod} />

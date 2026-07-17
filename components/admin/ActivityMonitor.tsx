@@ -62,75 +62,10 @@ const ActivityMonitor: React.FC = () => {
     useEffect(() => {
         const unsubscribe = subscribeToActivities((newActivities) => {
             if (isLive) {
-                if (newActivities && newActivities.length > 0) {
-                    setActivities(newActivities);
-                } else {
-                    setActivities(prev => prev.length > 0 ? prev : DEMO_ACTIVITIES);
-                }
+                setActivities(newActivities || []);
             }
         }, 100);
         return () => unsubscribe();
-    }, [isLive]);
-
-    // Live activity simulator for local demos when Supabase log history is empty
-    useEffect(() => {
-        if (!isLive) return;
-
-        const names = ['Barry Alimou', 'Mariama Sow', 'Amadou Diallo', 'Sékou Touré', 'Fatoumata Binta'];
-        const types: ActivityType[] = ['auth', 'quiz', 'library', 'social', 'creative'];
-        const actions = {
-            auth: [
-                "S'est connecté à l'application",
-                "A ouvert une session d'étude active",
-                "A mis à jour sa photo de profil"
-            ],
-            quiz: [
-                "A terminé le quiz 'Géométrie Analytique' avec succès",
-                "A relevé un défi de quiz en SVT",
-                "A obtenu un score parfait de 100% sur un quiz de Français"
-            ],
-            library: [
-                "A terminé la lecture du livre 'Le Petit Prince'",
-                "A ajouté le livre 'Germinal' à sa bibliothèque",
-                "A lu 'Une si longue lettre' de Mariama Bâ pendant 20 minutes"
-            ],
-            social: [
-                "A aimé une histoire publiée dans le club d'écriture",
-                "A commenté la publication de Mariama Sow",
-                "A rejoint le salon de discussion 'Maths & Physique'"
-            ],
-            creative: [
-                "A généré un nouveau poème romantique avec l'IA",
-                "A commencé la rédaction d'un roman de science-fiction",
-                "A demandé une inspiration d'écriture à l'IA"
-            ]
-        };
-
-        const interval = setInterval(() => {
-            setActivities(prev => {
-                // If there are real database activities, don't pollute them with simulation
-                const isRealDbEmpty = prev.length === 0 || prev.every(act => act.id?.startsWith('demo_') || act.id === undefined);
-                if (!isRealDbEmpty) return prev;
-
-                const randomName = names[Math.floor(Math.random() * names.length)];
-                const randomType = types[Math.floor(Math.random() * types.length)];
-                const typeActions = actions[randomType as keyof typeof actions];
-                const randomAction = typeActions[Math.floor(Math.random() * typeActions.length)];
-
-                const newAct: UserActivity = {
-                    id: `demo_${Date.now()}`,
-                    userId: `u_${Math.random()}`,
-                    userName: randomName,
-                    type: randomType,
-                    action: randomAction,
-                    timestamp: new Date().toISOString()
-                };
-
-                return [newAct, ...prev].slice(0, 50);
-            });
-        }, 10000); // Add a new event every 10 seconds
-
-        return () => clearInterval(interval);
     }, [isLive]);
 
     const getIcon = (type: ActivityType) => {

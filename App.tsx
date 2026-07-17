@@ -40,6 +40,7 @@ import { Loader2, AlertTriangle, RefreshCw, Check } from 'lucide-react';
 import { aiService } from './services/aiService';
 import { initializeNativeFeatures, isNativePlatform } from './services/nativeAdapters';
 import { App as CapacitorApp } from '@capacitor/app';
+import { initCrashReporter, reportReactCrash } from './services/crashReportService';
 
 // ERROR BOUNDARY COMPONENT
 class ErrorBoundary extends React.Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
@@ -54,6 +55,8 @@ class ErrorBoundary extends React.Component<{children: ReactNode}, {hasError: bo
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("APP CRASH DETECTED:", error, errorInfo);
+    // 🚨 Envoie automatiquement un rapport de crash par email
+    reportReactCrash(error, errorInfo.componentStack || '');
   }
 
   render() {

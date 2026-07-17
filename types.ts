@@ -437,6 +437,7 @@ export interface AdminUserAnalytics {
   quizzesCompleted: number;
   flashcardsStudied: number;
   storiesWritten: number;
+  role?: 'student' | 'teacher' | 'admin' | 'user';
 }
 
 export interface ActivityLog {

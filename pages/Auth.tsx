@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User as UserIcon, Sparkles, Rocket, Phone, Lock, Eye, EyeOff, ArrowRight, Book, Mail, Fingerprint, X, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +7,7 @@ import { User as UserType } from '../types';
 import { isAdminCredentials } from '../services/adminService';
 import { logUserActivity } from '../services/activityService';
 import { biometricService } from '../services/biometricService';
+import { supabase } from '../services/supabase';
 
 const getLegalUrl = (anchor: string) => {
   const isNative = window.location.origin.includes('https://localhost') || window.location.origin.startsWith('capacitor://');
@@ -37,7 +37,9 @@ const Auth: React.FC = () => {
   const [activePolicyTab, setActivePolicyTab] = useState<'privacy' | 'terms'>('privacy');
   const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [isGoogleRecovery, setIsGoogleRecovery] = useState(false);
   const [registerStep, setRegisterStep] = useState<number>(1);
+
   const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -218,7 +220,10 @@ const Auth: React.FC = () => {
       }
     } catch (err: any) {
       console.error('SUBMISSION ERROR:', err);
-      const msg = err.message || t('auth.errorUnknown');
+      let msg = err.message || t('auth.errorUnknown');
+      if (msg === 'Invalid login credentials' || msg.includes('invalid_credentials') || msg.includes('Invalid credentials')) {
+        msg = 'Mot de passe ou compte incorrect.';
+      }
       setError(msg);
       if (msg && msg.toLowerCase().includes('bloqu')) {
         alert("ALERTE SÉCURITÉ: " + msg);
@@ -267,16 +272,33 @@ const Auth: React.FC = () => {
     try {
       if (recoveryStep === 1) {
         if (!name.trim()) throw new Error(t('auth.identityRequired'));
-        // Simplified identity check for the Elite Experience
-        // In a Production environment, this would be a secure backend validation.
-        setRecoveryStep(2);
+        
+        const isGoogle = name.includes('@gmail') || name.includes('@google');
+        setIsGoogleRecovery(isGoogle);
+        
+        if (isGoogle) {
+          // Go to step 2 to show Google instructions
+          setRecoveryStep(2);
+        } else {
+          // Standard email: submit recovery help request to user_comments table
+          const { error: insertError } = await supabase.from('user_comments').insert({
+            user_id: 'guest_recovery',
+            user_name: 'Système (Aide Récupération)',
+            user_phone: 'N/A',
+            content: `DEMANDE DE RÉINITIALISATION : L'adresse de connexion "${name.trim()}" demande une réinitialisation de mot de passe. Veuillez contacter l'utilisateur pour vérifier son identité.`,
+            rating: 5,
+            category: 'password_reset',
+            timestamp: new Date().toISOString(),
+            status: 'pending'
+          });
+          
+          if (insertError) throw insertError;
+          
+          setResetSuccess(true);
+        }
       } else {
-        if (password.length < 6) throw new Error(t('auth.pwLength'));
-        setResetSuccess(true);
-        setTimeout(() => {
-          setMode('login');
-          resetForm();
-        }, 3000);
+        // Step 2 is only reached for Google recovery, which has a Google login button
+        await handleGoogleLogin();
       }
     } catch (err: any) {
       setError(err.message || t('auth.recoveryFailed'));
@@ -369,7 +391,7 @@ const Auth: React.FC = () => {
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
                   {recoveryStep === 1
                     ? t('auth.identityVerif')
-                    : t('auth.accessAuthorized')}
+                    : 'Aide Connexion'}
                 </p>
               </div>
 
@@ -383,64 +405,60 @@ const Auth: React.FC = () => {
                     className="space-y-4"
                   >
                     {recoveryStep === 1 ? (
-                      <>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <UserIcon size={12} className="text-orange-500" />
-                            {t('auth.pseudoOrEmail')}
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700"
-                            placeholder={t('auth.placeholderPseudo')}
-                          />
-                        </div>
-                      </>
-                    ) : (
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                          <Lock size={12} className="text-orange-500" />
-                          {t('auth.newPassword')}
+                          <UserIcon size={12} className="text-orange-500" />
+                          {t('auth.pseudoOrEmail')}
                         </label>
-                        <div className="relative group">
-                          <input
-                            type={showPassword ? 'text' : 'password'}
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700 pr-12"
-                            placeholder="••••••••"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                          >
-                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-orange-500/50 transition-all placeholder:text-slate-700"
+                          placeholder={t('auth.placeholderPseudo')}
+                        />
                       </div>
+                    ) : (
+                      isGoogleRecovery && (
+                        <div className="space-y-4 text-center p-6 bg-blue-500/5 border border-blue-500/10 rounded-[2rem]">
+                          <p className="text-sm text-slate-300 font-bold">
+                            Votre compte est associé à Google (<strong>{name}</strong>).
+                          </p>
+                          <p className="text-xs text-slate-400 font-medium">
+                            Veuillez vous reconnecter directement via le bouton d'authentification Google ci-dessous.
+                          </p>
+                        </div>
+                      )
                     )}
                   </motion.div>
                 </AnimatePresence>
 
                 {resetSuccess ? (
-                  <div className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-[2rem] text-orange-500 text-center space-y-3">
-                    <Sparkles className="mx-auto" size={32} />
-                    <p className="text-xs font-black uppercase tracking-widest text-white">{t('auth.requestValidated')}</p>
-                    <p className="text-[10px] font-medium opacity-80">{t('auth.updatingAccess')}</p>
+                  <div className="p-5 bg-green-500/10 border border-green-500/20 rounded-[2rem] text-green-400 text-center space-y-3">
+                    <Sparkles className="mx-auto text-green-500 animate-pulse" size={32} />
+                    <p className="text-xs font-black uppercase tracking-widest text-white">Demande d'aide envoyée !</p>
+                    <p className="text-[10px] font-medium opacity-80 text-slate-400">
+                      Votre demande de réinitialisation a été transmise à l'administration de LevelMak. Veuillez patienter pendant qu'un administrateur examine votre demande.
+                    </p>
                   </div>
+                ) : isGoogleRecovery && recoveryStep === 2 ? (
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-glow transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                  >
+                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
+                    <span>Se connecter avec Google</span>
+                  </button>
                 ) : (
                   <button
                     type="submit"
                     disabled={isLoading}
                     className="w-full py-5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-glow transition-all active:scale-[0.98] hover:shadow-orange-500/20"
-                    >
-                      {isLoading ? t('auth.verifying') : recoveryStep === 1 ? t('auth.verifyIdentity') : t('auth.changeAccess')}
-                    </button>
+                  >
+                    {isLoading ? t('auth.verifying') : t('auth.verifyIdentity')}
+                  </button>
                 )}
 
                 <button

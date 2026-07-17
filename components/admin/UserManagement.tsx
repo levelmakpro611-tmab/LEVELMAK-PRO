@@ -44,6 +44,7 @@ interface UserManagementProps {
 const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended' | 'blocked'>('all');
+    const [filterRole, setFilterRole] = useState<'all' | 'student' | 'teacher'>('all');
     const [selectedUser, setSelectedUser] = useState<UserAnalytics | null>(null);
     const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction' | 'reset_all' | null; userId: string | null }>({ type: null, userId: null });
     const [sanctionType, setSanctionType] = useState<'deduct_xp' | 'deduct_coins' | 'warning'>('warning');
@@ -104,7 +105,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
             uEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
             uPhone.includes(searchTerm);
         const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-        return matchesSearch && matchesStatus;
+        const matchesRole = filterRole === 'all' || 
+                            (filterRole === 'teacher' && (user as any).role === 'teacher') ||
+                            (filterRole === 'student' && (user as any).role !== 'teacher');
+        return matchesSearch && matchesStatus && matchesRole;
     });
 
     const handleAction = async (type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction' | 'reset_all', userId: string) => {
@@ -190,16 +194,17 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Stats Overview */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
-                <StatCard label="Total" value={users.length} color="blue" />
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 print:hidden">
+                <StatCard label="Élèves" value={users.filter(u => (u as any).role !== 'teacher').length} color="blue" />
+                <StatCard label="Enseignants" value={users.filter(u => (u as any).role === 'teacher').length} color="purple" />
                 <StatCard label="Actifs" value={users.filter(u => u.status === 'active').length} color="green" />
                 <StatCard label="Suspendus" value={users.filter(u => u.status === 'suspended').length} color="orange" />
                 <StatCard label="Bloqués" value={users.filter(u => u.status === 'blocked').length} color="red" />
             </div>
 
             {/* Controls */}
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 print:hidden">
-                <div className="relative w-full md:w-96 group">
+            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 print:hidden">
+                <div className="relative w-full lg:w-96 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18} />
                     <input
                         type="text"
@@ -210,27 +215,50 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                     />
                 </div>
 
-                <div className="flex gap-2 bg-black/20 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
-                    {(['all', 'active', 'suspended', 'blocked'] as const).map((status) => (
+                <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch sm:items-center">
+                    {/* Role Filter */}
+                    <div className="flex bg-black/20 p-1 rounded-xl w-full sm:w-auto">
+                        {([
+                            { id: 'all', label: 'Tous Rôles' },
+                            { id: 'student', label: 'Élèves' },
+                            { id: 'teacher', label: 'Enseignants' }
+                        ] as const).map((r) => (
+                            <button
+                                key={r.id}
+                                onClick={() => setFilterRole(r.id)}
+                                className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${filterRole === r.id
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                {r.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Status Filter */}
+                    <div className="flex bg-black/20 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
+                        {(['all', 'active', 'suspended', 'blocked'] as const).map((status) => (
+                            <button
+                                key={status}
+                                onClick={() => setFilterStatus(status)}
+                                className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${filterStatus === status
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                {status === 'all' ? 'Statuts' : status === 'active' ? 'Actifs' : status === 'suspended' ? 'Suspendus' : 'Bloqués'}
+                            </button>
+                        ))}
                         <button
-                            key={status}
-                            onClick={() => setFilterStatus(status)}
-                            className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${filterStatus === status
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                                : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                }`}
+                            onClick={handlePrint}
+                            disabled={loading}
+                            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center disabled:opacity-50"
+                            title="Imprimer"
                         >
-                            {status === 'all' ? 'Tous' : status}
+                            <Printer size={14} />
                         </button>
-                    ))}
-                    <button
-                        onClick={handlePrint}
-                        disabled={loading}
-                        className="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center disabled:opacity-50"
-                        title="Imprimer"
-                    >
-                        <Printer size={16} />
-                    </button>
+                    </div>
                 </div>
             </div>
 
@@ -255,6 +283,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                     />
                                 </th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider min-w-[250px]">Utilisateur</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Rôle</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Niveau & XP</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Statut</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Activité</th>
@@ -289,6 +318,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                                 {user.phoneNumber && <p className="text-[10px] text-slate-500 font-bold">{user.phoneNumber}</p>}
                                             </div>
                                         </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${(user as any).role === 'teacher'
+                                            ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-glow-purple/10'
+                                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                        }`}>
+                                            {(user as any).role === 'teacher' ? 'Enseignant' : 'Élève'}
+                                        </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="space-y-1">
@@ -682,6 +719,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
 const StatCard: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => {
     const colors: Record<string, string> = {
         blue: 'bg-blue-600/10 border-blue-500/20 text-blue-400',
+        purple: 'bg-purple-600/10 border-purple-500/20 text-purple-400',
         green: 'bg-green-600/10 border-green-500/20 text-green-400',
         orange: 'bg-orange-600/10 border-orange-500/20 text-orange-400',
         red: 'bg-red-600/10 border-red-500/20 text-red-400'

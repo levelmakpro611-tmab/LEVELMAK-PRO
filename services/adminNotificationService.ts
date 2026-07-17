@@ -180,14 +180,25 @@ class AdminNotificationService {
                 table: 'user_comments'
             }, (payload) => {
                 const row = payload.new as any;
-                this.addNotification(createNotif(
-                    'new_comment',
-                    '💬 Nouveau commentaire',
-                    `${row.user_name || 'Un utilisateur'} a laissé un avis : "${(row.content || '').substring(0, 60)}${row.content?.length > 60 ? '...' : ''}"`,
-                    'comments',
-                    { commentId: row.id },
-                    `comment_${row.id}`
-                ));
+                if (row.category === 'password_reset') {
+                    this.addNotification(createNotif(
+                        'system',
+                        '🔑 Récupération de compte',
+                        `Demande d'aide : ${row.content}`,
+                        'comments',
+                        { commentId: row.id },
+                        `comment_${row.id}`
+                    ));
+                } else {
+                    this.addNotification(createNotif(
+                        'new_comment',
+                        '💬 Nouveau commentaire',
+                        `${row.user_name || 'Un utilisateur'} a laissé un avis : "${(row.content || '').substring(0, 60)}${row.content?.length > 60 ? '...' : ''}"`,
+                        'comments',
+                        { commentId: row.id },
+                        `comment_${row.id}`
+                    ));
+                }
             })
             .subscribe();
 
@@ -270,7 +281,7 @@ class AdminNotificationService {
             const historyRange = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
             const [commentsRes, teachersRes, usersRes, ratingsRes] = await Promise.allSettled([
-                supabase.from('user_comments').select('id, user_name, content, timestamp').gte('timestamp', historyRange).order('timestamp', { ascending: false }).limit(15),
+                supabase.from('user_comments').select('id, user_name, content, timestamp, category').gte('timestamp', historyRange).order('timestamp', { ascending: false }).limit(15),
                 supabase.from('teachers').select('id, name, type, created_at').eq('status', 'pending').order('created_at', { ascending: false }).limit(10),
                 supabase.from('profiles').select('id, name, created_at').gte('created_at', historyRange).order('created_at', { ascending: false }).limit(15),
                 supabase.from('user_ratings').select('id, user_name, overall, timestamp').gte('timestamp', historyRange).order('timestamp', { ascending: false }).limit(10),
@@ -280,18 +291,33 @@ class AdminNotificationService {
 
             if (commentsRes.status === 'fulfilled' && commentsRes.value.data) {
                 commentsRes.value.data.forEach(row => {
-                    generated.push({
-                        ...createNotif(
-                            'new_comment',
-                            '💬 Commentaire reçu',
-                            `${row.user_name || 'Utilisateur'} : "${(row.content || '').substring(0, 60)}${(row.content?.length || 0) > 60 ? '...' : ''}"`,
-                            'comments',
-                            { commentId: row.id },
-                            `comment_${row.id}`
-                        ),
-                        timestamp: row.timestamp,
-                        read: true // mark historical as read
-                    });
+                    if (row.category === 'password_reset') {
+                        generated.push({
+                            ...createNotif(
+                                'system',
+                                '🔑 Récupération de compte',
+                                `Demande d'aide : ${row.content}`,
+                                'comments',
+                                { commentId: row.id },
+                                `comment_${row.id}`
+                            ),
+                            timestamp: row.timestamp,
+                            read: true // mark historical as read
+                        });
+                    } else {
+                        generated.push({
+                            ...createNotif(
+                                'new_comment',
+                                '💬 Commentaire reçu',
+                                `${row.user_name || 'Utilisateur'} : "${(row.content || '').substring(0, 60)}${(row.content?.length || 0) > 60 ? '...' : ''}"`,
+                                'comments',
+                                { commentId: row.id },
+                                `comment_${row.id}`
+                            ),
+                            timestamp: row.timestamp,
+                            read: true // mark historical as read
+                        });
+                    }
                 });
             }
 
