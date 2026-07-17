@@ -34,6 +34,17 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
     const [showQuitConfirm, setShowQuitConfirm] = useState(false);
     const [abandonRewardsClaimed, setAbandonRewardsClaimed] = useState(false);
 
+    // Rematch states
+    const [rematchRequestedByMe, setRematchRequestedByMe] = useState(false);
+    const [rematchRequestedByOpponent, setRematchRequestedByOpponent] = useState(false);
+
+    const getAvatarSrc = (avatar: any) => {
+        if (!avatar) return '';
+        if (typeof avatar === 'string') return avatar;
+        if (typeof avatar === 'object' && avatar.image) return avatar.image;
+        return '';
+    };
+
     const opponentJoinedRef = useRef(false);
 
     const mySymbol = isHost ? 'X' : 'O';
@@ -103,8 +114,27 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
             }
         };
 
+        const handleRematchRequestBroadcast = ({ payload }: any) => {
+            if (payload.senderId !== currentUser.id) {
+                setRematchRequestedByOpponent(true);
+                HapticFeedback.selection();
+            }
+        };
+
+        const handleRematchAcceptBroadcast = () => {
+            setBoard(Array(9).fill(null));
+            setWinner(null);
+            setWinningLine(null);
+            setRematchRequestedByMe(false);
+            setRematchRequestedByOpponent(false);
+            setIsMyTurn(isHost ? false : true);
+            HapticFeedback.success();
+        };
+
         activeChannel.on('broadcast', { event: 'ttt_move' }, handleMoveBroadcast);
         activeChannel.on('broadcast', { event: 'battle_abandoned' }, handleAbandonBroadcast);
+        activeChannel.on('broadcast', { event: 'ttt_rematch_request' }, handleRematchRequestBroadcast);
+        activeChannel.on('broadcast', { event: 'ttt_rematch_accept' }, handleRematchAcceptBroadcast);
         activeChannel.on('presence', { event: 'sync' }, handlePresenceSync);
 
         activeChannel.subscribe(async (status) => {
@@ -200,6 +230,30 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
         }, 500);
     };
 
+    const handleRequestRematch = () => {
+        setRematchRequestedByMe(true);
+        gameChannel?.send({
+            type: 'broadcast',
+            event: 'ttt_rematch_request',
+            payload: { senderId: currentUser.id }
+        });
+    };
+
+    const handleAcceptRematch = () => {
+        gameChannel?.send({
+            type: 'broadcast',
+            event: 'ttt_rematch_accept',
+            payload: {}
+        });
+        setBoard(Array(9).fill(null));
+        setWinner(null);
+        setWinningLine(null);
+        setRematchRequestedByMe(false);
+        setRematchRequestedByOpponent(false);
+        setIsMyTurn(isHost ? false : true);
+        HapticFeedback.success();
+    };
+
     return (
         <div className="flex flex-col items-center justify-center h-full w-full max-w-md mx-auto p-4 font-sans relative">
             
@@ -216,32 +270,49 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
             )}
 
             {/* Scoreboard */}
-            <div className="w-full glass-card p-4 rounded-3xl mb-6 flex items-center justify-between shadow-xl border border-white/10">
-                <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 mb-1">
-                        <img src={isHost ? currentUser.avatar?.image : opponent.avatar?.image} className="w-full h-full object-cover rounded-2xl" alt="Host" />
-                    </div>
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{isHost ? 'Toi' : opponent.name}</span>
-                    <span className="text-2xl font-black text-blue-500">{currentScore.host}</span>
-                </div>
-                
-                <div className="flex flex-col items-center">
-                    <div className="px-4 py-1.5 bg-yellow-500/20 rounded-full border border-yellow-500/30 mb-2">
-                        <span className="text-yellow-500 font-black text-xs flex items-center gap-1">
-                            <Coins size={14} /> {currentBet} LC
-                        </span>
-                    </div>
-                    <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">VS</div>
-                </div>
+            {(() => {
+                const hostAvatar = getAvatarSrc(isHost ? currentUser.avatar : opponent.avatar);
+                const hostName = isHost ? 'Toi' : opponent.name;
+                const guestAvatar = getAvatarSrc(!isHost ? currentUser.avatar : opponent.avatar);
+                const guestName = !isHost ? 'Toi' : opponent.name;
 
-                <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-2xl bg-rose-500/20 flex items-center justify-center text-rose-400 mb-1">
-                        <img src={!isHost ? currentUser.avatar?.image : opponent.avatar?.image} className="w-full h-full object-cover rounded-2xl" alt="Guest" />
+                return (
+                    <div className="w-full glass-card p-4 rounded-3xl mb-6 flex items-center justify-between shadow-xl border border-white/10">
+                        <div className="flex flex-col items-center">
+                            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 mb-1 overflow-hidden">
+                                {hostAvatar ? (
+                                    <img src={hostAvatar} className="w-full h-full object-cover" alt="Host" />
+                                ) : (
+                                    <span className="text-lg font-black text-blue-400 uppercase">{(hostName || 'U').charAt(0)}</span>
+                                )}
+                            </div>
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">{hostName}</span>
+                            <span className="text-2xl font-black text-blue-500">{currentScore.host}</span>
+                        </div>
+                        
+                        <div className="flex flex-col items-center">
+                            <div className="px-4 py-1.5 bg-yellow-500/20 rounded-full border border-yellow-500/30 mb-2">
+                                <span className="text-yellow-500 font-black text-xs flex items-center gap-1">
+                                    <Coins size={14} /> {currentBet} LC
+                                </span>
+                            </div>
+                            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">VS</div>
+                        </div>
+
+                        <div className="flex flex-col items-center">
+                            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 flex items-center justify-center text-rose-400 mb-1 overflow-hidden">
+                                {guestAvatar ? (
+                                    <img src={guestAvatar} className="w-full h-full object-cover" alt="Guest" />
+                                ) : (
+                                    <span className="text-lg font-black text-rose-400 uppercase">{(guestName || 'U').charAt(0)}</span>
+                                )}
+                            </div>
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">{guestName}</span>
+                            <span className="text-2xl font-black text-rose-500">{currentScore.guest}</span>
+                        </div>
                     </div>
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{!isHost ? 'Toi' : opponent.name}</span>
-                    <span className="text-2xl font-black text-rose-500">{currentScore.guest}</span>
-                </div>
-            </div>
+                );
+            })()}
 
             {/* Turn Indicator */}
             {!winner && !abandonedByOpponent && (
@@ -296,9 +367,23 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                             </p>
 
                             <div className="grid grid-cols-2 gap-4 w-full">
-                                {onRematch && (
+                                {rematchRequestedByMe ? (
                                     <button 
-                                        onClick={() => onRematch()}
+                                        disabled
+                                        className="flex items-center justify-center gap-2 py-4 bg-blue-600/50 text-white/70 rounded-2xl font-black uppercase tracking-widest text-[10px] cursor-not-allowed"
+                                    >
+                                        <RefreshCw size={14} className="animate-spin" /> En attente...
+                                    </button>
+                                ) : rematchRequestedByOpponent ? (
+                                    <button 
+                                        onClick={handleAcceptRematch}
+                                        className="flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-600/20 transition-all active:scale-95 animate-pulse"
+                                    >
+                                        <RefreshCw size={14} /> Accepter
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={handleRequestRematch}
                                         className="flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-600/20 transition-all active:scale-95"
                                     >
                                         <RefreshCw size={14} /> Revanche
@@ -306,7 +391,7 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                                 )}
                                 <button 
                                     onClick={() => onExit()}
-                                    className={`flex items-center justify-center gap-2 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all active:scale-95 ${!onRematch ? 'col-span-2' : ''}`}
+                                    className="flex items-center justify-center gap-2 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all active:scale-95"
                                 >
                                     <LogOut size={14} /> Quitter
                                 </button>

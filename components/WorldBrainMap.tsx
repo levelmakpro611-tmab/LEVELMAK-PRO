@@ -669,7 +669,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                                 id: `battle_${Date.now()}`,
                                 type: pendingDuelType,
                                 host: { id: user?.id, name: user?.name, avatar: user?.avatar?.image },
-                                guest: { id: selectedUser.user_id, name: selectedUser.name },
+                                guest: { id: selectedUser.user_id, name: selectedUser.name, avatar: selectedUser.avatar },
                                 status: 'pending',
                                 timestamp: new Date().toISOString()
                             };
