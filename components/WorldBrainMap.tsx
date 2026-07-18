@@ -396,7 +396,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     <div className={`bg-slate-900 p-6 rounded-[2rem] border border-white/5 relative min-h-[550px] ${onCloseMap ? 'fixed inset-4 z-[9999]' : ''}`}>
       {onCloseMap && <button onClick={onCloseMap} className="absolute top-6 right-6 z-[100] p-3 bg-white/10 text-white rounded-full"><X size={24} /></button>}
 
-      <div className="mb-4 relative z-10 flex justify-between items-end">
+      <div className="mb-4 relative z-10 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
         <div>
           <h2 className="text-2xl font-black text-white flex items-center gap-2"><Globe className="text-blue-400" size={24} /> {t('atlas.title')}</h2>
           <p className="text-slate-400 text-[10px] font-bold mt-1 flex items-center gap-2">
@@ -404,7 +404,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
             {activeUsers.length + 1} élève{activeUsers.length + 1 > 1 ? 's' : ''} en ligne (Toi {activeUsers.length > 0 ? `+ ${activeUsers.length}` : ''})
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto justify-start sm:justify-end">
           <button 
             onClick={() => {
               setSelectedUser({ user_id: 'levelbot', name: 'LevelBot 🤖', avatar: null });
@@ -413,13 +413,13 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               setIsBettingOpen(true);
               HapticFeedback.selection();
             }}
-            className="px-4 py-2 bg-purple-650/20 border border-purple-500/30 rounded-xl text-purple-400 hover:text-white text-[10px] font-black uppercase tracking-wider hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/10"
+            className="px-3 sm:px-4 py-2 bg-purple-600/20 border border-purple-500/30 rounded-xl text-purple-400 hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/10 flex-1 sm:flex-initial text-center"
           >
             Entraînement IA 🤖
           </button>
           <button 
             onClick={() => setIsUsersListOpen(!isUsersListOpen)}
-            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-[10px] font-black uppercase tracking-wider hover:bg-white/10 transition-colors"
+            className="px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider hover:bg-white/10 transition-colors flex-1 sm:flex-initial text-center"
           >
             {isUsersListOpen ? 'Fermer Liste' : 'Voir Élèves'}
           </button>
