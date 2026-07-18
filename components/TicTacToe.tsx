@@ -6,6 +6,60 @@ import { useStore } from '../hooks/useStore';
 import { supabase } from '../services/supabase';
 import { audioService } from '../services/audio';
 
+const getTicTacToeBotMove = (currentBoard: (string | null)[], botSymbol: string, userSymbol: string, difficulty: 'easy' | 'hard' | 'expert'): number => {
+    const emptyIndices = currentBoard.map((c, i) => c === null ? i : -1).filter(i => i !== -1);
+    if (emptyIndices.length === 0) return -1;
+    
+    if (difficulty === 'easy') {
+        return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    }
+
+    const lines = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+    ];
+
+    // 1. Can bot win?
+    for (const [a, b, c] of lines) {
+        const vals = [currentBoard[a], currentBoard[b], currentBoard[c]];
+        const botCount = vals.filter(v => v === botSymbol).length;
+        const nullCount = vals.filter(v => v === null).length;
+        if (botCount === 2 && nullCount === 1) {
+            if (currentBoard[a] === null) return a;
+            if (currentBoard[b] === null) return b;
+            if (currentBoard[c] === null) return c;
+        }
+    }
+
+    // 2. Block user?
+    for (const [a, b, c] of lines) {
+        const vals = [currentBoard[a], currentBoard[b], currentBoard[c]];
+        const userCount = vals.filter(v => v === userSymbol).length;
+        const nullCount = vals.filter(v => v === null).length;
+        if (userCount === 2 && nullCount === 1) {
+            if (currentBoard[a] === null) return a;
+            if (currentBoard[b] === null) return b;
+            if (currentBoard[c] === null) return c;
+        }
+    }
+
+    if (difficulty === 'hard' && Math.random() < 0.3) {
+        return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    }
+
+    // 3. Center
+    if (currentBoard[4] === null) return 4;
+
+    // 4. Corners
+    const corners = [0, 2, 6, 8].filter(i => currentBoard[i] === null);
+    if (corners.length > 0) {
+        return corners[Math.floor(Math.random() * corners.length)];
+    }
+
+    return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+};
+
 interface TicTacToeProps {
     battleId: string;
     currentUser: any;
@@ -67,6 +121,8 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
     isMyTurnRef.current = isMyTurn;
 
     useEffect(() => {
+        if (opponent.id === 'levelbot') return;
+
         const activeChannel = supabase.channel(`ttt_battle_${battleId}`, {
             config: { broadcast: { self: false } }
         });
@@ -184,6 +240,31 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
         checkWinner(board);
     }, [board]);
 
+    // LevelBot AI opponent move simulator
+    useEffect(() => {
+        if (opponent.id !== 'levelbot' || isMyTurn || winner || abandonedByOpponent) return;
+
+        const botSymbol = opponentSymbol;
+        const userSymbol = mySymbol;
+        const botDifficulty = opponent.difficulty || 'easy';
+
+        const timer = setTimeout(() => {
+            const moveIdx = getTicTacToeBotMove(board, botSymbol, userSymbol, botDifficulty);
+            if (moveIdx !== -1 && !board[moveIdx] && !winner) {
+                setBoard(prevBoard => {
+                    const newBoard = [...prevBoard];
+                    newBoard[moveIdx] = botSymbol;
+                    return newBoard;
+                });
+                setIsMyTurn(true);
+                HapticFeedback.selection();
+                audioService.playClick();
+            }
+        }, 1200 + Math.random() * 800);
+
+        return () => clearTimeout(timer);
+    }, [isMyTurn, board, winner, abandonedByOpponent]);
+
     // Handle Forfeit Reward Claiming
     useEffect(() => {
         if (abandonedByOpponent && !abandonRewardsClaimed) {
@@ -209,19 +290,23 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
         HapticFeedback.selection();
         audioService.playClick();
 
-        gameChannel?.send({
-            type: 'broadcast',
-            event: 'ttt_move',
-            payload: { index, symbol: mySymbol }
-        });
+        if (opponent.id !== 'levelbot') {
+            gameChannel?.send({
+                type: 'broadcast',
+                event: 'ttt_move',
+                payload: { index, symbol: mySymbol }
+            });
+        }
     };
 
     const confirmQuit = () => {
-        gameChannel?.send({
-            type: 'broadcast',
-            event: 'battle_abandoned',
-            payload: { senderId: currentUser.id }
-        });
+        if (opponent.id !== 'levelbot') {
+            gameChannel?.send({
+                type: 'broadcast',
+                event: 'battle_abandoned',
+                payload: { senderId: currentUser.id }
+            });
+        }
         if (currentBet > 0) {
             addLevelCoins(-currentBet);
         }
@@ -232,19 +317,27 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
 
     const handleRequestRematch = () => {
         setRematchRequestedByMe(true);
-        gameChannel?.send({
-            type: 'broadcast',
-            event: 'ttt_rematch_request',
-            payload: { senderId: currentUser.id }
-        });
+        if (opponent.id === 'levelbot') {
+            setTimeout(() => {
+                handleAcceptRematch();
+            }, 1000);
+        } else {
+            gameChannel?.send({
+                type: 'broadcast',
+                event: 'ttt_rematch_request',
+                payload: { senderId: currentUser.id }
+            });
+        }
     };
 
     const handleAcceptRematch = () => {
-        gameChannel?.send({
-            type: 'broadcast',
-            event: 'ttt_rematch_accept',
-            payload: {}
-        });
+        if (opponent.id !== 'levelbot') {
+            gameChannel?.send({
+                type: 'broadcast',
+                event: 'ttt_rematch_accept',
+                payload: {}
+            });
+        }
         setBoard(Array(9).fill(null));
         setWinner(null);
         setWinningLine(null);

@@ -113,6 +113,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   const [isBettingOpen, setIsBettingOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [pendingDuelType, setPendingDuelType] = useState<string>('quiz');
+  const [pendingDifficulty, setPendingDifficulty] = useState<'easy' | 'hard' | 'expert'>('easy');
   const [highlightedFeatureId, setHighlightedFeatureId] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<'searching' | 'locked' | 'error'>('searching');
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -403,12 +404,26 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
             {activeUsers.length + 1} élève{activeUsers.length + 1 > 1 ? 's' : ''} en ligne (Toi {activeUsers.length > 0 ? `+ ${activeUsers.length}` : ''})
           </p>
         </div>
-        <button 
-          onClick={() => setIsUsersListOpen(!isUsersListOpen)}
-          className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-[10px] font-black uppercase tracking-wider hover:bg-white/10 transition-colors"
-        >
-          {isUsersListOpen ? 'Fermer Liste' : 'Voir Élèves'}
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => {
+              setSelectedUser({ user_id: 'levelbot', name: 'LevelBot 🤖', avatar: null });
+              setPendingDuelType('quiz');
+              setPendingDifficulty('easy');
+              setIsBettingOpen(true);
+              HapticFeedback.selection();
+            }}
+            className="px-4 py-2 bg-purple-650/20 border border-purple-500/30 rounded-xl text-purple-400 hover:text-white text-[10px] font-black uppercase tracking-wider hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/10"
+          >
+            Entraînement IA 🤖
+          </button>
+          <button 
+            onClick={() => setIsUsersListOpen(!isUsersListOpen)}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-[10px] font-black uppercase tracking-wider hover:bg-white/10 transition-colors"
+          >
+            {isUsersListOpen ? 'Fermer Liste' : 'Voir Élèves'}
+          </button>
+        </div>
       </div>
 
       <div className="relative w-full h-[450px] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl z-0">
@@ -580,6 +595,49 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                {/* Pinned LevelBot IA Item */}
+                <div 
+                  onClick={() => {
+                    HapticFeedback.selection();
+                    setSelectedUser({ user_id: 'levelbot', name: 'LevelBot 🤖', avatar: null });
+                    setPendingDuelType('quiz');
+                    setPendingDifficulty('easy');
+                    setIsBettingOpen(true);
+                    if (window.innerWidth < 640) setIsUsersListOpen(false);
+                  }}
+                  className="p-3 bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/20 rounded-2xl cursor-pointer transition-all group shadow-md"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-black text-[10px] shadow-lg animate-pulse">
+                      🤖
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-[11px] font-black tracking-wide truncate">LevelBot (Tuteur IA)</p>
+                      <p className="text-purple-400 text-[9px] truncate">Entraînement Solo & Défis</p>
+                    </div>
+                    <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      HapticFeedback.selection();
+                      setSelectedUser({ user_id: 'levelbot', name: 'LevelBot 🤖', avatar: null });
+                      setPendingDuelType('quiz');
+                      setPendingDifficulty('easy');
+                      setIsBettingOpen(true);
+                      if (window.innerWidth < 640) setIsUsersListOpen(false);
+                    }}
+                    className="mt-2 w-full py-1.5 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white text-[9px] font-black rounded-lg transition-all border border-purple-500/30"
+                  >
+                    S'ENTRAÎNER ⚔️
+                  </button>
+                </div>
+
+                <div className="relative py-1">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+                  <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Élèves en Ligne</span></div>
+                </div>
+
                 {filteredUsers.length === 0 ? (
                   <p className="text-center text-slate-500 text-[10px] mt-10">Aucun élève trouvé</p>
                 ) : (
@@ -649,7 +707,14 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                             </button>
                             <button 
                                 onClick={() => setPendingDuelType('doodle')}
-                                className={`py-4 rounded-2xl font-black uppercase text-[10px] transition-all ${pendingDuelType === 'doodle' ? 'bg-pink-600 text-white shadow-glow-pink scale-105' : 'bg-slate-100 dark:bg-white/5 text-slate-500'}`}
+                                disabled={selectedUser.user_id === 'levelbot'}
+                                className={`py-4 rounded-2xl font-black uppercase text-[10px] transition-all ${
+                                    selectedUser.user_id === 'levelbot' 
+                                        ? 'opacity-30 cursor-not-allowed' 
+                                        : pendingDuelType === 'doodle' 
+                                            ? 'bg-pink-600 text-white shadow-glow-pink scale-105' 
+                                            : 'bg-slate-100 dark:bg-white/5 text-slate-500'
+                                }`}
                             >
                                 Doodle
                             </button>
@@ -662,20 +727,51 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                         </div>
                     </div>
 
+                    {selectedUser.user_id === 'levelbot' && (
+                        <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 text-center">Difficulté de l'IA</p>
+                            <div className="grid grid-cols-3 gap-2">
+                                {(['easy', 'hard', 'expert'] as const).map(diff => (
+                                    <button 
+                                        key={diff}
+                                        onClick={() => setPendingDifficulty(diff)}
+                                        className={`py-3 rounded-2xl font-black uppercase text-[10px] transition-all ${pendingDifficulty === diff ? 'bg-purple-600 text-white shadow-glow-purple scale-105' : 'bg-slate-100 dark:bg-white/5 text-slate-500'}`}
+                                    >
+                                        {diff === 'easy' ? 'Facile' : diff === 'hard' ? 'Difficile' : 'Expert'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <button 
                         onClick={async () => {
                             HapticFeedback.success();
-                            const request = {
-                                id: `battle_${Date.now()}`,
-                                type: pendingDuelType,
-                                host: { id: user?.id, name: user?.name, avatar: user?.avatar?.image },
-                                guest: { id: selectedUser.user_id, name: selectedUser.name, avatar: selectedUser.avatar },
-                                status: 'pending',
-                                timestamp: new Date().toISOString()
-                            };
-                            channelRef.current.send({ type: 'broadcast', event: 'battle_invite', payload: { request } });
-                            setIsBettingOpen(false);
-                            addNotification('info', 'Défi envoyé !', `Attente de la réponse de ${selectedUser.name}...`);
+                            if (selectedUser.user_id === 'levelbot') {
+                                const difficultyLabel = pendingDifficulty === 'easy' ? 'Facile' : pendingDifficulty === 'hard' ? 'Difficile' : 'Expert';
+                                const request = {
+                                    id: `battle_${Date.now()}`,
+                                    type: pendingDuelType,
+                                    host: { id: user?.id, name: user?.name, avatar: user?.avatar?.image, score: 0 },
+                                    guest: { id: 'levelbot', name: `LevelBot 🤖 (${difficultyLabel})`, avatar: null, difficulty: pendingDifficulty, score: 0 },
+                                    status: 'active',
+                                    timestamp: new Date().toISOString()
+                                };
+                                setIsBettingOpen(false);
+                                startBattle(request, true);
+                            } else {
+                                const request = {
+                                    id: `battle_${Date.now()}`,
+                                    type: pendingDuelType,
+                                    host: { id: user?.id, name: user?.name, avatar: user?.avatar?.image },
+                                    guest: { id: selectedUser.user_id, name: selectedUser.name, avatar: selectedUser.avatar },
+                                    status: 'pending',
+                                    timestamp: new Date().toISOString()
+                                };
+                                channelRef.current.send({ type: 'broadcast', event: 'battle_invite', payload: { request } });
+                                setIsBettingOpen(false);
+                                addNotification('info', 'Défi envoyé !', `Attente de la réponse de ${selectedUser.name}...`);
+                            }
                         }}
                         className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-transform"
                     >

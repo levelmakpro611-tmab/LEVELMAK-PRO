@@ -71,6 +71,24 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
 
   // Fetch AI questions & Subscribe to Realtime Channel
   useEffect(() => {
+    const isOpponentBot = battle.guest?.id === 'levelbot' || battle.host?.id === 'levelbot';
+
+    if (isOpponentBot) {
+      // Solo Game against LevelBot
+      const loadSolo = async () => {
+        try {
+          const qs = await aiService.getBattleQuiz('fr');
+          setQuestions(qs);
+        } catch (e) {
+          console.error('Failed to fetch solo quiz questions:', e);
+        } finally {
+          setLoadingQuestions(false);
+        }
+      };
+      loadSolo();
+      return;
+    }
+
     const battleChannel = supabase.channel(`battle-${battle.id}`, {
       config: { broadcast: { self: false } }
     });
@@ -175,22 +193,63 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
     if (localSelected === null) submitAnswer(-1);
   }, [localSelected]);
 
+  // LevelBot AI simulation effect
+  useEffect(() => {
+    const isOpponentBot = battle.guest?.id === 'levelbot' || battle.host?.id === 'levelbot';
+    if (!isOpponentBot || battle.status !== 'active' || loadingQuestions || questions.length === 0 || showResult) return;
+
+    const botDifficulty = battle.guest?.difficulty || 'easy';
+    let minTime = 4, maxTime = 8, correctChance = 0.40;
+    if (botDifficulty === 'hard') {
+      minTime = 2; maxTime = 5; correctChance = 0.75;
+    } else if (botDifficulty === 'expert') {
+      minTime = 1; maxTime = 3; correctChance = 0.95;
+    }
+
+    const secondsTaken = Math.floor(Math.random() * (maxTime - minTime + 1)) + minTime;
+    const botTimeLeft = 15 - secondsTaken;
+
+    const questionObj = questions[battle.currentQuestionIndex!];
+    if (!questionObj) return;
+    const correctIdx = questionObj.correctAnswer;
+    let botAnswerIdx = correctIdx;
+    if (Math.random() > correctChance) {
+      const incorrectOptions = questionObj.options
+        .map((_, idx) => idx)
+        .filter(idx => idx !== correctIdx);
+      if (incorrectOptions.length > 0) {
+        botAnswerIdx = incorrectOptions[Math.floor(Math.random() * incorrectOptions.length)];
+      }
+    }
+
+    const timer = setTimeout(() => {
+      if (battleRef.current.currentQuestionIndex === battle.currentQuestionIndex && !showResultRef.current) {
+        processAnswer(false, botAnswerIdx, botTimeLeft);
+      }
+    }, secondsTaken * 1000);
+
+    return () => clearTimeout(timer);
+  }, [battle.currentQuestionIndex, battle.status, loadingQuestions, questions.length, showResult]);
+
   // Submit local answer and broadcast
   const submitAnswer = useCallback((answerIdx: number) => {
     if (showResultRef.current || battleRef.current.status !== 'active' || questionsRef.current.length === 0) return;
     
     audioService.playClick();
     
-    channel?.send({
-      type: 'broadcast',
-      event: 'answer_submitted',
-      payload: {
-        senderId: userIdRef.current,
-        answerIdx,
-        timeLeft: timeLeftRef.current,
-        questionIndex: currentIdxRef.current
-      }
-    });
+    const isOpponentBot = battleRef.current.guest?.id === 'levelbot' || battleRef.current.host?.id === 'levelbot';
+    if (!isOpponentBot) {
+      channel?.send({
+        type: 'broadcast',
+        event: 'answer_submitted',
+        payload: {
+          senderId: userIdRef.current,
+          answerIdx,
+          timeLeft: timeLeftRef.current,
+          questionIndex: currentIdxRef.current
+        }
+      });
+    }
 
     processAnswer(userIdRef.current === battleRef.current.host.id, answerIdx, timeLeftRef.current);
   }, [channel]);
@@ -238,7 +297,10 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
 
     // Host manages authoritative sync and schedules transition
     if (isHost) {
-      channel?.send({ type: 'broadcast', event: 'battle_sync', payload: { state: newState } });
+      const isOpponentBot = newState.guest?.id === 'levelbot' || newState.host?.id === 'levelbot';
+      if (!isOpponentBot) {
+        channel?.send({ type: 'broadcast', event: 'battle_sync', payload: { state: newState } });
+      }
       setTimeout(() => advanceRound(newState), 2500);
     }
   }, [isHost, channel]);
@@ -246,16 +308,21 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
   // Transition to next round
   const advanceRound = useCallback((s: BattleState) => {
     if (!isHost) return;
+    const isOpponentBot = s.guest?.id === 'levelbot' || s.host?.id === 'levelbot';
     if (s.currentQuestionIndex! >= questionsRef.current.length - 1) {
       const isDraw = s.host.score === s.guest.score;
       const winner = s.host.score >= s.guest.score ? s.host.id : s.guest.id;
       const finalState = { ...s, status: 'finished' as const, winnerId: isDraw ? null : winner };
       setBattle(finalState);
-      channel?.send({ type: 'broadcast', event: 'battle_sync', payload: { state: finalState } });
+      if (!isOpponentBot) {
+        channel?.send({ type: 'broadcast', event: 'battle_sync', payload: { state: finalState } });
+      }
     } else {
       const next = { ...s, currentQuestionIndex: s.currentQuestionIndex! + 1 };
       setBattle(next);
-      channel?.send({ type: 'broadcast', event: 'battle_sync', payload: { state: next } });
+      if (!isOpponentBot) {
+        channel?.send({ type: 'broadcast', event: 'battle_sync', payload: { state: next } });
+      }
     }
   }, [isHost, channel]);
 
