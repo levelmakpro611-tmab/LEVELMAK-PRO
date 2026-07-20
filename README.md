@@ -1,4 +1,4 @@
-# 🚀 LEVELMAK PRO - Plateforme Éducative Gaming & IA
+LEVELMAK PRO - Plateforme Éducative Gaming & IA
 
 LEVELMAK PRO est une plateforme d'apprentissage immersive de niveau production, combinant la puissance de l'Intelligence Artificielle (Google Gemini) et des mécaniques de gamification avancées (leagues, boutique d'avatars, Mind Garden) pour offrir une expérience éducative stimulante.
 
@@ -6,9 +6,9 @@ L'application est construite avec **React 19 + TypeScript + Vite + TailwindCSS**
 
 ---
 
-## 🎨 Fonctionnalités Principales
+ 🎨 Fonctionnalités Principales
 
-### 🤖 Intelligence Artificielle & Apprentissage
+ 🤖 Intelligence Artificielle & Apprentissage
 *   **AILab (Atelier Feynman & Personnages Historiques)** : Entretien interactif basé sur la technique de Feynman pour tester sa compréhension d'un sujet, ou dialogue immersif avec des personnages historiques réels.
 *   **Générateur de Quiz IA** : Création instantanée de quiz personnalisés sur n'importe quel sujet et niveau scolaire à l'aide de Gemini AI.
 *   **Coach Éducatif Virtuel** : Module de chat d'accompagnement et d'aide aux devoirs.
