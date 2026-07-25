@@ -192,7 +192,11 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   }
               }
           } catch (innerE) {
-              console.error("📍 [Map] All initial fetch attempts failed", innerE);
+              console.error("📍 [Map] All initial fetch attempts failed, setting default Conakry coords", innerE);
+              if (isMountedRef.current) {
+                  setMyLocation({ lat: 9.5370, lng: -13.6785 });
+                  setGpsStatus('locked');
+              }
           }
       }
 
@@ -236,19 +240,23 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   // Presence & Database Fallback
   useEffect(() => {
     if (!user) return;
+    console.log("📍 [Map] Initializing Supabase presence channel for device:", deviceSessionId);
     const channel = supabase.channel('world-presence-v3', { config: { presence: { key: deviceSessionId } } });
     channelRef.current = channel;
 
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
+        console.log("📍 [Map] Realtime Presence Sync State:", state);
         const users: any[] = [];
         for (const key in state) {
-            if (key !== deviceSessionId) {
-                const p = state[key] as any;
-                if (p[0] && typeof p[0].lat === 'number') users.push({ ...p[0], session_id: key });
+            // Allow same user on different sessions (e.g. computer and phone testing)
+            const p = state[key] as any;
+            if (p[0] && typeof p[0].lat === 'number') {
+                users.push({ ...p[0], session_id: key });
             }
         }
+        console.log("📍 [Map] Active users mapped from presence:", users);
         setActiveUsers(users);
       })
       .on('broadcast', { event: 'battle_invite' }, (p) => { 
@@ -274,21 +282,21 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           }
       })
       .subscribe((status) => {
+          console.log("📍 [Map] Supabase presence subscription status changed:", status);
           if (status === 'SUBSCRIBED') {
               setIsSubscribed(true);
           }
       });
 
+    // Fallback: Fetch all profiles from Supabase database
     supabase.from('profiles').select('id, name, phone_number, avatar_config').then(({data}) => {
         if (data) {
-          // Only show users who are public AND have valid GPS coords AND are NOT admins
+          // Show users who are public (or if not specified, default to true) and are not admins
           const visibleProfiles = data.filter(p => 
-            p.id !== user.id && 
             p.avatar_config?.location?.isPublic !== false &&
-            typeof p.avatar_config?.location?.latitude === 'number' &&
-            typeof p.avatar_config?.location?.longitude === 'number' &&
             !isAdminUser(p)
           );
+          console.log("📍 [Map] Fallback profiles loaded from DB:", visibleProfiles.length);
           setAllProfiles(visibleProfiles.map(p => ({ 
             user_id: p.id, 
             name: p.name, 
@@ -300,7 +308,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         }
     });
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { 
+        console.log("📍 [Map] Removing Supabase presence channel");
+        supabase.removeChannel(channel); 
+    };
   }, [user, deviceSessionId]);
 
   // Heartbeat tracking (Throttled & Guaranteed)
@@ -308,14 +319,16 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     if (!channelRef.current || !isSubscribed || !user) return;
 
     if (isGhostMode) {
-      // Ghost ON: make sure we are untracked from presence
       channelRef.current.untrack();
       return;
     }
 
     const currentCoords = myLocation || { lat: 9.5370, lng: -13.6785 }; // Fallback to Conakry coordinates
 
-    const track = () => {
+    const track = async () => {
+        console.log("📍 [Map] Heartbeat track sending location:", currentCoords);
+        
+        // 1. Broadcast in Realtime Channel
         channelRef.current.track({ 
             user_id: user.id, 
             name: user.name, 
@@ -325,6 +338,24 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
             is_ghost: false,
             last_seen: Date.now()
         });
+
+        // 2. Also write/save to Supabase profiles database to guarantee fallback is 100% up to date
+        try {
+            const { data: profile } = await supabase.from('profiles').select('avatar_config').eq('id', user.id).single();
+            const config = profile?.avatar_config || {};
+            const updatedConfig = {
+                ...config,
+                location: {
+                    latitude: currentCoords.lat,
+                    longitude: currentCoords.lng,
+                    isPublic: !isGhostMode
+                }
+            };
+            await supabase.from('profiles').update({ avatar_config: updatedConfig }).eq('id', user.id);
+            console.log("📍 [Map] Geolocation successfully saved to Supabase profiles database");
+        } catch (e) {
+            console.warn("📍 [Map] Could not write location to Supabase profiles fallback:", e);
+        }
     };
     
     track(); // Initial track
@@ -375,19 +406,24 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       const mapUsers = new Map<string, any>();
       // 1. Add all profiles from Supabase DB
       allProfiles.forEach(p => {
-        if (p.user_id !== user?.id && !isAdminUser(p)) {
+        if (p.user_id !== user?.id && !isAdminUser(p) && typeof p.lat === 'number' && typeof p.lng === 'number') {
           mapUsers.set(p.user_id, p);
         }
       });
       // 2. Override/enrich with Realtime active presence users
       activeUsers.forEach(u => {
-        if (u.user_id !== user?.id && !u.is_ghost && !isAdminUser(u)) {
-          const existing = mapUsers.get(u.user_id) || {};
-          mapUsers.set(u.user_id, { ...existing, ...u });
+        if (!u.is_ghost && !isAdminUser(u)) {
+          // Allow showing same user ID if it is a different session (phone vs computer testing)
+          const isSelfDifferentSession = u.user_id === user?.id && u.session_id !== deviceSessionId;
+          if (u.user_id !== user?.id || isSelfDifferentSession) {
+             const key = isSelfDifferentSession ? `${u.user_id}_${u.session_id}` : u.user_id;
+             const existing = mapUsers.get(key) || {};
+             mapUsers.set(key, { ...existing, ...u, user_id: key, actual_user_id: u.user_id });
+          }
         }
       });
       return Array.from(mapUsers.values());
-  }, [activeUsers, allProfiles, user?.id]);
+  }, [activeUsers, allProfiles, user?.id, deviceSessionId]);
 
   const filteredUsers = useMemo(() => {
       const q = searchQuery.toLowerCase().trim();
