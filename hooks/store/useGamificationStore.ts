@@ -13,21 +13,16 @@ export const useGamificationStore = (
         setUser(prev => {
             if (!prev) return null;
             const newTotalXp = (prev.totalXp || 0) + amount;
-            const newXp = (prev.xp || 0) + amount;
+            let remainingXp = (prev.xp || 0) + amount;
+            let updatedLevel = prev.avatar?.currentLevel || 1;
             
-            // Level up logic
-            const currentLevel = prev.avatar?.currentLevel || 1;
-            const xpNeeded = 100 * currentLevel; // Simple formula for now
-            
-            let updatedLevel = currentLevel;
-            let remainingXp = newXp;
-            
-            if (remainingXp >= xpNeeded) {
+            // 100 XP per level
+            while (remainingXp >= 100) {
                 updatedLevel++;
-                remainingXp -= xpNeeded;
+                remainingXp -= 100;
             }
 
-            return {
+            const updatedUser = {
                 ...prev,
                 totalXp: newTotalXp,
                 xp: remainingXp,
@@ -36,13 +31,17 @@ export const useGamificationStore = (
                     currentLevel: updatedLevel
                 }
             };
+            localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+            return updatedUser;
         });
     }, [setUser]);
 
     const addLevelCoins = useCallback((amount: number) => {
         setUser(prev => {
             if (!prev) return null;
-            return { ...prev, levelCoins: (prev.levelCoins || 0) + amount };
+            const updated = { ...prev, levelCoins: (prev.levelCoins || 0) + amount };
+            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            return updated;
         });
     }, [setUser]);
 
@@ -51,7 +50,9 @@ export const useGamificationStore = (
         setUser(prev => {
             if (!prev || (prev.levelCoins || 0) < amount) return prev;
             success = true;
-            return { ...prev, levelCoins: prev.levelCoins - amount };
+            const updated = { ...prev, levelCoins: prev.levelCoins - amount };
+            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            return updated;
         });
         return success;
     }, [setUser]);
@@ -64,10 +65,12 @@ export const useGamificationStore = (
                 addActivity('badge', title, description);
             }, 0);
 
-            return {
+            const updated = {
                 ...prev,
                 badges: [...(prev.badges || []), badgeId]
             };
+            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            return updated;
         });
     }, [setUser, addActivity]);
 
@@ -75,20 +78,22 @@ export const useGamificationStore = (
         setUser(prev => {
             if (!prev) return null;
             const newPlant: GardenPlant = {
-                id: `plant_${Date.now()}`,
+                id: `plant_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
                 type,
-                growthStage: 0,
+                growthStage: 1, // Start as sprout
                 state: 'healthy',
                 lastWateredAt: new Date().toISOString(),
                 plantedAt: new Date().toISOString()
             };
-            return {
+            const updated = {
                 ...prev,
                 garden: {
                     ...prev.garden,
                     plants: [...(prev.garden?.plants || []), newPlant]
                 }
             };
+            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            return updated;
         });
     }, [setUser]);
 
@@ -102,8 +107,6 @@ export const useGamificationStore = (
             const updatedPlants = (prev.garden?.plants || []).map(plant => {
                 if (plant.id !== plantId) return plant;
                 
-                // Both water and fertilizer now help the plant grow!
-                // Water gives +1 growth, Fertilizer gives +2 growth
                 const growthBoost = itemType === 'water_can' ? 1 : 2;
                 const nextStage = Math.min(4, (plant.growthStage || 0) + growthBoost);
                 
@@ -115,7 +118,7 @@ export const useGamificationStore = (
                 };
             });
 
-            return {
+            const updated = {
                 ...prev,
                 consumables: {
                     ...prev.consumables,
@@ -126,6 +129,8 @@ export const useGamificationStore = (
                     plants: updatedPlants
                 }
             };
+            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            return updated;
         });
     }, [setUser]);
 

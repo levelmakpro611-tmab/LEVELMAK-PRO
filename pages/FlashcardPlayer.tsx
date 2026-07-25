@@ -30,7 +30,36 @@ const getFontSize = (text?: string) => {
     return 'text-xl md:text-3xl';
 };
 
-const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose }) => {
+const FormattedMarkdownText: React.FC<{ content?: string; className?: string }> = ({ content, className = '' }) => {
+    if (!content) return null;
+    const lines = content.split('\n');
+    return (
+        <div className={`space-y-1.5 ${className}`}>
+            {lines.map((line, idx) => {
+                const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+                return (
+                    <p key={idx} className="leading-relaxed">
+                        {parts.map((part, pIdx) => {
+                            if (part.startsWith('**') && part.endsWith('**')) {
+                                return <strong key={pIdx} className="font-black text-purple-300">{part.slice(2, -2)}</strong>;
+                            } else if (part.startsWith('*') && part.endsWith('*')) {
+                                return <em key={pIdx} className="italic text-slate-300">{part.slice(1, -1)}</em>;
+                            }
+                            return part;
+                        })}
+                    </p>
+                );
+            })}
+        </div>
+    );
+};
+
+const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards, onClose }) => {
+    // Deduplicate cards array
+    const cards = useMemo(() => {
+        return Array.from(new Map(rawCards.map(c => [c.id || c.front, c])).values());
+    }, [rawCards]);
+
     const { user, addXp, addLevelCoins, addActivity, incrementFlashcardsStudied, updateSRSMetadata, trackTime } = useStore();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [activeCards, setActiveCards] = useState<Flashcard[]>([...cards]);
@@ -43,7 +72,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
     const dragRotate = useTransform(dragX, [-200, 200], [-15, 15]);
 
     const currentCard = activeCards[currentIndex];
-    const progress = (stats.known / cards.length) * 100;
+    const progress = ((currentIndex + 1) / activeCards.length) * 100;
 
     const handleRate = (isMastered: boolean) => {
         HapticFeedback.selection();
@@ -77,7 +106,6 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
     };
 
     const finishSession = () => {
-        // More rewarding for known cards
         const xpGained = (cards.length * 10); 
         const coinsGained = Math.floor(cards.length / 3); 
         
@@ -126,7 +154,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
                 <div className="grid grid-cols-1 gap-6">
                     <div className="glass p-6 rounded-3xl border border-success/20 bg-success/5">
                         <div className="text-3xl font-black text-success mb-1">{cards.length}</div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-success/60">Cartes Appmises</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-success/60">Cartes Apprises</div>
                     </div>
                 </div>
 
@@ -165,7 +193,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
                     <div className="text-white font-bold">{deck.title}</div>
                 </div>
                 <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black">
-                    {stats.known}/{cards.length}
+                    {currentIndex + 1}/{cards.length}
                 </div>
             </div>
 
@@ -179,10 +207,25 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
                 />
             </div>
 
-            {/* Card Area */}
-            <div className="flex-1 flex items-center justify-center perspective-1000 py-12">
+            {/* Card Area with Navigation Arrows */}
+            <div className="flex-1 flex items-center justify-between perspective-1000 py-12 gap-4">
+                <button
+                    onClick={() => {
+                        if (currentIndex > 0) {
+                            setIsFlipped(false);
+                            setCurrentIndex(prev => prev - 1);
+                            HapticFeedback.selection();
+                        }
+                    }}
+                    disabled={currentIndex === 0}
+                    className="p-3 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10"
+                    title="Carte précédente"
+                >
+                    <ArrowLeft size={24} />
+                </button>
+
                 <motion.div
-                    className="relative w-full max-w-md aspect-[3/4] md:aspect-[4/3] cursor-pointer"
+                    className="relative w-full max-w-md aspect-[3/4] md:aspect-[4/3] cursor-pointer flex-1"
                     drag={isFlipped ? "x" : false}
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.8}
@@ -216,9 +259,10 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
                             transition: 'opacity 0.3s'
                         }}
                     >
-                        <h3 className={`font-display font-black text-white leading-tight select-none ${getFontSize(currentCard?.front)}`}>
-                            {currentCard?.front}
-                        </h3>
+                        <FormattedMarkdownText 
+                            content={currentCard?.front} 
+                            className={`font-display font-black text-white leading-tight select-none ${getFontSize(currentCard?.front)}`}
+                        />
                         <div className="absolute bottom-12 flex items-center gap-2 text-slate-500 font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                             Cliquer pour retourner <RotateCcw size={14} />
                         </div>
@@ -237,12 +281,28 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards, onClose 
                         }}
                     >
                         <div className="w-full h-full overflow-y-auto custom-scrollbar flex items-center justify-center py-4">
-                            <p className={`font-bold text-white leading-relaxed select-none ${getFontSize(currentCard?.back)}`}>
-                                {currentCard?.back}
-                            </p>
+                            <FormattedMarkdownText 
+                                content={currentCard?.back} 
+                                className={`font-bold text-white leading-relaxed select-none ${getFontSize(currentCard?.back)}`}
+                            />
                         </div>
                     </div>
                 </motion.div>
+
+                <button
+                    onClick={() => {
+                        if (currentIndex < activeCards.length - 1) {
+                            setIsFlipped(false);
+                            setCurrentIndex(prev => prev + 1);
+                            HapticFeedback.selection();
+                        }
+                    }}
+                    disabled={currentIndex === activeCards.length - 1}
+                    className="p-3 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10"
+                    title="Carte suivante"
+                >
+                    <ChevronRight size={24} />
+                </button>
             </div>
 
             {/* Controls */}

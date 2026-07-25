@@ -357,8 +357,9 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 className="group cursor-pointer"
                                 onClick={() => {
-                                    const deckCards = flashcards.filter(c => c.deckId === deck.id);
-                                    onStartSession(deck, deckCards);
+                                    const rawCards = flashcards.filter(c => c.deckId === deck.id);
+                                    const uniqueCards = Array.from(new Map(rawCards.map(c => [c.id || c.front, c])).values());
+                                    onStartSession(deck, uniqueCards);
                                 }}
                             >
                                 <div className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 shadow-xl hover:border-primary/40 transition-all relative overflow-hidden h-full flex flex-col">

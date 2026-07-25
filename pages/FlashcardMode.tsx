@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFlashcardStore, LocalFlashcard } from '../services/flashcardStore';
-import { Brain, ArrowLeft, CheckCircle, XCircle, RotateCcw, ShieldCheck, Flame, BookOpen, ChevronRight } from 'lucide-react';
+import { Brain, ArrowLeft, CheckCircle, XCircle, RotateCcw, ShieldCheck, Flame, BookOpen, ChevronRight, ChevronLeft } from 'lucide-react';
 import { HapticFeedback } from '../services/nativeAdapters';
 import { audioService } from '../services/audio';
 
@@ -144,9 +144,24 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
           animate={{ scaleX: cardsToReview.length > 0 ? currentIndex / cardsToReview.length : 0 }}
         />
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full relative perspective-[2000px]">
+      <div className="flex-1 flex items-center justify-between max-w-2xl mx-auto w-full relative perspective-[2000px] gap-4">
+        <button
+          onClick={() => {
+            if (currentIndex > 0) {
+              setIsFlipped(false);
+              setCurrentIndex(prev => prev - 1);
+              HapticFeedback.selection();
+            }
+          }}
+          disabled={currentIndex === 0}
+          className="p-3 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10"
+          title="Carte précédente"
+        >
+          <ChevronLeft size={24} />
+        </button>
+
         <motion.div
-            className="relative w-full max-w-md aspect-[3/4] cursor-pointer"
+            className="relative w-full max-w-md aspect-[3/4] cursor-pointer flex-1"
             style={{ transformStyle: 'preserve-3d' }}
             onClick={handleFlip}
             initial={false}
@@ -195,8 +210,22 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
                     <Flame size={16} className="text-orange-500" />
                 </div>
                 <div className="w-full h-full pt-8 overflow-y-auto custom-scrollbar flex items-center">
-                    <div className="text-lg text-white font-medium whitespace-pre-wrap leading-relaxed select-none">
-                        {currentCard.back}
+                    <div className="text-lg text-white font-medium leading-relaxed select-none w-full">
+                        {currentCard.back.split('\n').map((line, idx) => {
+                            const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+                            return (
+                                <p key={idx} className="mb-2">
+                                    {parts.map((part, pIdx) => {
+                                        if (part.startsWith('**') && part.endsWith('**')) {
+                                            return <strong key={pIdx} className="font-black text-purple-300">{part.slice(2, -2)}</strong>;
+                                        } else if (part.startsWith('*') && part.endsWith('*')) {
+                                            return <em key={pIdx} className="italic text-slate-300">{part.slice(1, -1)}</em>;
+                                        }
+                                        return part;
+                                    })}
+                                </p>
+                            );
+                        })}
                     </div>
                 </div>
                 <div className="absolute bottom-6 left-0 right-0 text-center text-slate-500 text-[10px] font-black uppercase tracking-widest opacity-50">
@@ -204,6 +233,21 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
                 </div>
             </div>
         </motion.div>
+
+        <button
+          onClick={() => {
+            if (currentIndex < cardsToReview.length - 1) {
+              setIsFlipped(false);
+              setCurrentIndex(prev => prev + 1);
+              HapticFeedback.selection();
+            }
+          }}
+          disabled={currentIndex === cardsToReview.length - 1}
+          className="p-3 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10"
+          title="Carte suivante"
+        >
+          <ChevronRight size={24} />
+        </button>
       </div>
 
       {/* Actions / Evaluation */}

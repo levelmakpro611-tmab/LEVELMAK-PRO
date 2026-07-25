@@ -258,3 +258,4 @@ const NotificationsManager: React.FC<NotificationsManagerProps> = ({ onNavigate 
 };
 
 export default NotificationsManager;
+

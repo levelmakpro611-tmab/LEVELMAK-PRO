@@ -305,7 +305,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
 
   // Heartbeat tracking (Throttled & Guaranteed)
   useEffect(() => {
-    if (!channelRef.current || !isSubscribed || !user || !myLocation) return;
+    if (!channelRef.current || !isSubscribed || !user) return;
 
     if (isGhostMode) {
       // Ghost ON: make sure we are untracked from presence
@@ -313,23 +313,24 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       return;
     }
 
+    const currentCoords = myLocation || { lat: 9.5370, lng: -13.6785 }; // Fallback to Conakry coordinates
+
     const track = () => {
         channelRef.current.track({ 
             user_id: user.id, 
             name: user.name, 
             avatar: user.avatar?.image, 
-            lat: myLocation.lat, 
-            lng: myLocation.lng,
+            lat: currentCoords.lat, 
+            lng: currentCoords.lng,
             is_ghost: false,
             last_seen: Date.now()
         });
     };
     
     track(); // Initial track
-    const interval = setInterval(track, 15000); // Heartbeat every 15s
+    const interval = setInterval(track, 10000); // Heartbeat every 10s
     return () => clearInterval(interval);
   }, [isSubscribed, myLocation, user, isGhostMode]);
-
 
   // Atlas Focus Logic
   useEffect(() => {
@@ -340,7 +341,6 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         setActiveAtlasCategory(f.type as any);
         const coords = Array.isArray(f.coords[0]) ? (f.coords as any)[0] : f.coords;
         if (typeof coords[0] === 'number') {
-          // ✅ Store timer ID and clear on cleanup to avoid memory leaks
           const timer = setTimeout(() => {
               if (isMountedRef.current && mapRef.current) {
                   try {
@@ -357,7 +357,6 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     }
   }, [map, mapFocusFeatureId]);
 
-
   const startBattle = (request: any, isHost: boolean) => {
       setActiveBattle({ state: { ...request, status: 'active' }, questions: request.questions, isHost });
   };
@@ -373,14 +372,21 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   };
 
   const finalUsers = useMemo(() => {
-      // Filter out current user, ghost users, and admins from presence
-      const visibleActive = activeUsers.filter(u => u.user_id !== user?.id && !u.is_ghost && !isAdminUser(u));
-      
-      // Merge presence data with profile data (to get phone numbers etc)
-      return visibleActive.map(u => {
-          const profile = allProfiles.find(p => p.user_id === u.user_id);
-          return { ...u, ...profile };
+      const mapUsers = new Map<string, any>();
+      // 1. Add all profiles from Supabase DB
+      allProfiles.forEach(p => {
+        if (p.user_id !== user?.id && !isAdminUser(p)) {
+          mapUsers.set(p.user_id, p);
+        }
       });
+      // 2. Override/enrich with Realtime active presence users
+      activeUsers.forEach(u => {
+        if (u.user_id !== user?.id && !u.is_ghost && !isAdminUser(u)) {
+          const existing = mapUsers.get(u.user_id) || {};
+          mapUsers.set(u.user_id, { ...existing, ...u });
+        }
+      });
+      return Array.from(mapUsers.values());
   }, [activeUsers, allProfiles, user?.id]);
 
   const filteredUsers = useMemo(() => {

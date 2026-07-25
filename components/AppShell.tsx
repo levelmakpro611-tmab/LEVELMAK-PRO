@@ -236,7 +236,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !Capacitor.isNativePlatform();
   let navItems = isLocal
     ? navItemsRaw
-    : navItemsRaw.filter(item => !['planner', 'library', 'tutor_hub'].includes(item.id));
+    : navItemsRaw.filter(item => !['planner', 'library', 'tutor_hub', 'social'].includes(item.id));
 
   if (!user) return <>{children}</>;
 
