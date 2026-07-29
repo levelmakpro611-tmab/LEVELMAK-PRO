@@ -459,58 +459,57 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
           {/* Vocabulaire du Jour Section */}
           <section className="animate-slide-up">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 px-2 gap-4">
-              <h3 className="text-xl md:text-2xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
-                <Sparkles className="text-blue-500 animate-pulse" /> {t('dashboard.vocab.title')}
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 px-2 gap-2">
+              <h3 className="text-lg md:text-xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                <Sparkles className="text-blue-500 animate-pulse w-5 h-5" /> {t('dashboard.vocab.title')}
               </h3>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('dashboard.vocab.subtitle')}</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{t('dashboard.vocab.subtitle')}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               {dailyVocab.loading ? (
                 // Squelettes de chargement
                 [1, 2].map((i) => (
-                  <div key={i} className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-white/10 animate-pulse">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-white/5 mb-6"></div>
-                    <div className="h-8 bg-slate-200 dark:bg-white/5 rounded-lg w-3/4 mb-4"></div>
-                    <div className="space-y-3">
+                  <div key={i} className="glass p-4 rounded-2xl border border-slate-200 dark:border-white/10 animate-pulse">
+                    <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-white/5 mb-3"></div>
+                    <div className="h-6 bg-slate-200 dark:bg-white/5 rounded-lg w-3/4 mb-3"></div>
+                    <div className="space-y-2">
+                      <div className="h-10 bg-slate-200 dark:bg-white/5 rounded-xl w-full"></div>
                       <div className="h-12 bg-slate-200 dark:bg-white/5 rounded-xl w-full"></div>
-                      <div className="h-16 bg-slate-200 dark:bg-white/5 rounded-xl w-full"></div>
                     </div>
                   </div>
                 ))
               ) : dailyVocab.words && dailyVocab.words.length > 0 ? (
                 dailyVocab.words.map((item) => (
-                  <div key={item.word} className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-white/10 hover:border-blue-500/30 transition-all group">
-                    <div className="flex items-start justify-between mb-4 md:mb-6">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
-                        <BookMarked size={20} className="md:w-6 md:h-6" />
+                  <div key={item.word} className="glass p-4 md:p-5 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-white/10 hover:border-blue-500/30 transition-all group flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20 shrink-0">
+                          <BookMarked size={16} />
+                        </div>
+                        <h4 className="text-base md:text-lg font-display font-black text-slate-900 dark:text-white tracking-tight group-hover:text-blue-500 transition-colors">
+                          {item.word}
+                        </h4>
                       </div>
-                    </div>
 
-                    <h4 className="text-xl md:text-2xl font-display font-black text-slate-900 dark:text-white mb-3 tracking-tight group-hover:text-blue-600 transition-colors">
-                      {item.word}
-                    </h4>
-
-                    <div className="space-y-4">
-                      <div className="p-3 md:p-4 bg-slate-50 dark:bg-white/5 rounded-xl md:rounded-2xl border border-slate-100 dark:border-white/5">
-                        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">
+                      <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5 mb-3">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed italic">
                           "{item.explanation}"
                         </p>
                       </div>
+                    </div>
 
-                      <div>
-                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">{t('dashboard.vocab.example')}</p>
-                        <p className="text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed bg-blue-500/5 p-3 md:p-4 rounded-xl md:rounded-2xl border-l-4 border-blue-500">
-                          {item.usage}
-                        </p>
-                      </div>
+                    <div className="p-3 bg-blue-500/5 rounded-xl border-l-2 border-blue-500">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-blue-500 mb-1">{t('dashboard.vocab.example')}</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+                        {item.usage}
+                      </p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="col-span-full p-8 text-center glass rounded-3xl border border-white/10">
-                  <p className="text-slate-400 font-bold">{t('dashboard.vocab.empty')}</p>
+                <div className="col-span-full p-6 text-center glass rounded-2xl border border-white/10">
+                  <p className="text-slate-400 font-bold text-xs">{t('dashboard.vocab.empty')}</p>
                 </div>
               )}
             </div>

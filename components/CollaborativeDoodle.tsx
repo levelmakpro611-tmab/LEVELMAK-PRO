@@ -277,21 +277,21 @@ export const CollaborativeDoodle: React.FC<CollaborativeDoodleProps> = ({
 
   if (!battle) {
     return (
-      <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-200 dark:border-white/10 shadow-premium overflow-hidden relative min-h-[400px] flex flex-col items-center justify-center text-center">
-        <div className="w-20 h-20 bg-pink-500/10 rounded-full flex items-center justify-center mb-6 animate-bounce">
-          <Palette className="text-pink-500" size={40} />
+      <div className="glass p-5 md:p-6 rounded-[2rem] border border-slate-200 dark:border-white/10 shadow-premium overflow-hidden relative flex flex-col items-center justify-center text-center group">
+        <div className="w-12 h-12 bg-pink-500/10 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+          <Palette className="text-pink-500" size={24} />
         </div>
-        <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase mb-2">Bataille de Territoire</h2>
-        <p className="text-slate-500 max-w-xs mb-8">
+        <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase mb-1 tracking-tight">Bataille de Territoire</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mb-4 leading-relaxed">
           Défie tes amis en temps réel sur cette fresque ! Aligne 3 points pour gagner.
         </p>
         <button 
           onClick={() => {
             window.dispatchEvent(new CustomEvent('find_opponent'));
           }}
-          className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform shadow-xl flex items-center gap-3"
+          className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-transform shadow-lg flex items-center gap-2"
         >
-          <Swords size={18} />
+          <Swords size={14} />
           Trouver un adversaire
         </button>
       </div>
