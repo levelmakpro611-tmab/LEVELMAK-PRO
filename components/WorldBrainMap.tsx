@@ -30,7 +30,6 @@ const createIcon = (color: string, isSelf: boolean = false) => new L.DivIcon({
 const SelfIcon = createIcon('#22C55E', true); // Vert pour soi
 const GhostIcon = createIcon('#9CA3AF', true); // Gris pour fantôme
 const StudentIcon = createIcon('#6366F1', false); // Indigo pour les autres
-const OfflineStudentIcon = createIcon('#94A3B8', false); // Slate/Gris pour les autres hors ligne
 
 // Atlas Feature Icons
 const RiverIcon = createIcon('#3B82F6', false); // Bleu clair
@@ -405,13 +404,16 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
 
   const finalUsers = useMemo(() => {
       const mapUsers = new Map<string, any>();
-      // 1. Add all profiles from Supabase DB (default to offline)
+      const activeUserIds = new Set(activeUsers.map(u => u.user_id));
+
+      // 1. Add all profiles from Supabase DB (default is_online: false)
       allProfiles.forEach(p => {
         if (p.user_id !== user?.id && !isAdminUser(p) && typeof p.lat === 'number' && typeof p.lng === 'number') {
-          mapUsers.set(p.user_id, { ...p, isOnline: false });
+          const isOnline = activeUserIds.has(p.user_id);
+          mapUsers.set(p.user_id, { ...p, is_online: isOnline });
         }
       });
-      // 2. Override/enrich with Realtime active presence users
+      // 2. Override/enrich with Realtime active presence users (is_online: true)
       activeUsers.forEach(u => {
         if (!u.is_ghost && !isAdminUser(u)) {
           // Allow showing same user ID if it is a different session (phone vs computer testing)
@@ -419,7 +421,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           if (u.user_id !== user?.id || isSelfDifferentSession) {
              const key = isSelfDifferentSession ? `${u.user_id}_${u.session_id}` : u.user_id;
              const existing = mapUsers.get(key) || {};
-             mapUsers.set(key, { ...existing, ...u, user_id: key, actual_user_id: u.user_id, isOnline: true });
+             mapUsers.set(key, { ...existing, ...u, user_id: key, actual_user_id: u.user_id, is_online: true });
           }
         }
       });
@@ -434,10 +436,6 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         (u.phone_number && u.phone_number.includes(q))
       );
   }, [finalUsers, searchQuery]);
-
-  const onlineFilteredUsers = useMemo(() => {
-      return filteredUsers.filter(u => u.isOnline);
-  }, [filteredUsers]);
 
   return (
     <div className={`bg-slate-900 p-6 rounded-[2rem] border border-white/5 relative min-h-[550px] ${onCloseMap ? 'fixed inset-4 z-[9999]' : ''}`}>
@@ -580,8 +578,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 <Marker 
                   key={u.user_id} 
                   position={[u.lat, u.lng]} 
-                  icon={u.isOnline ? StudentIcon : OfflineStudentIcon}
-                  opacity={u.isOnline ? 1.0 : 0.6}
+                  icon={StudentIcon}
                   eventHandlers={{
                     click: () => {
                         HapticFeedback.selection();
@@ -596,14 +593,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                     <Popup className="premium-popup">
                         <div className="p-3 text-center">
                             <p className="font-black text-slate-900 text-sm mb-1">{u.name}</p>
-                            <p className="text-[9px] text-slate-500 font-bold uppercase mb-2">
-                                {u.isOnline ? "En Ligne 🟢" : "Hors Ligne 🔴"}
-                            </p>
-                            {u.isOnline ? (
-                                <button onClick={() => { setSelectedUser(u); setPendingDuelType('quiz'); setIsBettingOpen(true); }} className="w-full py-2 bg-blue-600 text-white text-[10px] rounded-xl font-black">DÉFIER ⚔️</button>
-                            ) : (
-                                <button disabled className="w-full py-2 bg-slate-200 text-slate-400 text-[10px] rounded-xl font-black cursor-not-allowed">HORS LIGNE 🔴</button>
-                            )}
+                            <button onClick={() => { setSelectedUser(u); setPendingDuelType('quiz'); setIsBettingOpen(true); }} className="w-full py-2 bg-blue-600 text-white text-[10px] rounded-xl font-black">DÉFIER ⚔️</button>
                         </div>
                     </Popup>
                 </Marker>
@@ -693,10 +683,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Élèves en Ligne</span></div>
                 </div>
 
-                {onlineFilteredUsers.length === 0 ? (
-                  <p className="text-center text-slate-500 text-[10px] mt-10">Aucun élève en ligne</p>
+                {filteredUsers.filter(u => u.is_online).length === 0 ? (
+                  <p className="text-center text-slate-500 text-[10px] py-3 italic">Aucun autre élève en ligne pour le moment</p>
                 ) : (
-                  onlineFilteredUsers.map((u) => (
+                  filteredUsers.filter(u => u.is_online).map((u) => (
                     <div 
                       key={u.user_id}
                       onClick={() => {
@@ -708,7 +698,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                         HapticFeedback.selection();
                         if (window.innerWidth < 640) setIsUsersListOpen(false);
                       }}
-                      className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all group"
+                      className="p-3 bg-green-500/5 hover:bg-green-500/10 border border-green-500/20 rounded-2xl cursor-pointer transition-all group"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-[10px] shadow-lg">
@@ -716,9 +706,9 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-white text-[11px] font-bold truncate">{u.name}</p>
-                          <p className="text-slate-500 text-[9px] truncate">{u.phone_number || 'Pas de numéro'}</p>
+                          <p className="text-emerald-400 text-[9px] font-semibold truncate">En ligne 🟢</p>
                         </div>
-                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)] animate-pulse" />
                       </div>
                       <button 
                         onClick={(e) => {
@@ -733,6 +723,54 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                       </button>
                     </div>
                   ))
+                )}
+
+                {/* Offline Users / Profiles Section */}
+                {filteredUsers.filter(u => !u.is_online).length > 0 && (
+                  <>
+                    <div className="relative py-1 mt-4">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+                      <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Inscrits (Hors-Ligne)</span></div>
+                    </div>
+
+                    {filteredUsers.filter(u => !u.is_online).map((u) => (
+                      <div 
+                        key={u.user_id}
+                        onClick={() => {
+                          if (mapRef.current) {
+                              try {
+                                  mapRef.current.flyTo([u.lat, u.lng], 15);
+                              } catch (_) {}
+                          }
+                          HapticFeedback.selection();
+                          if (window.innerWidth < 640) setIsUsersListOpen(false);
+                        }}
+                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all group opacity-75 hover:opacity-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-black text-[10px] shadow-lg">
+                            {u.name[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-slate-300 text-[11px] font-bold truncate">{u.name}</p>
+                            <p className="text-slate-500 text-[9px] truncate">Hors-ligne ⚪</p>
+                          </div>
+                          <div className="w-2 h-2 rounded-full bg-slate-600" />
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedUser(u);
+                            setPendingDuelType('quiz');
+                            setIsBettingOpen(true);
+                          }}
+                          className="mt-2 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-[9px] font-black rounded-lg transition-all border border-white/10"
+                        >
+                          DÉFIER (ASYNCHRONE) ⚔️
+                        </button>
+                      </div>
+                    ))}
+                  </>
                 )}
               </div>
             </motion.div>
