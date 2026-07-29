@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HapticFeedback, sendLocalNotification } from '../services/nativeAdapters';
-import { Globe, Menu, X, Waves, HardHat, Mountain, Thermometer, Ghost, Eye } from 'lucide-react';
+import { Globe, Menu, X, Waves, HardHat, Mountain, Thermometer, Ghost, Eye, Star } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -38,6 +38,8 @@ const ResourceIcon = createIcon('#EAB308', false); // Jaune
 const ResourceFocusIcon = createIcon('#CA8A04', true); // Jaune foncé (Highlight)
 const ReliefIcon = createIcon('#166534', false); // Vert arbre
 const ReliefFocusIcon = createIcon('#14532D', true); // Vert arbre foncé (Highlight)
+const ClimateIcon = createIcon('#EF4444', false); // Rouge
+const ClimateFocusIcon = createIcon('#991B1B', true); // Rouge foncé (Highlight)
 
 // Helper: push ghost status to Supabase so other clients' DB fallback also respects it
 const pushGhostStatus = async (userId: string, isGhost: boolean) => {
@@ -678,7 +680,73 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   </button>
                 </div>
 
-                <div className="relative py-1">
+                {/* FAVORITES SECTION ⭐ */}
+                {filteredUsers.filter(u => {
+                  const actualId = u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id;
+                  return favoriteUserIds.includes(actualId);
+                }).length > 0 && (
+                  <>
+                    <div className="relative py-1 mt-2">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-amber-500/30"></div></div>
+                      <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-amber-400 font-black uppercase tracking-widest leading-none flex items-center gap-1"><Star size={10} className="fill-amber-400" /> Mes Amis & Rivaux Favoris</span></div>
+                    </div>
+
+                    {filteredUsers.filter(u => {
+                      const actualId = u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id;
+                      return favoriteUserIds.includes(actualId);
+                    }).map((u) => {
+                      const actualId = u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id;
+                      const isFav = favoriteUserIds.includes(actualId);
+                      return (
+                        <div 
+                          key={`fav_${u.user_id}`}
+                          onClick={() => {
+                            if (mapRef.current) {
+                                try { mapRef.current.flyTo([u.lat, u.lng], 15); } catch (_) {}
+                            }
+                            HapticFeedback.selection();
+                            if (window.innerWidth < 640) setIsUsersListOpen(false);
+                          }}
+                          className="p-3 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 rounded-2xl cursor-pointer transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-slate-900 font-black text-[10px] shadow-lg">
+                              {u.name[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-[11px] font-bold truncate flex items-center gap-1">
+                                {u.name} <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
+                              </p>
+                              <p className={`text-[9px] font-semibold truncate ${u.is_online ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                {u.is_online ? 'En ligne 🟢' : 'Hors-ligne ⚪'}
+                              </p>
+                            </div>
+                            <button
+                              onClick={(e) => toggleFavoriteUser(u.user_id, e)}
+                              className="p-1.5 text-amber-400 hover:text-amber-300 transition-colors"
+                              title="Retirer des favoris"
+                            >
+                              <Star size={14} className="fill-amber-400" />
+                            </button>
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedUser(u);
+                              setPendingDuelType('quiz');
+                              setIsBettingOpen(true);
+                            }}
+                            className="mt-2 w-full py-1.5 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-900 text-[9px] font-black rounded-lg transition-all border border-amber-500/40"
+                          >
+                            DÉFIER FAVORIS ⚔️
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                <div className="relative py-1 mt-2">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
                   <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Élèves en Ligne</span></div>
                 </div>
@@ -686,54 +754,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 {filteredUsers.filter(u => u.is_online).length === 0 ? (
                   <p className="text-center text-slate-500 text-[10px] py-3 italic">Aucun autre élève en ligne pour le moment</p>
                 ) : (
-                  filteredUsers.filter(u => u.is_online).map((u) => (
-                    <div 
-                      key={u.user_id}
-                      onClick={() => {
-                        if (mapRef.current) {
-                            try {
-                                mapRef.current.flyTo([u.lat, u.lng], 15);
-                            } catch (_) {}
-                        }
-                        HapticFeedback.selection();
-                        if (window.innerWidth < 640) setIsUsersListOpen(false);
-                      }}
-                      className="p-3 bg-green-500/5 hover:bg-green-500/10 border border-green-500/20 rounded-2xl cursor-pointer transition-all group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-[10px] shadow-lg">
-                          {u.name[0]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-[11px] font-bold truncate">{u.name}</p>
-                          <p className="text-emerald-400 text-[9px] font-semibold truncate">En ligne 🟢</p>
-                        </div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)] animate-pulse" />
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedUser(u);
-                          setPendingDuelType('quiz');
-                          setIsBettingOpen(true);
-                        }}
-                        className="mt-2 w-full py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-[9px] font-black rounded-lg transition-all border border-blue-500/30"
-                      >
-                        DÉFIER ⚔️
-                      </button>
-                    </div>
-                  ))
-                )}
-
-                {/* Offline Users / Profiles Section */}
-                {filteredUsers.filter(u => !u.is_online).length > 0 && (
-                  <>
-                    <div className="relative py-1 mt-4">
-                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-                      <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Inscrits (Hors-Ligne)</span></div>
-                    </div>
-
-                    {filteredUsers.filter(u => !u.is_online).map((u) => (
+                  filteredUsers.filter(u => u.is_online).map((u) => {
+                    const actualId = u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id;
+                    const isFav = favoriteUserIds.includes(actualId);
+                    return (
                       <div 
                         key={u.user_id}
                         onClick={() => {
@@ -745,17 +769,23 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                           HapticFeedback.selection();
                           if (window.innerWidth < 640) setIsUsersListOpen(false);
                         }}
-                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all group opacity-75 hover:opacity-100"
+                        className="p-3 bg-green-500/5 hover:bg-green-500/10 border border-green-500/20 rounded-2xl cursor-pointer transition-all group"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-black text-[10px] shadow-lg">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-[10px] shadow-lg">
                             {u.name[0]}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-slate-300 text-[11px] font-bold truncate">{u.name}</p>
-                            <p className="text-slate-500 text-[9px] truncate">Hors-ligne ⚪</p>
+                            <p className="text-white text-[11px] font-bold truncate">{u.name}</p>
+                            <p className="text-emerald-400 text-[9px] font-semibold truncate">En ligne 🟢</p>
                           </div>
-                          <div className="w-2 h-2 rounded-full bg-slate-600" />
+                          <button
+                            onClick={(e) => toggleFavoriteUser(u.user_id, e)}
+                            className="p-1 text-slate-400 hover:text-amber-400 transition-colors"
+                            title={isFav ? "Favori" : "Ajouter aux favoris"}
+                          >
+                            <Star size={14} className={isFav ? "fill-amber-400 text-amber-400" : ""} />
+                          </button>
                         </div>
                         <button 
                           onClick={(e) => {
@@ -764,12 +794,70 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                             setPendingDuelType('quiz');
                             setIsBettingOpen(true);
                           }}
-                          className="mt-2 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-[9px] font-black rounded-lg transition-all border border-white/10"
+                          className="mt-2 w-full py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-[9px] font-black rounded-lg transition-all border border-blue-500/30"
                         >
-                          DÉFIER (ASYNCHRONE) ⚔️
+                          DÉFIER ⚔️
                         </button>
                       </div>
-                    ))}
+                    );
+                  })
+                )}
+
+                {/* Offline Users / Profiles Section */}
+                {filteredUsers.filter(u => !u.is_online).length > 0 && (
+                  <>
+                    <div className="relative py-1 mt-4">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+                      <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Inscrits (Hors-Ligne)</span></div>
+                    </div>
+
+                    {filteredUsers.filter(u => !u.is_online).map((u) => {
+                      const actualId = u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id;
+                      const isFav = favoriteUserIds.includes(actualId);
+                      return (
+                        <div 
+                          key={u.user_id}
+                          onClick={() => {
+                            if (mapRef.current) {
+                                try {
+                                    mapRef.current.flyTo([u.lat, u.lng], 15);
+                                } catch (_) {}
+                            }
+                            HapticFeedback.selection();
+                            if (window.innerWidth < 640) setIsUsersListOpen(false);
+                          }}
+                          className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all group opacity-75 hover:opacity-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-black text-[10px] shadow-lg">
+                              {u.name[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-slate-300 text-[11px] font-bold truncate">{u.name}</p>
+                              <p className="text-slate-500 text-[9px] truncate">Hors-ligne ⚪</p>
+                            </div>
+                            <button
+                              onClick={(e) => toggleFavoriteUser(u.user_id, e)}
+                              className="p-1 text-slate-500 hover:text-amber-400 transition-colors"
+                              title={isFav ? "Favori" : "Ajouter aux favoris"}
+                            >
+                              <Star size={14} className={isFav ? "fill-amber-400 text-amber-400" : ""} />
+                            </button>
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedUser(u);
+                              setPendingDuelType('quiz');
+                              setIsBettingOpen(true);
+                            }}
+                            className="mt-2 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-[9px] font-black rounded-lg transition-all border border-white/10"
+                          >
+                            DÉFIER (ASYNCHRONE) ⚔️
+                          </button>
+                        </div>
+                      );
+                    })}
                   </>
                 )}
               </div>

@@ -672,8 +672,15 @@ export const useContentStore = (
         setQuizzes(mergedQuizzes);
         localStorage.setItem(quizKey, JSON.stringify(mergedQuizzes));
 
-        // --- 2. DECK MERGING ---
-        const defaultDecks = getDefaultDecks();
+        // --- 2. DECK MERGING & DELETION PERSISTENCE ---
+        const deletedDeckKey = userId ? `levelmak_${userId}_deleted_decks` : 'levelmak_deleted_decks';
+        let deletedDeckIds: string[] = [];
+        try {
+            const rawDel = localStorage.getItem(deletedDeckKey);
+            if (rawDel) deletedDeckIds = JSON.parse(rawDel);
+        } catch (e) {}
+
+        const defaultDecks = getDefaultDecks().filter(d => !deletedDeckIds.includes(d.id));
         let deckData = localStorage.getItem(deckKey);
         // Cloud recovery
         if (!deckData && user?.stats?.customDecks) {
@@ -683,13 +690,13 @@ export const useContentStore = (
         if (deckData) {
             try { currentDecks = JSON.parse(deckData); } catch (e) { console.error(e); }
         }
-        const customDecks = currentDecks.filter(d => !defaultDecks.some(dd => dd.id === d.id));
+        const customDecks = currentDecks.filter(d => !defaultDecks.some(dd => dd.id === d.id) && !deletedDeckIds.includes(d.id));
         const mergedDecks = [...defaultDecks, ...customDecks];
         setDecks(mergedDecks);
         localStorage.setItem(deckKey, JSON.stringify(mergedDecks));
 
         // --- 3. FLASHCARDS MERGING ---
-        const defaultFlashcards = getDefaultFlashcards();
+        const defaultFlashcards = getDefaultFlashcards().filter(f => !deletedDeckIds.includes(f.deckId));
         let fcData = localStorage.getItem(fcKey);
         // Cloud recovery
         if (!fcData && user?.stats?.customFlashcards) {
@@ -699,7 +706,7 @@ export const useContentStore = (
         if (fcData) {
             try { currentFlashcards = JSON.parse(fcData); } catch (e) { console.error(e); }
         }
-        const customFlashcards = currentFlashcards.filter(f => !defaultFlashcards.some(df => df.id === f.id));
+        const customFlashcards = currentFlashcards.filter(f => !defaultFlashcards.some(df => df.id === f.id) && !deletedDeckIds.includes(f.deckId));
         const mergedFlashcards = [...defaultFlashcards, ...customFlashcards];
         setFlashcards(mergedFlashcards);
         localStorage.setItem(fcKey, JSON.stringify(mergedFlashcards));
@@ -954,6 +961,16 @@ export const useContentStore = (
     }, [userId, user?.is_premium, user?.premium_until, language, decks, getDefaultDecks]);
 
     const deleteFlashcardDeck = useCallback((id: string) => {
+        const deletedDeckKey = userId ? `levelmak_${userId}_deleted_decks` : 'levelmak_deleted_decks';
+        try {
+            const rawDel = localStorage.getItem(deletedDeckKey);
+            const list: string[] = rawDel ? JSON.parse(rawDel) : [];
+            if (!list.includes(id)) {
+                list.push(id);
+                localStorage.setItem(deletedDeckKey, JSON.stringify(list));
+            }
+        } catch (e) {}
+
         setDecks(prev => {
             const updated = prev.filter(d => d.id !== id);
             const deckKey = userId ? `levelmak_${userId}_decks` : 'levelmak_decks';

@@ -23,18 +23,18 @@ interface FlashcardPlayerProps {
 }
 
 const getFontSize = (text?: string) => {
-    if (!text) return 'text-xl md:text-3xl';
-    if (text.length > 150) return 'text-xs md:text-sm';
-    if (text.length > 80) return 'text-sm md:text-lg';
-    if (text.length > 40) return 'text-base md:text-xl';
-    return 'text-xl md:text-3xl';
+    if (!text) return 'text-lg md:text-2xl';
+    if (text.length > 200) return 'text-xs md:text-sm';
+    if (text.length > 100) return 'text-sm md:text-base';
+    if (text.length > 50) return 'text-base md:text-xl';
+    return 'text-lg md:text-2xl';
 };
 
 const FormattedMarkdownText: React.FC<{ content?: string; className?: string }> = ({ content, className = '' }) => {
     if (!content) return null;
     const lines = content.split('\n');
     return (
-        <div className={`space-y-1.5 ${className}`}>
+        <div className={`space-y-2 ${className}`}>
             {lines.map((line, idx) => {
                 const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g);
                 return (
@@ -64,79 +64,46 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
     const [currentIndex, setCurrentIndex] = useState(0);
     const [activeCards, setActiveCards] = useState<Flashcard[]>([...cards]);
     const [isFlipped, setIsFlipped] = useState(false);
-    const [stats, setStats] = useState({ known: 0, struggling: 0 });
-    const [isFinished, setIsFinished] = useState(false);
-    const [startTime] = useState(Date.now());
 
     const dragX = useMotionValue(0);
     const dragRotate = useTransform(dragX, [-200, 200], [-15, 15]);
 
     const currentCard = activeCards[currentIndex];
-    const progress = ((currentIndex + 1) / activeCards.length) * 100;
+    const progress = activeCards.length > 0 ? ((currentIndex + 1) / activeCards.length) * 100 : 0;
 
-    const handleRate = (isMastered: boolean) => {
+    const handleRate = (mastered: boolean) => {
+        if (!currentCard) return;
+
         HapticFeedback.selection();
-        dragX.set(0);
+        incrementFlashcardsStudied(1);
+        updateSRSMetadata(currentCard.id, 'flashcard', mastered ? 5 : 2);
 
-        if (isMastered) {
-            setStats(prev => ({ ...prev, known: prev.known + 1 }));
-            updateSRSMetadata(currentCard.id, 'flashcard', 5);
-            
-            if (currentIndex < activeCards.length - 1) {
-                setIsFlipped(false);
-                setTimeout(() => {
-                    setCurrentIndex(prev => prev + 1);
-                }, 300);
-            } else {
-                finishSession();
-            }
-        } else {
-            // À REPRENDRE: Add the current card to the end of the pile
-            setStats(prev => ({ ...prev, struggling: prev.struggling + 1 }));
-            updateSRSMetadata(currentCard.id, 'flashcard', 1);
-            
-            const cardToRepeat = { ...currentCard };
-            setActiveCards(prev => [...prev, cardToRepeat]);
-            
+        if (mastered) {
+            addXp(10);
+            addLevelCoins(2);
+            trackTime(1, deck.subject);
+        }
+
+        if (currentIndex < activeCards.length - 1) {
             setIsFlipped(false);
             setTimeout(() => {
                 setCurrentIndex(prev => prev + 1);
-            }, 300);
+            }, 150);
+        } else {
+            addActivity('study', 'Cartes terminées 🧠', `Deck : ${deck.title}`);
+            if (user) {
+                logUserActivity(user.id, user.name, 'study', `Studied Deck: ${deck.title}`);
+            }
+            setIsFlipped(false);
+            setCurrentIndex(activeCards.length); // Trigger end screen
         }
     };
 
-    const finishSession = () => {
-        const xpGained = (cards.length * 10); 
-        const coinsGained = Math.floor(cards.length / 3); 
-        
-        addXp(xpGained);
-        if (coinsGained > 0) {
-            addLevelCoins(coinsGained);
-        }
-        
-        HapticFeedback.success();
-        incrementFlashcardsStudied(cards.length);
-        const timeSpent = Math.floor((Date.now() - startTime) / 60000) || 1;
-        addActivity('study', 'Session Flashcards terminée', `Tu as maîtrisé tout le deck "${deck.title}" !`);
-        trackTime(timeSpent);
-        
-        if (user) {
-            logUserActivity(
-                user.id,
-                user.name,
-                'creative',
-                `Session Flashcards terminée: ${deck.title}`,
-                { cards: cards.length, known: cards.length, xp: xpGained, coins: coinsGained, timeSpent }
-            );
-        }
-        setIsFinished(true);
-    };
-
-    if (isFinished) {
+    if (currentIndex >= activeCards.length) {
         return (
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
                 className="max-w-xl mx-auto py-12 md:py-20 px-4 text-center space-y-8 md:space-y-12"
             >
                 <div className="relative">
@@ -208,7 +175,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
             </div>
 
             {/* Card Area with Navigation Arrows */}
-            <div className="flex-1 flex items-center justify-between perspective-1000 py-12 gap-4">
+            <div className="flex-1 flex items-center justify-between perspective-1000 py-6 md:py-10 gap-2 md:gap-6">
                 <button
                     onClick={() => {
                         if (currentIndex > 0) {
@@ -218,14 +185,14 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         }
                     }}
                     disabled={currentIndex === 0}
-                    className="p-3 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10"
+                    className="p-3 md:p-4 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0"
                     title="Carte précédente"
                 >
                     <ArrowLeft size={24} />
                 </button>
 
                 <motion.div
-                    className="relative w-full max-w-md aspect-[3/4] md:aspect-[4/3] cursor-pointer flex-1"
+                    className="relative w-full max-w-lg min-h-[340px] md:min-h-[420px] cursor-pointer flex-1 my-auto"
                     drag={isFlipped ? "x" : false}
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.8}
@@ -250,7 +217,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                 >
                     {/* Front */}
                     <div
-                        className="absolute inset-0 glass rounded-[3rem] border border-white/10 shadow-2xl flex flex-col items-center justify-center p-6 md:p-12 text-center group"
+                        className="absolute inset-0 glass rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col items-center justify-between p-6 md:p-10 text-center overflow-y-auto custom-scrollbar group bg-slate-900/90"
                         style={{
                             backfaceVisibility: 'hidden',
                             WebkitBackfaceVisibility: 'hidden',
@@ -259,18 +226,20 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                             transition: 'opacity 0.3s'
                         }}
                     >
-                        <FormattedMarkdownText 
-                            content={currentCard?.front} 
-                            className={`font-display font-black text-white leading-tight select-none ${getFontSize(currentCard?.front)}`}
-                        />
-                        <div className="absolute bottom-12 flex items-center gap-2 text-slate-500 font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-full flex-1 flex flex-col items-center justify-center my-auto py-4">
+                            <FormattedMarkdownText 
+                                content={currentCard?.front} 
+                                className={`font-display font-black text-white leading-relaxed select-none ${getFontSize(currentCard?.front)}`}
+                            />
+                        </div>
+                        <div className="mt-4 flex items-center gap-2 text-slate-400 font-bold text-[10px] md:text-xs uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/10">
                             Cliquer pour retourner <RotateCcw size={14} />
                         </div>
                     </div>
 
                     {/* Back */}
                     <div
-                        className="absolute inset-0 glass rounded-[3rem] border border-primary/20 shadow-2xl flex flex-col items-center justify-center p-6 md:p-8 text-center bg-primary/5"
+                        className="absolute inset-0 glass rounded-[2.5rem] border border-primary/30 shadow-2xl flex flex-col items-center justify-center p-6 md:p-10 text-center bg-slate-900/95"
                         style={{
                             backfaceVisibility: 'hidden',
                             WebkitBackfaceVisibility: 'hidden',
@@ -280,7 +249,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                             transition: 'opacity 0.3s'
                         }}
                     >
-                        <div className="w-full h-full overflow-y-auto custom-scrollbar flex items-center justify-center py-4">
+                        <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center justify-center py-4 my-auto">
                             <FormattedMarkdownText 
                                 content={currentCard?.back} 
                                 className={`font-bold text-white leading-relaxed select-none ${getFontSize(currentCard?.back)}`}

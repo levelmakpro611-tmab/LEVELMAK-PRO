@@ -161,7 +161,7 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
         </button>
 
         <motion.div
-            className="relative w-full max-w-md aspect-[3/4] cursor-pointer flex-1"
+            className="relative w-full max-w-lg min-h-[340px] md:min-h-[420px] cursor-pointer flex-1 my-auto"
             style={{ transformStyle: 'preserve-3d' }}
             onClick={handleFlip}
             initial={false}
@@ -170,7 +170,7 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
         >
             {/* Front Side */}
             <div
-                className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 rounded-[2.5rem] p-8 flex flex-col justify-center items-center text-center shadow-2xl transition-all"
+                className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 rounded-[2.5rem] p-6 md:p-10 flex flex-col justify-between items-center text-center shadow-2xl transition-all overflow-y-auto custom-scrollbar"
                 style={{
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
@@ -179,23 +179,23 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
                     transition: 'opacity 0.3s'
                 }}
             >
-                <div className="absolute top-6 left-6 right-6 flex justify-between items-center text-slate-500">
+                <div className="w-full flex justify-between items-center text-slate-500 mb-2">
                     <span className="text-[10px] font-black uppercase tracking-widest">{currentCard.subject}</span>
                     <BookOpen size={16} />
                 </div>
-                <div className="space-y-6 flex flex-col items-center">
-                    <h3 className="text-3xl font-black text-white leading-tight select-none">
+                <div className="flex-1 flex flex-col items-center justify-center my-auto py-4 w-full">
+                    <h3 className="text-lg md:text-2xl font-black text-white leading-relaxed select-none">
                         {currentCard.front}
                     </h3>
-                    <p className="text-sm font-bold text-slate-500 mt-8 animate-pulse text-center">
-                        👆 Tap pour retourner la carte
-                    </p>
                 </div>
+                <p className="text-xs font-bold text-slate-400 mt-2 animate-pulse text-center bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                    👆 Tap pour retourner la carte
+                </p>
             </div>
 
             {/* Back Side */}
             <div
-                className="absolute inset-0 bg-slate-800 border border-purple-500/30 rounded-[2.5rem] p-8 flex flex-col text-left shadow-2xl transition-all"
+                className="absolute inset-0 bg-slate-900 border border-purple-500/30 rounded-[2.5rem] p-6 md:p-10 flex flex-col text-left shadow-2xl transition-all"
                 style={{
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
