@@ -26,7 +26,8 @@ import {
   Layers,
   Play,
   GraduationCap,
-  Target
+  Target,
+  Flame
 } from 'lucide-react';
 import {
   LineChart,
@@ -225,119 +226,133 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-12">
           {/* Profile Card Header */}
-          <section className="relative overflow-hidden glass p-5 md:p-12 rounded-[1.5rem] md:rounded-[4rem] border border-white/10 shadow-premium group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px] -mr-32 -mt-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/10 rounded-full blur-[80px] -ml-24 -mb-24"></div>
+          <section className="relative overflow-hidden glass p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] border border-white/10 shadow-2xl bg-slate-900/80 backdrop-blur-xl group">
+            {/* Ambient Background Glows */}
+            <div className="absolute top-0 right-1/4 w-72 h-72 bg-purple-600/15 rounded-full blur-[110px] pointer-events-none"></div>
+            <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-amber-500/15 rounded-full blur-[110px] pointer-events-none"></div>
 
-            <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8 relative z-10">
-              <div className="relative">
-                <div className="w-20 md:w-32 h-20 md:h-32 rounded-[1.2rem] md:rounded-[3rem] bg-gradient-to-br from-primary to-secondary p-0.5 md:p-1 rotate-2 md:rotate-3 group-hover:rotate-6 transition-transform shadow-2xl overflow-hidden">
-                  <div className="w-full h-full rounded-[1.1rem] md:rounded-[2.8rem] overflow-hidden bg-slate-900 border md:border-4 border-slate-900 flex items-center justify-center">
+            <div className="flex flex-col items-center justify-center text-center space-y-6 relative z-10">
+              {/* Hero Avatar & Level Badge */}
+              <div className="relative group/avatar">
+                <div className="w-28 md:w-36 h-28 md:h-36 rounded-full p-1 bg-gradient-to-tr from-amber-400 via-purple-500 to-indigo-500 shadow-[0_0_35px_rgba(245,158,11,0.35)] group-hover/avatar:scale-105 transition-transform duration-500">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-slate-950 border-4 border-slate-950 flex items-center justify-center">
                     {user.avatar?.image ? (
                       <img src={user.avatar.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-2xl md:text-5xl font-black text-white">{(user.name || 'U').charAt(0).toUpperCase()}</span>
+                      <span className="text-3xl md:text-5xl font-black text-white">{(user.name || 'U').charAt(0).toUpperCase()}</span>
                     )}
                   </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 bg-success text-white text-[7px] md:text-[10px] font-black px-2 md:px-3 py-0.5 md:py-1 rounded-full border-2 md:border-4 border-slate-900 shadow-xl">
-                  {t('dashboard.profile.level')} {user.avatar?.currentLevel || 1}
+                <div className="absolute -bottom-2 inset-x-0 flex justify-center">
+                  <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-black text-[10px] md:text-xs px-3.5 py-1 rounded-full shadow-lg border-2 border-slate-950 flex items-center gap-1 uppercase tracking-widest">
+                    ⭐ {t('dashboard.profile.level')} {user.avatar?.currentLevel || 1}
+                  </span>
                 </div>
               </div>
 
-              <div className="text-center md:text-left space-y-2 md:space-y-4 flex-1 w-full">
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-8">
-                  <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
-                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                      <h2 className="text-3xl md:text-6xl font-display font-black text-slate-900 dark:text-white tracking-tighter whitespace-nowrap">
-                        {user.name}<span className="text-primary">.</span>
-                      </h2>
-                      {(() => {
-                        const leagueId = getLeagueFromXp(user.totalXp);
-                        const league = LEAGUES.find(l => l.id === leagueId);
-                        if (!league) return null;
-                        return (
-                          <motion.div 
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 bg-black/20 backdrop-blur-md shadow-lg group/league cursor-help"
-                            style={{ borderColor: `${league.color}33` }}
-                            title={league.name}
-                          >
-                            <span className="text-lg md:text-xl">{league.icon}</span>
-                            <span className="text-[10px] md:text-xs font-black uppercase tracking-widest" style={{ color: league.color }}>{league.name}</span>
-                          </motion.div>
-                        );
-                      })()}
-                    </div>
-                    {user.streak?.current > 0 && (
-                      <div className="inline-flex items-center gap-2 bg-orange-500/10 dark:bg-orange-500/20 px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-2xl border border-orange-500/20 shadow-glow-orange animate-bounce">
-                        <span className="text-orange-600 dark:text-orange-400 font-bold text-lg md:text-2xl">{user.streak.current}</span>
-                        <Zap size={20} className="text-orange-500 fill-orange-500" />
-                      </div>
-                    )}
-                    <div className="inline-flex items-center gap-2 bg-amber-500/10 dark:bg-amber-500/20 px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-2xl border border-amber-500/20 shadow-sm self-center md:self-auto group/balance animate-fade-in">
-                      <div className="flex flex-col items-center md:items-start -space-y-0.5 md:-space-y-1">
-                        <span className="text-[7px] md:text-[8px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest">{t('shop.balance')}</span>
-                        <div className="flex items-center gap-1.5 md:gap-2">
-                          <span className="text-base md:text-3xl font-display font-black text-slate-900 dark:text-white">{user.levelCoins || 0}</span>
-                          <Coins className="text-amber-500 group-hover/balance:rotate-12 transition-transform w-3.5 h-3.5 md:w-6 md:h-6" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    {isPremiumActive ? (
-                      <>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-blue-500/10">
-                          <Sparkles size={10} /> {t('dashboard.profile.studentPro')}
-                        </div>
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-colors ${isOnline
-                          ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/10'
-                          : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/10'
-                          }`}>
-                          {isOnline ? (<><Wifi size={10} /> {t('dashboard.online')}</>) : (<><WifiOff size={10} /> {t('dashboard.offline')}</>)}
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
-                          {t('dashboard.profile.eliteMember')}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-500/10 text-slate-500 dark:text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-550/10">
-                          {settings.language === 'fr' ? 'Étudiant Gratuit' : 'Free Student'}
-                        </div>
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-colors ${isOnline
-                          ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/10'
-                          : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/10'
-                          }`}>
-                          {isOnline ? (<><Wifi size={10} /> {t('dashboard.online')}</>) : (<><WifiOff size={10} /> {t('dashboard.offline')}</>)}
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-500/10 text-slate-500 dark:text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-550/10">
-                          {settings.language === 'fr' ? 'Membre Standard' : 'Standard Member'}
-                        </div>
-                      </>
-                    )}
-                   </div>
+              {/* User Name & 3D Metallic League Badge */}
+              <div className="space-y-2.5 flex flex-col items-center">
+                <h2 className="text-3xl md:text-5xl font-display font-black text-white tracking-tight leading-none">
+                  {user.name}<span className="text-amber-400">.</span>
+                </h2>
+
+                {(() => {
+                  const leagueId = getLeagueFromXp(user.totalXp);
+                  const league = LEAGUES.find(l => l.id === leagueId);
+                  if (!league) return null;
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-950/60 via-amber-900/40 to-amber-950/60 shadow-[0_0_20px_rgba(245,158,11,0.2)] text-amber-300 font-black uppercase text-xs tracking-[0.2em]"
+                    >
+                      <span className="text-lg">{league.icon}</span>
+                      <span>{league.name}</span>
+                    </motion.div>
+                  );
+                })()}
+              </div>
+
+              {/* Side-by-Side Stat Cards (Streak & LevelCoins) */}
+              <div className="grid grid-cols-2 gap-3 md:gap-5 w-full max-w-md">
+                {/* Streak Card */}
+                <div className="bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-red-500/20 border border-orange-500/30 p-3.5 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(249,115,22,0.15)] group/streak">
+                  <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center border border-orange-500/40 shrink-0 group-hover/streak:scale-110 transition-transform">
+                    <Flame className="w-5 h-5 md:w-6 md:h-6 fill-orange-500 text-orange-400 animate-pulse" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[8px] md:text-[9px] font-black text-orange-400 uppercase tracking-widest">Série</p>
+                    <p className="text-sm md:text-xl font-display font-black text-white">{user.streak?.current || 0} Jour{(user.streak?.current || 0) > 1 ? 's' : ''}</p>
+                  </div>
                 </div>
-                <p className="text-[10px] md:text-base text-slate-500 dark:text-slate-400 font-medium max-w-lg leading-relaxed mx-auto md:mx-0">
-                  {t('dashboard.profile.nextLevel')} <span className="text-slate-900 dark:text-white font-bold">{Math.round(xpPercentage)}%</span> {t('dashboard.profile.ofNextLevel')}
+
+                {/* LevelCoins Card */}
+                <div className="bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-yellow-500/20 border border-amber-500/30 p-3.5 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(245,158,11,0.15)] group/coins">
+                  <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40 shrink-0 group-hover/coins:rotate-12 transition-transform">
+                    <Coins className="w-5 h-5 md:w-6 md:h-6 text-amber-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[8px] md:text-[9px] font-black text-amber-400 uppercase tracking-widest">{t('shop.balance')}</p>
+                    <p className="text-sm md:text-xl font-display font-black text-white">{user.levelCoins || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Pill Tags */}
+              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
+                {isPremiumActive ? (
+                  <>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-300 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-blue-500/30 shadow-glow-blue">
+                      <Sparkles size={12} /> {t('dashboard.profile.studentPro')}
+                    </div>
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border ${isOnline
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                      }`}>
+                      {isOnline ? (<><Wifi size={12} /> {t('dashboard.online')}</>) : (<><WifiOff size={12} /> {t('dashboard.offline')}</>)}
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 text-purple-300 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-purple-500/30">
+                      <Star size={12} className="fill-purple-300" /> {t('dashboard.profile.eliteMember')}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-400 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-white/10">
+                      {settings.language === 'fr' ? 'Étudiant Gratuit' : 'Free Student'}
+                    </div>
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border ${isOnline
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                      }`}>
+                      {isOnline ? (<><Wifi size={12} /> {t('dashboard.online')}</>) : (<><WifiOff size={12} /> {t('dashboard.offline')}</>)}
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-400 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-white/10">
+                      {settings.language === 'fr' ? 'Membre Standard' : 'Standard Member'}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Neon Energy Progress Bar */}
+              <div className="w-full max-w-lg space-y-2 pt-2">
+                <p className="text-xs md:text-sm text-slate-300 font-bold text-center leading-relaxed">
+                  Tu es à <span className="text-amber-400 font-black text-sm md:text-base">{Math.round(xpPercentage)}%</span> du Niveau {(user.avatar?.currentLevel || 1) + 1} !
                 </p>
 
-                <div className="space-y-1.5 md:space-y-2">
-                  <div className="w-full bg-slate-100 dark:bg-white/5 rounded-full h-3 md:h-5 p-0.5 md:p-1 border border-slate-200 dark:border-white/5 shadow-inner relative overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 rounded-full transition-all duration-1000 ease-out shadow-sm relative"
-                      style={{ width: `${xpPercentage}%` }}
-                    >
-                      <div className="absolute right-0 top-0 bottom-0 w-2 bg-white blur-[2px] opacity-40"></div>
-                    </div>
+                <div className="w-full bg-slate-950/80 rounded-full h-4 md:h-5 p-1 border border-white/10 shadow-inner relative overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(139,92,246,0.5)] relative"
+                    style={{ width: `${xpPercentage}%` }}
+                  >
+                    <div className="absolute right-0 top-0 bottom-0 w-2 bg-white blur-[1px] opacity-75 animate-pulse"></div>
                   </div>
-                  <div className="flex justify-between px-0.5">
-                    <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter">{user.xp} XP</span>
-                    <span className="text-[7px] md:text-[10px] font-black text-blue-600 uppercase tracking-tighter">
-                      {Math.round(getXpForNextLevel(user.avatar?.currentLevel || 1) - user.xp)} {t('dashboard.profile.remaining')}
-                    </span>
-                  </div>
+                </div>
+
+                <div className="flex justify-between text-[9px] md:text-xs font-black uppercase tracking-wider text-slate-400 px-1">
+                  <span>{user.xp} XP</span>
+                  <span className="text-amber-400">
+                    {Math.round(getXpForNextLevel(user.avatar?.currentLevel || 1) - user.xp)} {t('dashboard.profile.remaining')}
+                  </span>
                 </div>
               </div>
             </div>
