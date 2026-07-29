@@ -96,8 +96,32 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   const [isGhostMode, setIsGhostMode] = useState(!(user?.location?.isPublic ?? true));
   const [activeUsers, setActiveUsers] = useState<any[]>([]);
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
-  const [myLocation, setMyLocation] = useState<{lat: number, lng: number} | null>(null);
   const [map, setMap] = useState<L.Map | null>(null);
+  const [myLocation, setMyLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  const [favoriteUserIds, setFavoriteUserIds] = useState<string[]>(() => {
+    try {
+      const key = user?.id ? `levelmak_fav_users_${user.id}` : 'levelmak_fav_users';
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const toggleFavoriteUser = useCallback((targetUserId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    HapticFeedback.selection();
+    setFavoriteUserIds(prev => {
+      const actualId = targetUserId.includes('_') ? targetUserId.split('_')[0] : targetUserId;
+      const updated = prev.includes(actualId)
+        ? prev.filter(id => id !== actualId)
+        : [...prev, actualId];
+      const key = user?.id ? `levelmak_fav_users_${user.id}` : 'levelmak_fav_users';
+      localStorage.setItem(key, JSON.stringify(updated));
+      return updated;
+    });
+  }, [user?.id]);
 
   const isMountedRef = useRef(true);
   const mapRef = useRef<L.Map | null>(null);
