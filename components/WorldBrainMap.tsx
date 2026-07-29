@@ -30,6 +30,7 @@ const createIcon = (color: string, isSelf: boolean = false) => new L.DivIcon({
 const SelfIcon = createIcon('#22C55E', true); // Vert pour soi
 const GhostIcon = createIcon('#9CA3AF', true); // Gris pour fantôme
 const StudentIcon = createIcon('#6366F1', false); // Indigo pour les autres
+const OfflineStudentIcon = createIcon('#94A3B8', false); // Slate/Gris pour les autres hors ligne
 
 // Atlas Feature Icons
 const RiverIcon = createIcon('#3B82F6', false); // Bleu clair
@@ -404,10 +405,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
 
   const finalUsers = useMemo(() => {
       const mapUsers = new Map<string, any>();
-      // 1. Add all profiles from Supabase DB
+      // 1. Add all profiles from Supabase DB (default to offline)
       allProfiles.forEach(p => {
         if (p.user_id !== user?.id && !isAdminUser(p) && typeof p.lat === 'number' && typeof p.lng === 'number') {
-          mapUsers.set(p.user_id, p);
+          mapUsers.set(p.user_id, { ...p, isOnline: false });
         }
       });
       // 2. Override/enrich with Realtime active presence users
@@ -418,7 +419,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           if (u.user_id !== user?.id || isSelfDifferentSession) {
              const key = isSelfDifferentSession ? `${u.user_id}_${u.session_id}` : u.user_id;
              const existing = mapUsers.get(key) || {};
-             mapUsers.set(key, { ...existing, ...u, user_id: key, actual_user_id: u.user_id });
+             mapUsers.set(key, { ...existing, ...u, user_id: key, actual_user_id: u.user_id, isOnline: true });
           }
         }
       });
@@ -433,6 +434,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         (u.phone_number && u.phone_number.includes(q))
       );
   }, [finalUsers, searchQuery]);
+
+  const onlineFilteredUsers = useMemo(() => {
+      return filteredUsers.filter(u => u.isOnline);
+  }, [filteredUsers]);
 
   return (
     <div className={`bg-slate-900 p-6 rounded-[2rem] border border-white/5 relative min-h-[550px] ${onCloseMap ? 'fixed inset-4 z-[9999]' : ''}`}>
@@ -575,7 +580,8 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 <Marker 
                   key={u.user_id} 
                   position={[u.lat, u.lng]} 
-                  icon={StudentIcon}
+                  icon={u.isOnline ? StudentIcon : OfflineStudentIcon}
+                  opacity={u.isOnline ? 1.0 : 0.6}
                   eventHandlers={{
                     click: () => {
                         HapticFeedback.selection();
@@ -590,7 +596,14 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                     <Popup className="premium-popup">
                         <div className="p-3 text-center">
                             <p className="font-black text-slate-900 text-sm mb-1">{u.name}</p>
-                            <button onClick={() => { setSelectedUser(u); setPendingDuelType('quiz'); setIsBettingOpen(true); }} className="w-full py-2 bg-blue-600 text-white text-[10px] rounded-xl font-black">DÉFIER ⚔️</button>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase mb-2">
+                                {u.isOnline ? "En Ligne 🟢" : "Hors Ligne 🔴"}
+                            </p>
+                            {u.isOnline ? (
+                                <button onClick={() => { setSelectedUser(u); setPendingDuelType('quiz'); setIsBettingOpen(true); }} className="w-full py-2 bg-blue-600 text-white text-[10px] rounded-xl font-black">DÉFIER ⚔️</button>
+                            ) : (
+                                <button disabled className="w-full py-2 bg-slate-200 text-slate-400 text-[10px] rounded-xl font-black cursor-not-allowed">HORS LIGNE 🔴</button>
+                            )}
                         </div>
                     </Popup>
                 </Marker>
@@ -680,10 +693,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Élèves en Ligne</span></div>
                 </div>
 
-                {filteredUsers.length === 0 ? (
-                  <p className="text-center text-slate-500 text-[10px] mt-10">Aucun élève trouvé</p>
+                {onlineFilteredUsers.length === 0 ? (
+                  <p className="text-center text-slate-500 text-[10px] mt-10">Aucun élève en ligne</p>
                 ) : (
-                  filteredUsers.map((u) => (
+                  onlineFilteredUsers.map((u) => (
                     <div 
                       key={u.user_id}
                       onClick={() => {
