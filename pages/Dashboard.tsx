@@ -198,34 +198,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-0 pb-24 md:pb-0">
-      {/* Stats Summary Card */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        {[
-          { label: t('dashboard.stats.xp'), value: user.totalXp || 0, icon: Zap, color: 'text-amber-500', glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]', border: 'border-amber-500/10' },
-          { label: t('dashboard.stats.quiz'), value: quizzes.length, icon: BookOpenCheck, color: 'text-blue-500', glow: 'shadow-[0_0_15px_rgba(37,99,235,0.15)]', border: 'border-blue-500/10' },
-          { label: t('dashboard.stats.time'), value: formatTime(user.stats?.hoursLearned || 0), icon: Clock, color: 'text-purple-500', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]', border: 'border-purple-500/10', tab: 'analytics' },
-          { label: t('dashboard.stats.badges'), value: (user.badges || []).length, icon: Award, color: 'text-rose-500', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]', border: 'border-rose-500/10' },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            onClick={() => stat.tab && onNavigate(stat.tab)}
-            className={`glass p-3 md:p-6 rounded-xl md:rounded-[2rem] border ${stat.border} flex items-center gap-2 md:gap-5 transition-all duration-300 ${stat.tab ? 'hover:scale-[1.05] cursor-pointer' : 'hover:scale-[1.02]'} ${stat.glow} group relative overflow-hidden`}
-          >
-            <div className={`p-2 md:p-4 rounded-lg md:rounded-2xl glass flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform relative z-10 border border-white/5`}>
-              <stat.icon size={16} className="md:w-7 md:h-7" strokeWidth={2.5} />
-            </div>
-            <div className="relative z-10">
-              <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5">{stat.label}</p>
-              <p className="text-sm md:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">{stat.value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
         {/* Main Content Column */}
-        <div className="lg:col-span-2 space-y-12">
-          {/* Profile Card Header */}
+        <div className="lg:col-span-2 space-y-8 md:space-y-10">
+          {/* Profile Card Header (Top of Dashboard) */}
           <section className="relative overflow-hidden glass p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] border border-white/10 shadow-2xl bg-slate-900/80 backdrop-blur-xl group">
             {/* Ambient Background Glows */}
             <div className="absolute top-0 right-1/4 w-72 h-72 bg-purple-600/15 rounded-full blur-[110px] pointer-events-none"></div>
@@ -357,6 +333,30 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
             </div>
           </section>
+
+          {/* Stats Summary Card (Directly Below Profile Card) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
+            {[
+              { label: t('dashboard.stats.xp'), value: user.totalXp || 0, icon: Zap, color: 'text-amber-500', glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]', border: 'border-amber-500/10' },
+              { label: t('dashboard.stats.quiz'), value: quizzes.length, icon: BookOpenCheck, color: 'text-blue-500', glow: 'shadow-[0_0_15px_rgba(37,99,235,0.15)]', border: 'border-blue-500/10' },
+              { label: t('dashboard.stats.time'), value: formatTime(user.stats?.hoursLearned || 0), icon: Clock, color: 'text-purple-500', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]', border: 'border-purple-500/10', tab: 'analytics' },
+              { label: t('dashboard.stats.badges'), value: (user.badges || []).length, icon: Award, color: 'text-rose-500', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]', border: 'border-rose-500/10' },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                onClick={() => stat.tab && onNavigate(stat.tab)}
+                className={`glass p-3 md:p-5 rounded-xl md:rounded-[2rem] border ${stat.border} flex items-center gap-2 md:gap-4 transition-all duration-300 ${stat.tab ? 'hover:scale-[1.05] cursor-pointer' : 'hover:scale-[1.02]'} ${stat.glow} group relative overflow-hidden`}
+              >
+                <div className={`p-2 md:p-3.5 rounded-lg md:rounded-2xl glass flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform relative z-10 border border-white/5`}>
+                  <stat.icon size={16} className="md:w-6 md:h-6" strokeWidth={2.5} />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 mb-0.5">{stat.label}</p>
+                  <p className="text-sm md:text-2xl font-display font-bold text-slate-900 dark:text-white tracking-tight">{stat.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* AI Spirit Card */}
 
