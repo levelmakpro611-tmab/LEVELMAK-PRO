@@ -144,7 +144,7 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
           animate={{ scaleX: cardsToReview.length > 0 ? currentIndex / cardsToReview.length : 0 }}
         />
       </div>
-      <div className="flex-1 flex items-center justify-between max-w-2xl mx-auto w-full relative perspective-[2000px] gap-4">
+      <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto w-full relative perspective-[2000px] gap-2 sm:gap-6">
         <button
           onClick={() => {
             if (currentIndex > 0) {
@@ -154,20 +154,21 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
             }
           }}
           disabled={currentIndex === 0}
-          className="p-3 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10"
+          className="p-3 sm:p-4 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
           title="Carte précédente"
         >
           <ChevronLeft size={24} />
         </button>
 
-        <motion.div
-            className="relative w-full max-w-lg min-h-[340px] md:min-h-[420px] cursor-pointer flex-1 my-auto"
-            style={{ transformStyle: 'preserve-3d' }}
-            onClick={handleFlip}
-            initial={false}
-            animate={{ rotateY: isFlipped ? 180 : 0 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-        >
+        <div className="flex-1 w-full max-w-md sm:max-w-lg mx-auto min-w-[280px]">
+          <motion.div
+              className="relative w-full h-[360px] sm:h-[420px] cursor-pointer mx-auto"
+              style={{ transformStyle: 'preserve-3d' }}
+              onClick={handleFlip}
+              initial={false}
+              animate={{ rotateY: isFlipped ? 180 : 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          >
             {/* Front Side */}
             <div
                 className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 rounded-[2.5rem] p-6 md:p-10 flex flex-col justify-between items-center text-center shadow-2xl transition-all overflow-y-auto custom-scrollbar"
@@ -233,6 +234,7 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
                 </div>
             </div>
         </motion.div>
+        </div>
 
         <button
           onClick={() => {

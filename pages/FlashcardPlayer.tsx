@@ -175,7 +175,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
             </div>
 
             {/* Card Area with Navigation Arrows */}
-            <div className="flex-1 flex items-center justify-between perspective-1000 py-6 md:py-10 gap-2 md:gap-6">
+            <div className="flex-1 flex items-center justify-center perspective-1000 py-4 sm:py-8 gap-2 sm:gap-6 w-full max-w-2xl mx-auto">
                 <button
                     onClick={() => {
                         if (currentIndex > 0) {
@@ -185,78 +185,80 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         }
                     }}
                     disabled={currentIndex === 0}
-                    className="p-3 md:p-4 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0"
+                    className="p-3 sm:p-4 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
                     title="Carte précédente"
                 >
                     <ArrowLeft size={24} />
                 </button>
 
-                <motion.div
-                    className="relative w-full max-w-lg min-h-[340px] md:min-h-[420px] cursor-pointer flex-1 my-auto"
-                    drag={isFlipped ? "x" : false}
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.8}
-                    onDragEnd={(event, info) => {
-                        if (!isFlipped) return;
-                        const swipeThreshold = 100;
-                        if (info.offset.x > swipeThreshold) {
-                            handleRate(true); // Swiped Right -> Mastered
-                        } else if (info.offset.x < -swipeThreshold) {
-                            handleRate(false); // Swiped Left -> Repeat
-                        }
-                    }}
-                    style={{ x: dragX, rotate: dragRotate, transformStyle: 'preserve-3d' }}
-                    onClick={() => {
-                        if (Math.abs(dragX.get()) < 10) {
-                            setIsFlipped(!isFlipped);
-                        }
-                    }}
-                    initial={false}
-                    animate={{ rotateY: isFlipped ? 180 : 0 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                >
-                    {/* Front */}
-                    <div
-                        className="absolute inset-0 glass rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col items-center justify-between p-6 md:p-10 text-center overflow-y-auto custom-scrollbar group bg-slate-900/90"
-                        style={{
-                            backfaceVisibility: 'hidden',
-                            WebkitBackfaceVisibility: 'hidden',
-                            zIndex: isFlipped ? 0 : 1,
-                            opacity: isFlipped ? 0 : 1,
-                            transition: 'opacity 0.3s'
+                <div className="flex-1 w-full max-w-md sm:max-w-lg mx-auto min-w-[280px]">
+                    <motion.div
+                        className="relative w-full h-[360px] sm:h-[420px] cursor-pointer mx-auto"
+                        drag={isFlipped ? "x" : false}
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.8}
+                        onDragEnd={(event, info) => {
+                            if (!isFlipped) return;
+                            const swipeThreshold = 100;
+                            if (info.offset.x > swipeThreshold) {
+                                handleRate(true); // Swiped Right -> Mastered
+                            } else if (info.offset.x < -swipeThreshold) {
+                                handleRate(false); // Swiped Left -> Repeat
+                            }
                         }}
+                        style={{ x: dragX, rotate: dragRotate, transformStyle: 'preserve-3d' }}
+                        onClick={() => {
+                            if (Math.abs(dragX.get()) < 10) {
+                                setIsFlipped(!isFlipped);
+                            }
+                        }}
+                        initial={false}
+                        animate={{ rotateY: isFlipped ? 180 : 0 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
                     >
-                        <div className="w-full flex-1 flex flex-col items-center justify-center my-auto py-4">
-                            <FormattedMarkdownText 
-                                content={currentCard?.front} 
-                                className={`font-display font-black text-white leading-relaxed select-none ${getFontSize(currentCard?.front)}`}
-                            />
+                        {/* Front */}
+                        <div
+                            className="absolute inset-0 glass rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col items-center justify-between p-6 sm:p-10 text-center overflow-y-auto custom-scrollbar group bg-slate-900/90 w-full h-full"
+                            style={{
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden',
+                                zIndex: isFlipped ? 0 : 1,
+                                opacity: isFlipped ? 0 : 1,
+                                transition: 'opacity 0.3s'
+                            }}
+                        >
+                            <div className="w-full flex-1 flex flex-col items-center justify-center my-auto py-2">
+                                <FormattedMarkdownText 
+                                    content={currentCard?.front} 
+                                    className={`font-display font-black text-white leading-relaxed select-none ${getFontSize(currentCard?.front)}`}
+                                />
+                            </div>
+                            <div className="mt-4 flex items-center gap-2 text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/10 shrink-0">
+                                Cliquer pour retourner <RotateCcw size={14} />
+                            </div>
                         </div>
-                        <div className="mt-4 flex items-center gap-2 text-slate-400 font-bold text-[10px] md:text-xs uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/10">
-                            Cliquer pour retourner <RotateCcw size={14} />
-                        </div>
-                    </div>
 
-                    {/* Back */}
-                    <div
-                        className="absolute inset-0 glass rounded-[2.5rem] border border-primary/30 shadow-2xl flex flex-col items-center justify-center p-6 md:p-10 text-center bg-slate-900/95"
-                        style={{
-                            backfaceVisibility: 'hidden',
-                            WebkitBackfaceVisibility: 'hidden',
-                            transform: 'rotateY(180deg)',
-                            zIndex: isFlipped ? 1 : 0,
-                            opacity: isFlipped ? 1 : 0,
-                            transition: 'opacity 0.3s'
-                        }}
-                    >
-                        <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center justify-center py-4 my-auto">
-                            <FormattedMarkdownText 
-                                content={currentCard?.back} 
-                                className={`font-bold text-white leading-relaxed select-none ${getFontSize(currentCard?.back)}`}
-                            />
+                        {/* Back */}
+                        <div
+                            className="absolute inset-0 glass rounded-[2.5rem] border border-primary/30 shadow-2xl flex flex-col items-center justify-center p-6 sm:p-10 text-center bg-slate-900/95 w-full h-full"
+                            style={{
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden',
+                                transform: 'rotateY(180deg)',
+                                zIndex: isFlipped ? 1 : 0,
+                                opacity: isFlipped ? 1 : 0,
+                                transition: 'opacity 0.3s'
+                            }}
+                        >
+                            <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center justify-center py-2 my-auto">
+                                <FormattedMarkdownText 
+                                    content={currentCard?.back} 
+                                    className={`font-bold text-white leading-relaxed select-none ${getFontSize(currentCard?.back)}`}
+                                />
+                            </div>
                         </div>
-                    </div>
-                </motion.div>
+                    </motion.div>
+                </div>
 
                 <button
                     onClick={() => {
@@ -267,7 +269,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         }
                     }}
                     disabled={currentIndex === activeCards.length - 1}
-                    className="p-3 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10"
+                    className="p-3 sm:p-4 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
                     title="Carte suivante"
                 >
                     <ChevronRight size={24} />
