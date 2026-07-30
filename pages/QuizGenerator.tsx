@@ -279,7 +279,7 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
         </div>
 
         {/* Tab Selector matched exactly with AISummary page */}
-        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 shrink-0">
+        <div className="inline-flex w-fit bg-white/5 p-1 rounded-2xl border border-white/10 shrink-0">
           <button
             onClick={() => setViewMode('generator')}
             className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'generator' ? 'bg-primary text-white shadow-glow' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
@@ -300,7 +300,7 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
           <div className="space-y-2">
             <h3 className="text-xl md:text-2xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
               <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/10 text-primary rounded-lg md:rounded-xl flex items-center justify-center border border-primary/20">
-                <Zap size={18} />
+                <BookOpen size={18} />
               </div>
               {t('quiz.generator.savedTitle').replace('{count}', String(quizzes.length))}
             </h3>
@@ -347,7 +347,7 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
                           onClick={() => onGenerated(quiz)}
                           className={`flex-1 flex items-center justify-center gap-2 py-3 ${theme.btn} rounded-xl text-[10px] font-black uppercase tracking-widest transition-all`}
                         >
-                          <Zap size={14} /> {t('quiz.generator.launchQuiz')}
+                          {t('quiz.generator.launchQuiz')}
                         </button>
                         <button
                           onClick={(e) => {

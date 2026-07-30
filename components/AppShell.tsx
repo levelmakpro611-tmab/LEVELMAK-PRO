@@ -381,7 +381,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : 'p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : 'pb-40 md:pb-10'} transition-all duration-300`}>
+        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : 'pb-36 md:pb-10'} transition-all duration-300`}>
           <div className={`${(activeTab === 'social' || activeTab === 'ailab') ? 'h-full' : ''}`}>
             {children}
           </div>

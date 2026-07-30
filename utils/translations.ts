@@ -914,7 +914,7 @@ export const translations: Record<string, any> = {
                     "saved": "Mes Sauvegardes"
                 },
                 "savedTitle": "Mes Quiz Sauvegardés ({count})",
-                "savedDesc": "Ces quiz sont stockés localement sur ton appareil. Tu peux les refaire à tout moment, même sans connexion internet ! 🚀",
+                "savedDesc": "Ces quiz sont stockés localement sur ton appareil. Tu peux les refaire à tout moment, même sans connexion internet !",
                 "noSaved": "Aucune sauvegarde",
                 "noSavedDesc": "Génère ton premier quiz IA et sauvegarde-le !",
                 "launchQuiz": "Lancer le Quiz",

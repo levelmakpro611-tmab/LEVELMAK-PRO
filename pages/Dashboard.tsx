@@ -197,12 +197,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-0 pb-24 md:pb-0">
+    <div className="space-y-6 md:space-y-10 max-w-7xl mx-auto px-1 sm:px-4 md:px-0 pb-24 md:pb-0">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
         {/* Main Content Column */}
-        <div className="lg:col-span-2 space-y-8 md:space-y-10">
+        <div className="lg:col-span-2 space-y-6 md:space-y-10">
           {/* Profile Card Header (Top of Dashboard) */}
-          <section className="relative overflow-hidden glass p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] border border-white/10 shadow-2xl bg-slate-900/80 backdrop-blur-xl group">
+          <section className="relative overflow-hidden glass p-4 sm:p-8 md:p-10 rounded-[2rem] md:rounded-[3.5rem] border border-white/10 shadow-2xl bg-slate-900/80 backdrop-blur-xl group">
             {/* Ambient Background Glows */}
             <div className="absolute top-0 right-1/4 w-72 h-72 bg-purple-600/15 rounded-full blur-[110px] pointer-events-none"></div>
             <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-amber-500/15 rounded-full blur-[110px] pointer-events-none"></div>
@@ -250,7 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
 
               {/* Side-by-Side Stat Cards (Streak & LevelCoins) */}
-              <div className="grid grid-cols-2 gap-3 md:gap-5 w-full max-w-md">
+              <div className="grid grid-cols-2 gap-3 md:gap-5 w-full max-w-full sm:max-w-md">
                 {/* Streak Card */}
                 <div className="bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-red-500/20 border border-orange-500/30 p-3.5 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(249,115,22,0.15)] group/streak">
                   <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center border border-orange-500/40 shrink-0 group-hover/streak:scale-110 transition-transform">
