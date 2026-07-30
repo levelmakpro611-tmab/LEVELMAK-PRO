@@ -144,7 +144,7 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
           animate={{ scaleX: cardsToReview.length > 0 ? currentIndex / cardsToReview.length : 0 }}
         />
       </div>
-      <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto w-full relative perspective-[2000px] gap-2 sm:gap-6">
+      <div className="flex-1 flex items-center justify-between max-w-2xl mx-auto w-full relative perspective-[2000px] gap-1.5 sm:gap-6">
         <button
           onClick={() => {
             if (currentIndex > 0) {
@@ -154,13 +154,13 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
             }
           }}
           disabled={currentIndex === 0}
-          className="p-3 sm:p-4 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
+          className="p-2.5 sm:p-4 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
           title="Carte précédente"
         >
-          <ChevronLeft size={24} />
+          <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
         </button>
 
-        <div className="flex-1 w-full max-w-md sm:max-w-lg mx-auto min-w-[280px]">
+        <div className="flex-1 w-full max-w-md sm:max-w-lg mx-auto min-w-0">
           <motion.div
               className="relative w-full h-[360px] sm:h-[420px] cursor-pointer mx-auto"
               style={{ transformStyle: 'preserve-3d' }}
@@ -245,10 +245,10 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
             }
           }}
           disabled={currentIndex === cardsToReview.length - 1}
-          className="p-3 bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10"
+          className="p-2.5 sm:p-4 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
           title="Carte suivante"
         >
-          <ChevronRight size={24} />
+          <ChevronRight size={20} className="sm:w-6 sm:h-6" />
         </button>
       </div>
 

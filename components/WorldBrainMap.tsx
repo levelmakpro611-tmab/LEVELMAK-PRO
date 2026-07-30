@@ -432,27 +432,24 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       const mapUsers = new Map<string, any>();
       const activeUserIds = new Set(activeUsers.map(u => u.user_id));
 
-      // 1. Add all profiles from Supabase DB (default is_online: false)
+      // 1. Add all profiles from Supabase DB (strictly excluding current user and admins)
       allProfiles.forEach(p => {
-        if (p.user_id !== user?.id && !isAdminUser(p) && typeof p.lat === 'number' && typeof p.lng === 'number') {
-          const isOnline = activeUserIds.has(p.user_id);
-          mapUsers.set(p.user_id, { ...p, is_online: isOnline });
+        const pUserId = p.user_id || p.id;
+        if (pUserId && pUserId !== user?.id && !isAdminUser(p) && typeof p.lat === 'number' && typeof p.lng === 'number') {
+          const isOnline = activeUserIds.has(pUserId);
+          mapUsers.set(pUserId, { ...p, user_id: pUserId, is_online: isOnline });
         }
       });
-      // 2. Override/enrich with Realtime active presence users (is_online: true)
+      // 2. Override/enrich with Realtime active presence users (strictly excluding current user)
       activeUsers.forEach(u => {
-        if (!u.is_ghost && !isAdminUser(u)) {
-          // Allow showing same user ID if it is a different session (phone vs computer testing)
-          const isSelfDifferentSession = u.user_id === user?.id && u.session_id !== deviceSessionId;
-          if (u.user_id !== user?.id || isSelfDifferentSession) {
-             const key = isSelfDifferentSession ? `${u.user_id}_${u.session_id}` : u.user_id;
-             const existing = mapUsers.get(key) || {};
-             mapUsers.set(key, { ...existing, ...u, user_id: key, actual_user_id: u.user_id, is_online: true });
-          }
+        const uUserId = u.user_id || u.id;
+        if (uUserId && uUserId !== user?.id && !u.is_ghost && !isAdminUser(u)) {
+          const existing = mapUsers.get(uUserId) || {};
+          mapUsers.set(uUserId, { ...existing, ...u, user_id: uUserId, is_online: true });
         }
       });
       return Array.from(mapUsers.values());
-  }, [activeUsers, allProfiles, user?.id, deviceSessionId]);
+  }, [activeUsers, allProfiles, user?.id]);
 
   const filteredUsers = useMemo(() => {
       const q = searchQuery.toLowerCase().trim();
@@ -625,19 +622,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 </Marker>
             ))}
 
-            {myLocation && typeof myLocation.lat === 'number' && (
-                <Marker position={[myLocation.lat, myLocation.lng]} icon={isGhostMode ? GhostIcon : SelfIcon} zIndexOffset={500}>
-                    <Popup className="premium-popup">
-                        <div className="p-2 text-center">
-                            <p className="font-black text-blue-600 text-[10px] uppercase">
-                                {isGhostMode ? "C'est Toi (Fantôme) 👻" : "C'est Toi (Visible) 🚀"}
-                            </p>
-                            <p className="text-[8px] text-slate-400 font-mono mt-1">{myLocation.lat.toFixed(4)}, {myLocation.lng.toFixed(4)}</p>
-                            {isGhostMode && <p className="text-[7px] text-purple-400 font-bold mt-1 uppercase">Invisible pour les autres</p>}
-                        </div>
-                    </Popup>
-                </Marker>
-            )}
+            {/* Self marker is hidden per user preference */}
         </MapContainer>
 
         {/* Floating Users List Overlay */}
