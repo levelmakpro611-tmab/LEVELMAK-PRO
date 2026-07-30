@@ -536,8 +536,15 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
     );
   }
 
-  const question = questions[battle.currentQuestionIndex!];
-  if (!question) return null;
+  const activeQuestions = questions.length > 0 ? questions : [
+    { id: 'fb_1', text: "Quelle est la vitesse approximative de la lumière dans le vide ?", options: ["300 000 km/s", "150 000 km/s", "1 000 000 km/s", "30 000 km/s"], correctAnswer: 0, explanation: "La lumière se déplace à environ 299 792 km/s dans le vide." },
+    { id: 'fb_2', text: "Quel est l'élément chimique représenté par le symbole 'O' ?", options: ["Or", "Oxygène", "Osmium", "Ozone"], correctAnswer: 1, explanation: "L'Oxygène est l'élément chimique de numéro atomique 8." },
+    { id: 'fb_3', text: "Combien de continents compte la Terre ?", options: ["5", "6", "7", "8"], correctAnswer: 2, explanation: "On compte 7 continents sur Terre." },
+    { id: 'fb_4', text: "Qui a formulé la théorie de la relativité générale ?", options: ["Isaac Newton", "Albert Einstein", "Nikola Tesla", "Galilée"], correctAnswer: 1, explanation: "Albert Einstein a publié la relativité générale en 1915." },
+    { id: 'fb_5', text: "Quel est le plus grand océan de la Terre ?", options: ["Océan Atlantique", "Océan Pacifique", "Océan Indien", "Océan Arctique"], correctAnswer: 1, explanation: "L'océan Pacifique couvre environ 165 millions de km²." }
+  ];
+  const safeIndex = Math.min(battle.currentQuestionIndex || 0, activeQuestions.length - 1);
+  const question = activeQuestions[safeIndex];
 
   return (
     <div className="fixed inset-0 z-[1000] bg-slate-950 flex flex-col items-center justify-between p-3 md:p-8 overflow-y-auto">

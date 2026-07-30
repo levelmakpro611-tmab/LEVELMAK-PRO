@@ -706,10 +706,29 @@ export const aiService = {
   },
 
   async getBattleQuiz(lang: string = 'fr') {
-    const prompt = BATTLE_QUIZ_USER_PROMPT(lang);
-    const text = await callGemini([{ role: "user", content: prompt }], true);
-    const data = JSON.parse(text);
-    return (data.questions || []).map((q: any, idx: number) => ({ ...q, id: `battle_q_${Date.now()}_${idx}` }));
+    try {
+      const prompt = BATTLE_QUIZ_USER_PROMPT(lang);
+      const text = await callGemini([{ role: "user", content: prompt }], true);
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const data = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+      if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+        return data.questions.map((q: any, idx: number) => ({ ...q, id: `battle_q_${Date.now()}_${idx}` }));
+      }
+    } catch (err) {
+      console.warn("⚠️ Échec de la génération IA du duel, utilisation des questions de secours autonomes:", err);
+    }
+    return [
+      { id: 'b_q_1', text: "Quelle est la vitesse approximative de la lumière dans le vide ?", options: ["300 000 km/s", "150 000 km/s", "1 000 000 km/s", "30 000 km/s"], correctAnswer: 0, explanation: "La lumière se déplace à environ 299 792 km/s dans le vide." },
+      { id: 'b_q_2', text: "Quel est l'élément chimique représenté par le symbole 'O' ?", options: ["Or", "Oxygène", "Osmium", "Ozone"], correctAnswer: 1, explanation: "L'Oxygène est l'élément chimique de numéro atomique 8, de symbole O." },
+      { id: 'b_q_3', text: "Combien de continents compte la Terre ?", options: ["5", "6", "7", "8"], correctAnswer: 2, explanation: "On compte généralement 7 continents : Asie, Afrique, Amérique du Nord, Amérique du Sud, Antarctique, Europe et Océanie." },
+      { id: 'b_q_4', text: "Qui a formulé la théorie de la relativité générale ?", options: ["Isaac Newton", "Albert Einstein", "Nikola Tesla", "Galilée"], correctAnswer: 1, explanation: "Albert Einstein a publié la théorie de la relativité générale en 1915." },
+      { id: 'b_q_5', text: "Quel est le plus grand océan de la Terre ?", options: ["Océan Atlantique", "Océan Pacifique", "Océan Indien", "Océan Arctique"], correctAnswer: 1, explanation: "L'océan Pacifique couvre environ 165 millions de km²." },
+      { id: 'b_q_6', text: "Quelle planète est surnommée la Planète Rouge ?", options: ["Vénus", "Jupiter", "Mars", "Saturne"], correctAnswer: 2, explanation: "Mars doit sa couleur rouge aux oxydes de fer présents à sa surface." },
+      { id: 'b_q_7', text: "Quelle est la capitale de la France ?", options: ["Lyon", "Paris", "Marseille", "Bordeaux"], correctAnswer: 1, explanation: "Paris est la capitale et le chef-lieu de la région Île-de-France." },
+      { id: 'b_q_8', text: "Quel organe pompe le sang dans le corps humain ?", options: ["Le poumon", "Le cerveau", "Le cœur", "Le foie"], correctAnswer: 2, explanation: "Le cœur est un muscle creux qui assure la circulation du sang." },
+      { id: 'b_q_9', text: "Combien d'octets y a-t-il dans un kilooctet (Ko) en informatique standard ?", options: ["1000 octets", "1024 octets", "512 octets", "2048 octets"], correctAnswer: 1, explanation: "Un kilooctet équivaut à 1024 octets en binaire." },
+      { id: 'b_q_10', text: "Quel est le plus grand désert du monde ?", options: ["Le Sahara", "L'Antarctique", "Le désert de Gobi", "Le désert d'Atacama"], correctAnswer: 1, explanation: "L'Antarctique est considéré comme le plus grand désert froid du monde." }
+    ];
   },
 
   /**
