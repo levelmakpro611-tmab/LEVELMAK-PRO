@@ -18,7 +18,15 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
   const { user, resolveBattle, addLevelCoins, addNotification, t } = useStore();
   const [battle, setBattle] = useState<BattleState>({
     currentQuestionIndex: 0,
-    ...initialState
+    ...initialState,
+    host: {
+      ...initialState.host,
+      score: Number(initialState.host?.score) || 0
+    },
+    guest: {
+      ...initialState.guest,
+      score: Number(initialState.guest?.score) || 0
+    }
   });
   const [channel, setChannel] = useState<any>(null);
   const [localSelected, setLocalSelected] = useState<number | null>(null);
@@ -179,7 +187,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
   // Timer per question (stops when showResult is true)
   useEffect(() => {
     if (battle.status !== 'active' || loadingQuestions || questions.length === 0 || showResult) return;
-    setTimeLeft(15);
+    setTimeLeft(30);
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) { clearInterval(timer); handleTimeUp(); return 0; }
@@ -198,16 +206,29 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
     const isOpponentBot = battle.guest?.id === 'levelbot' || battle.host?.id === 'levelbot';
     if (!isOpponentBot || battle.status !== 'active' || loadingQuestions || questions.length === 0 || showResult) return;
 
-    const botDifficulty = battle.guest?.difficulty || 'easy';
-    let minTime = 4, maxTime = 8, correctChance = 0.40;
-    if (botDifficulty === 'hard') {
-      minTime = 2; maxTime = 5; correctChance = 0.75;
-    } else if (botDifficulty === 'expert') {
-      minTime = 1; maxTime = 3; correctChance = 0.95;
-    }
+    const botDifficulty = String(battle.guest?.difficulty || battle.difficulty || 'easy').toLowerCase();
+    
+    // Timer is 30s default:
+    // Facile (Easy): AI answers when 15 seconds remain (takes 15s)
+    // Moyen / Intermédiaire (Medium): AI answers when 10 seconds remain (takes 20s)
+    // Hard / Expert: AI answers when 5 seconds remain (takes 25s)
+    let botTimeLeft = 15;
+    let secondsToWait = 15;
+    let correctChance = 0.50;
 
-    const secondsTaken = Math.floor(Math.random() * (maxTime - minTime + 1)) + minTime;
-    const botTimeLeft = 15 - secondsTaken;
+    if (botDifficulty.includes('hard') || botDifficulty.includes('expert')) {
+      botTimeLeft = 5;
+      secondsToWait = 25;
+      correctChance = 0.90;
+    } else if (botDifficulty.includes('moyen') || botDifficulty.includes('medium') || botDifficulty.includes('intermédiaire')) {
+      botTimeLeft = 10;
+      secondsToWait = 20;
+      correctChance = 0.70;
+    } else {
+      botTimeLeft = 15;
+      secondsToWait = 15;
+      correctChance = 0.50;
+    }
 
     const questionObj = questions[battle.currentQuestionIndex!];
     if (!questionObj) return;
@@ -226,7 +247,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
       if (battleRef.current.currentQuestionIndex === battle.currentQuestionIndex && !showResultRef.current) {
         processAnswer(false, botAnswerIdx, botTimeLeft);
       }
-    }, secondsTaken * 1000);
+    }, secondsToWait * 1000);
 
     return () => clearTimeout(timer);
   }, [battle.currentQuestionIndex, battle.status, loadingQuestions, questions.length, showResult]);
@@ -538,7 +559,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
             <img src={battle.host.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${battle.host.name}`} alt="Host" className="w-full h-full rounded-full bg-slate-800" />
           </div>
           <p className="font-bold text-white uppercase text-[10px] tracking-wider truncate max-w-[80px]">{battle.host.name}</p>
-          <div className="font-black text-xl md:text-2xl text-blue-400">{battle.host.score}</div>
+          <div className="font-black text-xl md:text-2xl text-blue-400">{Number(battle.host?.score) || 0}</div>
         </div>
         <div className="flex flex-col items-center justify-center z-10 px-2">
           <Swords size={24} className="text-slate-500 mb-0.5" />
@@ -549,7 +570,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
             <img src={battle.guest.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${battle.guest.name}`} alt="Guest" className="w-full h-full rounded-full bg-slate-800" />
           </div>
           <p className="font-bold text-white uppercase text-[10px] tracking-wider truncate max-w-[80px]">{battle.guest.name}</p>
-          <div className="font-black text-xl md:text-2xl text-red-400">{battle.guest.score}</div>
+          <div className="font-black text-xl md:text-2xl text-red-400">{Number(battle.guest?.score) || 0}</div>
         </div>
         <div className="absolute inset-0 z-0">
           <div className="absolute top-0 right-1/2 bottom-0 bg-blue-500/10 skew-x-12 translate-x-10" />
@@ -564,7 +585,7 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
             <motion.div
               style={{ originX: 0 }}
               initial={{ scaleX: 1 }}
-              animate={{ scaleX: timeLeft / 15 }}
+              animate={{ scaleX: timeLeft / 30 }}
               transition={{ duration: 1, ease: 'linear' }}
               className={`h-full w-full ${timeLeft <= 5 ? 'bg-red-500' : 'bg-emerald-500'}`}
             />

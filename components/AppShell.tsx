@@ -857,10 +857,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
 
       <FloatingBubble 
         progress={continuousStudyTime}
-        isVisible={continuousStudyTime > 0}
+        isVisible={true}
         onClick={() => {
           if (continuousStudyTime >= 30) { setShowBubbleWrap(true); } 
-          else { addActivity('study', 'Patience...', `Encore ${30 - Math.floor(continuousStudyTime)} minutes.`); }
+          else { setActiveTab('ailab'); }
         }}
       />
     </div>

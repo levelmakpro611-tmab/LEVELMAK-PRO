@@ -17,23 +17,20 @@ export const FloatingBubble: React.FC<FloatingBubbleProps> = ({ progress, onClic
     <AnimatePresence>
       {isVisible && (
         <motion.div
+          drag
+          dragMomentum={false}
+          whileDrag={{ scale: 1.15, cursor: 'grabbing' }}
           initial={{ scale: 0, opacity: 0, y: 20 }}
           animate={{ 
             scale: 1, 
             opacity: 1, 
-            y: [0, -10, 0],
           }}
           exit={{ scale: 0, opacity: 0, y: 20 }}
           transition={{ 
-            y: {
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            },
-            scale: { duration: 0.5 },
-            opacity: { duration: 0.5 }
+            scale: { duration: 0.3 },
+            opacity: { duration: 0.3 }
           }}
-          className="fixed bottom-24 right-6 z-[130] md:bottom-8 md:right-8"
+          className="fixed bottom-24 right-6 z-[130] md:bottom-8 md:right-8 touch-none cursor-grab"
         >
           <button
             onClick={() => {

@@ -45,8 +45,37 @@ export const mapProfileToUser = (profile: any): User => {
         }
     }
 
+    // Real Daily Streak (Série) Calculation:
+    const rawStreak = profile.streak || { current: 1, lastLogin: new Date().toISOString() };
+    let currentStreak = Number(rawStreak.current) || 1;
+    let lastLoginIso = rawStreak.lastLogin || new Date().toISOString();
+
+    if (rawStreak.lastLogin) {
+        const lastDate = new Date(rawStreak.lastLogin);
+        const nowDate = new Date();
+        const lastDay = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+        const nowDay = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate());
+        const diffMs = nowDay.getTime() - lastDay.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+            currentStreak += 1;
+            lastLoginIso = nowDate.toISOString();
+            supabase.from('profiles').update({
+                streak: { current: currentStreak, lastLogin: lastLoginIso }
+            }).eq('id', profile.id).then(() => {});
+        } else if (diffDays > 1) {
+            currentStreak = 1;
+            lastLoginIso = nowDate.toISOString();
+            supabase.from('profiles').update({
+                streak: { current: currentStreak, lastLogin: lastLoginIso }
+            }).eq('id', profile.id).then(() => {});
+        }
+    }
+
     return {
         ...profile,
+        streak: { current: currentStreak, lastLogin: lastLoginIso },
         is_premium: isPremium,
         premium_until: premiumUntil,
         education: stats.education || profile.education || '',
