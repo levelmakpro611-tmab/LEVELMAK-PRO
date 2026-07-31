@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { User, Mission, GardenPlant } from '../../types';
-import { XP_PER_LEVEL, POTIONS } from '../../constants';
+import { XP_PER_LEVEL, POTIONS, getXpForNextLevel } from '../../constants';
 
 export const useGamificationStore = (
     user: User | null, 

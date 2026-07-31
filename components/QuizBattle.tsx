@@ -208,25 +208,17 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
 
     const botDifficulty = String(battle.guest?.difficulty || battle.difficulty || 'easy').toLowerCase();
     
-    // Timer is 30s default:
-    // Facile (Easy): AI answers when 15 seconds remain (takes 15s)
-    // Moyen / Intermédiaire (Medium): AI answers when 10 seconds remain (takes 20s)
-    // Hard / Expert: AI answers when 5 seconds remain (takes 25s)
-    let botTimeLeft = 15;
-    let secondsToWait = 15;
+    // AI Bot timing requested by user:
+    // AI answers after 10 seconds elapsed (when timer reaches 20s left out of 30s)
+    const botTimeLeft = 20;
+    const secondsToWait = 10;
     let correctChance = 0.50;
 
     if (botDifficulty.includes('hard') || botDifficulty.includes('expert')) {
-      botTimeLeft = 5;
-      secondsToWait = 25;
-      correctChance = 0.90;
+      correctChance = 0.95; // Very costaud!
     } else if (botDifficulty.includes('moyen') || botDifficulty.includes('medium') || botDifficulty.includes('intermédiaire')) {
-      botTimeLeft = 10;
-      secondsToWait = 20;
-      correctChance = 0.70;
+      correctChance = 0.75;
     } else {
-      botTimeLeft = 15;
-      secondsToWait = 15;
       correctChance = 0.50;
     }
 

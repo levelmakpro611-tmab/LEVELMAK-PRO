@@ -705,30 +705,73 @@ export const aiService = {
     return await callGemini(messages, false);
   },
 
-  async getBattleQuiz(lang: string = 'fr') {
+  async getBattleQuiz(lang: string = 'fr', difficulty: string = 'easy') {
     try {
       const prompt = BATTLE_QUIZ_USER_PROMPT(lang);
       const text = await callGemini([{ role: "user", content: prompt }], true);
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       const data = JSON.parse(jsonMatch ? jsonMatch[0] : text);
       if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
-        return data.questions.map((q: any, idx: number) => ({ ...q, id: `battle_q_${Date.now()}_${idx}` }));
+        // Shuffle options and questions randomly for anti-repetition
+        const shuffled = data.questions.map((q: any, idx: number) => {
+          const zipped = q.options.map((opt: string, i: number) => ({ opt, isCorrect: i === q.correctAnswer }));
+          const shuffledOpts = [...zipped].sort(() => Math.random() - 0.5);
+          const newCorrectIndex = shuffledOpts.findIndex(o => o.isCorrect);
+          return {
+            ...q,
+            id: `battle_q_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+            options: shuffledOpts.map(o => o.opt),
+            correctAnswer: newCorrectIndex
+          };
+        }).sort(() => Math.random() - 0.5);
+        return shuffled;
       }
     } catch (err) {
-      console.warn("⚠️ Échec de la génération IA du duel, utilisation des questions de secours autonomes:", err);
+      console.warn("⚠️ Échec de la génération IA du duel, utilisation du vaste réservoir de questions de secours autonomes:", err);
     }
-    return [
-      { id: 'b_q_1', text: "Quelle est la vitesse approximative de la lumière dans le vide ?", options: ["300 000 km/s", "150 000 km/s", "1 000 000 km/s", "30 000 km/s"], correctAnswer: 0, explanation: "La lumière se déplace à environ 299 792 km/s dans le vide." },
-      { id: 'b_q_2', text: "Quel est l'élément chimique représenté par le symbole 'O' ?", options: ["Or", "Oxygène", "Osmium", "Ozone"], correctAnswer: 1, explanation: "L'Oxygène est l'élément chimique de numéro atomique 8, de symbole O." },
-      { id: 'b_q_3', text: "Combien de continents compte la Terre ?", options: ["5", "6", "7", "8"], correctAnswer: 2, explanation: "On compte généralement 7 continents : Asie, Afrique, Amérique du Nord, Amérique du Sud, Antarctique, Europe et Océanie." },
-      { id: 'b_q_4', text: "Qui a formulé la théorie de la relativité générale ?", options: ["Isaac Newton", "Albert Einstein", "Nikola Tesla", "Galilée"], correctAnswer: 1, explanation: "Albert Einstein a publié la théorie de la relativité générale en 1915." },
-      { id: 'b_q_5', text: "Quel est le plus grand océan de la Terre ?", options: ["Océan Atlantique", "Océan Pacifique", "Océan Indien", "Océan Arctique"], correctAnswer: 1, explanation: "L'océan Pacifique couvre environ 165 millions de km²." },
-      { id: 'b_q_6', text: "Quelle planète est surnommée la Planète Rouge ?", options: ["Vénus", "Jupiter", "Mars", "Saturne"], correctAnswer: 2, explanation: "Mars doit sa couleur rouge aux oxydes de fer présents à sa surface." },
-      { id: 'b_q_7', text: "Quelle est la capitale de la France ?", options: ["Lyon", "Paris", "Marseille", "Bordeaux"], correctAnswer: 1, explanation: "Paris est la capitale et le chef-lieu de la région Île-de-France." },
-      { id: 'b_q_8', text: "Quel organe pompe le sang dans le corps humain ?", options: ["Le poumon", "Le cerveau", "Le cœur", "Le foie"], correctAnswer: 2, explanation: "Le cœur est un muscle creux qui assure la circulation du sang." },
-      { id: 'b_q_9', text: "Combien d'octets y a-t-il dans un kilooctet (Ko) en informatique standard ?", options: ["1000 octets", "1024 octets", "512 octets", "2048 octets"], correctAnswer: 1, explanation: "Un kilooctet équivaut à 1024 octets en binaire." },
-      { id: 'b_q_10', text: "Quel est le plus grand désert du monde ?", options: ["Le Sahara", "L'Antarctique", "Le désert de Gobi", "Le désert d'Atacama"], correctAnswer: 1, explanation: "L'Antarctique est considéré comme le plus grand désert froid du monde." }
+
+    // Comprehensive, anti-repetition Question Bank for Guinea 🇬🇳, Africa 🌍 & World 🌐
+    const questionBank = [
+      // === GUINÉE 🇬🇳 ===
+      { text: "Quelle est la capitale officielle de la République de Guinée ?", options: ["Kindia", "Conakry", "Labé", "Kankan"], correctAnswer: 1, explanation: "Conakry est la capitale politique et économique de la Guinée." },
+      { text: "En quelle année la Guinée a-t-elle proclamé son indépendance ?", options: ["1960", "1958", "1952", "1962"], correctAnswer: 1, explanation: "La Guinée a proclamé son indépendance le 2 octobre 1958." },
+      { text: "Quel est le plus haut sommet de la Guinée et d'Afrique de l'Ouest ?", options: ["Le Mont Loura", "Le Mont Nimba", "Le Mont Kakoulima", "Le Fouta-Djallon"], correctAnswer: 1, explanation: "Le Mont Nimba culmine à 1 752 mètres d'altitude." },
+      { text: "Quel fleuve majeur d'Afrique de l'Ouest prend sa source dans le Fouta-Djallon en Guinée ?", options: ["Le fleuve Congo", "Le fleuve Niger (Djoliba)", "Le fleuve Zambèze", "Le fleuve Volta"], correctAnswer: 1, explanation: "Le fleuve Niger (Djoliba) prend sa source près de Kobikoro en Guinée." },
+      { text: "Quelle est la monnaie officielle utilisée en Guinée ?", options: ["Le Franc CFA", "Le Franc Guinéen (GNF)", "Le Cedi", "Le Naira"], correctAnswer: 1, explanation: "Le Franc Guinéen (GNF) est la devise officielle de la Guinée." },
+      { text: "Quel illustre homme d'État guinéen est célèbre pour son 'Non' à De Gaulle en 1958 ?", options: ["Lansana Conté", "Ahmed Sékou Touré", "Alpha Condé", "Saïdou Sow"], correctAnswer: 1, explanation: "Ahmed Sékou Touré a mené la Guinée à l'indépendance avec le référendum de 1958." },
+      { text: "Dans quelle région naturelle de Guinée se trouve la ville de Labé ?", options: ["Basse-Guinée", "Moyenne-Guinée", "Haute-Guinée", "Guinée Forestière"], correctAnswer: 1, explanation: "Labé est la capitale économique de la Moyenne-Guinée dans le Fouta-Djallon." },
+      { text: "Quelle célèbre cascade naturelle est située près de la ville de Kindia ?", options: ["Le Voile de la Mariée", "Les chutes de la Lobé", "Les chutes de la Kiamaka", "Les chutes de la Tine"], correctAnswer: 0, explanation: "Le Voile de la Mariée est un site touristique renommé situé près de Kindia." },
+
+      // === AFRIQUE 🌍 ===
+      { text: "Quel est le plus long fleuve du continent africain ?", options: ["Le fleuve Niger", "Le Nil", "Le fleuve Congo", "Le fleuve Sénégal"], correctAnswer: 1, explanation: "Le Nil s'étend sur plus de 6 650 km." },
+      { text: "Quel est le plus grand lac naturel d'Afrique ?", options: ["Le lac Tchad", "Le lac Victoria", "Le lac Tanganyika", "Le lac Malawi"], correctAnswer: 1, explanation: "Le lac Victoria couvre environ 68 800 km²." },
+      { text: "Où se trouve le siège principal de l'Union Africaine (UA) ?", options: ["Dakar (Sénégal)", "Addis-Abeba (Éthiopie)", "Nairobi (Kenya)", "Le Caire (Égypte)"], correctAnswer: 1, explanation: "L'Union Africaine a son siège à Addis-Abeba en Éthiopie." },
+      { text: "Quel est le pays le plus peuplé du continent africain ?", options: ["L'Égypte", "Le Nigéria", "L'Éthiopie", "L'Afrique du Sud"], correctAnswer: 1, explanation: "Le Nigéria compte plus de 210 millions d'habitants." },
+      { text: "Quel grand désert chaud occupe la majeure partie du nord de l'Afrique ?", options: ["Le Kalahari", "Le Sahara", "Le Namibe", "Le Gobi"], correctAnswer: 1, explanation: "Le Sahara est le plus vaste désert chaud du monde." },
+
+      // === MONDE & SCIENCES 🌐 ===
+      { text: "Quelle est la vitesse approximative de la lumière dans le vide ?", options: ["300 000 km/s", "150 000 km/s", "1 000 000 km/s", "30 000 km/s"], correctAnswer: 0, explanation: "La lumière se déplace à environ 299 792 km/s." },
+      { text: "Quel est l'élément chimique représenté par le symbole 'Au' ?", options: ["Argent", "Or", "Aluminium", "Cuivre"], correctAnswer: 1, explanation: "'Au' vient du latin Aurum signifiant Or." },
+      { text: "Quel est le plus grand océan de la planète Terre ?", options: ["Océan Atlantique", "Océan Pacifique", "Océan Indien", "Océan Arctique"], correctAnswer: 1, explanation: "L'océan Pacifique couvre environ 165 millions de km²." },
+      { text: "Quelle planète du système solaire est surnommée la Planète Rouge ?", options: ["Vénus", "Jupiter", "Mars", "Saturne"], correctAnswer: 2, explanation: "Mars doit sa couleur rouge aux oxydes de fer à sa surface." },
+      { text: "Qui a formulé la théorie de la relativité générale ?", options: ["Isaac Newton", "Albert Einstein", "Nikola Tesla", "Galilée"], correctAnswer: 1, explanation: "Albert Einstein a publié la relativité générale en 1915." },
+      { text: "Quel organe filtre le sang et produit l'urine dans le corps humain ?", options: ["Le foie", "Les reins", "La rate", "Le pancréas"], correctAnswer: 1, explanation: "Les reins filtrent les déchets toxiques du sang." }
     ];
+
+    // Randomize order of questions & shuffle options for maximum anti-repetition
+    const shuffledBank = [...questionBank].map((q, idx) => {
+      const zipped = q.options.map((opt: string, i: number) => ({ opt, isCorrect: i === q.correctAnswer }));
+      const shuffledOpts = [...zipped].sort(() => Math.random() - 0.5);
+      const newCorrectIndex = shuffledOpts.findIndex(o => o.isCorrect);
+      return {
+        ...q,
+        id: `b_q_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+        options: shuffledOpts.map(o => o.opt),
+        correctAnswer: newCorrectIndex
+      };
+    }).sort(() => Math.random() - 0.5);
+
+    return shuffledBank.slice(0, 10);
   },
 
   /**
