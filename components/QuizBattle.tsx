@@ -487,43 +487,102 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
       rewardText = isWinner ? `+10 LevelCoins • +50 XP` : isDraw ? `${t('quiz.battle.draw')} — +20 XP` : `-10 LevelCoins • +20 XP`;
     }
 
+    const isSelfHost = user?.id === battle.host.id;
+    const myAnswers = isSelfHost ? (battle.hostAnswers || []) : (battle.guestAnswers || []);
+
     return (
-      <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 pb-24">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', bounce: 0.5 }}>
-          <Trophy size={100} className={`mb-6 ${isWinner ? 'text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.5)]' : isDraw ? 'text-slate-400' : 'text-slate-600'}`} />
-        </motion.div>
-        <motion.h2 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-4xl font-black text-white mb-2 uppercase tracking-widest text-center">
-          {isDraw ? t('quiz.battle.draw') : isWinner ? t('quiz.battle.victory') : t('quiz.battle.defeat')}
-        </motion.h2>
+      <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-between p-4 md:p-8 overflow-y-auto">
+        <div className="w-full max-w-2xl flex flex-col items-center pt-6 pb-20">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', bounce: 0.5 }}>
+            <Trophy size={90} className={`mb-4 ${isWinner ? 'text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.5)]' : isDraw ? 'text-slate-400' : 'text-slate-600'}`} />
+          </motion.div>
+          
+          <motion.h2 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl md:text-4xl font-black text-white mb-2 uppercase tracking-widest text-center">
+            {isDraw ? "Égalité !" : isWinner ? "Battle Gagné ! 🏆" : "Défaite ! ⚔️"}
+          </motion.h2>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className={`flex items-center gap-2 px-5 py-2 rounded-full border mb-6 font-black text-base ${
-            isWinner ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' 
-            : isDraw ? 'bg-slate-500/20 border-slate-500/40 text-slate-400'
-            : 'bg-red-500/10 border-red-500/30 text-red-400'
-          }`}>
-          <Coins size={18} />
-          {rewardText}
-        </motion.div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className={`flex items-center gap-2 px-5 py-2 rounded-full border mb-6 font-black text-sm md:text-base ${
+              isWinner ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' 
+              : isDraw ? 'bg-slate-500/20 border-slate-500/40 text-slate-400'
+              : 'bg-red-500/10 border-red-500/30 text-red-400'
+            }`}>
+            <Coins size={18} />
+            {rewardText}
+          </motion.div>
 
-        <div className="flex gap-12 text-center w-full max-w-md bg-slate-900/50 p-6 rounded-3xl border border-white/10 relative overflow-hidden mb-8">
-          <div className="flex-1 z-10">
-            <p className="font-bold text-lg text-white">{battle.host.name}</p>
-            <p className="text-3xl font-black text-blue-400 mt-2">{battle.host.score}</p>
+          <div className="flex gap-8 md:gap-12 text-center w-full max-w-md bg-slate-900/80 p-5 md:p-6 rounded-3xl border border-white/10 relative overflow-hidden mb-6 shadow-2xl">
+            <div className="flex-1 z-10">
+              <p className="font-bold text-base md:text-lg text-white truncate">{battle.host.name}</p>
+              <p className="text-3xl font-black text-blue-400 mt-1">{battle.host.score}</p>
+            </div>
+            <div className="w-px bg-white/10 relative z-10" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-800 opacity-20 z-0">
+              <Swords size={120} />
+            </div>
+            <div className="flex-1 z-10">
+              <p className="font-bold text-base md:text-lg text-white truncate">{battle.guest.name}</p>
+              <p className="text-3xl font-black text-red-400 mt-1">{battle.guest.score}</p>
+            </div>
           </div>
-          <div className="w-px bg-white/10 relative z-10" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-800 opacity-20 z-0">
-            <Swords size={150} />
+
+          {/* Fiche de révision / Correction des questions */}
+          <div className="w-full max-w-2xl bg-slate-900/90 border border-white/10 rounded-3xl p-4 md:p-6 mb-8 text-left shadow-2xl">
+            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Sparkles className="text-amber-400" size={20} /> Fiche de Correction & Révision
+            </h3>
+            
+            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
+              {questions.map((q, idx) => {
+                const myAnsIdx = myAnswers[idx] ?? -1;
+                const isCorrect = myAnsIdx === q.correctAnswer;
+
+                return (
+                  <div key={`review-${idx}`} className={`p-4 rounded-2xl border ${isCorrect ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-red-950/20 border-red-500/30'}`}>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <p className="text-sm font-bold text-white leading-snug">
+                        <span className="text-amber-400 font-black mr-2">Q{idx + 1}.</span> {q.text}
+                      </p>
+                      {isCorrect ? (
+                        <span className="flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                          <CheckCircle size={12} /> Correct
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
+                          <XCircle size={12} /> Incorrect
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-xs space-y-1.5 mt-2">
+                      <p className="text-slate-400">
+                        <span className="font-semibold text-slate-300">Ta réponse : </span>
+                        <span className={isCorrect ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                          {myAnsIdx >= 0 && q.options[myAnsIdx] ? q.options[myAnsIdx] : 'Temps écoulé / Non répondu'}
+                        </span>
+                      </p>
+                      {!isCorrect && (
+                        <p className="text-slate-400">
+                          <span className="font-semibold text-slate-300">Bonne réponse : </span>
+                          <span className="text-emerald-400 font-bold">{q.options[q.correctAnswer]}</span>
+                        </p>
+                      )}
+                      {q.explanation && (
+                        <p className="text-[11px] text-blue-300/90 italic bg-blue-500/10 p-2.5 rounded-xl border border-blue-500/20 mt-2">
+                          💡 <span className="font-semibold">Explication : </span>{q.explanation}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex-1 z-10">
-            <p className="font-bold text-lg text-white">{battle.guest.name}</p>
-            <p className="text-3xl font-black text-red-400 mt-2">{battle.guest.score}</p>
-          </div>
+
+          <button onClick={onClose} className="w-full max-w-md bg-white text-slate-900 py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform shadow-2xl uppercase tracking-wider">
+            Retour à la carte
+          </button>
         </div>
-
-        <button onClick={onClose} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform shadow-2xl">
-          {t('quiz.battle.backToMap')}
-        </button>
       </div>
     );
   }

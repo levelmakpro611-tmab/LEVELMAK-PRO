@@ -308,6 +308,14 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     try {
       initializeNativeFeatures();
+
+      // Listen to app foreground/resume (WhatsApp-like instant resume)
+      const appStateListener = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          console.log('⚡ App returned to foreground (Instant Resume)');
+          hideSplashScreen();
+        }
+      });
       
       const handleNav = (e: any) => {
         if (e.detail) handleSetActiveTab(e.detail);
@@ -326,6 +334,7 @@ const AppContent: React.FC = () => {
       return () => {
         window.removeEventListener('nav_change', handleNav);
         window.removeEventListener('start_quiz', handleStartQuiz);
+        appStateListener.then(sub => sub.remove()).catch(() => {});
       };
     } catch (e) {
       console.error("Native init error:", e);
