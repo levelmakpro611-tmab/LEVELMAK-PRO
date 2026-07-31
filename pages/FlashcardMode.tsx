@@ -160,9 +160,9 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
           <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
         </button>
 
-        <div className="flex-1 w-full max-w-md sm:max-w-lg mx-auto min-w-0">
+        <div className="flex-1 w-full max-w-xl sm:max-w-3xl mx-auto min-w-0">
           <motion.div
-              className="relative w-full h-[360px] sm:h-[420px] cursor-pointer mx-auto"
+              className="relative w-full h-[480px] sm:h-[540px] md:h-[580px] cursor-pointer mx-auto"
               style={{ transformStyle: 'preserve-3d' }}
               onClick={handleFlip}
               initial={false}
@@ -171,13 +171,12 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
           >
             {/* Front Side */}
             <div
-                className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 rounded-[2.5rem] p-6 md:p-10 flex flex-col justify-between items-center text-center shadow-2xl transition-all overflow-y-auto custom-scrollbar"
+                className="absolute inset-0 bg-[#0d1527] border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] p-6 md:p-10 flex flex-col justify-between items-center text-center shadow-2xl overflow-y-auto custom-scrollbar"
                 style={{
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
                     zIndex: isFlipped ? 0 : 1,
                     opacity: isFlipped ? 0 : 1,
-                    transition: 'opacity 0.3s'
                 }}
             >
                 <div className="w-full flex justify-between items-center text-slate-500 mb-2">
@@ -185,7 +184,7 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
                     <BookOpen size={16} />
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center my-auto py-4 w-full">
-                    <h3 className="text-lg md:text-2xl font-black text-white leading-relaxed select-none">
+                    <h3 className="text-xl md:text-3xl font-black text-white leading-relaxed select-none">
                         {currentCard.front}
                     </h3>
                 </div>
@@ -196,14 +195,13 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
 
             {/* Back Side */}
             <div
-                className="absolute inset-0 bg-slate-900 border border-purple-500/30 rounded-[2.5rem] p-6 md:p-10 flex flex-col text-left shadow-2xl transition-all"
+                className="absolute inset-0 bg-[#0d1527] border border-purple-500/40 rounded-[2rem] sm:rounded-[2.5rem] p-6 md:p-10 flex flex-col text-left shadow-2xl"
                 style={{
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
                     transform: 'rotateY(180deg)',
                     zIndex: isFlipped ? 1 : 0,
                     opacity: isFlipped ? 1 : 0,
-                    transition: 'opacity 0.3s'
                 }}
             >
                 <div className="absolute top-6 left-6 right-6 flex justify-between items-center text-purple-400">
