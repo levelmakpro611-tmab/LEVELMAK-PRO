@@ -296,21 +296,6 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         </div>
                     </motion.div>
                 </div>
-
-                <button
-                    onClick={() => {
-                        if (currentIndex < activeCards.length - 1) {
-                            setIsFlipped(false);
-                            setCurrentIndex(prev => prev + 1);
-                            HapticFeedback.selection();
-                        }
-                    }}
-                    disabled={currentIndex === activeCards.length - 1}
-                    className="p-2.5 sm:p-4 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
-                    title="Carte suivante"
-                >
-                    <ChevronRight size={20} className="sm:w-6 sm:h-6" />
-                </button>
             </div>
 
             {/* Controls */}
