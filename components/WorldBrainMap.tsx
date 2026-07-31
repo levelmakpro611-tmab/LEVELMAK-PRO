@@ -597,7 +597,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 );
             })}
 
-            {activeAtlasCategory === 'none' && finalUsers.map((u) => (
+            {activeAtlasCategory === 'none' && finalUsers.filter(u => u.is_online).map((u) => (
                 <Marker 
                   key={u.user_id} 
                   position={[u.lat, u.lng]} 
@@ -810,64 +810,6 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                       </div>
                     );
                   })
-                )}
-
-                {/* Offline Users / Profiles Section */}
-                {filteredUsers.filter(u => !u.is_online).length > 0 && (
-                  <>
-                    <div className="relative py-1 mt-4">
-                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-                      <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Inscrits (Hors-Ligne)</span></div>
-                    </div>
-
-                    {filteredUsers.filter(u => !u.is_online).map((u) => {
-                      const actualId = u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id;
-                      const isFav = favoriteUserIds.includes(actualId);
-                      return (
-                        <div 
-                          key={u.user_id}
-                          onClick={() => {
-                            if (mapRef.current) {
-                                try {
-                                    mapRef.current.flyTo([u.lat, u.lng], 15);
-                                } catch (_) {}
-                            }
-                            HapticFeedback.selection();
-                            if (window.innerWidth < 640) setIsUsersListOpen(false);
-                          }}
-                          className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all group opacity-75 hover:opacity-100"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-black text-[10px] shadow-lg">
-                              {u.name[0]}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-slate-300 text-[11px] font-bold truncate">{u.name}</p>
-                              <p className="text-slate-500 text-[9px] truncate">Hors-ligne ⚪</p>
-                            </div>
-                            <button
-                              onClick={(e) => toggleFavoriteUser(u.user_id, e)}
-                              className="p-1 text-slate-500 hover:text-amber-400 transition-colors"
-                              title={isFav ? "Favori" : "Ajouter aux favoris"}
-                            >
-                              <Star size={14} className={isFav ? "fill-amber-400 text-amber-400" : ""} />
-                            </button>
-                          </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedUser(u);
-                              setPendingDuelType('quiz');
-                              setIsBettingOpen(true);
-                            }}
-                            className="mt-2 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-[9px] font-black rounded-lg transition-all border border-white/10"
-                          >
-                            DÉFIER (ASYNCHRONE) ⚔️
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </>
                 )}
               </div>
             </motion.div>
