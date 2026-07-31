@@ -280,7 +280,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                         <div className="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center border border-secondary/20">
                             <Layers size={20} />
                         </div>
-                        Mes Decks ({filteredDecks.length + Object.keys(srsGroups).length})
+                        Mes Leçons ({filteredDecks.length + Object.keys(srsGroups).length})
                     </h3>
                 </div>
 

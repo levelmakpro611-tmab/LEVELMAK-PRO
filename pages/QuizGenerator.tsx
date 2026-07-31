@@ -276,7 +276,7 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
         </div>
 
         {/* Tab Selector matched exactly with AISummary page */}
-        <div className="inline-flex w-fit bg-white/5 p-1 rounded-2xl border border-white/10 shrink-0">
+        <div className="inline-flex w-fit self-start md:self-auto bg-white/5 p-1 rounded-2xl border border-white/10 shrink-0">
           <button
             onClick={() => setViewMode('generator')}
             className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'generator' ? 'bg-primary text-white shadow-glow' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}

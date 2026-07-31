@@ -172,7 +172,7 @@ const AISummary: React.FC<{
                     </p>
                 </div>
 
-                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 shrink-0">
+                <div className="inline-flex w-fit self-start md:self-auto bg-white/5 p-1 rounded-2xl border border-white/10 shrink-0">
                     <button
                         onClick={() => { setViewMode('generator'); setSummary(null); }}
                         className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'generator' ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
