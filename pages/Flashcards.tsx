@@ -433,7 +433,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                 </div>
 
                 {/* Bottom Spacer for Mobile Nav Bar Navigation Bar Compatibility */}
-                <div className="h-24 md:hidden"></div>
+                <div className="h-6 md:hidden"></div>
             </div>
         </div>
     );

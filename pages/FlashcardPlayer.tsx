@@ -23,11 +23,11 @@ interface FlashcardPlayerProps {
 }
 
 const getFontSize = (text?: string) => {
-    if (!text) return 'text-lg md:text-2xl';
-    if (text.length > 200) return 'text-xs md:text-sm';
-    if (text.length > 100) return 'text-sm md:text-base';
-    if (text.length > 50) return 'text-base md:text-xl';
-    return 'text-lg md:text-2xl';
+    if (!text) return 'text-2xl md:text-4xl';
+    if (text.length > 200) return 'text-base md:text-xl';
+    if (text.length > 100) return 'text-lg md:text-2xl';
+    if (text.length > 50) return 'text-xl md:text-3xl';
+    return 'text-2xl md:text-4xl';
 };
 
 const FormattedMarkdownText: React.FC<{ content?: string; className?: string }> = ({ content, className = '' }) => {
@@ -197,7 +197,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
             </div>
 
             {/* Card Area with Navigation Arrows */}
-            <div className="flex-1 flex items-center justify-between perspective-1000 py-4 sm:py-8 gap-1.5 sm:gap-6 w-full max-w-2xl mx-auto">
+            <div className="flex-1 flex items-center justify-between perspective-1000 py-4 sm:py-8 gap-2 sm:gap-6 w-full max-w-4xl mx-auto">
                 <button
                     onClick={() => {
                         if (currentIndex > 0) {
@@ -207,15 +207,15 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         }
                     }}
                     disabled={currentIndex === 0}
-                    className="p-2.5 sm:p-4 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
+                    className="p-3 sm:p-5 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
                     title="Carte précédente"
                 >
-                    <ArrowLeft size={20} className="sm:w-6 sm:h-6" />
+                    <ArrowLeft size={24} className="sm:w-7 sm:h-7" />
                 </button>
 
-                <div className="flex-1 w-full max-w-md sm:max-w-lg mx-auto min-w-0">
+                <div className="flex-1 w-full max-w-xl sm:max-w-3xl mx-auto min-w-0">
                     <motion.div
-                        className="relative w-full h-[360px] sm:h-[420px] cursor-pointer mx-auto"
+                        className="relative w-full h-[480px] sm:h-[540px] md:h-[580px] cursor-pointer mx-auto"
                         drag={isFlipped ? "x" : false}
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={0.8}

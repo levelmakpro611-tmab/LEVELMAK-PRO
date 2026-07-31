@@ -180,7 +180,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                     </p>
                 </div>
 
-                <div className="bg-slate-900/50 border border-white/10 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex items-center gap-4 md:gap-6 shadow-2xl backdrop-blur-xl">
+                <div className="w-fit self-start md:self-auto bg-slate-900/50 border border-white/10 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 flex items-center gap-4 md:gap-6 shadow-2xl backdrop-blur-xl">
                     <div className="flex flex-col items-end">
                         <span className="text-[8px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest">{t('shop.balance')}</span>
                         <div className="flex items-center gap-1.5 md:gap-2">
