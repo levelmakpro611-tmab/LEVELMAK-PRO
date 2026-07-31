@@ -2,8 +2,8 @@
 export const XP_PER_LEVEL = 1000; // Base XP for level 1
 
 export const getXpForNextLevel = (level: number) => {
-  // 100 XP needed per level
-  return 100;
+  // Scaling XP needed per level (Level 1: 500 XP, Level 2: 1000 XP, etc.)
+  return Math.max(500, level * 500);
 };
 
 export const getTotalXpAtLevel = (level: number) => {

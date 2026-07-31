@@ -451,6 +451,17 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       return Array.from(mapUsers.values());
   }, [activeUsers, allProfiles, user?.id]);
 
+  const otherOnlineUsersCount = useMemo(() => {
+      const uniqueOtherUserIds = new Set<string>();
+      activeUsers.forEach(u => {
+        const uid = u.user_id || u.id;
+        if (uid && uid !== user?.id && uid !== 'levelbot' && !isAdminUser(u) && !u.is_ghost) {
+          uniqueOtherUserIds.add(uid);
+        }
+      });
+      return uniqueOtherUserIds.size;
+  }, [activeUsers, user?.id]);
+
   const filteredUsers = useMemo(() => {
       const q = searchQuery.toLowerCase().trim();
       if (!q) return finalUsers;
@@ -468,8 +479,8 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         <div>
           <h2 className="text-2xl font-black text-white flex items-center gap-2"><Globe className="text-blue-400" size={24} /> {t('atlas.title')}</h2>
           <p className="text-slate-400 text-[10px] font-bold mt-1 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> 
-            {activeUsers.length + 1} élève{activeUsers.length + 1 > 1 ? 's' : ''} en ligne (Toi {activeUsers.length > 0 ? `+ ${activeUsers.length}` : ''})
+            <span className={`w-2 h-2 rounded-full ${otherOnlineUsersCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-500'}`} /> 
+            {otherOnlineUsersCount === 0 ? '0 élève en ligne' : `${otherOnlineUsersCount} élève${otherOnlineUsersCount > 1 ? 's' : ''} en ligne`}
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto justify-start sm:justify-end">

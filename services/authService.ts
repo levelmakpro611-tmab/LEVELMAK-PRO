@@ -91,6 +91,7 @@ export const mapProfileToUser = (profile: any): User => {
             currentLevel: 1
         },
         stats: stats,
+        garden: stats.garden || profile.garden || profile.avatar_config?.garden || { plants: [] },
         customSubjects: stats.customSubjects || profile.customSubjects || [],
         activeSubjects: stats.activeSubjects || profile.activeSubjects || undefined,
         subjectTargets: stats.subjectTargets || profile.subjectTargets || {},

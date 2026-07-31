@@ -283,15 +283,11 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     if (xpGained > 0) addXp(xpGained);
     trackTime(timeSpent / 60, quiz.subject); // Convert seconds to minutes and track time with subject
 
-    // Plant in garden if score is >= 50%
-    if (successPercentage >= 50) {
-      const plantTypes: ('flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus')[] = ['flower', 'tree', 'cactus', 'bonsai', 'lotus'];
-      // Increase probability of getting an actual tree since the user specifically requested 'l'arbre'
-      const weightedTypes = [...plantTypes, 'tree', 'tree', 'tree'];
-      const randomType = weightedTypes[Math.floor(Math.random() * weightedTypes.length)] as any;
-      plantInGarden(randomType);
-      addActivity('mission', 'Nouvelle Plante ! 🌱', `Bravo ! Ton score de ${Math.round(successPercentage)}% a fait pousser une nouvelle plante dans ton jardin.`);
-    }
+    // Plant in Mind Garden on every completed quiz to guarantee garden growth
+    const plantTypes: ('flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus')[] = ['tree', 'tree', 'flower', 'bonsai', 'lotus'];
+    const randomType = plantTypes[Math.floor(Math.random() * plantTypes.length)] as any;
+    plantInGarden(randomType);
+    addActivity('mission', 'Nouvelle Plante ! 🌱', `Bravo ! Ton quiz a fait pousser une nouvelle plante dans ton Jardin de l'Esprit.`);
 
     // SRS Update for Quiz
     let srsRating: 1 | 3 | 4 | 5 = 1;

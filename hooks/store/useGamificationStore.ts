@@ -16,10 +16,11 @@ export const useGamificationStore = (
             let remainingXp = (prev.xp || 0) + amount;
             let updatedLevel = prev.avatar?.currentLevel || 1;
             
-            // 100 XP per level
-            while (remainingXp >= 100) {
+            let needed = getXpForNextLevel(updatedLevel);
+            while (remainingXp >= needed) {
+                remainingXp -= needed;
                 updatedLevel++;
-                remainingXp -= 100;
+                needed = getXpForNextLevel(updatedLevel);
             }
 
             const updatedUser = {
@@ -85,11 +86,16 @@ export const useGamificationStore = (
                 lastWateredAt: new Date().toISOString(),
                 plantedAt: new Date().toISOString()
             };
+            const newGarden = {
+                ...prev.garden,
+                plants: [...(prev.garden?.plants || []), newPlant]
+            };
             const updated = {
                 ...prev,
-                garden: {
-                    ...prev.garden,
-                    plants: [...(prev.garden?.plants || []), newPlant]
+                garden: newGarden,
+                stats: {
+                    ...prev.stats,
+                    garden: newGarden
                 }
             };
             localStorage.setItem('levelmak_user', JSON.stringify(updated));
@@ -118,15 +124,21 @@ export const useGamificationStore = (
                 };
             });
 
+            const newGarden = {
+                ...prev.garden,
+                plants: updatedPlants
+            };
+
             const updated = {
                 ...prev,
                 consumables: {
                     ...prev.consumables,
                     [itemType]: currentItemCount - 1
                 },
-                garden: {
-                    ...prev.garden,
-                    plants: updatedPlants
+                garden: newGarden,
+                stats: {
+                    ...prev.stats,
+                    garden: newGarden
                 }
             };
             localStorage.setItem('levelmak_user', JSON.stringify(updated));
