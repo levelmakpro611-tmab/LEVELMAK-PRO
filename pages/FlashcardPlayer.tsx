@@ -171,7 +171,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
     }
 
     return (
-        <div className="min-h-[80vh] flex flex-col max-w-4xl mx-auto py-8 px-6 space-y-8 animate-fade-in">
+        <div className="min-h-[80vh] flex flex-col max-w-5xl mx-auto py-6 sm:py-8 px-2 sm:px-6 space-y-6 sm:space-y-8 animate-fade-in">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all">
@@ -197,7 +197,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
             </div>
 
             {/* Card Area with Navigation Arrows */}
-            <div className="flex-1 flex items-center justify-between perspective-1000 py-4 sm:py-8 gap-2 sm:gap-6 w-full max-w-4xl mx-auto">
+            <div className="flex-1 flex items-center justify-between perspective-1000 py-2 sm:py-6 gap-2 sm:gap-4 w-full max-w-5xl mx-auto">
                 <button
                     onClick={() => {
                         if (currentIndex > 0) {
@@ -207,15 +207,15 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         }
                     }}
                     disabled={currentIndex === 0}
-                    className="p-3 sm:p-5 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
+                    className="p-2 sm:p-4 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
                     title="Carte précédente"
                 >
-                    <ArrowLeft size={24} className="sm:w-7 sm:h-7" />
+                    <ArrowLeft size={22} className="sm:w-6 sm:h-6" />
                 </button>
 
-                <div className="flex-1 w-full max-w-xl sm:max-w-3xl mx-auto min-w-0">
+                <div className="flex-1 w-full max-w-full sm:max-w-4xl mx-auto min-w-0">
                     <motion.div
-                        className="relative w-full h-[480px] sm:h-[540px] md:h-[580px] cursor-pointer mx-auto"
+                        className="relative w-full h-[400px] sm:h-[460px] md:h-[500px] cursor-pointer mx-auto"
                         drag={isFlipped ? "x" : false}
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={0.8}
@@ -240,7 +240,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                     >
                         {/* Front */}
                         <div
-                            className="absolute inset-0 glass rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col items-center justify-between p-6 sm:p-10 text-center overflow-y-auto custom-scrollbar group bg-slate-900/90 w-full h-full"
+                            className="absolute inset-0 glass rounded-[2.5rem] border border-white/15 shadow-2xl flex flex-col items-center justify-between p-6 sm:p-12 text-center overflow-y-auto custom-scrollbar group bg-slate-900/90 w-full h-full"
                             style={{
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
