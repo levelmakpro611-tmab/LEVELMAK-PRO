@@ -255,7 +255,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               <Download size={22} />
             </button>
           )}
-          <button onClick={() => { HapticFeedback.selection(); setIsNotifOpen(true); }} className="p-3 text-slate-600 dark:text-slate-300 relative active:scale-95 transition-all bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
+          <button onClick={() => { 
+            HapticFeedback.selection(); 
+            setIsNotifOpen(true); 
+            // Automatically mark notifications as read when opening notification center
+            notifications.forEach(n => {
+              if (!n.read) markNotificationAsRead(n.id);
+            });
+          }} className="p-3 text-slate-600 dark:text-slate-300 relative active:scale-95 transition-all bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
             <Bell size={22} fill={(hasUnread && !isNotifOpen) ? "currentColor" : "none"} className={(hasUnread && !isNotifOpen) ? "animate-pulse" : ""} />
             {hasUnread && (
               <span className="absolute top-2.5 right-2.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-black flex items-center justify-center text-white border-2 border-white dark:border-slate-900 shadow-glow animate-pulse">
@@ -357,7 +364,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                 <span className="text-xs uppercase tracking-widest leading-none">Installer App</span>
               </button>
             )}
-            <button onClick={() => { HapticFeedback.selection(); setIsNotifOpen(true); }} className="relative p-3 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-all group border border-transparent hover:border-black/5 dark:hover:border-white/10">
+            <button onClick={() => { 
+              HapticFeedback.selection(); 
+              setIsNotifOpen(true); 
+              notifications.forEach(n => {
+                if (!n.read) markNotificationAsRead(n.id);
+              });
+            }} className="relative p-3 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-all group border border-transparent hover:border-black/5 dark:hover:border-white/10">
               <Bell size={28} fill={(hasUnread && !isNotifOpen) ? "currentColor" : "none"} className={`group-hover:rotate-12 transition-transform ${(hasUnread && !isNotifOpen) ? "animate-pulse" : ""}`} />
               {hasUnread && (
                 <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#060915] animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"></span>

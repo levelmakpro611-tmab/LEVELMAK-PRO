@@ -4,6 +4,7 @@ import {
     Bell,
     X,
     Check,
+    CheckCheck,
     Trash2,
     MessageSquare,
     Trophy,
@@ -24,6 +25,12 @@ interface NotificationCenterProps {
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
     const { notifications, markNotificationAsRead, clearNotifications, settings, updateSettings, t } = useStore();
+
+    const markAllAsRead = () => {
+        notifications.forEach(n => {
+            if (!n.read) markNotificationAsRead(n.id);
+        });
+    };
 
     const getIcon = (notif: AppNotification) => {
         if (notif.title.includes('PRO') || notif.title.includes('Levelmak') || notif.title.includes('Abonnement') || notif.title.includes('Reçu')) {
@@ -74,6 +81,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                 <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t('notifications.title')}</h2>
                             </div>
                             <div className="flex items-center gap-2">
+                                {notifications.some(n => !n.read) && (
+                                    <button
+                                        onClick={markAllAsRead}
+                                        className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold"
+                                        title="Tout marquer comme lu"
+                                    >
+                                        <CheckCheck size={18} />
+                                    </button>
+                                )}
                                 {notifications.length > 0 && (
                                     <button
                                         onClick={clearNotifications}
@@ -128,24 +144,28 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                                 <div className="flex items-start justify-between gap-2 mb-1">
                                                     <h4 className={`text-sm font-bold truncate ${notif.read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-white'
                                                         }`}>
-                                                     {notif.title}
-                                                 </h4>
-                                                 {!notif.read && (
-                                                     <button
-                                                         onClick={() => markNotificationAsRead(notif.id)}
-                                                         className="p-1 text-primary hover:bg-primary/10 rounded-md transition-colors"
-                                                         title={t('notifications.markRead')}
-                                                     >
-                                                         <Check size={14} />
-                                                     </button>
-                                                 )}
-                                             </div>
-                                             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                                 {notif.message}
-                                             </p>
-                                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
-                                                 <Clock size={10} /> {new Date(notif.timestamp).toLocaleTimeString(settings.language === 'fr' ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
-                                             </p>
+                                                        {notif.title}
+                                                    </h4>
+                                                    {!notif.read ? (
+                                                        <button
+                                                            onClick={() => markNotificationAsRead(notif.id)}
+                                                            className="p-1 text-primary hover:bg-primary/10 rounded-md transition-colors"
+                                                            title={t('notifications.markRead')}
+                                                        >
+                                                            <Check size={16} />
+                                                        </button>
+                                                    ) : (
+                                                        <div className="p-1 text-blue-400 font-bold flex items-center gap-0.5" title="Lu (Accusé de lecture)">
+                                                            <CheckCheck size={16} className="text-blue-400" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                    {notif.message}
+                                                </p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
+                                                    <Clock size={10} /> {new Date(notif.timestamp).toLocaleTimeString(settings.language === 'fr' ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
                                             </div>
                                         </div>
                                     </motion.div>
