@@ -166,9 +166,6 @@ const AISummary: React.FC<{
                 className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b border-white/5 pb-8 md:pb-12"
             >
                 <div className="space-y-2 md:space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 rounded-full border border-blue-500/20 text-blue-400 font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
-                        <Sparkles size={10} className="animate-pulse" /> {t('aiSummary.badge')}
-                    </div>
                     <h1 className="text-4xl md:text-7xl font-display font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-4 md:mb-6 transition-colors">{t('aiSummary.title')} <span className="text-blue-500">{t('aiSummary.titleAccent')}</span></h1>
                     <p className="text-slate-400 text-[10px] md:text-xl font-medium max-w-2xl leading-relaxed">
                         {t('aiSummary.desc')}<span className="text-white font-bold">{t('aiSummary.descAccent')}</span>

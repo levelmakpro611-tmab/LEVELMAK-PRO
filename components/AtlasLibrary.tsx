@@ -76,12 +76,6 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-black/5 dark:border-white/5">
         <div className="space-y-2">
-          <div className="flex items-center gap-3 text-orange-500 mb-1">
-            <div className="p-2 bg-orange-500/10 rounded-xl">
-              <Globe className="w-6 h-6" />
-            </div>
-            <span className="font-black uppercase tracking-[0.2em] text-xs">{t('atlas.subtitle')}</span>
-          </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
             {t('atlas.title')}
           </h1>

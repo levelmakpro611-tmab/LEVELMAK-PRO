@@ -715,9 +715,6 @@ const CreativeWriting: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b border-white/5 pb-8 md:pb-10">
                 <div className="space-y-3 md:space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-secondary/10 rounded-full border border-secondary/20 text-secondary-light font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
-                        <PenTool className="w-3 h-3 md:w-4 md:h-4 animate-pulse" /> {t('creativeWriting.tag')}
-                    </div>
                     <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
                         <h1 className="text-2xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter transition-colors">
                             {t('creativeWriting.title').split(' ')[0]} {t('creativeWriting.title').split(' ').slice(1, -1).join(' ')} <span className="text-gradient-primary">{t('creativeWriting.title').split(' ').pop()}</span>

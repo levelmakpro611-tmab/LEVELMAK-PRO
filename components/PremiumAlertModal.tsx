@@ -76,20 +76,15 @@ export const PremiumAlertModal: React.FC<PremiumAlertModalProps> = ({
             </button>
 
             {/* Glowing Icon Container */}
-            <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-              <div className="absolute inset-0 bg-amber-500/20 rounded-3xl blur-lg animate-pulse" />
-              <div className="relative w-16 h-16 bg-gradient-to-br from-amber-400/20 to-yellow-600/20 rounded-3xl border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-[inset_0_0_15px_rgba(245,158,11,0.2)]">
-                <Lock size={28} className="animate-pulse" />
+            <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <div className="absolute inset-0 bg-amber-500/20 rounded-2xl blur-lg animate-pulse" />
+              <div className="relative w-14 h-14 bg-gradient-to-br from-amber-400/20 to-yellow-600/20 rounded-2xl border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-[inset_0_0_15px_rgba(245,158,11,0.2)]">
+                <Lock size={24} className="animate-pulse" />
               </div>
             </div>
 
-            {/* Badge */}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-widest mb-3">
-              <Sparkles className="w-3 h-3" /> Espace Privilège
-            </span>
-
             {/* Title */}
-            <h3 className="text-2xl font-black text-white tracking-tight leading-tight mb-4 uppercase">
+            <h3 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight mb-3 uppercase">
               {displayTitle}
             </h3>
 

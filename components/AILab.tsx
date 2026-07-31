@@ -708,10 +708,6 @@ export const AILab: React.FC = () => {
           <motion.div key="hub" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="p-6 md:p-12 space-y-12">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="space-y-4">
-                <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-500">
-                  <FlaskRound size={24} />
-                  <span className="font-black uppercase tracking-[0.2em] text-xs">{t('ailab.experimental')}</span>
-                </div>
                 <h1 className="text-5xl md:text-7xl font-display font-black text-slate-900 dark:text-white tracking-tighter transition-colors">
                   {t('ailab.title')} <span className="text-primary italic">{t('ailab.titleAccent')}</span>
                 </h1>

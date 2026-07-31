@@ -117,10 +117,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-10">
                 <div className="space-y-3 md:space-y-4">
-                    <div className="flex items-center gap-2 md:gap-3 text-primary-light font-black uppercase tracking-[0.2em] text-[8px] md:text-xs">
-                        <Zap className="w-3 h-3 md:w-4 md:h-4" /> {t('flashcards.memorization')}
-                    </div>
-                    <h1 className="text-2xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">Flashcards <span className="text-gradient-primary">IA</span></h1>
+                    <h1 className="text-2xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">Flashcards</h1>
                     <p className="text-slate-400 text-base md:text-lg font-medium max-w-xl">{t('flashcards.aiSubtitle')}</p>
                 </div>
 
@@ -131,7 +128,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder={t('flashcards.searchPlaceholder')}
+                            placeholder="Rechercher une leçon..."
                             className="bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-primary/50 text-white font-bold transition-all w-full md:w-64"
                         />
                     </div>
@@ -144,9 +141,6 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                 <div className="relative glass p-5 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/10 overflow-hidden">
                     <div className="flex flex-col lg:flex-row items-center gap-6 md:gap-8">
                         <div className="flex-1 space-y-4 md:space-y-6 w-full">
-                            <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-primary/10 text-primary rounded-full text-[8px] md:text-xs font-black uppercase tracking-widest border border-primary/20">
-                                <Sparkles className="w-3 h-3 md:w-3.5 md:h-3.5" /> Intelligence Artificielle
-                            </div>
                             <h2 className="text-xl md:text-3xl font-display font-black text-slate-900 dark:text-white leading-tight">
                                 {t('flashcards.aiPrompt').split('\n').map((line, i) => <React.Fragment key={i}>{line}<br className="hidden md:block" /></React.Fragment>)}
                             </h2>                             <form onSubmit={handleGenerateDeck} className="relative space-y-4">

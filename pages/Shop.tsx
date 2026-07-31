@@ -172,9 +172,6 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b border-white/5 pb-8 md:pb-10">
                 <div className="space-y-3 md:space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-secondary/10 rounded-full border border-secondary/20 text-secondary font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
-                        <ShoppingBag className="w-3 h-3 md:w-3.5 md:h-3.5 animate-pulse" /> {t('shop.title')}
-                    </div>
                     <h1 className="text-3xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">
                         {t('shop.subtitle')}
                     </h1>

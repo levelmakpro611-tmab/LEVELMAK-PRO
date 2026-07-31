@@ -267,9 +267,6 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
         className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b border-white/5 pb-8 md:pb-12"
       >
         <div className="space-y-2 md:space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-primary/10 rounded-full border border-primary/20 text-primary-light font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">
-            <Sparkles className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 animate-pulse" /> {t('quiz.generator.badge')}
-          </div>
           <h1 className="text-2xl md:text-6xl font-display font-black text-slate-900 dark:text-white tracking-tighter leading-tight md:leading-none">
             {t('quiz.generator.title')} <span className="text-gradient-primary">{t('quiz.generator.subtitle')}</span>
           </h1>
@@ -498,21 +495,6 @@ const QuizGenerator: React.FC<{ onGenerated: (quiz: Quiz) => void }> = ({ onGene
 
           <div className="lg:col-span-4 space-y-8">
             <div className="glass rounded-[2.5rem] border border-white/5 p-6 md:p-8 space-y-8 sticky top-8">
-              <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">Matière du Quiz</label>
-                <select
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold text-xs outline-none focus:border-primary/40 transition-all cursor-pointer"
-                >
-                  {[...SUBJECTS, ...(user?.customSubjects || [])].map((sub) => (
-                    <option key={sub} value={sub} className="bg-slate-950 text-white font-semibold">
-                      {sub}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div className="space-y-6">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">{t('quiz.generator.intensity')}</label>
                 <div className="grid grid-cols-1 gap-3">

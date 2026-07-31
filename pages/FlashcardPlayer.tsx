@@ -82,9 +82,12 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
             addXp(10);
             addLevelCoins(2);
             trackTime(1, deck.subject);
+        } else {
+            // Re-queue the unmastered card to the end of the stack for review!
+            setActiveCards(prev => [...prev, currentCard]);
         }
 
-        if (currentIndex < activeCards.length - 1) {
+        if (currentIndex < activeCards.length - 1 || !mastered) {
             setIsFlipped(false);
             setTimeout(() => {
                 setCurrentIndex(prev => prev + 1);
@@ -104,38 +107,57 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="max-w-xl mx-auto py-12 md:py-20 px-4 text-center space-y-8 md:space-y-12"
+                className="max-w-2xl mx-auto py-8 md:py-16 px-4 text-center space-y-8 custom-scrollbar"
             >
                 <div className="relative">
                     <div className="absolute -inset-8 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
-                    <div className="relative w-32 h-32 bg-gradient-to-br from-primary to-secondary rounded-full mx-auto flex items-center justify-center shadow-glow">
-                        <Trophy size={60} className="text-white" />
+                    <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-primary to-secondary rounded-full mx-auto flex items-center justify-center shadow-glow">
+                        <Trophy size={56} className="text-white" />
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <h2 className="text-3xl md:text-4xl font-display font-black text-white">Deck Maîtrisé !</h2>
-                    <p className="text-slate-400 text-lg">Deck: <span className="text-white font-bold">{deck.title}</span></p>
+                <div className="space-y-2">
+                    <h2 className="text-3xl md:text-4xl font-display font-black text-white">Deck Maîtrisé ! 🏆</h2>
+                    <p className="text-slate-400 text-base md:text-lg">Deck: <span className="text-white font-bold">{deck.title}</span></p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6">
-                    <div className="glass p-6 rounded-3xl border border-success/20 bg-success/5">
-                        <div className="text-3xl font-black text-success mb-1">{cards.length}</div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-success/60">Cartes Apprises</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="glass p-5 rounded-2xl border border-success/20 bg-success/5">
+                        <div className="text-2xl md:text-3xl font-black text-success mb-1">{cards.length}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-success/70">Cartes Apprises</div>
+                    </div>
+                    <div className="glass p-5 rounded-2xl border border-primary/20 bg-primary/5">
+                        <div className="text-2xl md:text-3xl font-black text-primary-light mb-1">+ {cards.length * 10} XP</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-primary-light/70">Points d'Expérience</div>
                     </div>
                 </div>
 
-                <div className="glass p-8 rounded-[2rem] border border-white/10 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-                            <Zap size={24} />
+                {/* Comprehension Quiz & Key Review Sheet */}
+                <div className="glass p-6 md:p-8 rounded-[2rem] border border-white/10 text-left space-y-6 bg-slate-900/80">
+                    <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                        <div className="p-2.5 bg-blue-500/20 text-blue-400 rounded-xl">
+                            <MessageSquare size={20} />
                         </div>
-                        <div className="text-left">
-                            <div className="text-white font-bold">Points d'Expérience</div>
-                            <div className="text-primary-light font-black">+ {cards.length * 10} XP</div>
+                        <div>
+                            <h3 className="text-lg font-black text-white uppercase tracking-tight">Test de Mémorisation & Bilan</h3>
+                            <p className="text-xs text-slate-400 font-medium">Revois les notions clés tirées de tes cartes</p>
                         </div>
                     </div>
-                    <CheckCircle2 className="text-success" size={32} />
+
+                    <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                        {cards.slice(0, 5).map((c, idx) => (
+                            <div key={idx} className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+                                <div className="text-xs font-black text-primary-light uppercase tracking-widest flex items-center gap-2">
+                                    <span>Question {idx + 1} :</span>
+                                </div>
+                                <p className="text-sm font-bold text-white">{c.front}</p>
+                                <div className="mt-2 pt-2 border-t border-white/5 text-xs text-emerald-400 font-semibold flex items-start gap-2">
+                                    <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
+                                    <span>Réponse : {c.back}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 <button
