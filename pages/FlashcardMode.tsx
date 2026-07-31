@@ -144,7 +144,9 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
           animate={{ scaleX: cardsToReview.length > 0 ? currentIndex / cardsToReview.length : 0 }}
         />
       </div>
-      <div className="flex-1 flex items-center justify-between max-w-2xl mx-auto w-full relative perspective-[2000px] gap-1.5 sm:gap-6">
+      {/* Card Area with Floating Navigation Arrows */}
+      <div className="relative flex-1 w-full max-w-md sm:max-w-xl md:max-w-2xl mx-auto my-auto flex items-center justify-center min-w-0 px-2 sm:px-4">
+        {/* Floating Left Arrow Button */}
         <button
           onClick={() => {
             if (currentIndex > 0) {
@@ -154,15 +156,31 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
             }
           }}
           disabled={currentIndex === 0}
-          className="p-2.5 sm:p-4 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
+          className="absolute -left-2 sm:-left-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-slate-800/90 hover:bg-slate-700 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/20 shadow-2xl backdrop-blur-xl shrink-0"
           title="Carte précédente"
         >
-          <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
+          <ChevronLeft size={22} className="sm:w-6 sm:h-6" />
         </button>
 
-        <div className="flex-1 w-full max-w-xl sm:max-w-3xl mx-auto min-w-0">
+        {/* Floating Right Arrow Button */}
+        <button
+          onClick={() => {
+            if (currentIndex < cardsToReview.length - 1) {
+              setIsFlipped(false);
+              setCurrentIndex(prev => prev + 1);
+              HapticFeedback.selection();
+            }
+          }}
+          disabled={currentIndex === cardsToReview.length - 1}
+          className="absolute -right-2 sm:-right-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-slate-800/90 hover:bg-slate-700 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/20 shadow-2xl backdrop-blur-xl shrink-0"
+          title="Carte suivante"
+        >
+          <ChevronRight size={22} className="sm:w-6 sm:h-6" />
+        </button>
+
+        <div className="w-full min-w-0">
           <motion.div
-              className="relative w-full h-[480px] sm:h-[540px] md:h-[580px] cursor-pointer mx-auto"
+              className="relative w-full h-[440px] sm:h-[500px] md:h-[540px] cursor-pointer mx-auto"
               style={{ transformStyle: 'preserve-3d' }}
               onClick={handleFlip}
               initial={false}
@@ -233,21 +251,6 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
             </div>
         </motion.div>
         </div>
-
-        <button
-          onClick={() => {
-            if (currentIndex < cardsToReview.length - 1) {
-              setIsFlipped(false);
-              setCurrentIndex(prev => prev + 1);
-              HapticFeedback.selection();
-            }
-          }}
-          disabled={currentIndex === cardsToReview.length - 1}
-          className="p-2.5 sm:p-4 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
-          title="Carte suivante"
-        >
-          <ChevronRight size={20} className="sm:w-6 sm:h-6" />
-        </button>
       </div>
 
       {/* Actions / Evaluation */}

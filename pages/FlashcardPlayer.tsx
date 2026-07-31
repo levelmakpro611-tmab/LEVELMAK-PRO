@@ -196,8 +196,9 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                 />
             </div>
 
-            {/* Card Area with Navigation Arrows */}
-            <div className="flex-1 flex items-center justify-between perspective-1000 py-4 sm:py-8 gap-2 sm:gap-6 w-full max-w-4xl mx-auto">
+            {/* Card Area with Floating Navigation Arrows */}
+            <div className="relative flex-1 w-full max-w-md sm:max-w-xl md:max-w-2xl mx-auto my-auto flex items-center justify-center min-w-0 px-2 sm:px-4">
+                {/* Floating Left Arrow Button */}
                 <button
                     onClick={() => {
                         if (currentIndex > 0) {
@@ -207,15 +208,31 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         }
                     }}
                     disabled={currentIndex === 0}
-                    className="p-3 sm:p-5 bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/10 shrink-0 z-20"
+                    className="absolute -left-2 sm:-left-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-slate-800/90 hover:bg-slate-700 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/20 shadow-2xl backdrop-blur-xl shrink-0"
                     title="Carte précédente"
                 >
-                    <ArrowLeft size={24} className="sm:w-7 sm:h-7" />
+                    <ArrowLeft size={22} className="sm:w-6 sm:h-6" />
                 </button>
 
-                <div className="flex-1 w-full max-w-xl sm:max-w-3xl mx-auto min-w-0">
+                {/* Floating Right Arrow Button */}
+                <button
+                    onClick={() => {
+                        if (currentIndex < activeCards.length - 1) {
+                            setIsFlipped(false);
+                            setCurrentIndex(prev => prev + 1);
+                            HapticFeedback.selection();
+                        }
+                    }}
+                    disabled={currentIndex === activeCards.length - 1}
+                    className="absolute -right-2 sm:-right-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-slate-800/90 hover:bg-slate-700 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/20 shadow-2xl backdrop-blur-xl shrink-0"
+                    title="Carte suivante"
+                >
+                    <ChevronRight size={22} className="sm:w-6 sm:h-6" />
+                </button>
+
+                <div className="w-full min-w-0">
                     <motion.div
-                        className="relative w-full h-[480px] sm:h-[540px] md:h-[580px] cursor-pointer mx-auto"
+                        className="relative w-full h-[440px] sm:h-[500px] md:h-[540px] cursor-pointer mx-auto"
                         drag={isFlipped ? "x" : false}
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={0.8}
