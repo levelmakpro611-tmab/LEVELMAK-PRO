@@ -63,27 +63,32 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
     const { user, addXp, addLevelCoins, addActivity, incrementFlashcardsStudied, updateSRSMetadata, trackTime } = useStore();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [activeCards, setActiveCards] = useState<Flashcard[]>([...cards]);
+    const [masteredCardIds, setMasteredCardIds] = useState<Set<string>>(new Set());
     const [isFlipped, setIsFlipped] = useState(false);
 
     const dragX = useMotionValue(0);
     const dragRotate = useTransform(dragX, [-200, 200], [-15, 15]);
 
     const currentCard = activeCards[currentIndex];
-    const progress = activeCards.length > 0 ? ((currentIndex + 1) / activeCards.length) * 100 : 0;
+    const currentCardIsNew = currentCard && !masteredCardIds.has(currentCard.id);
+    const displayedCount = Math.min(masteredCardIds.size + (currentCardIsNew ? 1 : 0), cards.length);
+    const progress = cards.length > 0 ? (masteredCardIds.size / cards.length) * 100 : 0;
 
     const handleRate = (mastered: boolean) => {
         if (!currentCard) return;
 
         HapticFeedback.selection();
-        incrementFlashcardsStudied(1);
         updateSRSMetadata(currentCard.id, 'flashcard', mastered ? 5 : 2);
 
         if (mastered) {
+            incrementFlashcardsStudied(1);
+            setMasteredCardIds(prev => new Set(prev).add(currentCard.id));
             addXp(10);
             addLevelCoins(2);
             trackTime(1, deck.subject);
         } else {
             // Re-queue the unmastered card to the end of the stack for review!
+            // Does NOT count as learned/mastered!
             setActiveCards(prev => [...prev, currentCard]);
         }
 
@@ -182,7 +187,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                     <div className="text-white font-bold">{deck.title}</div>
                 </div>
                 <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black">
-                    {currentIndex + 1}/{cards.length}
+                    {displayedCount}/{cards.length}
                 </div>
             </div>
 
