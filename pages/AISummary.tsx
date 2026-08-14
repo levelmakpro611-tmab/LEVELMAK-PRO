@@ -22,13 +22,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { aiService } from '../services/aiService';
 import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
+import { isFeatureAllowedForGrade, checkMessageQuota, incrementMessageUsage } from '../services/aiQuotaService';
 import mammoth from 'mammoth';
 
 const AISummary: React.FC<{
     onGenerateQuiz: (content: string, title: string) => void;
     onGenerateFlashcards: (content: string, title: string) => void;
 }> = ({ onGenerateQuiz, onGenerateFlashcards }) => {
-    const { saveBook, library, addActivity, settings, t } = useStore();
+    const { saveBook, library, addActivity, settings, t, user } = useStore();
     const [files, setFiles] = useState<{ id: string, file: File, preview: string, type: 'image' | 'pdf' | 'word' }[]>([]);
     const [manualText, setManualText] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -38,6 +39,8 @@ const AISummary: React.FC<{
     const [viewMode, setViewMode] = useState<'generator' | 'saved'>('generator');
     const [summary, setSummary] = useState<any | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const isAllowed = isFeatureAllowedForGrade('summarizer', user?.gradeClass);
 
     const savedSummaries = library?.filter(book => book.category === 'Synthèse') || [];
 
@@ -82,6 +85,17 @@ const AISummary: React.FC<{
     };
 
     const handleSummarize = async () => {
+        if (!isAllowed) {
+            setError("Le résumé de texte IA est réservé aux classes de 10ème à Université.");
+            return;
+        }
+
+        const msgQuota = checkMessageQuota(user);
+        if (!msgQuota.allowed) {
+            setError(msgQuota.message || "Quota quotidien de messages atteint.");
+            return;
+        }
+
         if (inputMode === 'file' && files.length === 0) {
             setError(t('aiSummary.errors.noFile'));
             return;
@@ -91,6 +105,7 @@ const AISummary: React.FC<{
             return;
         }
 
+        incrementMessageUsage(user);
         setIsProcessing(true);
         setError('');
         setStatus(t('aiSummary.status.init'));
@@ -244,6 +259,14 @@ const AISummary: React.FC<{
             ) : !summary ? (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
                     <div className="lg:col-span-8 space-y-8">
+                        {!isAllowed && (
+                            <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-[2rem] text-blue-300 space-y-2">
+                                <h3 className="font-black text-sm uppercase tracking-wider text-white">Fonctionnalité Réservée (Secondaire & Supérieur)</h3>
+                                <p className="text-xs text-slate-300 font-medium">
+                                    Le Résumé de Texte IA est débloqué à partir de la 10ème année. Les élèves de 1ère à 9ème année ont accès à la <strong>Méthode Feynman (Deviens le Prof)</strong> dans le Labo IA !
+                                </p>
+                            </div>
+                        )}
                         <div className="glass p-1 md:p-2 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/5 flex gap-1 md:gap-2 shadow-2xl">
                             <button
                                 onClick={() => setInputMode('file')}

@@ -47,9 +47,8 @@ interface CrashReport {
 // ENVOI EMAIL VIA EMAILJS
 // ──────────────────────────────────────────────
 async function sendCrashEmail(report: CrashReport): Promise<void> {
-  // Vérifie que EmailJS est configuré
-  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
-    console.warn('[CrashReport] EmailJS non configuré — rapport sauvegardé en DB uniquement');
+  // Vérifie que EmailJS est configuré et sans placeholder
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY.includes('YOUR_PUBLIC_KEY')) {
     return;
   }
 
@@ -93,7 +92,7 @@ ${report.stack || 'Aucune stack trace disponible'}
 ${report.context || 'Aucun contexte supplémentaire'}
 
 ══════════════════════════════════════════════
-Ce message est envoyé automatiquement par Levelmak Pro.
+Ce message est envoyé automatiquement par Levelmak.
 `.trim();
 
   try {

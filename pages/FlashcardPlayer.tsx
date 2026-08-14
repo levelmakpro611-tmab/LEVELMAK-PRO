@@ -100,7 +100,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
         } else {
             addActivity('study', 'Cartes terminées 🧠', `Deck : ${deck.title}`);
             if (user) {
-                logUserActivity(user.id, user.name, 'study', `Studied Deck: ${deck.title}`);
+                logUserActivity(user.id, user.name, 'quiz', `Studied Deck: ${deck.title}`);
             }
             setIsFlipped(false);
             setCurrentIndex(activeCards.length); // Trigger end screen

@@ -137,7 +137,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     const expirationDate = new Date(profile.premium_until);
                     const planDuration = tx?.plan_duration || 'monthly';
                     const planName = planDuration === 'weekly' ? 'Hebdomadaire' : planDuration === 'monthly' ? 'Mensuel' : 'Annuel';
-                    const amount = tx?.amount || (planDuration === 'weekly' ? 10000 : planDuration === 'monthly' ? 25000 : 250000);
+                    const amount = tx?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
                     
                     const receiptPayload = {
                         transactionId: tx?.id || `tx_${Date.now()}`,
@@ -210,7 +210,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                 }
                 window.location.href = res.redirectUrl;
             } else {
-                setInitiateError(res.error || "Impossible d'initier le paiement. Réessayez.");
+                if (res.error?.includes('non valide') || res.error?.includes('expiré')) {
+                    setInitiateError("Votre session a expiré. Veuillez vous déconnecter et vous reconnecter à votre compte pour finaliser le paiement.");
+                } else {
+                    setInitiateError(res.error || "Impossible d'initier le paiement. Réessayez.");
+                }
                 setIsInitiatingPayment(false);
             }
         } catch (err: any) {
@@ -622,11 +626,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     </motion.div>
                 )}
 
-                {/* Grid - Horizontal scrolling on mobile (web/native simulation), 4 columns on desktop */}
-                <div className="flex flex-row overflow-x-auto md:grid md:grid-cols-4 gap-4 md:gap-6 items-stretch pb-6 md:pb-0 snap-x snap-mandatory no-scrollbar w-full">
+                {/* Grid - Vertical stack block by block */}
+                <div className="flex flex-col gap-6 max-w-xl mx-auto w-full">
                     
                     {/* 1. GRATUIT */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-4 sm:p-6 transition-all hover:border-slate-700 relative overflow-hidden flex-1 min-w-[280px] sm:min-w-[325px] md:min-w-0 snap-center shadow-lg shadow-black/10">
+                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-5 sm:p-7 transition-all hover:border-slate-700 relative overflow-hidden w-full shadow-lg shadow-black/10">
                         <div className="flex-1">
                             <div className="w-10 h-10 rounded-lg bg-purple-900/20 flex items-center justify-center text-purple-400 mb-4 border border-purple-500/20">
                                 <Sparkles className="w-5 h-5" />
@@ -722,7 +726,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     </div>
 
                     {/* 2. HEBDOMADAIRE */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-4 sm:p-6 transition-all hover:border-slate-700 relative overflow-hidden flex-1 min-w-[280px] sm:min-w-[325px] md:min-w-0 snap-center shadow-lg shadow-black/10">
+                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-5 sm:p-7 transition-all hover:border-slate-700 relative overflow-hidden w-full shadow-lg shadow-black/10">
                         <div className="absolute top-4 right-4">
                             <span className="text-[9px] font-bold uppercase tracking-widest bg-rose-500/15 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
                                 ⚡ Engagement flexible
@@ -736,7 +740,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                             <p className="mt-2 text-xs text-slate-400">Progresse chaque semaine avec un accès complet</p>
                             
                             <p className="mt-5">
-                                <span className="text-3xl sm:text-4xl font-extrabold text-white">10 000 FG</span>
+                                <span className="text-3xl sm:text-4xl font-extrabold text-white">15 000 FG</span>
                                 <span className="text-xs text-slate-400 font-semibold"> / semaine</span>
                             </p>
 
@@ -785,7 +789,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         </div>
 
                         <button
-                            onClick={() => handleSelectPlan('weekly', 10000)}
+                            onClick={() => handleSelectPlan('weekly', 15000)}
                             disabled={isPremiumActive}
                             className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
                                 isPremiumActive 
@@ -803,7 +807,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     </div>
 
                     {/* 3. MENSUEL */}
-                    <div className="flex flex-col border border-blue-500/50 bg-slate-900/40 rounded-3xl p-4 sm:p-6 transition-all hover:border-blue-400 relative overflow-hidden flex-1 min-w-[280px] sm:min-w-[325px] md:min-w-0 snap-center shadow-lg shadow-blue-950/20 ring-1 ring-blue-500/20">
+                    <div className="flex flex-col border border-blue-500/50 bg-slate-900/40 rounded-3xl p-5 sm:p-7 transition-all hover:border-blue-400 relative overflow-hidden w-full shadow-lg shadow-blue-950/20 ring-1 ring-blue-500/20">
                         <div className="absolute top-4 right-4">
                             <span className="text-[9px] font-bold uppercase tracking-widest bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full flex items-center gap-1">
                                 ★ Le plus choisi
@@ -817,7 +821,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                             <p className="mt-2 text-xs text-slate-400">Le meilleur équilibre pour des résultats durables</p>
                             
                             <p className="mt-5">
-                                <span className="text-3xl sm:text-4xl font-extrabold text-white">25 000 FG</span>
+                                <span className="text-3xl sm:text-4xl font-extrabold text-white">45 000 FG</span>
                                 <span className="text-xs text-slate-400 font-semibold"> / mois</span>
                             </p>
                             <p className="text-[11px] text-blue-400 font-bold mt-1">✓ Économise 15 000 FG</p>
@@ -863,7 +867,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         </div>
 
                         <button
-                            onClick={() => handleSelectPlan('monthly', 25000)}
+                            onClick={() => handleSelectPlan('monthly', 45000)}
                             disabled={isPremiumActive}
                             className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
                                 isPremiumActive 
@@ -881,7 +885,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     </div>
 
                     {/* 4. ANNUEL */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-4 sm:p-6 transition-all hover:border-slate-700 relative overflow-hidden flex-1 min-w-[280px] sm:min-w-[325px] md:min-w-0 snap-center shadow-lg shadow-black/10">
+                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-5 sm:p-7 transition-all hover:border-slate-700 relative overflow-hidden w-full shadow-lg shadow-black/10">
                         <div className="absolute top-4 right-4">
                             <span className="text-[9px] font-bold uppercase tracking-widest bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
                                 Le meilleur investissement
@@ -895,10 +899,10 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                             <p className="mt-2 text-xs text-slate-400">Le choix ultime pour une réussite assurée</p>
                             
                             <p className="mt-5">
-                                <span className="text-3xl sm:text-4xl font-extrabold text-white">250 000 FG</span>
+                                <span className="text-3xl sm:text-4xl font-extrabold text-white">385 000 FG</span>
                                 <span className="text-xs text-slate-400 font-semibold"> / an</span>
                             </p>
-                            <p className="text-[11px] text-yellow-400 font-bold mt-1">✓ Économise 50 000 FG</p>
+                            <p className="text-[11px] text-yellow-400 font-bold mt-1">✓ Économise 155 000 FG</p>
 
                             <ul className="mt-4 sm:mt-6 space-y-2">
                                 <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
@@ -941,7 +945,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         </div>
 
                         <button
-                            onClick={() => handleSelectPlan('annual', 250000)}
+                            onClick={() => handleSelectPlan('annual', 385000)}
                             disabled={isPremiumActive}
                             className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
                                 isPremiumActive 

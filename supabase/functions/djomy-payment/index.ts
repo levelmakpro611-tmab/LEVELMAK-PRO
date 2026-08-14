@@ -38,12 +38,14 @@ serve(async (req) => {
   }
 
   // Load environment variables
-  const DJOMY_CLIENT_ID = (Deno.env.get("DJOMY_CLIENT_ID") || "djomy-client-1781800938488-6dd9").trim();
-  const DJOMY_CLIENT_SECRET = (Deno.env.get("DJOMY_CLIENT_SECRET") || "s3cr3t-2MkVrxI58qJt0QfedkILKMk8N1WmZbzB").trim();
+  const isProduction = Deno.env.get("DJOMY_ENV") !== "sandbox";
+  
+  const DJOMY_CLIENT_ID = (Deno.env.get("DJOMY_CLIENT_ID") || (isProduction ? "djomy-client-1785975328862-31a0" : "djomy-client-1781800938488-6dd9")).trim();
+  const DJOMY_CLIENT_SECRET = (Deno.env.get("DJOMY_CLIENT_SECRET") || (isProduction ? "s3cr3t-wi7-BwBfmzR0ulY4Aioe7bCwEoOYoGzu" : "s3cr3t-2MkVrxI58qJt0QfedkILKMk8N1WmZbzB")).trim();
+  const DJOMY_PARTNER_DOMAIN = (Deno.env.get("DJOMY_PARTNER_DOMAIN") || "d30285448f9d800ee6ba9d58e2c6c9f8fac408b414dd13782bd0b4e8c39306b4").trim();
   const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") || "").trim();
   const SERVICE_ROLE_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "").trim();
   
-  const isProduction = Deno.env.get("DJOMY_ENV") === "production";
   const baseUrl = isProduction 
     ? "https://api.djomy.africa" 
     : "https://sandbox-api.djomy.africa";
@@ -72,8 +74,9 @@ serve(async (req) => {
       });
       
       // Verify webhook authenticity
+      const cleanSignature = webhookSignature.startsWith("v1:") ? webhookSignature.slice(3) : webhookSignature;
       const expectedSignature = await calculateHmacHex(rawBody, DJOMY_CLIENT_SECRET);
-      if (expectedSignature !== webhookSignature) {
+      if (expectedSignature !== cleanSignature && expectedSignature !== webhookSignature) {
         console.warn("Invalid webhook signature received:", webhookSignature, "expected:", expectedSignature);
         
         await supabaseAdmin.from("admin_logs").insert({
@@ -321,12 +324,15 @@ serve(async (req) => {
       // 1. Auth with Djomy to retrieve Bearer Token
       const hexSignature = await calculateHmacHex(DJOMY_CLIENT_ID, DJOMY_CLIENT_SECRET);
       const authHeaders = {
+        "Content-Type": "application/json",
+        "User-Agent": "LevelMak-Pro/1.0",
         "X-API-KEY": `${DJOMY_CLIENT_ID}:${hexSignature}`,
       };
 
       const authResponse = await fetch(`${baseUrl}/v1/auth`, {
         method: "POST",
         headers: authHeaders,
+        body: JSON.stringify({}),
       });
 
       if (!authResponse.ok) {
@@ -466,6 +472,17 @@ serve(async (req) => {
       });
     }
 
+    // Ensure profile row exists to satisfy foreign key constraint
+    await supabaseAdmin
+      .from("profiles")
+      .upsert({
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        role: "user",
+        status: "active"
+      }, { onConflict: "id" });
+
     // 1. Create transaction log
     const { data: tx, error: txError } = await supabaseAdmin
       .from("user_transactions")
@@ -489,19 +506,24 @@ serve(async (req) => {
     // 2. Auth with Djomy to retrieve Bearer Token
     const hexSignature = await calculateHmacHex(DJOMY_CLIENT_ID, DJOMY_CLIENT_SECRET);
     const authHeaders = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "X-API-KEY": `${DJOMY_CLIENT_ID}:${hexSignature}`,
+      "X-PARTNER-DOMAIN": DJOMY_PARTNER_DOMAIN,
     };
 
     console.log("Authenticating with Djomy API...");
     const authResponse = await fetch(`${baseUrl}/v1/auth`, {
       method: "POST",
       headers: authHeaders,
+      body: JSON.stringify({}),
     });
 
     if (!authResponse.ok) {
       const authErrText = await authResponse.text();
       console.error("Djomy auth returned error:", authResponse.status, authErrText);
-      throw new Error("Échec d'authentification auprès de l'opérateur de paiement.");
+      throw new Error(`Réponse Djomy (HTTP ${authResponse.status}): ${authErrText.slice(0, 300)}`);
     }
 
     const authData = await authResponse.json();
@@ -516,15 +538,33 @@ serve(async (req) => {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${bearerToken}`,
       "X-API-KEY": `${DJOMY_CLIENT_ID}:${paymentSignature}`,
+      "X-PARTNER-DOMAIN": DJOMY_PARTNER_DOMAIN,
     };
+
+    // Format payerNumber to international format required by Djomy (Ex: 00224623707722)
+    let formattedPayerNumber = String(payerNumber || "").replace(/\D/g, "");
+    if (formattedPayerNumber.length === 9) {
+      formattedPayerNumber = "00224" + formattedPayerNumber;
+    } else if (formattedPayerNumber.startsWith("224") && formattedPayerNumber.length === 12) {
+      formattedPayerNumber = "00" + formattedPayerNumber;
+    }
+
+    // Ensure returnUrl is HTTPS as strictly required by Djomy API docs
+    let safeReturnUrl = returnUrl;
+    if (!safeReturnUrl || !safeReturnUrl.startsWith("https://")) {
+      safeReturnUrl = "https://levelmak.app/pricing?success=true";
+    }
+
+    let safeCancelUrl = "https://levelmak.app/pricing?cancelled=true";
 
     const gatewayBody = {
       amount: amount,
       countryCode: "GN",
-      payerNumber: payerNumber,
+      payerNumber: formattedPayerNumber,
       merchantPaymentReference: tx.id,
       description: `Abonnement LEVELMAK PRO - ${duration === 'weekly' ? 'Hebdomadaire' : duration === 'monthly' ? 'Mensuel' : 'Annuel'}`,
-      returnUrl: returnUrl,
+      returnUrl: safeReturnUrl,
+      cancelUrl: safeCancelUrl,
       metadata: {
         userId: user.id,
         transactionId: tx.id,

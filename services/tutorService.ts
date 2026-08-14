@@ -684,8 +684,11 @@ const mapToTeacher = (dbData: any): Teacher => {
 export const getTotalTeachersCount = async (): Promise<number> => {
   try {
     const { count, error } = await supabase.from('teachers').select('*', { count: 'exact', head: true });
-    if (error) throw error;
-    return count || 0;
+    if (!error && count !== null && count > 0) {
+      return count;
+    }
+    const { data: rows } = await supabase.from('teachers').select('id');
+    return rows ? rows.length : (count || 0);
   } catch (error) {
     console.error('Error fetching total teachers count:', error);
     return 0;

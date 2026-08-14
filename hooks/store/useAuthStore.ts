@@ -198,7 +198,7 @@ export const useAuthStore = () => {
     const registerWithEmail = useCallback(async (name: string, email: string, password: string, gender: any, ageRange: any, extra?: any) => {
         try {
             setLoading(true);
-            const newUser = await signUpWithEmail(email, password, name, gender, ageRange, extra?.phoneNumber);
+            const newUser = await signUpWithEmail(email, password, name, gender, ageRange, extra?.phoneNumber, extra?.gradeClass);
             if (newUser) {
                 setUser(newUser);
                 localStorage.setItem('levelmak_user', JSON.stringify(newUser));
@@ -270,6 +270,27 @@ export const useAuthStore = () => {
                 stats: updatedStats
             };
             localStorage.setItem('levelmak_user', JSON.stringify(updated));
+
+            // Immediately sync to Supabase DB
+            if (prev.id && !prev.id.includes('anon')) {
+                supabase.from('profiles').update({
+                    name: updated.name,
+                    phone_number: updated.phoneNumber,
+                    xp: updated.xp,
+                    total_xp: updated.totalXp,
+                    level_coins: updated.levelCoins,
+                    stats: updated.stats,
+                    badges: updated.badges,
+                    streak: updated.streak,
+                    inventory: updated.inventory,
+                    wallpaper: updated.wallpaper,
+                    avatar_config: updated.avatar,
+                    coach_sessions: updated.coachSessions
+                }).eq('id', prev.id).then(({ error }) => {
+                    if (error) console.error('[Supabase updateProfile Sync Error]:', error);
+                });
+            }
+
             return updated;
         });
     }, []);

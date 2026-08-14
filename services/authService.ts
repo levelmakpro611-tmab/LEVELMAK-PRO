@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { User, SchoolLevel } from '../types';
+import { User, SchoolLevel, GradeClass } from '../types';
 
 // ======================================================
 // Helper: Normalize phone to a consistent email format
@@ -34,7 +34,7 @@ export const mapProfileToUser = (profile: any): User => {
     const localDemoPremium = localStorage.getItem(`levelmak_demo_premium_${userId}`) === 'true';
     const localDemoPremiumUntil = localStorage.getItem(`levelmak_demo_premium_until_${userId}`);
     
-    let isPremium = profile.is_premium || false;
+    let isPremium = Boolean(profile.is_premium);
     let premiumUntil = profile.premium_until || null;
     
     if (localDemoPremium && localDemoPremiumUntil) {
@@ -44,6 +44,13 @@ export const mapProfileToUser = (profile: any): User => {
             premiumUntil = localDemoPremiumUntil;
         }
     }
+
+    // Expiration check: If premium_until is passed, subscription is expired
+    if (premiumUntil && new Date(premiumUntil).getTime() <= Date.now()) {
+        isPremium = false;
+    }
+
+    const calculatedTier = isPremium ? (profile.subscription_tier || stats.subscriptionTier || 'mensuel') : 'free';
 
     // Real Daily Streak (Série) Calculation:
     const rawStreak = profile.streak || { current: 1, lastLogin: new Date().toISOString() };
@@ -84,6 +91,8 @@ export const mapProfileToUser = (profile: any): User => {
         levelCoins: profile.level_coins || 50,
         onboardingCompleted: profile.onboarding_completed || false,
         level: profile.level as SchoolLevel,
+        gradeClass: (profile.grade_class || stats.gradeClass || 'Terminale') as GradeClass,
+        subscriptionTier: calculatedTier as any,
         avatar: profile.avatar_config || {
             baseColor: '#3B82F6',
             accessory: 'none',
@@ -174,6 +183,8 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
             gender: metadata.gender || undefined,
             ageRange: metadata.age_range || undefined,
             level: SchoolLevel.MIDDLE,
+            gradeClass: (metadata.grade_class || 'Terminale') as GradeClass,
+            subscriptionTier: 'free',
             avatar: {
                 baseColor: '#3B82F6',
                 accessory: 'none',
@@ -216,6 +227,8 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
                 gender: newUser.gender,
                 age_range: newUser.ageRange,
                 level: newUser.level,
+                grade_class: metadata.grade_class || 'Terminale',
+                subscription_tier: 'free',
                 xp: newUser.xp,
                 total_xp: newUser.totalXp,
                 level_coins: newUser.levelCoins,
@@ -251,7 +264,15 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 // ======================================================
 // Sign up with Email and Password
 // ======================================================
-export const signUpWithEmail = async (email: string, password: string, name: string, gender?: string, ageRange?: string, phone?: string): Promise<User | null> => {
+export const signUpWithEmail = async (
+    email: string, 
+    password: string, 
+    name: string, 
+    gender?: string, 
+    ageRange?: string, 
+    phone?: string,
+    gradeClass?: GradeClass
+): Promise<User | null> => {
     try {
         const { data, error } = await supabase.auth.signUp({
             email,
@@ -262,7 +283,8 @@ export const signUpWithEmail = async (email: string, password: string, name: str
                     real_email: email, 
                     gender, 
                     age_range: ageRange,
-                    phone: phone || ''
+                    phone: phone || '',
+                    grade_class: gradeClass || 'Terminale'
                 }
             }
         });
@@ -340,9 +362,10 @@ export const signUpWithPhone = async (params: {
     password: string,
     gender: 'HOMME' | 'FEMME',
     ageRange: '15-18' | '19-23' | '24+',
-    realEmail?: string
+    realEmail?: string,
+    gradeClass?: GradeClass
 }): Promise<User | null> => {
-    const { name, phone, password, gender, ageRange, realEmail } = params;
+    const { name, phone, password, gender, ageRange, realEmail, gradeClass } = params;
     try {
         console.log('--- signUpWithPhone ---');
 
@@ -363,7 +386,8 @@ export const signUpWithPhone = async (params: {
                     gender,
                     age_range: ageRange,
                     real_email: realEmail || '',
-                    auth_email: authEmail
+                    auth_email: authEmail,
+                    grade_class: gradeClass || 'Terminale'
                 }
             }
         });

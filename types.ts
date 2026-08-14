@@ -6,6 +6,47 @@ export enum SchoolLevel {
   UNIVERSITY = 'Université'
 }
 
+export type GradeClass =
+  | '1ère'
+  | '2ème'
+  | '3ème'
+  | '4ème'
+  | '5ème'
+  | '6ème'
+  | '7ème'
+  | '8ème'
+  | '9ème'
+  | '10ème'
+  | '11ème'
+  | '12ème'
+  | 'Terminale'
+  | 'Université';
+
+export const ELEMENTARY_MIDDLE_GRADES: GradeClass[] = [
+  '1ère', '2ème', '3ème', '4ème', '5ème', '6ème', '7ème', '8ème', '9ème'
+];
+
+export const isElementaryOrMiddleSchool = (grade?: string | GradeClass): boolean => {
+  if (!grade) return false;
+  return ELEMENTARY_MIDDLE_GRADES.includes(grade as GradeClass);
+};
+
+export type SubscriptionTier = 'free' | 'hebdo' | 'mensuel' | 'annuel';
+
+export interface AIQuotaLimits {
+  dailyMessages: number;
+  dailyPhotos: number;
+  dailyQuizzes: number;
+}
+
+export const SUBSCRIPTION_QUOTAS: Record<SubscriptionTier, AIQuotaLimits> = {
+  free: { dailyMessages: 5, dailyPhotos: 1, dailyQuizzes: 2 },
+  hebdo: { dailyMessages: 35, dailyPhotos: 5, dailyQuizzes: 10 },
+  mensuel: { dailyMessages: 75, dailyPhotos: 15, dailyQuizzes: 30 },
+  annuel: { dailyMessages: 150, dailyPhotos: 35, dailyQuizzes: 999 }
+};
+
+
 export enum League {
   BRONZE = 'bronze',
   SILVER = 'silver',
@@ -99,6 +140,8 @@ export interface User {
   ageRange?: '15-18' | '19-23' | '24+';
   status?: 'active' | 'suspended' | 'blocked';
   level: SchoolLevel;
+  gradeClass?: GradeClass;
+  subscriptionTier?: SubscriptionTier;
   avatar: AvatarConfig;
   analytics?: UserAnalytics;
   xp: number;
@@ -118,6 +161,7 @@ export interface User {
     audioNotes?: any[];
     aiLabHistory?: any[];
     notifications?: any[];
+    adminMessageBoost?: number;
   };
   badges: string[];
   favorites: string[];
@@ -433,6 +477,11 @@ export interface AdminUserAnalytics {
   totalActivityMinutes: number;
   status: 'active' | 'suspended' | 'blocked';
   level: number;
+  gradeClass?: GradeClass;
+  subscriptionTier?: SubscriptionTier;
+  isPremium?: boolean;
+  premiumUntil?: string | null;
+  adminMessageBoost?: number;
   xp: number;
   quizzesCompleted: number;
   flashcardsStudied: number;

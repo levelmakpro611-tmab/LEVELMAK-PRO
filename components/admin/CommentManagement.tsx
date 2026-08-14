@@ -27,10 +27,13 @@ const CommentManagement: React.FC<CommentManagementProps> = ({ comments, onRefre
     const [responseText, setResponseText] = useState('');
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-    // Filter comments
+    // Filter comments (Exclude support items & system crash reports so general comments only show student feedback)
     const filteredComments = comments.filter(comment => {
+        const contentStr = comment.content || '';
+        const isSupport = comment.category === 'support' || comment.userPhone === 'crash-reporter' || contentStr.startsWith('[CRASH');
+        if (isSupport) return false;
         const matchesStatus = filterStatus === 'all' || comment.status === filterStatus;
-        const matchesCategory = filterCategory === 'all' || comment.category === filterCategory;
+        const matchesCategory = filterCategory === 'all' || (comment.category || 'general') === filterCategory;
         return matchesStatus && matchesCategory;
     });
 

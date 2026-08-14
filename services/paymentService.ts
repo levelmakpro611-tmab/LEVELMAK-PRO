@@ -42,8 +42,22 @@ class WebPaymentService implements PaymentService {
 
         // Sur web : appeler la Supabase Edge Function pour le vrai flux Djomy
         try {
-            console.log('PaymentService: Invoking Supabase function djomy-payment for plan:', options.planId);
+            console.log('PaymentService: Checking session & invoking Supabase function djomy-payment for plan:', options.planId);
             
+            // 1. Ensure user has a valid fresh session
+            let { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+            
+            if (sessionErr || !session) {
+                console.log('Session stale/missing, attempting refreshSession...');
+                const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
+                if (refreshErr || !refreshData.session) {
+                    return {
+                        success: false,
+                        error: 'Votre session d\'authentification a expiré. Veuillez vous déconnecter puis vous reconnecter.'
+                    };
+                }
+            }
+
             const { data, error } = await supabase.functions.invoke('djomy-payment', {
                 body: {
                     planId: options.planId,
@@ -56,10 +70,21 @@ class WebPaymentService implements PaymentService {
             });
 
             if (error) {
-                console.error("Supabase function error:", error);
+                console.error("Supabase function error details:", error);
+                let errorMessage = error.message || "Erreur de connexion avec la passerelle de paiement.";
+                try {
+                    if (error.context && typeof error.context.json === 'function') {
+                        const errJson = await error.context.json();
+                        if (errJson && errJson.error) {
+                            errorMessage = errJson.error;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Impossible de décoder le JSON d'erreur:", e);
+                }
                 return { 
                     success: false, 
-                    error: error.message || "Erreur de connexion avec la passerelle de paiement." 
+                    error: errorMessage
                 };
             }
 

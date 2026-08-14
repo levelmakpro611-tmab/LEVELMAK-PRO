@@ -3,7 +3,7 @@ import { User as UserIcon, Sparkles, Rocket, Phone, Lock, Eye, EyeOff, ArrowRigh
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
 import { PRIVACY_POLICY_SECTIONS, TERMS_OF_SERVICE_SECTIONS } from '../utils/legalTexts';
-import { User as UserType } from '../types';
+import { User as UserType, GradeClass } from '../types';
 import { isAdminCredentials } from '../services/adminService';
 import { logUserActivity } from '../services/activityService';
 import { biometricService } from '../services/biometricService';
@@ -28,6 +28,7 @@ const Auth: React.FC = () => {
   const [proofFiles, setProofFiles] = useState<File[]>([]);
   const [gender, setGender] = useState<UserType['gender']>('HOMME');
   const [ageRange, setAgeRange] = useState<UserType['ageRange']>('15-18');
+  const [gradeClass, setGradeClass] = useState<GradeClass>('Terminale');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +126,7 @@ const Auth: React.FC = () => {
           password,
           gender,
           ageRange,
-          { role: 'student', phoneNumber: phone.trim() }
+          { role: 'student', phoneNumber: phone.trim(), gradeClass }
         );
         console.log('Inscription réussie !');
       } else if (mode === 'login') {
@@ -478,6 +479,39 @@ const Auth: React.FC = () => {
                               <option value="24+" className="bg-slate-900">{t('auth.age24plus')}</option>
                             </select>
                           </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
+                            <Book size={12} className="text-blue-500" />
+                            Classe d'études (Niveau)
+                          </label>
+                          <select
+                            value={gradeClass}
+                            onChange={(e) => setGradeClass(e.target.value as GradeClass)}
+                            className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-xs outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
+                          >
+                            <optgroup label="Primaire & Collège (1ère à 9ème)" className="bg-slate-900 text-blue-400 font-bold">
+                              <option value="1ère" className="bg-slate-900 text-white">1ère année (Primaire)</option>
+                              <option value="2ème" className="bg-slate-900 text-white">2ème année (Primaire)</option>
+                              <option value="3ème" className="bg-slate-900 text-white">3ème année (Primaire)</option>
+                              <option value="4ème" className="bg-slate-900 text-white">4ème année (Primaire)</option>
+                              <option value="5ème" className="bg-slate-900 text-white">5ème année (Primaire)</option>
+                              <option value="6ème" className="bg-slate-900 text-white">6ème année (Primaire)</option>
+                              <option value="7ème" className="bg-slate-900 text-white">7ème année (Collège)</option>
+                              <option value="8ème" className="bg-slate-900 text-white">8ème année (Collège)</option>
+                              <option value="9ème" className="bg-slate-900 text-white">9ème année (Collège)</option>
+                            </optgroup>
+                            <optgroup label="Secondaire / Lycée (10ème à Terminale)" className="bg-slate-900 text-purple-400 font-bold">
+                              <option value="10ème" className="bg-slate-900 text-white">10ème année</option>
+                              <option value="11ème" className="bg-slate-900 text-white">11ème année</option>
+                              <option value="12ème" className="bg-slate-900 text-white">12ème année</option>
+                              <option value="Terminale" className="bg-slate-900 text-white">Terminale (BAC)</option>
+                            </optgroup>
+                            <optgroup label="Enseignement Supérieur" className="bg-slate-900 text-emerald-400 font-bold">
+                              <option value="Université" className="bg-slate-900 text-white">Université</option>
+                            </optgroup>
+                          </select>
                         </div>
 
                         <div className="space-y-2">

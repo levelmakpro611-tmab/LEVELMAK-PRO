@@ -38,7 +38,7 @@ import { PremiumAlertModal } from './components/PremiumAlertModal';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
 import { Loader2, AlertTriangle, RefreshCw, Check } from 'lucide-react';
 import { aiService } from './services/aiService';
-import { initializeNativeFeatures, isNativePlatform } from './services/nativeAdapters';
+import { initializeNativeFeatures, isNativePlatform, hideSplashScreen } from './services/nativeAdapters';
 import { App as CapacitorApp } from '@capacitor/app';
 import { initCrashReporter, reportReactCrash } from './services/crashReportService';
 

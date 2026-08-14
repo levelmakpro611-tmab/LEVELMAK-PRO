@@ -94,15 +94,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       const formatted = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
       setTimeLeft(formatted);
 
-      // Estimate total duration for percent calculations
+      // Calculate total duration based on plan / expiry diff
       const activePlanId = localStorage.getItem(`levelmak_demo_premium_plan_id_${user.id}`);
-      let totalDurationMs = 3600000; // default 1 hour
-      if (activePlanId?.includes('weekly')) {
-        totalDurationMs = 30 * 60 * 1000; // 30 minutes
-      } else if (activePlanId?.includes('annual')) {
-        totalDurationMs = 90 * 60 * 1000; // 90 minutes
+      let totalDurationMs = 30 * 24 * 3600 * 1000; // Default 30 days
+
+      if (user.stats?.premium_started_at) {
+        totalDurationMs = Math.max(1000, expiry - new Date(user.stats.premium_started_at).getTime());
+      } else if (activePlanId?.includes('weekly')) {
+        totalDurationMs = 7 * 24 * 3600 * 1000;
+      } else if (activePlanId?.includes('annual') || diff > 30 * 24 * 3600 * 1000) {
+        totalDurationMs = 365 * 24 * 3600 * 1000;
+      } else if (diff > 7 * 24 * 3600 * 1000) {
+        totalDurationMs = 30 * 24 * 3600 * 1000;
+      } else {
+        totalDurationMs = 7 * 24 * 3600 * 1000;
       }
-      
+
       const pct = Math.max(0, Math.min(100, (diff / totalDurationMs) * 100));
       setPercentLeft(pct);
     };
@@ -640,58 +647,55 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   weeklyGoals: { target: 120, achieved: 0 },
                   customGoals: []
                 };
+                const goalsList = (analytics.customGoals && analytics.customGoals.length > 0)
+                  ? analytics.customGoals
+                  : [
+                      { id: 'default_1', text: 'Faire 3 quiz cette semaine', completed: false },
+                      { id: 'default_2', text: 'Étudier 2 heures au total', completed: false },
+                      { id: 'default_3', text: 'Lire un livre de la bibliothèque', completed: false }
+                    ];
+                const totalGoals = goalsList.length;
+                const completedGoals = goalsList.filter(g => g.completed).length;
+                const goalsPct = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
+
                 return (
                   <>
-                    {/* Weekly study time progress */}
+                    {/* Goals completion progress */}
                     <div className="space-y-2 pb-4 border-b border-white/5">
                       <div className="flex justify-between items-end text-xs">
-                        <span className="font-semibold text-slate-400">{settings.language === 'fr' ? 'Cette semaine' : 'This week'}</span>
-                        <span className="font-bold text-slate-900 dark:text-white">{analytics.weeklyGoals.achieved} / {analytics.weeklyGoals.target}m</span>
+                        <span className="font-semibold text-slate-400">{settings.language === 'fr' ? 'Progression' : 'Progress'}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{completedGoals} / {totalGoals} {settings.language === 'fr' ? 'objectifs' : 'goals'}</span>
                       </div>
                       <div className="h-2 bg-black/20 rounded-full overflow-hidden p-0.5 border border-white/5">
                         <div
                           className="h-full rounded-full bg-secondary shadow-[0_0_12px_rgba(245,158,11,0.25)] transition-all duration-500"
-                          style={{ width: `${analytics.weeklyGoals.target > 0 ? Math.min((analytics.weeklyGoals.achieved / analytics.weeklyGoals.target) * 100, 100) : 0}%` }}
+                          style={{ width: `${goalsPct}%` }}
                         />
                       </div>
                     </div>
 
                     {/* Checklist of custom goals */}
                     <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
-                      {analytics.customGoals && analytics.customGoals.length > 0 ? (
-                        analytics.customGoals.map((goal) => (
-                          <button
-                            key={goal.id}
-                            onClick={() => handleToggleGoal(goal.id)}
-                            className={`w-full p-3 rounded-2xl border flex items-center gap-3 transition-all ${
-                              goal.completed
-                                ? 'bg-green-500/10 border-green-500/20 text-green-400 line-through'
-                                : 'bg-black/10 border-white/5 text-slate-300 hover:bg-black/25'
-                            }`}
-                          >
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                              goal.completed
-                                ? 'bg-green-500 border-green-500 text-slate-950'
-                                : 'border-white/30 text-transparent'
-                            }`}>
-                              {goal.completed && <CheckCircle2 size={10} className="text-white" />}
-                            </div>
-                            <span className="text-[11px] font-bold text-left leading-tight truncate">{goal.text}</span>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="text-center py-6">
-                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-                            {settings.language === 'fr' ? 'Aucun objectif défini' : 'No goals defined'}
-                          </p>
-                          <button
-                            onClick={() => onNavigate('analytics')}
-                            className="mt-2 text-[9px] font-black uppercase tracking-widest text-primary hover:underline"
-                          >
-                            {settings.language === 'fr' ? '+ Ajouter un objectif' : '+ Add a goal'}
-                          </button>
-                        </div>
-                      )}
+                      {goalsList.map((goal) => (
+                        <button
+                          key={goal.id}
+                          onClick={() => handleToggleGoal(goal.id)}
+                          className={`w-full p-3 rounded-2xl border flex items-center gap-3 transition-all ${
+                            goal.completed
+                              ? 'bg-green-500/10 border-green-500/20 text-green-400 line-through'
+                              : 'bg-black/10 border-white/5 text-slate-300 hover:bg-black/25'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            goal.completed
+                              ? 'bg-green-500 border-green-500 text-slate-950'
+                              : 'border-white/30 text-transparent'
+                          }`}>
+                            {goal.completed && <CheckCircle2 size={10} className="text-white" />}
+                          </div>
+                          <span className="text-[11px] font-bold text-left leading-tight truncate">{goal.text}</span>
+                        </button>
+                      ))}
                     </div>
                   </>
                 );
@@ -699,35 +703,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Mission Widgets */}
-          <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 shadow-premium">
-            <h3 className="text-lg md:text-xl font-display font-bold text-slate-900 dark:text-white mb-6 md:mb-8 flex items-center gap-3">
-              <TrendingUp size={20} className="text-amber-500" />
-              {t('dashboard.missions.title')}
-            </h3>
-            <div className="space-y-4">
-              {missions.filter(m => !m.completed).map(mission => (
-                <div key={mission.id} className="p-4 md:p-5 rounded-2xl md:rounded-3xl border transition-all bg-black/5 dark:bg-white/5 border-transparent">
-                  <div className="flex items-start justify-between mb-3">
-                    <p className="font-bold text-sm leading-tight text-slate-900 dark:text-white">
-                      {mission.title}
-                    </p>
-                    <span className="shrink-0 text-[8px] font-black uppercase tracking-tighter bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
-                      +{mission.rewardXp}
-                    </span>
-                  </div>
-                  <div className="w-full bg-black/10 h-1.5 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-green-500 transition-all w-0" />
-                  </div>
-                </div>
-              ))}
-              {missions.filter(m => !m.completed).length === 0 && (
-                <div className="p-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem]">
-                  <p className="text-slate-500 font-bold text-sm">{t('dashboard.missions.allCompleted')}</p>
-                </div>
-              )}
-            </div>
-          </div>
+
 
           {/* Ranking Widget */}
           <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 overflow-hidden relative group">

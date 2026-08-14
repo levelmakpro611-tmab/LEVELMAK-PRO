@@ -85,7 +85,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
   const { 
     user, logout, updateProfile, addActivity, trackTime, grantBadge, 
-    notifications, addNotification, t, showBubbleWrap, setShowBubbleWrap, continuousStudyTime, resetContinuousStudyTime 
+    notifications, addNotification, markNotificationAsRead, t, showBubbleWrap, setShowBubbleWrap, continuousStudyTime, resetContinuousStudyTime 
   } = useStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);

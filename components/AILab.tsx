@@ -28,6 +28,7 @@ import { HapticFeedback } from '../services/nativeAdapters';
 import { audioService } from '../services/audio';
 import { aiService } from '../services/aiService';
 import { AILabSession } from '../types';
+import { checkMessageQuota, checkPhotoQuota, incrementMessageUsage, incrementPhotoUsage, isFeatureAllowedForGrade } from '../services/aiQuotaService';
 
 // --- AILab Inline Formatter to support Bold & Italics adaptively ---
 const formatAILabInline = (text: string, theme: 'light' | 'dark' = 'dark') => {
@@ -132,7 +133,7 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
   const [sessionId, setSessionId] = useState(initialSession?.id || `fey_${Date.now()}`);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const { saveAILabSession, t, settings } = useStore();
+  const { saveAILabSession, t, settings, user } = useStore();
   const lang = settings.language;
 
   useEffect(() => {
@@ -152,6 +153,23 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
 
   const handleSend = async () => {
     if ((!input.trim() && !selectedImage) || loading) return;
+
+    // Check message quota
+    const msgQuota = checkMessageQuota(user);
+    if (!msgQuota.allowed) {
+      alert(msgQuota.message);
+      return;
+    }
+
+    if (selectedImage) {
+      const imgQuota = checkPhotoQuota(user);
+      if (!imgQuota.allowed) {
+        alert(imgQuota.message);
+        return;
+      }
+      incrementPhotoUsage(user);
+    }
+    incrementMessageUsage(user);
 
     const userMsg = input.trim();
     const currentImage = selectedImage;
@@ -355,7 +373,7 @@ const FIGURE_IMAGES: Record<string, string> = {
 };
 
 const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSession?: AILabSession }) => {
-  const { saveAILabSession, t, settings } = useStore();
+  const { saveAILabSession, t, settings, user } = useStore();
   
   const historicalFigures = React.useMemo(() => {
     const figures = t('historicalFigures') as any;
@@ -437,6 +455,23 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
 
   const handleSend = async () => {
     if ((!input.trim() && !selectedImage) || loading || !selectedChar) return;
+
+    // Check message quota
+    const msgQuota = checkMessageQuota(user);
+    if (!msgQuota.allowed) {
+      alert(msgQuota.message);
+      return;
+    }
+
+    if (selectedImage) {
+      const imgQuota = checkPhotoQuota(user);
+      if (!imgQuota.allowed) {
+        alert(imgQuota.message);
+        return;
+      }
+      incrementPhotoUsage(user);
+    }
+    incrementMessageUsage(user);
 
     const userMsg = input.trim();
     const currentImage = selectedImage;
@@ -736,15 +771,31 @@ export const AILab: React.FC = () => {
               </motion.div>
 
               {/* TimeMachine Card */}
-              <motion.div whileHover={{ scale: 1.02, translateY: -10 }} whileTap={{ scale: 0.98 }} onClick={() => handleSelect('timemachine')} className="relative group cursor-pointer overflow-hidden rounded-[3rem] md:rounded-[4rem] bg-gradient-to-br from-purple-600/20 via-purple-900/10 to-transparent border border-purple-500/20 p-8 md:p-12 shadow-2xl transition-all">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity"><Hourglass size={150} /></div>
-                <div className="relative z-10 space-y-6">
-                  <div className="w-16 h-16 rounded-3xl bg-purple-500 flex items-center justify-center text-white shadow-glow-purple"><History size={32} /></div>
-                  <div className="space-y-2"><h3 className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tighter">{t('ailab.timeMachineTitle')}</h3><p className="text-purple-200/60 font-bold uppercase tracking-widest text-xs">{t('ailab.timeMachineSubtitle')}</p></div>
-                  <p className="text-slate-400 text-sm md:text-lg leading-relaxed font-medium">{t('ailab.timeMachineDesc')}</p>
-                  <div className="flex items-center gap-2 text-purple-400 font-black uppercase tracking-widest text-[10px]">{t('ailab.startChallenge')} <ChevronRight size={14} /></div>
+              {isFeatureAllowedForGrade('timeMachine', user?.gradeClass) ? (
+                <motion.div whileHover={{ scale: 1.02, translateY: -10 }} whileTap={{ scale: 0.98 }} onClick={() => handleSelect('timemachine')} className="relative group cursor-pointer overflow-hidden rounded-[3rem] md:rounded-[4rem] bg-gradient-to-br from-purple-600/20 via-purple-900/10 to-transparent border border-purple-500/20 p-8 md:p-12 shadow-2xl transition-all">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity"><Hourglass size={150} /></div>
+                  <div className="relative z-10 space-y-6">
+                    <div className="w-16 h-16 rounded-3xl bg-purple-500 flex items-center justify-center text-white shadow-glow-purple"><History size={32} /></div>
+                    <div className="space-y-2"><h3 className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tighter">{t('ailab.timeMachineTitle')}</h3><p className="text-purple-200/60 font-bold uppercase tracking-widest text-xs">{t('ailab.timeMachineSubtitle')}</p></div>
+                    <p className="text-slate-400 text-sm md:text-lg leading-relaxed font-medium">{t('ailab.timeMachineDesc')}</p>
+                    <div className="flex items-center gap-2 text-purple-400 font-black uppercase tracking-widest text-[10px]">{t('ailab.startChallenge')} <ChevronRight size={14} /></div>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="relative overflow-hidden rounded-[3rem] md:rounded-[4rem] bg-slate-900/40 border border-white/5 p-8 md:p-12 shadow-xl opacity-60">
+                  <div className="relative z-10 space-y-6">
+                    <div className="w-16 h-16 rounded-3xl bg-slate-800 flex items-center justify-center text-slate-500"><History size={32} /></div>
+                    <div className="space-y-2">
+                      <h3 className="text-3xl md:text-4xl font-black text-slate-400 leading-none uppercase tracking-tighter">{t('ailab.timeMachineTitle')}</h3>
+                      <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Réservé aux lycéens & étudiants</p>
+                    </div>
+                    <p className="text-slate-500 text-sm md:text-base leading-relaxed font-medium">La Machine Temporelle est débloquée à partir de la 10ème année.</p>
+                    <div className="inline-block px-4 py-2 bg-slate-800 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Niveau actuel : {user?.gradeClass || '1ère-9ème'}
+                    </div>
+                  </div>
                 </div>
-              </motion.div>
+              )}
             </div>
 
             {/* Recent Sessions Quick Access */}

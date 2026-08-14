@@ -81,16 +81,16 @@ const Ranking: React.FC = () => {
                             <div className="absolute top-0 right-0 w-8 h-8 bg-slate-300 text-slate-600 rounded-full flex items-center justify-center font-black border-2 border-slate-900 z-10 text-xs translate-x-2 -translate-y-2">2</div>
                             <div className="w-24 h-24 rounded-[2rem] bg-slate-200 border-4 border-slate-300/50 shadow-2xl overflow-hidden relative ring-4 ring-slate-400/10 group-hover:scale-105 transition-transform">
                                 {top3[1].avatar?.image ? (
-                                    <img src={top3[1].avatar.image} alt={top3[1].name} className="w-full h-full object-cover" />
+                                    <img src={top3[1].avatar.image} alt={top3[1].name || 'Élève'} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-4xl font-black text-slate-400 bg-slate-100">
-                                        {top3[1].name.charAt(0)}
+                                        {(top3[1].name || 'Élève').charAt(0)}
                                     </div>
                                 )}
                             </div>
                         </div>
                         <div className="text-center space-y-1">
-                            <h3 className="font-display font-black text-slate-900 dark:text-white line-clamp-1">{top3[1].name}</h3>
+                            <h3 className="font-display font-black text-slate-900 dark:text-white line-clamp-1">{top3[1].name || 'Élève'}</h3>
                             <div className="flex items-center justify-center gap-2 bg-slate-500/10 px-3 py-1 rounded-full border border-slate-500/20">
                                 <Star size={12} className="text-slate-400" />
                                 <span className="text-[10px] font-black text-slate-500 uppercase">{top3[1].totalXp.toLocaleString()} XP</span>
@@ -119,17 +119,17 @@ const Ranking: React.FC = () => {
                             <div className="w-40 h-40 rounded-[3rem] bg-gradient-to-br from-amber-400 to-orange-600 p-1.5 shadow-[0_0_50px_rgba(245,158,11,0.3)] group-hover:scale-105 transition-transform duration-500">
                                 <div className="w-full h-full rounded-[2.6rem] overflow-hidden bg-slate-900">
                                     {top3[0].avatar?.image ? (
-                                        <img src={top3[0].avatar.image} alt={top3[0].name} className="w-full h-full object-cover" />
+                                        <img src={top3[0].avatar.image} alt={top3[0].name || 'Élève'} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-6xl font-black text-amber-500">
-                                            {top3[0].name.charAt(0)}
+                                            {(top3[0].name || 'Élève').charAt(0)}
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
                         <div className="text-center space-y-2 mb-4">
-                            <h3 className="text-xl font-display font-black text-slate-900 dark:text-white drop-shadow-sm">{top3[0].name}</h3>
+                            <h3 className="text-xl font-display font-black text-slate-900 dark:text-white drop-shadow-sm">{top3[0].name || 'Élève'}</h3>
                             <div className="flex items-center justify-center gap-2 bg-amber-500/20 px-4 py-1.5 rounded-full border border-amber-500/30">
                                 <Zap size={14} className="text-amber-500 fill-amber-500 animate-pulse" />
                                 <span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">{top3[0].totalXp.toLocaleString()} XP</span>
@@ -153,16 +153,16 @@ const Ranking: React.FC = () => {
                             <div className="absolute top-0 right-0 w-8 h-8 bg-orange-700 text-orange-100 rounded-full flex items-center justify-center font-black border-2 border-slate-900 z-10 text-xs translate-x-2 -translate-y-2">3</div>
                             <div className="w-24 h-24 rounded-[2rem] bg-orange-950 border-4 border-orange-900/50 shadow-2xl overflow-hidden relative ring-4 ring-orange-900/10 group-hover:scale-105 transition-transform">
                                 {top3[2].avatar?.image ? (
-                                    <img src={top3[2].avatar.image} alt={top3[2].name} className="w-full h-full object-cover" />
+                                    <img src={top3[2].avatar.image} alt={top3[2].name || 'Élève'} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-4xl font-black text-orange-500">
-                                        {top3[2].name.charAt(0)}
+                                        {(top3[2].name || 'Élève').charAt(0)}
                                     </div>
                                 )}
                             </div>
                         </div>
                         <div className="text-center space-y-1">
-                            <h3 className="font-display font-black text-slate-900 dark:text-white line-clamp-1">{top3[2].name}</h3>
+                            <h3 className="font-display font-black text-slate-900 dark:text-white line-clamp-1">{top3[2].name || 'Élève'}</h3>
                             <div className="flex items-center justify-center gap-2 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
                                 <Star size={12} className="text-orange-600" />
                                 <span className="text-[10px] font-black text-orange-600 uppercase">{top3[2].totalXp.toLocaleString()} XP</span>
@@ -243,10 +243,10 @@ const Ranking: React.FC = () => {
                                         <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-slate-800 border-2 overflow-hidden relative group-hover:scale-105 transition-transform`}
                                              style={{ borderColor: pLeague?.color || 'transparent' }}>
                                             {player.avatar?.image ? (
-                                                <img src={player.avatar.image} alt={player.name} className="w-full h-full object-cover" />
+                                                <img src={player.avatar.image} alt={player.name || 'Élève'} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-xl font-black text-white" style={{ backgroundColor: player.avatar?.baseColor || '#3B82F6' }}>
-                                                    {player.name.charAt(0)}
+                                                    {(player.name || 'Élève').charAt(0)}
                                                 </div>
                                             )}
                                         </div>
@@ -259,7 +259,7 @@ const Ranking: React.FC = () => {
 
                                     <div>
                                         <h4 className={`font-display font-bold text-sm md:text-base flex items-center gap-2 ${isMe ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>
-                                            {player.name} 
+                                            {player.name || 'Élève'} 
                                             {isMe && <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-md uppercase font-black">{t('ranking.me')}</span>}
                                         </h4>
                                         <div className="flex items-center gap-2">

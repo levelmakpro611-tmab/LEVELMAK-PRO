@@ -6,6 +6,7 @@
 import { geminiService } from './geminiService';
 import { DAILY_VOCAB, DAILY_MOTIVATION } from '../utils/dailyContent';
 import { supabase } from './supabase';
+import { telemetryService } from './telemetryService';
 import { 
   COACH_SYSTEM_PROMPT, 
   SEARCH_BOOKS_SYSTEM, 
@@ -287,7 +288,7 @@ export const aiService = {
       const messages = [
         {
           role: "system",
-          content: `Tu es le tuteur d'élite Levelmak Pro de TMAB GROUP. Ton rôle est de concevoir un examen surprise personnalisé de 10 questions sous forme de QCM.
+          content: `Tu es le tuteur d'élite Levelmak de TMAB GROUP. Ton rôle est de concevoir un examen surprise personnalisé de 10 questions sous forme de QCM.
           Cet examen doit porter en priorité SUR CE QUE L'ÉLÈVE A APPRIS ET SURTOUT LES SUJETS DISCUTÉS DANS L'HISTORIQUE DE SES SESSIONS DE COACHING (ci-dessous), en insistant sur ses erreurs, exercices ou explications scientifiques.
           Retourne UNIQUEMENT un objet JSON.`
         },
@@ -460,7 +461,23 @@ export const aiService = {
       { role: "user", content: currentMessageContent }
     ];
 
-    return await callGemini(messages, false);
+    const startTime = Date.now();
+    const response = await callGemini(messages, false);
+    const reasoningTime = Math.round((Date.now() - startTime) / 1000);
+
+    // Enregistrement silencieux du comportement élève pour le Fine-Tuning IA
+    telemetryService.logInteraction({
+      userId: userContext ? userContext.split(',')[0] : 'anonymous_student',
+      userName: userContext ? (userContext.match(/Élève:\s*([^,]+)/)?.[1] || 'Élève') : 'Élève',
+      gradeClass: userContext ? (userContext.match(/Niveau:\s*([^,]+)/)?.[1] || 'Toutes Classes') : 'Toutes Classes',
+      subject: 'Coach Élite IA',
+      prompt: message || '[Image envoyée par l\'élève]',
+      response: response,
+      interactionType: 'ai_chat',
+      reasoningTimeSeconds: reasoningTime
+    }).catch(e => console.warn('Telemetry log warning:', e));
+
+    return response;
   },
 
   async searchBooks(query: string, lang: string = 'fr') {

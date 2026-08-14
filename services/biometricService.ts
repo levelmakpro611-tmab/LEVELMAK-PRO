@@ -91,7 +91,7 @@ export const biometricService = {
     try {
       // 1. Déclencher le prompt natif (Fingerprint/FaceID)
       await NativeBiometric.verifyIdentity({
-        reason: "Authentifiez-vous pour accéder à Levelmak Pro",
+        reason: "Authentifiez-vous pour accéder à Levelmak",
         title: "Connexion Biométrique",
         subtitle: "Utilisez votre empreinte ou visage",
         description: "Sécurisez votre accès élite",

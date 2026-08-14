@@ -24,12 +24,16 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
-    const { notifications, markNotificationAsRead, clearNotifications, settings, updateSettings, t } = useStore();
+    const { notifications, markNotificationAsRead, toggleNotificationRead, markAllNotificationsAsRead, deleteNotification, clearNotifications, settings, updateSettings, t } = useStore();
 
     const markAllAsRead = () => {
-        notifications.forEach(n => {
-            if (!n.read) markNotificationAsRead(n.id);
-        });
+        if (markAllNotificationsAsRead) {
+            markAllNotificationsAsRead();
+        } else {
+            notifications.forEach(n => {
+                if (!n.read) markNotificationAsRead(n.id);
+            });
+        }
     };
 
     const getIcon = (notif: AppNotification) => {
@@ -81,7 +85,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                 <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t('notifications.title')}</h2>
                             </div>
                             <div className="flex items-center gap-2">
-                                {notifications.some(n => !n.read) && (
+                                {notifications.length > 0 && (
                                     <button
                                         onClick={markAllAsRead}
                                         className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold"
@@ -146,19 +150,26 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                                         }`}>
                                                         {notif.title}
                                                     </h4>
-                                                    {!notif.read ? (
+                                                    <div className="flex items-center gap-1 shrink-0">
                                                         <button
-                                                            onClick={() => markNotificationAsRead(notif.id)}
-                                                            className="p-1 text-primary hover:bg-primary/10 rounded-md transition-colors"
-                                                            title={t('notifications.markRead')}
+                                                            onClick={() => toggleNotificationRead ? toggleNotificationRead(notif.id) : markNotificationAsRead(notif.id)}
+                                                            className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-colors"
+                                                            title={notif.read ? "Marquer comme non lu" : "Marquer comme lu"}
                                                         >
-                                                            <Check size={16} />
+                                                            {notif.read ? (
+                                                                <CheckCheck size={16} className="text-blue-400" />
+                                                            ) : (
+                                                                <Check size={16} className="text-slate-400 hover:text-primary" />
+                                                            )}
                                                         </button>
-                                                    ) : (
-                                                        <div className="p-1 text-blue-400 font-bold flex items-center gap-0.5" title="Lu (Accusé de lecture)">
-                                                            <CheckCheck size={16} className="text-blue-400" />
-                                                        </div>
-                                                    )}
+                                                        <button
+                                                            onClick={() => deleteNotification && deleteNotification(notif.id)}
+                                                            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                                                            title="Supprimer cette notification"
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                                                     {notif.message}

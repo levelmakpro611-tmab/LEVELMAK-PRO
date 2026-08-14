@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Shield, BarChart3, Users, Activity, MessageSquare, Star, Download, LogOut,
-    Home, TrendingUp, UserCheck, Settings, Menu, X, Bell, Magnet, Trophy, ShoppingBag, Printer, RefreshCw, Trash2
+    Home, TrendingUp, UserCheck, Settings, Menu, X, Bell, Magnet, Trophy, ShoppingBag, Printer, RefreshCw, Trash2, LifeBuoy, Crown, Brain
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
@@ -10,6 +10,7 @@ import {
     getGlobalStats,
     getUserAnalytics,
     getAllComments,
+    getSupportTickets,
     getAllRatings,
     getAverageRatings,
     logAdminAction,
@@ -30,6 +31,7 @@ import AdminNotifPanel from '../components/admin/AdminNotifPanel';
 
 const StatisticsPanel = React.lazy(() => import('../components/admin/StatisticsPanel'));
 const UserManagement = React.lazy(() => import('../components/admin/UserManagement'));
+const SubscriptionManager = React.lazy(() => import('../components/admin/SubscriptionManager'));
 const CommentManagement = React.lazy(() => import('../components/admin/CommentManagement'));
 const ExportTools = React.lazy(() => import('../components/admin/ExportTools'));
 const DemographicTable = React.lazy(() => import('../components/admin/DemographicTable'));
@@ -40,8 +42,10 @@ const SecurityPanel = React.lazy(() => import('../components/admin/SecurityPanel
 const ShopManager = React.lazy(() => import('../components/admin/ShopManager'));
 const TeacherModeration = React.lazy(() => import('../components/admin/TeacherModeration'));
 const NotificationsManager = React.lazy(() => import('../components/admin/NotificationsManager'));
+const SupportManager = React.lazy(() => import('../components/admin/SupportManager'));
+const StudentBehaviorDataset = React.lazy(() => import('../components/admin/StudentBehaviorDataset'));
 
-type Tab = 'overview' | 'stats' | 'users' | 'comments' | 'ratings' | 'export' | 'monitor' | 'retention' | 'gamification' | 'security' | 'shop' | 'teachers' | 'notifications';
+type Tab = 'overview' | 'stats' | 'users' | 'subscriptions' | 'comments' | 'support' | 'ratings' | 'export' | 'monitor' | 'retention' | 'gamification' | 'security' | 'shop' | 'teachers' | 'notifications' | 'behavior';
 
 const AdminDashboard: React.FC = () => {
     const { user, logout, changePassword, updateProfile } = useStore();
@@ -49,6 +53,7 @@ const AdminDashboard: React.FC = () => {
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [users, setUsers] = useState<AdminUserAnalytics[]>([]);
     const [comments, setComments] = useState<UserComment[]>([]);
+    const [supportTickets, setSupportTickets] = useState<UserComment[]>([]);
     const [ratings, setRatings] = useState<PlatformRating[]>([]);
     const [teacherApps, setTeacherApps] = useState<any[]>([]);
     const [totalTeachers, setTotalTeachers] = useState(0);
@@ -62,8 +67,8 @@ const AdminDashboard: React.FC = () => {
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [adminNotifCount, setAdminNotifCount] = useState(0);
     const [loadingStates, setLoadingStates] = useState<Record<Tab, boolean>>({
-        overview: false, stats: false, users: false, comments: false, ratings: false,
-        export: false, monitor: false, retention: false, gamification: false, security: false, shop: false, teachers: false, notifications: false
+        overview: false, stats: false, users: false, subscriptions: false, comments: false, support: false, ratings: false,
+        export: false, monitor: false, retention: false, gamification: false, security: false, shop: false, teachers: false, notifications: false, behavior: false
     });
     const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
 
@@ -141,7 +146,7 @@ const AdminDashboard: React.FC = () => {
         if (cachedOverview) {
             try {
                 const { stats, comments, ratings, teacherApps, totalTeachers: cachedTotalTeachers, averageRatings } = JSON.parse(cachedOverview);
-                if (stats) setStats(stats);
+                if (stats && stats.totalUsers > 1) setStats(stats);
                 if (comments) setComments(comments);
                 if (ratings) setRatings(ratings);
                 if (teacherApps) setTeacherApps(teacherApps);
@@ -183,7 +188,10 @@ const AdminDashboard: React.FC = () => {
     const handleNotificationClick = (notif: any) => {
         setHighlightItemId(null); // Reset first
 
-        if (notif.type === 'new_comment' || notif.type === 'system') {
+        if (notif.type === 'system') {
+            setActiveTab('support');
+            if (notif.metadata?.commentId) setHighlightItemId(notif.metadata.commentId);
+        } else if (notif.type === 'new_comment') {
             setActiveTab('comments');
             if (notif.metadata?.commentId) setHighlightItemId(notif.metadata.commentId);
         } else if (notif.type === 'new_rating') {
@@ -205,9 +213,10 @@ const AdminDashboard: React.FC = () => {
         try {
             switch (tab) {
                 case 'overview':
-                    const [sData, cData, rData, avgR, tData, teachersCountResult] = await Promise.allSettled([
+                    const [sData, cData, supData, rData, avgR, tData, teachersCountResult] = await Promise.allSettled([
                         getGlobalStats(period), 
                         getAllComments(50), 
+                        getSupportTickets(50),
                         getAllRatings(50), 
                         getAverageRatings(),
                         getPendingApplications(),
@@ -216,6 +225,7 @@ const AdminDashboard: React.FC = () => {
                     
                     if (sData.status === 'rejected') console.error('getGlobalStats rejected:', sData.reason);
                     if (cData.status === 'rejected') console.error('getAllComments rejected:', cData.reason);
+                    if (supData.status === 'rejected') console.error('getSupportTickets rejected:', supData.reason);
                     if (rData.status === 'rejected') console.error('getAllRatings rejected:', rData.reason);
                     if (avgR.status === 'rejected') console.error('getAverageRatings rejected:', avgR.reason);
                     if (tData.status === 'rejected') console.error('getPendingApplications rejected:', tData.reason);
@@ -223,6 +233,7 @@ const AdminDashboard: React.FC = () => {
 
                     const newStats = sData.status === 'fulfilled' ? sData.value : null;
                     const newComments = cData.status === 'fulfilled' ? cData.value : [];
+                    const newSupport = supData.status === 'fulfilled' ? supData.value : [];
                     const newRatings = rData.status === 'fulfilled' ? rData.value : [];
                     const newTeacherApps = tData.status === 'fulfilled' ? tData.value : [];
                     const newAvgR = avgR.status === 'fulfilled' ? avgR.value : null;
@@ -232,6 +243,7 @@ const AdminDashboard: React.FC = () => {
                     else if (!stats) setStats(DEFAULT_STATS); // Prevent infinite skeleton state
 
                     setComments(newComments);
+                    setSupportTickets(newSupport);
                     setRatings(newRatings);
                     setTeacherApps(newTeacherApps);
                     setTotalTeachers(newTotalTeachers);
@@ -239,6 +251,7 @@ const AdminDashboard: React.FC = () => {
                     localStorage.setItem('admin_cache_overview', JSON.stringify({
                         stats: newStats || DEFAULT_STATS,
                         comments: newComments,
+                        supportTickets: newSupport,
                         ratings: newRatings,
                         teacherApps: newTeacherApps,
                         totalTeachers: newTotalTeachers,
@@ -247,8 +260,9 @@ const AdminDashboard: React.FC = () => {
                     }));
                     break;
                 case 'users':
+                case 'subscriptions':
                     try {
-                        const result = await getUserAnalytics(100);
+                        const result = await getUserAnalytics(500);
                         setUsers(result);
                     } catch (e) {
                         console.error('getUserAnalytics failed:', e);
@@ -257,11 +271,20 @@ const AdminDashboard: React.FC = () => {
                     break;
                 case 'comments':
                     try {
-                        const result = await getAllComments(50);
+                        const result = await getAllComments(100);
                         setComments(result);
                     } catch (e) {
                         console.error('getAllComments failed:', e);
                         setComments([]);
+                    }
+                    break;
+                case 'support':
+                    try {
+                        const result = await getSupportTickets(100);
+                        setSupportTickets(result);
+                    } catch (e) {
+                        console.error('getSupportTickets failed:', e);
+                        setSupportTickets([]);
                     }
                     break;
                 case 'ratings':
@@ -352,11 +375,14 @@ const AdminDashboard: React.FC = () => {
         { id: 'security' as Tab, icon: Shield, label: 'Sécurité', badge: null },
         { id: 'stats' as Tab, icon: TrendingUp, label: 'Statistiques', badge: null },
         { id: 'users' as Tab, icon: Users, label: 'Utilisateurs', badge: users.length },
-        { id: 'comments' as Tab, icon: MessageSquare, label: 'Commentaires', badge: comments.filter(c => c.status === 'pending').length },
+        { id: 'subscriptions' as Tab, icon: Crown, label: 'Abonnements & Premium', badge: users.filter(u => u.isPremium || u.subscriptionTier !== 'free').length },
+        { id: 'comments' as Tab, icon: MessageSquare, label: 'Commentaires Élèves', badge: comments.filter(c => c.status === 'pending').length },
+        { id: 'support' as Tab, icon: LifeBuoy, label: 'Messages & Support', badge: supportTickets.filter(c => c.status === 'pending').length },
         { id: 'ratings' as Tab, icon: Star, label: 'Évaluations', badge: null },
         { id: 'export' as Tab, icon: Download, label: 'Exports', badge: null },
         { id: 'shop' as Tab, icon: ShoppingBag, label: 'Boutique', badge: null },
         { id: 'teachers' as Tab, icon: Shield, label: 'Enseignants', badge: null },
+        { id: 'behavior' as Tab, icon: Brain, label: 'Comportement Élèves & IA', badge: null },
     ];
 
     const activeNav = navItems.find(item => item.id === activeTab);
@@ -830,7 +856,9 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                 )}
                                 {activeTab === 'users' && <UserManagement users={users} onRefresh={() => loadTab('users')} />}
+                                {activeTab === 'subscriptions' && <SubscriptionManager users={users} onRefresh={() => loadTab('subscriptions')} />}
                                 {activeTab === 'comments' && <CommentManagement comments={comments} onRefresh={() => loadTab('comments')} highlightId={highlightItemId} />}
+                                {activeTab === 'support' && <SupportManager comments={supportTickets} onRefresh={() => loadTab('support')} />}
                                 {activeTab === 'ratings' && <RatingsTab ratings={ratings} averageRatings={averageRatings} totalUsers={stats?.totalUsers || 0} highlightId={highlightItemId} />}
                                 {activeTab === 'export' && stats && <ExportTools stats={stats} users={users} comments={comments} period={period} demographicStats={demographicStats} />}
                                 {activeTab === 'shop' && <ShopManager />}
@@ -839,6 +867,7 @@ const AdminDashboard: React.FC = () => {
                                 {activeTab === 'gamification' && <GamificationPanel />}
                                 {activeTab === 'security' && <SecurityPanel />}
                                 {activeTab === 'teachers' && <TeacherModeration />}
+                                {activeTab === 'behavior' && <StudentBehaviorDataset />}
                             </>
                         )}
                     </React.Suspense>

@@ -7,6 +7,7 @@ import { useUIStore } from './store/useUIStore';
 import { useCoachStore } from './store/useCoachStore';
 import { useDailyStore } from './store/useDailyStore';
 import { changeUserPassword as apiChangePassword } from '../services/authService';
+import { supabase } from '../services/supabase';
 
 // Re-defining interface to match exactly what the app expects
 // (Normally this should be in types.ts, but let's keep it here for compatibility if it was)
@@ -140,14 +141,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (!prev) return prev;
       const currentStats = prev.stats || {};
       const currentNotifications = currentStats.notifications || [];
+      const updatedStats = {
+        ...currentStats,
+        notifications: [newNotif, ...currentNotifications]
+      };
       const updatedUser = {
         ...prev,
-        stats: {
-          ...currentStats,
-          notifications: [newNotif, ...currentNotifications]
-        }
+        stats: updatedStats
       };
       localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      if (prev.id && !prev.id.includes('anon')) {
+        supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
+          if (error) console.error('[Notification Add Supabase Sync Error]:', error);
+        });
+      }
       return updatedUser;
     });
   }, [auth]);
@@ -157,14 +164,89 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (!prev) return prev;
       const currentStats = prev.stats || {};
       const currentNotifications = currentStats.notifications || [];
+      const updatedStats = {
+        ...currentStats,
+        notifications: currentNotifications.map((n: any) => n.id === id ? { ...n, read: true } : n)
+      };
       const updatedUser = {
         ...prev,
-        stats: {
-          ...currentStats,
-          notifications: currentNotifications.map((n: any) => n.id === id ? { ...n, read: true } : n)
-        }
+        stats: updatedStats
       };
       localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      if (prev.id && !prev.id.includes('anon')) {
+        supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
+          if (error) console.error('[Notification Mark Read Supabase Sync Error]:', error);
+        });
+      }
+      return updatedUser;
+    });
+  }, [auth]);
+
+  const toggleNotificationRead = useCallback((id: string) => {
+    auth.setUser(prev => {
+      if (!prev) return prev;
+      const currentStats = prev.stats || {};
+      const currentNotifications = currentStats.notifications || [];
+      const updatedStats = {
+        ...currentStats,
+        notifications: currentNotifications.map((n: any) => n.id === id ? { ...n, read: !n.read } : n)
+      };
+      const updatedUser = {
+        ...prev,
+        stats: updatedStats
+      };
+      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      if (prev.id && !prev.id.includes('anon')) {
+        supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
+          if (error) console.error('[Notification Toggle Read Supabase Sync Error]:', error);
+        });
+      }
+      return updatedUser;
+    });
+  }, [auth]);
+
+  const markAllNotificationsAsRead = useCallback(() => {
+    auth.setUser(prev => {
+      if (!prev) return prev;
+      const currentStats = prev.stats || {};
+      const currentNotifications = currentStats.notifications || [];
+      const updatedStats = {
+        ...currentStats,
+        notifications: currentNotifications.map((n: any) => ({ ...n, read: true }))
+      };
+      const updatedUser = {
+        ...prev,
+        stats: updatedStats
+      };
+      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      if (prev.id && !prev.id.includes('anon')) {
+        supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
+          if (error) console.error('[Notification Mark All Read Supabase Sync Error]:', error);
+        });
+      }
+      return updatedUser;
+    });
+  }, [auth]);
+
+  const deleteNotification = useCallback((id: string) => {
+    auth.setUser(prev => {
+      if (!prev) return prev;
+      const currentStats = prev.stats || {};
+      const currentNotifications = currentStats.notifications || [];
+      const updatedStats = {
+        ...currentStats,
+        notifications: currentNotifications.filter((n: any) => n.id !== id)
+      };
+      const updatedUser = {
+        ...prev,
+        stats: updatedStats
+      };
+      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      if (prev.id && !prev.id.includes('anon')) {
+        supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
+          if (error) console.error('[Notification Delete Supabase Sync Error]:', error);
+        });
+      }
       return updatedUser;
     });
   }, [auth]);
@@ -173,14 +255,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     auth.setUser(prev => {
       if (!prev) return prev;
       const currentStats = prev.stats || {};
+      const updatedStats = {
+        ...currentStats,
+        notifications: []
+      };
       const updatedUser = {
         ...prev,
-        stats: {
-          ...currentStats,
-          notifications: []
-        }
+        stats: updatedStats
       };
       localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      if (prev.id && !prev.id.includes('anon')) {
+        supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
+          if (error) console.error('[Notification Clear Supabase Sync Error]:', error);
+        });
+      }
       return updatedUser;
     });
   }, [auth]);
@@ -358,6 +446,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     notifications,
     addNotification,
     markNotificationAsRead,
+    toggleNotificationRead,
+    markAllNotificationsAsRead,
+    deleteNotification,
     clearNotifications,
     continuousStudyTime,
     resetContinuousStudyTime,
@@ -367,7 +458,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     downloadCourse,
     incrementFlashcardsStudied,
     updateSRSMetadata
-  }), [auth, content, ui, coach, gamification, daily, changePassword, registerTeacher, resolveBattle, rollDice, notifications, continuousStudyTime, resetContinuousStudyTime, deleteCurrentUserAccount, addNotification, markNotificationAsRead, clearNotifications, trackTime, offlinePacks, downloadCourse, incrementFlashcardsStudied, updateSRSMetadata]);
+  }), [auth, content, ui, coach, gamification, daily, changePassword, registerTeacher, resolveBattle, rollDice, notifications, continuousStudyTime, resetContinuousStudyTime, deleteCurrentUserAccount, addNotification, markNotificationAsRead, toggleNotificationRead, markAllNotificationsAsRead, deleteNotification, clearNotifications, trackTime, offlinePacks, downloadCourse, incrementFlashcardsStudied, updateSRSMetadata]);
 
   return (
     <AppContext.Provider value={value as any}>
