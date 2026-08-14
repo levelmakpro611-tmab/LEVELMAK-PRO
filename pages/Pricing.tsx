@@ -1064,47 +1064,6 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                     )}
                                 </button>
                                 
-                                {(window.location.hostname === 'localhost' || 
-                                  window.location.hostname === '127.0.0.1' || 
-                                  window.location.hostname.startsWith('192.168.') || 
-                                  window.location.hostname.startsWith('10.') || 
-                                  window.location.hostname.startsWith('172.') || 
-                                  window.location.search.includes('test=true') || 
-                                  window.location.search.includes('demo=true') || 
-                                  window.location.hostname.includes('vercel.app') || 
-                                  window.location.hostname.includes('netlify.app')) && (
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            setIsInitiatingPayment(true);
-                                            try {
-                                                const res = await paymentService.createCheckoutSession(
-                                                    user.id,
-                                                    'orange_money',
-                                                    selectedOptions!,
-                                                    true, // simulateSuccess = true
-                                                    '620000000'
-                                                );
-                                                if (res.success && res.redirectUrl) {
-                                                    if (res.transactionId) {
-                                                        localStorage.setItem(`levelmak_pending_tx_id_${user.id}`, res.transactionId);
-                                                    }
-                                                    window.location.href = res.redirectUrl;
-                                                } else {
-                                                    setInitiateError(res.error || "Échec de l'initiation de la simulation.");
-                                                    setIsInitiatingPayment(false);
-                                                }
-                                            } catch (err: any) {
-                                                setInitiateError(err.message || "Erreur de simulation.");
-                                                setIsInitiatingPayment(false);
-                                            }
-                                        }}
-                                        className="w-full mt-2 py-3 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 rounded-2xl font-bold uppercase tracking-widest text-[10px] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                    >
-                                        <span>Simuler un Succès (Mode Test) ✓</span>
-                                    </button>
-                                )}
-                                
                                 <div className="pt-2 text-center">
                                     <span className="text-[10px] text-slate-500 font-semibold tracking-tight inline-flex items-center gap-1.5">
                                         🔒 Transaction cryptée SSL 256 bits via Djomy
