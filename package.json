@@ -48,6 +48,7 @@
     "pdfjs-dist": "^5.5.207",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-is": "^19.2.8",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.7.0",
     "tesseract.js": "^7.0.0",
