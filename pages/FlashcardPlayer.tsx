@@ -122,41 +122,41 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                 </div>
 
                 <div className="space-y-2">
-                    <h2 className="text-3xl md:text-4xl font-display font-black text-white">Deck Maîtrisé ! 🏆</h2>
-                    <p className="text-slate-400 text-base md:text-lg">Deck: <span className="text-white font-bold">{deck.title}</span></p>
+                    <h2 className="text-3xl md:text-4xl font-display font-black text-slate-900 dark:text-white">Deck Maîtrisé ! 🏆</h2>
+                    <p className="text-slate-600 dark:text-slate-400 text-base md:text-lg font-bold">Deck: <span className="text-slate-900 dark:text-white font-black">{deck.title}</span></p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="glass p-5 rounded-2xl border border-success/20 bg-success/5">
-                        <div className="text-2xl md:text-3xl font-black text-success mb-1">{cards.length}</div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-success/70">Cartes Apprises</div>
+                    <div className="glass p-5 rounded-2xl border border-emerald-500/30 dark:border-success/20 bg-emerald-50 dark:bg-success/5">
+                        <div className="text-2xl md:text-3xl font-black text-emerald-600 dark:text-success mb-1">{cards.length}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-success/70">Cartes Apprises</div>
                     </div>
-                    <div className="glass p-5 rounded-2xl border border-primary/20 bg-primary/5">
-                        <div className="text-2xl md:text-3xl font-black text-primary-light mb-1">+ {cards.length * 10} XP</div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-primary-light/70">Points d'Expérience</div>
+                    <div className="glass p-5 rounded-2xl border border-primary/30 dark:border-primary/20 bg-blue-50 dark:bg-primary/5">
+                        <div className="text-2xl md:text-3xl font-black text-primary dark:text-primary-light mb-1">+ {cards.length * 10} XP</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-primary dark:text-primary-light/70">Points d'Expérience</div>
                     </div>
                 </div>
 
                 {/* Comprehension Quiz & Key Review Sheet */}
-                <div className="glass p-6 md:p-8 rounded-[2rem] border border-white/10 text-left space-y-6 bg-slate-900/80">
-                    <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                        <div className="p-2.5 bg-blue-500/20 text-blue-400 rounded-xl">
+                <div className="bg-white dark:bg-slate-900/80 p-6 md:p-8 rounded-[2rem] border border-slate-200 dark:border-white/10 text-left space-y-6 shadow-xl">
+                    <div className="flex items-center gap-3 border-b border-slate-200 dark:border-white/10 pb-4">
+                        <div className="p-2.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl">
                             <MessageSquare size={20} />
                         </div>
                         <div>
-                            <h3 className="text-lg font-black text-white uppercase tracking-tight">Test de Mémorisation & Bilan</h3>
-                            <p className="text-xs text-slate-400 font-medium">Revois les notions clés tirées de tes cartes</p>
+                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Test de Mémorisation & Bilan</h3>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 font-bold">Revois les notions clés tirées de tes cartes</p>
                         </div>
                     </div>
 
                     <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-1">
                         {cards.slice(0, 5).map((c, idx) => (
-                            <div key={idx} className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-2">
-                                <div className="text-xs font-black text-primary-light uppercase tracking-widest flex items-center gap-2">
+                            <div key={idx} className="p-4 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 space-y-2">
+                                <div className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
                                     <span>Question {idx + 1} :</span>
                                 </div>
-                                <p className="text-sm font-bold text-white">{c.front}</p>
-                                <div className="mt-2 pt-2 border-t border-white/5 text-xs text-emerald-400 font-semibold flex items-start gap-2">
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">{c.front}</p>
+                                <div className="mt-2 pt-2 border-t border-slate-200 dark:border-white/5 text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-start gap-2">
                                     <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
                                     <span>Réponse : {c.back}</span>
                                 </div>
@@ -167,7 +167,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
 
                 <button
                     onClick={onClose}
-                    className="w-full py-4 md:py-5 bg-white text-slate-900 rounded-xl md:rounded-2xl font-black uppercase tracking-[0.2em] text-xs md:text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+                    className="w-full py-4 md:py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl md:rounded-2xl font-black uppercase tracking-[0.2em] text-xs md:text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
                 >
                     Retour au tableau de bord
                 </button>
@@ -179,12 +179,12 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
         <div className="min-h-[80vh] flex flex-col max-w-4xl mx-auto py-8 px-6 space-y-8 animate-fade-in">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all">
+                <button onClick={onClose} className="p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all border border-slate-200 dark:border-white/5">
                     <X size={24} />
                 </button>
                 <div className="text-center">
-                    <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-1">En cours d'étude</div>
-                    <div className="text-white font-bold">{deck.title}</div>
+                    <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-500 mb-1">En cours d'étude</div>
+                    <div className="text-slate-900 dark:text-white font-bold">{deck.title}</div>
                 </div>
                 <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-black">
                     {displayedCount}/{cards.length}
@@ -192,7 +192,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
                 <motion.div
                     style={{ originX: 0 }}
                     initial={{ scaleX: 0 }}
@@ -213,7 +213,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         }
                     }}
                     disabled={currentIndex === 0}
-                    className="absolute -left-2 sm:-left-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-slate-800/90 hover:bg-slate-700 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/20 shadow-2xl backdrop-blur-xl shrink-0"
+                    className="absolute -left-2 sm:-left-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-white dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-20 text-slate-800 dark:text-white rounded-2xl transition-all border border-slate-300 dark:border-white/20 shadow-2xl backdrop-blur-xl shrink-0"
                     title="Carte précédente"
                 >
                     <ArrowLeft size={22} className="sm:w-6 sm:h-6" />
@@ -229,7 +229,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         }
                     }}
                     disabled={currentIndex === activeCards.length - 1}
-                    className="absolute -right-2 sm:-right-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-slate-800/90 hover:bg-slate-700 disabled:opacity-20 text-white rounded-2xl transition-all border border-white/20 shadow-2xl backdrop-blur-xl shrink-0"
+                    className="absolute -right-2 sm:-right-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-white dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-20 text-slate-800 dark:text-white rounded-2xl transition-all border border-slate-300 dark:border-white/20 shadow-2xl backdrop-blur-xl shrink-0"
                     title="Carte suivante"
                 >
                     <ChevronRight size={22} className="sm:w-6 sm:h-6" />
@@ -262,7 +262,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                     >
                         {/* Front */}
                         <div
-                            className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col items-center justify-between p-6 sm:p-10 text-center overflow-y-auto custom-scrollbar group bg-[#0d1527] w-full h-full"
+                            className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col items-center justify-between p-6 sm:p-10 text-center overflow-y-auto custom-scrollbar group bg-white dark:bg-[#0d1527] w-full h-full"
                             style={{
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
@@ -273,17 +273,17 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                             <div className="w-full flex-1 flex flex-col items-center justify-center my-auto py-2">
                                 <FormattedMarkdownText 
                                     content={currentCard?.front} 
-                                    className={`font-display font-black text-white leading-relaxed select-none ${getFontSize(currentCard?.front)}`}
+                                    className={`font-display font-black text-slate-900 dark:text-white leading-relaxed select-none ${getFontSize(currentCard?.front)}`}
                                 />
                             </div>
-                            <div className="mt-4 flex items-center gap-2 text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/10 shrink-0">
+                            <div className="mt-4 flex items-center gap-2 text-slate-600 dark:text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-widest bg-slate-100 dark:bg-white/5 px-4 py-2 rounded-full border border-slate-200 dark:border-white/10 shrink-0">
                                 Cliquer pour retourner <RotateCcw size={14} />
                             </div>
                         </div>
 
                         {/* Back */}
                         <div
-                            className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] border border-primary/40 shadow-2xl flex flex-col items-center justify-center p-6 sm:p-10 text-center bg-[#0d1527] w-full h-full"
+                            className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] border border-primary/40 shadow-2xl flex flex-col items-center justify-center p-6 sm:p-10 text-center bg-white dark:bg-[#0d1527] w-full h-full"
                             style={{
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
@@ -295,7 +295,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                             <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center justify-center py-2 my-auto">
                                 <FormattedMarkdownText 
                                     content={currentCard?.back} 
-                                    className={`font-bold text-white leading-relaxed select-none ${getFontSize(currentCard?.back)}`}
+                                    className={`font-bold text-slate-900 dark:text-white leading-relaxed select-none ${getFontSize(currentCard?.back)}`}
                                 />
                             </div>
                         </div>
@@ -315,13 +315,13 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                         >
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleRate(false); }}
-                                className="flex-1 py-4 md:py-6 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-500 rounded-xl md:rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs transition-all flex items-center justify-center gap-3"
+                                className="flex-1 py-4 md:py-6 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-600 dark:text-red-500 rounded-xl md:rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs transition-all flex items-center justify-center gap-3"
                             >
                                 <RotateCcw size={20} /> À REPRENDRE
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleRate(true); }}
-                                className="flex-1 py-4 md:py-6 bg-success text-white rounded-xl md:rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs transition-all flex items-center justify-center gap-3 shadow-glow"
+                                className="flex-1 py-4 md:py-6 bg-emerald-600 dark:bg-success text-white rounded-xl md:rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs transition-all flex items-center justify-center gap-3 shadow-glow"
                             >
                                 <ChevronRight size={20} /> AVANCER
                             </button>
@@ -331,7 +331,7 @@ const FlashcardPlayer: React.FC<FlashcardPlayerProps> = ({ deck, cards: rawCards
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="flex items-center justify-center text-slate-500 font-bold"
+                            className="flex items-center justify-center text-slate-600 dark:text-slate-500 font-bold"
                         >
                             Tape sur la carte pour voir la réponse
                         </motion.div>

@@ -756,50 +756,50 @@ const CreativeWriting: React.FC = () => {
                     >
                         {/* Main Editor Section (LHS) */}
                         <div className="lg:col-span-8 space-y-6 w-full overflow-hidden">
-                            <div className="bg-slate-950/40 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] border border-white/10 p-6 md:p-10 shadow-premium relative overflow-hidden">
+                            <div className="bg-slate-100/90 dark:bg-slate-950/40 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] border border-slate-300/80 dark:border-white/10 p-6 md:p-10 shadow-premium relative overflow-hidden">
                                 <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-secondary/40 to-transparent"></div>
 
                                 <div className="space-y-6 md:space-y-8">
                                     <div className="space-y-4">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-1">{t('creativeWriting.form.titleLabel')}</label>
+                                        <label className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-400 px-1">{t('creativeWriting.form.titleLabel')}</label>
                                         <input
                                             type="text"
                                             value={title}
                                             onChange={(e) => setTitle(e.target.value)}
                                             placeholder={t('creativeWriting.form.titlePlaceholder')}
-                                            className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl md:rounded-2xl px-4 md:px-8 py-3 md:py-6 text-base md:text-3xl font-display font-black text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:border-secondary/50 outline-none transition-all"
+                                            className="w-full bg-white dark:bg-white/5 border border-slate-300/80 dark:border-white/10 rounded-xl md:rounded-2xl px-4 md:px-8 py-3 md:py-6 text-base md:text-3xl font-display font-black text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-slate-400 focus:border-secondary/50 outline-none transition-all shadow-sm"
                                         />
                                     </div>
 
                                     <div className="space-y-3 md:space-y-4">
                                         <div className="flex items-center justify-between px-3 md:px-4">
-                                            <label className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t('creativeWriting.form.contentLabel')}</label>
+                                            <label className="text-[8px] md:text-[10px] font-extrabold uppercase tracking-[0.3em] text-slate-800 dark:text-slate-400">{t('creativeWriting.form.contentLabel')}</label>
                                             <div className="flex items-center gap-3 md:gap-6">
                                                 <div className="flex items-center gap-1.5 md:gap-2">
                                                     <Type className="w-3 h-3 md:w-3.5 md:h-3.5 text-secondary" />
-                                                    <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">{content.length} {t('creativeWriting.form.characters')}</span>
+                                                    <span className="text-[8px] md:text-[10px] font-black text-slate-700 dark:text-slate-400 uppercase tracking-widest">{content.length} {t('creativeWriting.form.characters')}</span>
                                                 </div>
                                                 {lastSaved && (
                                                     <div className="flex items-center gap-1.5 md:gap-2">
                                                         <Clock className="w-3 h-3 md:w-3.5 md:h-3.5 text-success" />
-                                                        <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">{lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <span className="text-[8px] md:text-[10px] font-black text-slate-700 dark:text-slate-400 uppercase tracking-widest">{lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
 
                                         {/* Rich Editing Toolbar & PDF Export */}
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-slate-950/60 backdrop-blur-xl rounded-2xl border border-white/10 mx-1">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-slate-200/90 dark:bg-slate-950/60 backdrop-blur-xl rounded-2xl border border-slate-300/80 dark:border-white/10 mx-1">
                                             <div className="flex flex-wrap items-center gap-4">
                                                 {/* Modes: Edition & Apercu */}
-                                                <div className="flex bg-black/30 p-1 rounded-xl border border-white/5 shrink-0">
+                                                <div className="flex bg-slate-300/80 dark:bg-black/30 p-1 rounded-xl border border-slate-300/80 dark:border-white/5 shrink-0">
                                                     <button
                                                         type="button"
                                                         onClick={() => { HapticFeedback.selection(); setEditorMode('edit'); }}
                                                         className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
                                                             editorMode === 'edit'
                                                                 ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-glow shadow-primary/20'
-                                                                : 'text-slate-400 hover:text-white'
+                                                                : 'text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
                                                         }`}
                                                     >
                                                         Édition
@@ -810,7 +810,7 @@ const CreativeWriting: React.FC = () => {
                                                         className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
                                                             editorMode === 'preview'
                                                                 ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-glow shadow-primary/20'
-                                                                : 'text-slate-400 hover:text-white'
+                                                                : 'text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
                                                         }`}
                                                     >
                                                         Aperçu Réel 👁️
@@ -822,7 +822,7 @@ const CreativeWriting: React.FC = () => {
                                                         <button
                                                             type="button"
                                                             onClick={() => insertFormat('bold')}
-                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                                            className="p-2 text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-300/60 dark:hover:bg-white/10 rounded-xl transition-all"
                                                             title="Gras (**)"
                                                         >
                                                             <Bold size={16} />
@@ -830,16 +830,16 @@ const CreativeWriting: React.FC = () => {
                                                         <button
                                                             type="button"
                                                             onClick={() => insertFormat('italic')}
-                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                                            className="p-2 text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-300/60 dark:hover:bg-white/10 rounded-xl transition-all"
                                                             title="Italique (*)"
                                                         >
                                                             <Italic size={16} />
                                                         </button>
-                                                        <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+                                                        <div className="w-[1px] h-4 bg-slate-400/40 dark:bg-white/10 mx-1"></div>
                                                         <button
                                                             type="button"
                                                             onClick={() => insertFormat('h1')}
-                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all flex items-center"
+                                                            className="p-2 text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-300/60 dark:hover:bg-white/10 rounded-xl transition-all flex items-center"
                                                             title="Titre 1 (#)"
                                                         >
                                                             <Heading1 size={16} />
@@ -847,16 +847,16 @@ const CreativeWriting: React.FC = () => {
                                                         <button
                                                             type="button"
                                                             onClick={() => insertFormat('h2')}
-                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all flex items-center"
+                                                            className="p-2 text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-300/60 dark:hover:bg-white/10 rounded-xl transition-all flex items-center"
                                                             title="Titre 2 (##)"
                                                         >
                                                             <Heading2 size={16} />
                                                         </button>
-                                                        <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+                                                        <div className="w-[1px] h-4 bg-slate-400/40 dark:bg-white/10 mx-1"></div>
                                                         <button
                                                             type="button"
                                                             onClick={() => insertFormat('quote')}
-                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                                            className="p-2 text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-300/60 dark:hover:bg-white/10 rounded-xl transition-all"
                                                             title="Citation (>)"
                                                         >
                                                             <Quote size={16} />
@@ -864,7 +864,7 @@ const CreativeWriting: React.FC = () => {
                                                         <button
                                                             type="button"
                                                             onClick={() => insertFormat('list')}
-                                                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                                            className="p-2 text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-300/60 dark:hover:bg-white/10 rounded-xl transition-all"
                                                             title="Liste à puces (-)"
                                                         >
                                                             <List size={16} />
@@ -891,10 +891,10 @@ const CreativeWriting: React.FC = () => {
                                                 value={content}
                                                 onChange={(e) => setContent(e.target.value)}
                                                 placeholder={t('creativeWriting.form.contentPlaceholder')}
-                                                className="w-full h-[300px] md:h-[600px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-4 md:p-12 text-sm md:text-xl leading-relaxed text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:border-secondary/50 outline-none transition-all resize-none custom-scrollbar"
+                                                className="w-full h-[300px] md:h-[600px] bg-white dark:bg-white/5 border border-slate-300/80 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-4 md:p-12 text-sm md:text-xl leading-relaxed text-slate-900 dark:text-slate-200 placeholder:text-slate-600 dark:placeholder:text-slate-400 focus:border-secondary/50 outline-none transition-all resize-none custom-scrollbar font-medium shadow-inner"
                                             />
                                         ) : (
-                                            <div className="w-full h-[300px] md:h-[600px] bg-slate-950/20 border border-black/5 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-6 md:p-12 overflow-y-auto custom-scrollbar">
+                                            <div className="w-full h-[300px] md:h-[600px] bg-white/80 dark:bg-slate-950/20 border border-slate-300/80 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-6 md:p-12 overflow-y-auto custom-scrollbar">
                                                 {renderMarkdown(content)}
                                             </div>
                                         )}
@@ -906,15 +906,15 @@ const CreativeWriting: React.FC = () => {
                         {/* AI & Config Side Panel (RHS) */}
                         <div className="lg:col-span-4 space-y-8">
                             {/* AI Coach Area */}
-                            <div className="glass rounded-[2rem] md:rounded-[3rem] border border-white/5 p-6 md:p-8 space-y-6 md:space-y-8 flex flex-col min-h-[400px] md:min-h-[500px]">
-                                <div className="space-y-4 border-b border-white/5 pb-6">
+                            <div className="bg-slate-100/90 dark:bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] md:rounded-[3rem] border border-slate-300/80 dark:border-white/5 p-6 md:p-8 space-y-6 md:space-y-8 flex flex-col min-h-[400px] md:min-h-[500px] shadow-xl">
+                                <div className="space-y-4 border-b border-slate-300/80 dark:border-white/5 pb-6">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-secondary/20 text-secondary rounded-xl flex items-center justify-center border border-secondary/20 shrink-0">
                                             <Sparkles size={20} />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <h4 className="font-display font-bold text-base md:text-lg text-slate-900 dark:text-white truncate leading-tight transition-colors">{t('creativeWriting.coach.title')}</h4>
-                                            <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{t('creativeWriting.coach.subtitle')}</p>
+                                            <p className="text-[8px] font-extrabold text-slate-700 dark:text-slate-400 uppercase tracking-widest truncate">{t('creativeWriting.coach.subtitle')}</p>
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-3">
@@ -928,7 +928,7 @@ const CreativeWriting: React.FC = () => {
                                                     handleAiAction('review');
                                                 }}
                                                 disabled={isAiLoading || !content.trim()}
-                                                className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${isAiLoading || !content.trim() ? 'opacity-50 cursor-not-allowed bg-white/5 border-white/5 text-slate-500' : 'bg-white/5 border-white/10 hover:bg-white/10 text-white shadow-lg shadow-black/20 active:scale-95'}`}
+                                                className={`flex-1 py-4 rounded-2xl text-xs font-extrabold uppercase tracking-widest border transition-all ${isAiLoading || !content.trim() ? 'opacity-50 cursor-not-allowed bg-slate-200/50 dark:bg-white/5 border-slate-300 dark:border-white/5 text-slate-400' : 'bg-slate-200/90 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/15 border-slate-300 dark:border-white/10 text-slate-900 dark:text-white shadow-md active:scale-95'}`}
                                             >
                                                 AVIS
                                             </button>
@@ -941,7 +941,7 @@ const CreativeWriting: React.FC = () => {
                                                     handleAiAction('help');
                                                 }}
                                                 disabled={isAiLoading || !content.trim()}
-                                                className={`flex-1 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-glow shadow-purple-500/20`}
+                                                className={`flex-1 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-glow shadow-purple-500/20`}
                                             >
                                                 {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
                                                 M'AIDER
@@ -951,7 +951,7 @@ const CreativeWriting: React.FC = () => {
                                             <button
                                                 onClick={handleInspirationPotion}
                                                 disabled={isAiLoading}
-                                                className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all group shadow-inner"
+                                                className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all group shadow-inner"
                                             >
                                                 <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center bg-amber-500/10 shadow-glow shadow-amber-500/20">
                                                     <img src="/assets/fiole magique/WhatsApp Image 2026-02-10 at 02.26.07.jpeg" alt="Inspiration" className="w-full h-full object-contain group-hover:rotate-12 transition-transform" />
@@ -964,17 +964,17 @@ const CreativeWriting: React.FC = () => {
                                     {aiSuggestions.length > 0 && (
                                         <div className="space-y-3 mt-4 overflow-y-auto max-h-[300px] custom-scrollbar pr-2">
                                             {aiSuggestions.map(sugg => (
-                                                <div key={sugg.id} className="p-4 bg-white/5 border border-white/10 rounded-2xl relative group">
-                                                    <button onClick={() => setAiSuggestions(prev => prev.filter(s => s.id !== sugg.id))} className="absolute top-3 right-3 p-1.5 bg-black/20 rounded-lg text-slate-500 hover:text-white transition-colors">
+                                                <div key={sugg.id} className="p-4 bg-white dark:bg-white/5 border border-slate-300/80 dark:border-white/10 rounded-2xl relative group shadow-sm">
+                                                    <button onClick={() => setAiSuggestions(prev => prev.filter(s => s.id !== sugg.id))} className="absolute top-3 right-3 p-1.5 bg-slate-200/80 dark:bg-black/20 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
                                                         <X size={14} />
                                                     </button>
                                                     <div className="flex items-center gap-2 mb-3">
                                                         {sugg.type === 'suggestion' ? <Zap size={14} className="text-secondary" /> : <Sparkles size={14} className="text-primary" />}
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-700 dark:text-slate-400">
                                                             {sugg.type === 'suggestion' ? 'Idée' : 'Avis du Coach'}
                                                         </span>
                                                     </div>
-                                                    <p className="text-sm text-slate-200 font-medium leading-relaxed mb-3 whitespace-pre-wrap line-clamp-3">{sugg.text}</p>
+                                                    <p className="text-sm text-slate-900 dark:text-slate-200 font-semibold leading-relaxed mb-3 whitespace-pre-wrap line-clamp-3">{sugg.text}</p>
                                                     <button
                                                         onClick={() => {
                                                             setAiModalContent(sugg.text);
@@ -992,8 +992,8 @@ const CreativeWriting: React.FC = () => {
                             </div>
 
                             {/* Writing Lab Area */}
-                            <div className="glass rounded-[2rem] md:rounded-[3rem] border border-white/5 p-6 md:p-8 space-y-6 md:space-y-8 flex flex-col">
-                                <div className="space-y-4 border-b border-white/5 pb-6">
+                            <div className="bg-slate-100/90 dark:bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] md:rounded-[3rem] border border-slate-300/80 dark:border-white/5 p-6 md:p-8 space-y-6 md:space-y-8 flex flex-col shadow-xl">
+                                <div className="space-y-4 border-b border-slate-300/80 dark:border-white/5 pb-6">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-primary/20 text-primary rounded-xl flex items-center justify-center border border-primary/20 shrink-0">
@@ -1001,13 +1001,13 @@ const CreativeWriting: React.FC = () => {
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <h4 className="font-display font-bold text-base md:text-lg text-slate-900 dark:text-white truncate leading-tight transition-colors">{t('creativeWriting.writingLab.title')}</h4>
-                                                <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{t('creativeWriting.writingLab.strength')}</p>
+                                                <p className="text-[8px] font-extrabold text-slate-700 dark:text-slate-400 uppercase tracking-widest truncate">{t('creativeWriting.writingLab.strength')}</p>
                                             </div>
                                         </div>
                                         {writingAnalysis && (
                                             <div className="relative w-12 h-12 flex items-center justify-center">
                                                 <svg className="w-full h-full -rotate-90">
-                                                    <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="4" className="text-black/5 dark:text-white/5" />
+                                                    <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="4" className="text-slate-300 dark:text-white/5" />
                                                     <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={125.6} strokeDashoffset={125.6 * (1 - writingAnalysis.score / 100)} className="text-primary transition-all duration-1000" />
                                                 </svg>
                                                 <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-slate-900 dark:text-white">{writingAnalysis.score}</span>
@@ -1028,13 +1028,13 @@ const CreativeWriting: React.FC = () => {
                                         <div className="grid grid-cols-2 gap-2">
                                             <button
                                                 onClick={() => setActiveLabTab('corrections')}
-                                                className={`py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeLabTab === 'corrections' ? 'bg-primary/20 border-primary/40 text-primary font-bold' : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500'}`}
+                                                className={`py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeLabTab === 'corrections' ? 'bg-primary/20 border-primary/40 text-primary font-bold' : 'bg-white dark:bg-white/5 border-slate-300 dark:border-white/5 text-slate-700 dark:text-slate-400'}`}
                                             >
                                                 {t('creativeWriting.writingLab.corrections')} ({writingAnalysis.corrections.length})
                                             </button>
                                             <button
                                                 onClick={() => setActiveLabTab('synonyms')}
-                                                className={`py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeLabTab === 'synonyms' ? 'bg-primary/20 border-primary/40 text-primary font-bold' : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500'}`}
+                                                className={`py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeLabTab === 'synonyms' ? 'bg-primary/20 border-primary/40 text-primary font-bold' : 'bg-white dark:bg-white/5 border-slate-300 dark:border-white/5 text-slate-700 dark:text-slate-400'}`}
                                             >
                                                 {t('creativeWriting.writingLab.synonyms')} ({writingAnalysis.synonyms.length})
                                             </button>
@@ -1044,9 +1044,9 @@ const CreativeWriting: React.FC = () => {
 
                                 <div className="flex-1 space-y-6 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
                                     {!writingAnalysis ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 opacity-40">
-                                            <FlaskConical size={48} className="text-slate-600" />
-                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+                                        <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 opacity-70">
+                                            <FlaskConical size={48} className="text-slate-500 dark:text-slate-600" />
+                                            <p className="text-xs font-extrabold text-slate-700 dark:text-slate-500 uppercase tracking-widest leading-relaxed">
                                                 {t('creativeWriting.writingLab.empty')}
                                             </p>
                                         </div>
@@ -1065,8 +1065,8 @@ const CreativeWriting: React.FC = () => {
                                                                 <div className="absolute top-0 right-0 w-16 h-16 bg-danger/5 rounded-bl-full -mr-8 -mt-8 group-hover:bg-danger/10 transition-colors"></div>
                                                                 <div className="flex items-start justify-between gap-2 relative z-10">
                                                                     <div className="space-y-1">
-                                                                        <span className="text-[8px] font-black text-danger uppercase tracking-widest opacity-50">Erreur détectée</span>
-                                                                        <p className="text-xs text-slate-400 line-through decoration-danger/50 italic">"{corr.original}"</p>
+                                                                        <span className="text-[8px] font-black text-danger uppercase tracking-widest opacity-70">Erreur détectée</span>
+                                                                        <p className="text-xs text-slate-500 dark:text-slate-400 line-through decoration-danger/50 italic">"{corr.original}"</p>
                                                                     </div>
                                                                     <button
                                                                         onClick={() => applyCorrection(corr.original, corr.correction)}
@@ -1076,12 +1076,12 @@ const CreativeWriting: React.FC = () => {
                                                                         <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
                                                                     </button>
                                                                 </div>
-                                                                <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                                                <div className="p-3 bg-white dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5">
                                                                     <p className="text-sm text-slate-900 dark:text-white font-bold transition-colors">→ {corr.correction}</p>
                                                                 </div>
-                                                                <div className="flex items-start gap-3 bg-blue-500/5 p-3 rounded-xl border border-blue-500/10">
-                                                                    <Sparkles size={14} className="text-blue-400 shrink-0 mt-0.5" />
-                                                                    <p className="text-[10px] text-slate-600 dark:text-blue-200/70 font-medium leading-relaxed italic">"{corr.reason}"</p>
+                                                                <div className="flex items-start gap-3 bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">
+                                                                    <Sparkles size={14} className="text-blue-500 shrink-0 mt-0.5" />
+                                                                    <p className="text-[10px] text-slate-800 dark:text-blue-200/70 font-semibold leading-relaxed italic">"{corr.reason}"</p>
                                                                 </div>
                                                             </div>
                                                         ))
@@ -1095,13 +1095,13 @@ const CreativeWriting: React.FC = () => {
                                                                 <Languages size={14} className="text-primary" />
                                                                 <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest transition-colors">{syn.word}</span>
                                                             </div>
-                                                            <p className="text-[9px] text-slate-500 leading-relaxed mb-3">"{syn.context}"</p>
+                                                            <p className="text-[9px] text-slate-600 dark:text-slate-500 leading-relaxed mb-3">"{syn.context}"</p>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {syn.suggestions.map((s, si) => (
                                                                     <button
                                                                         key={si}
                                                                         onClick={() => applySynonym(syn.word, s)}
-                                                                        className="px-3 py-1.5 bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/5 dark:border-white/10 rounded-lg text-[10px] font-bold transition-all text-slate-600 dark:text-slate-300"
+                                                                        className="px-3 py-1.5 bg-white dark:bg-white/5 hover:bg-primary hover:text-white border border-slate-300 dark:border-white/10 rounded-lg text-[10px] font-bold transition-all text-slate-800 dark:text-slate-300"
                                                                     >
                                                                         {s}
                                                                     </button>
@@ -1111,7 +1111,7 @@ const CreativeWriting: React.FC = () => {
                                                     ))}
                                                     <button
                                                         onClick={handleAnalyzeWriting}
-                                                        className="w-full py-3 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 transition-all flex items-center justify-center gap-2"
+                                                        className="w-full py-3 bg-white dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-300 dark:border-white/5 transition-all flex items-center justify-center gap-2"
                                                     >
                                                         <RefreshCw size={12} /> {t('creativeWriting.writingLab.getSynonyms')}
                                                     </button>
@@ -1123,14 +1123,14 @@ const CreativeWriting: React.FC = () => {
                             </div>
 
                             {/* Document Config Area */}
-                            <div className="glass rounded-[2rem] md:rounded-[3rem] border border-white/5 p-6 md:p-8 space-y-6 md:space-y-8">
+                            <div className="bg-slate-100/90 dark:bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] md:rounded-[3rem] border border-slate-300/80 dark:border-white/5 p-6 md:p-8 space-y-6 md:space-y-8 shadow-xl">
                                 <div className="space-y-6">
                                     {/* Cover Image Selector */}
                                     <div className="space-y-4">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-1 truncate block">COUVERTURE DU LIVRE</label>
+                                        <label className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-400 px-1 truncate block">COUVERTURE DU LIVRE</label>
                                         <div 
                                             onClick={() => fileInputRef.current?.click()}
-                                            className="w-full aspect-[3/4] rounded-3xl bg-white/5 border-2 border-dashed border-white/10 hover:border-secondary/50 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center group relative"
+                                            className="w-full aspect-[3/4] rounded-3xl bg-white dark:bg-white/5 border-2 border-dashed border-slate-300 dark:border-white/10 hover:border-secondary/50 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center group relative shadow-inner"
                                         >
                                             {coverImage ? (
                                                 <>
@@ -1141,10 +1141,10 @@ const CreativeWriting: React.FC = () => {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-slate-500 group-hover:text-secondary group-hover:scale-110 transition-all mb-4">
+                                                    <div className="w-16 h-16 rounded-2xl bg-slate-200/80 dark:bg-white/5 flex items-center justify-center text-slate-600 dark:text-slate-500 group-hover:text-secondary group-hover:scale-110 transition-all mb-4">
                                                         <Globe size={32} />
                                                     </div>
-                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center px-6">Ajouter une image de couverture</p>
+                                                    <p className="text-[10px] font-extrabold text-slate-700 dark:text-slate-500 uppercase tracking-widest text-center px-6">Ajouter une image de couverture</p>
                                                 </>
                                             )}
                                         </div>
@@ -1165,13 +1165,13 @@ const CreativeWriting: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-1 truncate block">{t('creativeWriting.form.documentSettings')}</label>
+                                        <label className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-400 px-1 truncate block">{t('creativeWriting.form.documentSettings')}</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {CATEGORY_KEYS.map(catKey => (
                                                 <button
                                                     key={catKey}
                                                     onClick={() => setCategory(catKey)}
-                                                    className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${category === catKey ? 'bg-secondary/20 border-secondary/40 text-secondary-light' : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300'}`}
+                                                    className={`py-3 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest border transition-all ${category === catKey ? 'bg-purple-600 border-purple-600 text-white shadow-md' : 'bg-white dark:bg-white/5 border-slate-300 dark:border-white/5 text-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:text-white'}`}
                                                 >
                                                     {t(`creativeWriting.categories.${catKey}`)}
                                                 </button>
@@ -1179,16 +1179,16 @@ const CreativeWriting: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <div className="flex items-center justify-between p-4 bg-white dark:bg-white/5 rounded-2xl border border-slate-300/80 dark:border-white/5 shadow-sm">
                                         <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-lg ${isPublic ? 'bg-success/10 text-success' : 'bg-black/10 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+                                            <div className={`p-2 rounded-lg ${isPublic ? 'bg-success/10 text-success' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-500'}`}>
                                                 {isPublic ? <Globe size={18} /> : <Lock size={18} />}
                                             </div>
-                                            <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest transition-colors">{t('creativeWriting.form.public')}</p>
+                                            <p className="text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-widest transition-colors">{t('creativeWriting.form.public')}</p>
                                         </div>
                                         <button
                                             onClick={() => setIsPublic(!isPublic)}
-                                            className={`w-10 h-5 rounded-full relative transition-colors ${isPublic ? 'bg-success' : 'bg-slate-700'}`}
+                                            className={`w-10 h-5 rounded-full relative transition-colors ${isPublic ? 'bg-success' : 'bg-slate-400 dark:bg-slate-700'}`}
                                         >
                                             <motion.div
                                                 className="absolute top-1 left-1 w-3 h-3 bg-white rounded-full"
@@ -1201,7 +1201,7 @@ const CreativeWriting: React.FC = () => {
                                         <button
                                             onClick={() => handleSave(false, false)}
                                             disabled={isSaving || !title || !content}
-                                            className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-[1.2rem] font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                                            className="w-full py-4 bg-slate-200/90 hover:bg-slate-300/90 dark:bg-white/10 dark:hover:bg-white/15 border border-slate-300/80 dark:border-white/10 text-slate-900 dark:text-white rounded-[1.2rem] font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale shadow-md"
                                         >
                                             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                                             SAUVEGARDER LE BROUILLON

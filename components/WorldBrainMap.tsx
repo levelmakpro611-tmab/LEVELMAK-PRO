@@ -314,21 +314,13 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           }
       });
 
-    // Fallback: Fetch all profiles from Supabase database
+    // Fetch profiles from Supabase database for metadata enrichment
     supabase.from('profiles').select('id, name, phone_number, avatar_config').then(({data}) => {
         if (data) {
-          // Show users who are public (or if not specified, default to true) and are not admins
-          const visibleProfiles = data.filter(p => 
-            p.avatar_config?.location?.isPublic !== false &&
-            !isAdminUser(p)
-          );
-          console.log("📍 [Map] Fallback profiles loaded from DB:", visibleProfiles.length);
-          setAllProfiles(visibleProfiles.map(p => ({ 
+          setAllProfiles(data.map(p => ({ 
             user_id: p.id, 
-            name: p.name, 
+            name: p.name || 'Étudiant Elite', 
             phone_number: p.phone_number,
-            lat: p.avatar_config?.location?.latitude, 
-            lng: p.avatar_config?.location?.longitude, 
             avatar: p.avatar_config?.image 
           })));
         }
@@ -377,7 +369,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                     isPublic: !isGhostMode
                 }
             };
-            await supabase.from('profiles').update({ avatar_config: updatedConfig }).eq('id', user.id);
+            await supabase.from('profiles').update({ status: 'online', last_active: new Date().toISOString(), avatar_config: updatedConfig }).eq('id', user.id);
             console.log("📍 [Map] Geolocation successfully saved to Supabase profiles database");
         } catch (e) {
             console.warn("📍 [Map] Could not write location to Supabase profiles fallback:", e);
@@ -430,37 +422,29 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
 
   const finalUsers = useMemo(() => {
       const mapUsers = new Map<string, any>();
-      const activeUserIds = new Set(activeUsers.map(u => u.user_id));
 
-      // 1. Add all profiles from Supabase DB (strictly excluding current user and admins)
-      allProfiles.forEach(p => {
-        const pUserId = p.user_id || p.id;
-        if (pUserId && pUserId !== user?.id && !isAdminUser(p) && typeof p.lat === 'number' && typeof p.lng === 'number') {
-          const isOnline = activeUserIds.has(pUserId);
-          mapUsers.set(pUserId, { ...p, user_id: pUserId, is_online: isOnline });
-        }
-      });
-      // 2. Override/enrich with Realtime active presence users (strictly excluding current user)
+      // Strictly map ONLY users actively broadcasting in Realtime Presence (in app + location active)
       activeUsers.forEach(u => {
         const uUserId = u.user_id || u.id;
-        if (uUserId && uUserId !== user?.id && !u.is_ghost && !isAdminUser(u)) {
-          const existing = mapUsers.get(uUserId) || {};
-          mapUsers.set(uUserId, { ...existing, ...u, user_id: uUserId, is_online: true });
+        if (
+          uUserId && 
+          uUserId !== user?.id && 
+          !u.is_ghost && 
+          !isAdminUser(u) &&
+          typeof u.lat === 'number' && 
+          typeof u.lng === 'number'
+        ) {
+          const dbMatch = allProfiles.find(p => (p.user_id || p.id) === uUserId) || {};
+          mapUsers.set(uUserId, { ...dbMatch, ...u, user_id: uUserId, is_online: true });
         }
       });
+
       return Array.from(mapUsers.values());
   }, [activeUsers, allProfiles, user?.id]);
 
   const otherOnlineUsersCount = useMemo(() => {
-      const uniqueOtherUserIds = new Set<string>();
-      activeUsers.forEach(u => {
-        const uid = u.user_id || u.id;
-        if (uid && uid !== user?.id && uid !== 'levelbot' && !isAdminUser(u) && !u.is_ghost) {
-          uniqueOtherUserIds.add(uid);
-        }
-      });
-      return uniqueOtherUserIds.size;
-  }, [activeUsers, user?.id]);
+      return finalUsers.length;
+  }, [finalUsers]);
 
   const filteredUsers = useMemo(() => {
       const q = searchQuery.toLowerCase().trim();
@@ -472,14 +456,14 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   }, [finalUsers, searchQuery]);
 
   return (
-    <div className={`bg-slate-900 p-6 rounded-[2rem] border border-white/5 relative min-h-[550px] ${onCloseMap ? 'fixed inset-4 z-[9999]' : ''}`}>
-      {onCloseMap && <button onClick={onCloseMap} className="absolute top-6 right-6 z-[100] p-3 bg-white/10 text-white rounded-full"><X size={24} /></button>}
+    <div className={`glass bg-white/80 dark:bg-slate-900/90 p-6 rounded-[2rem] border border-slate-200/80 dark:border-white/10 shadow-xl relative min-h-[550px] ${onCloseMap ? 'fixed inset-4 z-[9999]' : ''}`}>
+      {onCloseMap && <button onClick={onCloseMap} className="absolute top-6 right-6 z-[100] p-3 bg-slate-200/80 dark:bg-white/10 text-slate-800 dark:text-white rounded-full"><X size={24} /></button>}
 
       <div className="mb-4 relative z-10 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
         <div>
-          <h2 className="text-2xl font-black text-white flex items-center gap-2"><Globe className="text-blue-400" size={24} /> {t('atlas.title')}</h2>
-          <p className="text-slate-400 text-[10px] font-bold mt-1 flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${otherOnlineUsersCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-500'}`} /> 
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2"><Globe className="text-blue-500 dark:text-blue-400" size={24} /> {t('atlas.title')}</h2>
+          <p className="text-slate-600 dark:text-slate-400 text-[10px] font-bold mt-1 flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${otherOnlineUsersCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`} /> 
             {otherOnlineUsersCount === 0 ? '0 élève en ligne' : `${otherOnlineUsersCount} élève${otherOnlineUsersCount > 1 ? 's' : ''} en ligne`}
           </p>
         </div>
@@ -492,20 +476,20 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               setIsBettingOpen(true);
               HapticFeedback.selection();
             }}
-            className="px-3 sm:px-4 py-2 bg-purple-600/20 border border-purple-500/30 rounded-xl text-purple-400 hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/10 flex-1 sm:flex-initial text-center"
+            className="px-3 sm:px-4 py-2 bg-purple-500/10 dark:bg-purple-600/20 border border-purple-500/30 rounded-xl text-purple-700 dark:text-purple-400 hover:text-purple-900 dark:hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider hover:bg-purple-500/20 transition-colors shadow-lg shadow-purple-500/10 flex-1 sm:flex-initial text-center"
           >
             Entraînement IA 🤖
           </button>
           <button 
             onClick={() => setIsUsersListOpen(!isUsersListOpen)}
-            className="px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider hover:bg-white/10 transition-colors flex-1 sm:flex-initial text-center"
+            className="px-3 sm:px-4 py-2 bg-slate-100/90 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider hover:bg-slate-200/80 dark:hover:bg-white/10 transition-colors flex-1 sm:flex-initial text-center"
           >
             {isUsersListOpen ? 'Fermer Liste' : 'Voir Élèves'}
           </button>
         </div>
       </div>
 
-      <div className="relative w-full h-[450px] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl z-0">
+      <div className="relative w-full h-[450px] rounded-[2rem] overflow-hidden border border-slate-200/80 dark:border-white/5 shadow-2xl z-0">
         {/* Atlas Controls moved inside the map container */}
         <div className="absolute top-4 right-4 z-[500] flex flex-col gap-2">
           <button 
@@ -530,7 +514,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${
                 isGhostMode 
                   ? 'bg-purple-600 text-white border-purple-500 shadow-[0_0_20px_rgba(147,51,234,0.5)]' 
-                  : 'bg-slate-900/80 text-slate-400 border-white/10 hover:bg-slate-800'
+                  : 'bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-400 border-slate-200/80 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
               title={isGhostMode ? '👻 Mode Fantôme ACTIF — invisible pour tous' : 'Activer Mode Fantôme'}
           >
@@ -541,12 +525,12 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               👻 Invisible
             </div>
           )}
-          <button onClick={() => { setActiveAtlasCategory('none'); setIsAtlasMenuOpen(false); setHighlightedFeatureId(null); mapRef.current?.setView([10.5, -11], 6); }} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${activeAtlasCategory === 'none' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900/80 text-slate-400 border-white/10 hover:bg-slate-800'}`}><Globe size={18} /></button>
-          <button onClick={() => setIsAtlasMenuOpen(!isAtlasMenuOpen)} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${isAtlasMenuOpen ? 'bg-orange-600 text-white border-orange-500' : 'bg-slate-900/80 text-slate-400 border-white/10 hover:bg-slate-800'}`}><Menu size={18} /></button>
+          <button onClick={() => { setActiveAtlasCategory('none'); setIsAtlasMenuOpen(false); setHighlightedFeatureId(null); mapRef.current?.setView([10.5, -11], 6); }} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${activeAtlasCategory === 'none' ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-400 border-slate-200/80 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800'}`}><Globe size={18} /></button>
+          <button onClick={() => setIsAtlasMenuOpen(!isAtlasMenuOpen)} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${isAtlasMenuOpen ? 'bg-orange-600 text-white border-orange-500' : 'bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-400 border-slate-200/80 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800'}`}><Menu size={18} /></button>
           {isAtlasMenuOpen && (
               <div className="flex flex-col gap-2 mt-1">
                   {[ {id:'river', icon:<Waves size={18}/>}, {id:'resource', icon:<HardHat size={18}/>}, {id:'relief', icon:<Mountain size={18}/>} ].map(cat => (
-                      <button key={cat.id} onClick={() => { setActiveAtlasCategory(cat.id as any); setHighlightedFeatureId(null); }} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${activeAtlasCategory === cat.id ? 'bg-white text-slate-900 border-white' : 'bg-slate-900/80 text-slate-400 border-white/10 hover:bg-slate-800'}`}>{cat.icon}</button>
+                      <button key={cat.id} onClick={() => { setActiveAtlasCategory(cat.id as any); setHighlightedFeatureId(null); }} className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg backdrop-blur-md transition-all ${activeAtlasCategory === cat.id ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white' : 'bg-white/90 dark:bg-slate-900/80 text-slate-700 dark:text-slate-400 border-slate-200/80 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>{cat.icon}</button>
                   ))}
               </div>
           )}

@@ -17,14 +17,14 @@ const MessageFormatter: React.FC<{ text: string }> = ({ text }) => {
           return <h4 key={`line-${idx}`} className="text-base font-black text-accent mt-4 mb-2">{line.replace('### ', '')}</h4>;
         }
         if (line.startsWith('## ')) {
-          return <h3 key={`line-${idx}`} className="text-lg font-black text-white mt-6 mb-3 border-b border-white/10 pb-1">{line.replace('## ', '')}</h3>;
+          return <h3 key={`line-${idx}`} className="text-lg font-black text-slate-900 dark:text-white mt-6 mb-3 border-b border-slate-200 dark:border-white/10 pb-1">{line.replace('## ', '')}</h3>;
         }
 
         // List items
         if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
           return (
             <div key={`line-${idx}`} className="flex gap-2 ml-2">
-              <span className="text-primary-light">•</span>
+              <span className="text-primary dark:text-primary-light">•</span>
               <span className="flex-1">{formatInline(line.trim().substring(2))}</span>
             </div>
           );
@@ -35,7 +35,7 @@ const MessageFormatter: React.FC<{ text: string }> = ({ text }) => {
         if (numberedMatch) {
           return (
             <div key={`line-${idx}`} className="flex gap-2 ml-2">
-              <span className="text-primary-light font-black underline decoration-accent/30">{numberedMatch[1]}.</span>
+              <span className="text-primary dark:text-primary-light font-black underline decoration-accent/30">{numberedMatch[1]}.</span>
               <span className="flex-1">{formatInline(numberedMatch[2])}</span>
             </div>
           );
@@ -54,10 +54,10 @@ const formatInline = (text: string) => {
   const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={`part-${i}`} className="font-black text-white decoration-primary/50 underline-offset-2">{part.slice(2, -2)}</strong>;
+      return <strong key={`part-${i}`} className="font-black text-slate-900 dark:text-white decoration-primary/50 underline-offset-2">{part.slice(2, -2)}</strong>;
     }
     if (part.startsWith('*') && part.endsWith('*')) {
-      return <em key={`part-${i}`} className="italic text-slate-300">{part.slice(1, -1)}</em>;
+      return <em key={`part-${i}`} className="italic text-slate-700 dark:text-slate-300">{part.slice(1, -1)}</em>;
     }
     return part;
   });
@@ -172,11 +172,18 @@ const LevelBot: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  useEffect(() => {
+  const scrollToBottom = () => {
     if (scrollRef.current && view === 'chat') {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isTyping, view]);
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+    const t1 = setTimeout(scrollToBottom, 50);
+    const t2 = setTimeout(scrollToBottom, 200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [messages, isTyping, view, isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -293,43 +300,43 @@ const LevelBot: React.FC = () => {
       fixed transition-[opacity,transform] duration-300 z-[2000]
       bottom-0 right-0 md:bottom-6 md:right-6 
       w-full md:w-[450px] md:max-w-[calc(100vw-3rem)]
-      h-[calc(100dvh-env(safe-area-inset-top))] md:h-auto md:max-h-[calc(100dvh-3rem)]
+      h-[calc(100dvh-env(safe-area-inset-top))] md:h-[650px] md:max-h-[85vh]
       rounded-t-3xl md:rounded-[2rem]
-      bg-slate-900 border border-white/10 shadow-premium flex flex-col overflow-hidden animate-slide-up
+      bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden animate-slide-up
     `}>
       {/* Header */}
-      <div className="bg-slate-800 p-4 md:p-6 text-white flex items-center justify-between border-b border-white/10 shrink-0">
+      <div className="bg-slate-100 dark:bg-slate-800 p-4 md:p-6 text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-white/10 shrink-0">
         <div className="flex items-center gap-3 md:gap-4">
           <button 
             onClick={() => setView(view === 'chat' ? 'history' : 'chat')}
-            className="w-10 h-10 md:w-12 md:h-12 bg-white/10 rounded-xl md:rounded-2xl flex items-center justify-center border border-white/20 relative overflow-hidden group active:scale-95 transition-transform"
+            className="w-10 h-10 md:w-12 md:h-12 bg-slate-200/80 dark:bg-white/10 rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-300 dark:border-white/20 relative overflow-hidden group active:scale-95 transition-transform"
           >
-            {view === 'chat' ? <History size={20} className="text-accent" /> : <ChevronLeft size={24} className="text-accent" />}
+            {view === 'chat' ? <History size={20} className="text-primary dark:text-accent" /> : <ChevronLeft size={24} className="text-primary dark:text-accent" />}
           </button>
           <div>
-            <h4 className="font-display font-black text-base md:text-lg tracking-tight">
+            <h4 className="font-display font-black text-base md:text-lg tracking-tight text-slate-900 dark:text-white">
               {view === 'chat' ? t.title : t.sessions}
             </h4>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-success rounded-full animate-pulse"></span>
-              <span className="text-[10px] text-white/60 font-black uppercase tracking-[0.2em]">{t.subtitle}</span>
+              <span className="text-[10px] text-slate-600 dark:text-white/60 font-black uppercase tracking-[0.2em]">{t.subtitle}</span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {view === 'history' && (
-            <button onClick={handleNewChat} className="p-2.5 bg-primary/20 text-primary-light rounded-xl hover:bg-primary/30 transition-colors">
+            <button onClick={handleNewChat} className="p-2.5 bg-primary/20 text-primary hover:bg-primary/30 rounded-xl transition-colors">
               <Plus size={20} />
             </button>
           )}
-          <button onClick={() => setIsOpen(false)} className="p-2.5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl transition-all">
+          <button onClick={() => setIsOpen(false)} className="p-2.5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 hover:text-slate-900 dark:text-white/60 dark:hover:text-white rounded-xl transition-all">
             <X size={20} />
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex flex-col bg-slate-900">
+      <div className="flex-1 overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-900">
         {view === 'history' ? (
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 custom-scrollbar">
             {coachSessions.length === 0 ? (
@@ -364,63 +371,65 @@ const LevelBot: React.FC = () => {
           </div>
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 custom-scrollbar">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                  {msg.role === 'bot' && (
-                    <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/20 flex items-center justify-center mr-3 mt-1 shrink-0">
-                      <Sparkles size={14} className="text-primary-light" />
-                    </div>
-                  )}
-                  <div className={`
-                    max-w-[85%] p-4 rounded-2xl text-sm font-medium leading-relaxed whitespace-pre-wrap
-                    ${msg.role === 'user'
-                      ? 'bg-gradient-to-br from-primary to-secondary text-white rounded-tr-none shadow-lg'
-                      : 'bg-white/5 text-slate-200 border border-white/5 rounded-tl-none shadow-inner'}
-                  `}>
-                    {msg.image && (
-                      <div className="mb-2 rounded-xl overflow-hidden border border-white/20">
-                        <img src={msg.image} alt="User upload" className="max-w-full h-auto max-h-[250px] object-contain bg-black/20" />
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+              <div className="min-h-full flex flex-col justify-end space-y-4 md:space-y-6">
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                    {msg.role === 'bot' && (
+                      <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/20 flex items-center justify-center mr-3 mt-1 shrink-0">
+                        <Sparkles size={14} className="text-primary dark:text-primary-light" />
                       </div>
                     )}
-                    {msg.role === 'bot' ? <MessageFormatter text={msg.text} /> : msg.text}
-                  </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className="flex justify-start animate-fade-in">
-                  <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center mr-3 mt-1">
-                    <Loader2 size={14} className="animate-spin text-slate-500" />
-                  </div>
-                  <div className="bg-white/5 px-4 py-3 rounded-2xl border border-white/5 rounded-tl-none shadow-inner flex items-center gap-3">
-                    <div className="flex gap-1">
-                      <span className="w-1.5 h-1.5 bg-primary-light rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                      <span className="w-1.5 h-1.5 bg-primary-light rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                      <span className="w-1.5 h-1.5 bg-primary-light rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    <div className={`
+                      max-w-[85%] p-4 rounded-2xl text-sm font-medium leading-relaxed whitespace-pre-wrap
+                      ${msg.role === 'user'
+                        ? 'bg-gradient-to-br from-primary to-secondary text-white rounded-tr-none shadow-lg'
+                        : 'bg-white dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/5 rounded-tl-none shadow-sm dark:shadow-inner'}
+                    `}>
+                      {msg.image && (
+                        <div className="mb-2 rounded-xl overflow-hidden border border-slate-200 dark:border-white/20">
+                          <img src={msg.image} alt="User upload" className="max-w-full h-auto max-h-[250px] object-contain bg-black/20" />
+                        </div>
+                      )}
+                      {msg.role === 'bot' ? <MessageFormatter text={msg.text} /> : msg.text}
                     </div>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.typing}</span>
                   </div>
-                </div>
-              )}
+                ))}
+                {isTyping && (
+                  <div className="flex justify-start animate-fade-in">
+                    <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-white/5 border border-slate-300 dark:border-white/5 flex items-center justify-center mr-3 mt-1">
+                      <Loader2 size={14} className="animate-spin text-slate-500" />
+                    </div>
+                    <div className="bg-white dark:bg-white/5 px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/5 rounded-tl-none shadow-sm flex items-center gap-3">
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-primary dark:bg-primary-light rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-1.5 h-1.5 bg-primary dark:bg-primary-light rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-1.5 h-1.5 bg-primary dark:bg-primary-light rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      </div>
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.typing}</span>
+                    </div>
+                  </div>
+                )}
 
-              {/* Retry button shown when last message failed */}
-              {lastFailedMsg && !isTyping && (
-                <div className="flex justify-start animate-fade-in">
-                  <button
-                    onClick={(e) => handleSend(e as any, lastFailedMsg)}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-2xl text-xs font-bold transition-all active:scale-95"
-                  >
-                    <RefreshCw size={13} />
-                    Réessayer la dernière réponse
-                  </button>
-                </div>
-              )}
+                {/* Retry button shown when last message failed */}
+                {lastFailedMsg && !isTyping && (
+                  <div className="flex justify-start animate-fade-in">
+                    <button
+                      onClick={(e) => handleSend(e as any, lastFailedMsg)}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30 rounded-2xl text-xs font-bold transition-all active:scale-95"
+                    >
+                      <RefreshCw size={13} />
+                      Réessayer la dernière réponse
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Input Area */}
-            <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,1.5rem)+1.5rem)] md:pb-6">
+            <div className="p-3 md:p-6 border-t border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,1.5rem)+1.5rem)] md:pb-6">
               {isLimitReached && (
-                <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-400 text-center animate-fade-in">
+                <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 text-center animate-fade-in">
                   {language === 'fr' 
                     ? "⚠️ Limite de 10 messages atteinte. Abonnez-vous à un forfait Premium pour continuer à discuter avec le Coach IA !"
                     : language === 'ar'
@@ -431,7 +440,7 @@ const LevelBot: React.FC = () => {
               {selectedImage && !isLimitReached && (
                 <div className="mb-3 animate-fade-in">
                   <div className="relative inline-block mb-2">
-                    <img src={selectedImage} alt="Preview" className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-xl border border-white/20 shadow-lg" />
+                    <img src={selectedImage} alt="Preview" className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-xl border border-slate-300 dark:border-white/20 shadow-lg" />
                     <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center border border-white/20 hover:bg-slate-700 shadow-xl transition-colors">
                       <X size={12} />
                     </button>
@@ -442,21 +451,21 @@ const LevelBot: React.FC = () => {
                      <button
                        type="button"
                        onClick={() => setInput("Fais l'analyse littéraire complète de ce texte (thèmes, ton, registre).")}
-                       className="px-3 py-1.5 bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg text-xs font-bold hover:bg-purple-500/20 transition-all"
+                       className="px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30 rounded-lg text-xs font-bold hover:bg-purple-500/20 transition-all"
                      >
                        🎭 Analyse Littéraire
                      </button>
                      <button
                        type="button"
                        onClick={() => setInput("Relève et explique toutes les figures de style présentes dans ce texte.")}
-                       className="px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold hover:bg-blue-500/20 transition-all"
+                       className="px-3 py-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded-lg text-xs font-bold hover:bg-blue-500/20 transition-all"
                      >
                        ✒️ Figures de Style
                      </button>
                      <button
                        type="button"
                        onClick={() => setInput("Fais un résumé détaillé de ce texte scanné.")}
-                       className="px-3 py-1.5 bg-green-500/10 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold hover:bg-green-500/20 transition-all"
+                       className="px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30 rounded-lg text-xs font-bold hover:bg-green-500/20 transition-all"
                      >
                        📝 Résumé
                      </button>
@@ -483,8 +492,8 @@ const LevelBot: React.FC = () => {
                     }}
                     className={`w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-xl md:rounded-2xl flex items-center justify-center transition-all border ${
                       isLimitReached 
-                        ? 'bg-slate-800 text-slate-600 border-white/5 cursor-not-allowed opacity-50' 
-                        : 'bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-white border-blue-500/30'
+                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-300 dark:border-white/5 cursor-not-allowed opacity-50' 
+                        : 'bg-blue-600/10 dark:bg-blue-600/20 hover:bg-blue-600/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-white border-blue-500/30'
                     }`}
                     title={t.snapSolve}
                     disabled={isLimitReached}
@@ -501,8 +510,8 @@ const LevelBot: React.FC = () => {
                     }}
                     className={`w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-xl md:rounded-2xl flex items-center justify-center transition-all border ${
                       isLimitReached 
-                        ? 'bg-slate-800 text-slate-600 border-white/5 cursor-not-allowed opacity-50' 
-                        : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border-white/5'
+                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-300 dark:border-white/5 cursor-not-allowed opacity-50' 
+                        : 'bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border-slate-200 dark:border-white/5'
                     }`}
                     title={t.gallery}
                     disabled={isLimitReached}
@@ -524,7 +533,7 @@ const LevelBot: React.FC = () => {
                           : "Message limit reached")
                         : t.placeholder
                     }
-                    className="w-full h-full bg-white/5 border border-white/10 outline-none rounded-xl md:rounded-2xl px-4 text-sm font-bold text-white placeholder:text-slate-500 focus:bg-white/10 transition-all shadow-inner pr-12 md:pr-14"
+                    className="w-full h-full bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 outline-none rounded-xl md:rounded-2xl px-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-primary transition-all shadow-sm pr-12 md:pr-14"
                     disabled={isLimitReached}
                   />
                   <button

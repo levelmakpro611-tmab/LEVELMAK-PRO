@@ -46,7 +46,7 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
 
 
   const categories = [
-    { id: 'all', label: t('atlas.all'), icon: Globe, color: 'text-slate-400' },
+    { id: 'all', label: t('atlas.all'), icon: Globe, color: 'text-slate-700 dark:text-slate-300' },
     { id: 'hydro', label: t('atlas.hydro'), icon: Waves, color: 'text-blue-500' },
     { id: 'relief', label: t('atlas.relief'), icon: Mountain, color: 'text-orange-500' },
     { id: 'resource', label: t('atlas.resource'), icon: HardHat, color: 'text-yellow-500' },
@@ -74,19 +74,19 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
   return (
     <div className="min-h-full p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-black/5 dark:border-white/5">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-200/80 dark:border-white/10">
         <div className="space-y-2">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
             {t('atlas.title')}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 max-w-md font-medium">
+          <p className="text-slate-800 dark:text-slate-300 max-w-md font-semibold">
             Explorez les richesses géographiques du "Château d'eau de l'Afrique de l'Ouest".
           </p>
         </div>
 
         {/* Search Bar */}
         <div className="relative group w-full md:w-80">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-orange-500 transition-colors">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-500 dark:text-slate-400 group-focus-within:text-orange-500 transition-colors">
             <Search size={20} />
           </div>
           <input
@@ -94,7 +94,7 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
             placeholder={t('atlas.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-orange-500/50 transition-all font-medium"
+            className="w-full bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 outline-none text-slate-900 dark:text-white placeholder:text-slate-700 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-orange-500/50 transition-all font-bold shadow-md"
           />
         </div>
       </div>
@@ -121,10 +121,10 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
                       setActiveCategory(cat.id as any);
                     }}
                     className={`
-                      flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all
+                      flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all border
                       ${isActive 
-                        ? 'bg-orange-500 text-white shadow-glow-orange scale-105' 
-                        : 'bg-black/5 dark:bg-white/5 text-slate-500 hover:bg-black/10 dark:hover:bg-white/10'
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-glow-orange scale-105' 
+                        : 'bg-white/80 dark:bg-white/5 text-slate-800 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 shadow-sm'
                       }
                     `}
                   >
@@ -142,7 +142,7 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
                   key={lesson.id}
                   layoutId={`card-${lesson.id}`}
                   whileHover={{ y: -5 }}
-                  className="glass dark:bg-slate-900/40 p-6 rounded-[2rem] border border-black/5 dark:border-white/5 flex flex-col h-full group"
+                  className="bg-white/80 dark:bg-slate-900/40 p-6 rounded-[2rem] border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col h-full group"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className={`p-3 rounded-2xl ${
@@ -164,10 +164,10 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
                     </button>
                   </div>
 
-                  <h3 className="text-xl font-black mb-2 line-clamp-1">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 line-clamp-1">
                     {t(`atlas.lessons.${lesson.id}.title`)}
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mb-6 flex-grow leading-relaxed">
+                  <p className="text-sm text-slate-800 dark:text-slate-300 font-semibold line-clamp-3 mb-6 flex-grow leading-relaxed">
                     {t(`atlas.lessons.${lesson.id}.content`)}
                   </p>
 
@@ -177,7 +177,7 @@ const AtlasLibrary: React.FC<AtlasLibraryProps> = ({ onNavigate }) => {
                         HapticFeedback.selection();
                         setSelectedLesson(lesson);
                       }}
-                      className="flex-1 bg-black/5 dark:bg-white/5 hover:bg-orange-500 hover:text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                      className="flex-1 bg-slate-200/80 dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-300/80 dark:border-white/10 hover:bg-orange-500 hover:text-white hover:border-orange-500 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
                     >
                       <BookOpen size={18} />
                       {t('atlas.readLesson')}

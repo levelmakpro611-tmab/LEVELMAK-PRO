@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { translations, Language } from '../../utils/translations';
+import { audioService } from '../../services/audio';
 
 export const useUIStore = () => {
     const [settings, setSettings] = useState({
@@ -28,7 +29,17 @@ export const useUIStore = () => {
     useEffect(() => {
         const stored = localStorage.getItem('levelmak_settings');
         if (stored) {
-            try { setSettings(prev => ({ ...prev, ...JSON.parse(stored) })); } catch (e) {}
+            try { 
+                const parsed = JSON.parse(stored);
+                setSettings(prev => {
+                    const merged = { ...prev, ...parsed };
+                    audioService.setEnabled(merged.soundEnabled);
+                    if (merged.soundSettings) {
+                        audioService.setSoundSettings(merged.soundSettings);
+                    }
+                    return merged;
+                }); 
+            } catch (e) {}
         }
     }, []);
 
@@ -36,6 +47,12 @@ export const useUIStore = () => {
         setSettings(prev => {
             const updated = { ...prev, ...newSettings };
             localStorage.setItem('levelmak_settings', JSON.stringify(updated));
+            if (newSettings.soundEnabled !== undefined) {
+                audioService.setEnabled(updated.soundEnabled);
+            }
+            if (newSettings.soundSettings !== undefined) {
+                audioService.setSoundSettings(updated.soundSettings);
+            }
             return updated;
         });
     }, []);

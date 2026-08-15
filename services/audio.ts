@@ -36,6 +36,7 @@ class AudioService {
     }
 
     private initContext() {
+        if (!this.enabled) return;
         if (!this.audioContext && typeof window !== 'undefined') {
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
             if (AudioContextClass) {
@@ -49,10 +50,16 @@ class AudioService {
 
     setEnabled(enabled: boolean) {
         this.enabled = enabled;
+        if (!enabled) {
+            this.stopBackgroundPiano();
+        }
     }
 
     setSoundSettings(settings: any) {
         this.soundSettings = { ...this.soundSettings, ...settings };
+        if (!this.soundSettings.quiz) {
+            this.stopBackgroundPiano();
+        }
     }
 
     playClick() {
@@ -120,7 +127,7 @@ class AudioService {
         const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
         
         const playRandomNote = () => {
-            if (!this.audioContext) return;
+            if (!this.enabled || !this.soundSettings.quiz || !this.audioContext) return;
             const freq = pentatonic[Math.floor(Math.random() * pentatonic.length)];
             const osc = this.audioContext.createOscillator();
             const gain = this.audioContext.createGain();
@@ -167,6 +174,7 @@ class AudioService {
     }
 
     private playTone(freq: number, type: OscillatorType, duration: number, vol: number) {
+        if (!this.enabled) return;
         this.initContext();
         if (!this.audioContext) return;
 

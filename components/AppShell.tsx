@@ -241,7 +241,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   if (!user) return <>{children}</>;
 
   return (
-    <div className="min-h-screen bg-transparent flex flex-col md:flex-row font-sans text-slate-900 dark:text-slate-200 relative overflow-hidden transition-colors duration-500">
+    <div className="min-h-screen min-h-[100dvh] w-full bg-transparent flex flex-col md:flex-row font-sans text-slate-900 dark:text-slate-200 relative overflow-hidden transition-colors duration-500">
       <OfflineIndicator />
 
       {/* Mobile Header - Re-adjusted for "Married" look */}
@@ -300,7 +300,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                   }
                   setIsSidebarOpen(false);
                 }}
-                className={`w-full items-center gap-4 px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 group relative ${item.hideOnMobile ? 'hidden md:flex' : 'flex'} ${activeTab === item.id ? 'bg-blue-500/10 text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`w-full items-center gap-4 px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 group relative ${item.hideOnMobile ? 'hidden md:flex' : 'flex'} ${activeTab === item.id ? 'bg-blue-500/10 text-blue-600 dark:text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20 font-black' : 'text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-white/5'}`}
               >
                 <item.icon size={22} className={`transition-all duration-300 ${activeTab === item.id ? 'text-blue-500 scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'group-hover:scale-110'}`} />
                 <span className="tracking-wide text-[15px]">{item.label}</span>
@@ -314,28 +314,28 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             ))}
 
             <div className="pt-4 space-y-1.5">
-              <button onClick={() => { HapticFeedback.navigation(); setIsInfoOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-white hover:bg-blue-500/5 dark:hover:bg-blue-500/10 transition-all">
+              <button onClick={() => { HapticFeedback.navigation(); setIsInfoOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-white hover:bg-blue-500/10 transition-all">
                 <Info size={22} />
                 <span className="tracking-wide text-[15px]">{t('layout.important')}</span>
               </button>
-              <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold transition-all ${activeTab === 'settings' ? 'bg-blue-500/10 text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+              <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold transition-all ${activeTab === 'settings' ? 'bg-blue-500/10 text-blue-600 dark:text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-white/5'}`}>
                 <Settings className={`transition-all duration-300 ${activeTab === 'settings' ? 'text-blue-500 scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'group-hover:scale-110'}`} size={22} />
                 <span className="tracking-wide text-[15px]">{t('nav.settings')}</span>
               </button>
-              <button onClick={logout} className="w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold text-danger/80 hover:text-danger hover:bg-danger/10 transition-all">
+              <button onClick={logout} className="w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold text-red-600 dark:text-danger/80 hover:text-red-700 dark:hover:text-danger hover:bg-red-500/10 transition-all">
                 <LogOut size={22} />
                 <span className="tracking-wide text-[15px]">{t('auth.logout')}</span>
               </button>
               
-              <button onClick={() => { HapticFeedback.selection(); setIsHelpOpen(true); }} className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group flex items-center gap-3 w-full">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <button onClick={() => { HapticFeedback.selection(); setIsHelpOpen(true); }} className="mt-4 p-4 rounded-2xl bg-slate-200/80 dark:bg-white/5 border border-slate-300/80 dark:border-white/5 hover:bg-slate-300/80 dark:hover:bg-white/10 transition-all group flex items-center gap-3 w-full shadow-sm dark:shadow-none">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <HelpCircle size={18} className="animate-pulse" />
                 </div>
                 <div className="text-left">
-                  <p className="text-[10px] font-black text-white uppercase tracking-widest">{t('layout.helpSupport')}</p>
-                  <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">{t('layout.helpSubtitle')}</p>
+                  <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">{t('layout.helpSupport')}</p>
+                  <p className="text-[8px] text-slate-600 dark:text-slate-500 font-bold uppercase tracking-wider">{t('layout.helpSubtitle')}</p>
                 </div>
-                <ChevronRight size={14} className="ml-auto text-slate-600 group-hover:translate-x-1 transition-transform" />
+                <ChevronRight size={14} className="ml-auto text-slate-500 dark:text-slate-600 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </nav>
@@ -348,7 +348,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <div className="flex items-center gap-6 lg:gap-10">
             <div className="flex-1">
               <h1 className="text-xl lg:text-3xl font-display font-black text-slate-900 dark:text-white tracking-tight">{t('layout.welcome')} {user.name} 👋</h1>
-              <p className="text-[10px] lg:text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1 opacity-70">{t('layout.ready')}</p>
+              <p className="text-[10px] lg:text-sm text-slate-800 dark:text-slate-300 font-black uppercase tracking-widest mt-1">{t('layout.ready')}</p>
             </div>
             <div className="flex items-center bg-primary/5 px-4 lg:px-6 py-2 md:py-3 rounded-full text-sm lg:text-base font-black border border-primary/10 shadow-xl gap-2 md:gap-3 glass group hover:border-primary/50 transition-colors">
               <span className="text-primary dark:text-primary-light">{user.levelCoins || 0}</span>
@@ -370,7 +370,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               notifications.forEach(n => {
                 if (!n.read) markNotificationAsRead(n.id);
               });
-            }} className="relative p-3 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-all group border border-transparent hover:border-black/5 dark:hover:border-white/10">
+            }} className="relative p-3 text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-all group border border-slate-200/80 dark:border-white/10">
               <Bell size={28} fill={(hasUnread && !isNotifOpen) ? "currentColor" : "none"} className={`group-hover:rotate-12 transition-transform ${(hasUnread && !isNotifOpen) ? "animate-pulse" : ""}`} />
               {hasUnread && (
                 <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#060915] animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"></span>
@@ -378,10 +378,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             </button>
             <div className="flex items-center gap-5 pl-8 border-l border-black/5 dark:border-white/10">
               <div className="flex items-center gap-4">
-                <div className="w-24 h-1.5 bg-black/10 dark:bg-white/5 rounded-full overflow-hidden">
+                <div className="w-24 h-2 bg-slate-300 dark:bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)] rounded-full transition-all duration-1000 ease-out" style={{ width: `${Math.min((user.xp / getXpForNextLevel(user.avatar?.currentLevel || 1)) * 100, 100)}%` }}></div>
                 </div>
-                <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{user.xp} XP</p>
+                <p className="text-[11px] font-black text-slate-800 dark:text-slate-300 uppercase tracking-widest">{user.xp} XP</p>
               </div>
               <div className="relative group cursor-pointer ml-2" onClick={() => setIsProfileOpen(true)}>
                 <div className="w-12 h-12 rounded-[1rem] bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-black text-xl shadow-lg ring-1 ring-black/5 dark:ring-white/10 group-hover:scale-105 transition-transform overflow-hidden relative">
@@ -401,7 +401,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         </div>
 
         {activeTab !== 'social' && !isKeyboardOpen && (
-          <nav className="md:hidden fixed bottom-0 left-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-background/80 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-black/5 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.2)] transition-all duration-500">
+          <nav className="md:hidden fixed bottom-0 left-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transition-all duration-500">
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
               { id: 'flashcards', icon: Layers, label: 'Flash' },
@@ -416,10 +416,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               return (
                 <div key={item.id} className="relative flex flex-col items-center flex-1 h-full justify-center">
                   <button onClick={() => { HapticFeedback.selection(); setActiveTab(item.id); }} className="relative flex flex-col items-center justify-center z-10 w-full h-full">
-                    <motion.div initial={false} animate={{ y: shouldPop ? -32 : 0, scale: shouldPop ? 1.25 : (isActive ? 1.1 : 1) }} transition={{ type: "spring", stiffness: 400, damping: 25 }} className={`flex items-center justify-center rounded-full transition-colors duration-300 ${shouldPop ? 'w-14 h-14 shadow-lg shadow-blue-500/30 dark:shadow-[0_8px_25px_rgba(59,130,246,0.5)] border-4 border-background dark:border-[#050b18] bg-gradient-to-br from-blue-500 to-purple-600 text-white' : 'w-10 h-10 bg-transparent'} ${isActive && !isDashboard ? 'text-blue-500 dark:text-blue-400' : (isActive ? '' : 'text-slate-500 dark:text-slate-400')}`}>
+                    <motion.div initial={false} animate={{ y: shouldPop ? -32 : 0, scale: shouldPop ? 1.25 : (isActive ? 1.1 : 1) }} transition={{ type: "spring", stiffness: 400, damping: 25 }} className={`flex items-center justify-center rounded-full transition-colors duration-300 ${shouldPop ? 'w-14 h-14 shadow-lg shadow-blue-500/30 dark:shadow-[0_8px_25px_rgba(59,130,246,0.5)] border-4 border-white dark:border-[#050b18] bg-gradient-to-br from-blue-500 to-purple-600 text-white' : 'w-10 h-10 bg-transparent'} ${isActive && !isDashboard ? 'text-blue-600 dark:text-blue-400' : (isActive ? '' : 'text-slate-800 dark:text-slate-400')}`}>
                       <Icon size={isActive && !isDashboard ? 26 : 24} fill={isActive && (item.id === 'dashboard' || item.id === 'summary') ? 'currentColor' : 'none'} strokeWidth={isActive ? 2.5 : 2} className="transition-colors duration-300" />
                     </motion.div>
-                    <motion.span initial={false} animate={{ y: shouldPop ? 16 : 22, opacity: isActive || shouldPop ? 1 : 0.6 }} className={`absolute font-black text-[10px] uppercase tracking-tighter whitespace-nowrap ${isActive ? 'text-blue-500 dark:text-blue-400' : 'text-slate-500'}`}>{item.label}</motion.span>
+                    <motion.span initial={false} animate={{ y: shouldPop ? 16 : 22, opacity: isActive || shouldPop ? 1 : 0.85 }} className={`absolute font-black text-[10px] uppercase tracking-tighter whitespace-nowrap ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-400'}`}>{item.label}</motion.span>
                   </button>
                   {shouldPop && <motion.div layoutId="nav-glow" animate={{ opacity: isActive ? 1 : 0.5 }} className="absolute top-0 w-16 h-16 rounded-full blur-xl bg-blue-500/20 dark:bg-blue-500/30 -z-10 pointer-events-none -translate-y-4" />}
                 </div>
@@ -561,23 +561,23 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         <AnimatePresence>
           {isInfoOpen && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsInfoOpen(false)} className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" />
-              <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-2xl max-h-[85vh] bg-slate-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsInfoOpen(false)} className="absolute inset-0 bg-slate-950/70 dark:bg-slate-950/90 backdrop-blur-xl" />
+              <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-2xl max-h-[85vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
                 <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar">
                   <div className="text-center mb-12">
-                    <div className="w-20 h-20 bg-blue-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 text-blue-400 ring-4 ring-blue-500/10 scale-110"><Sparkles size={40} /></div>
-                    <h2 className="text-4xl font-black text-white tracking-tighter mb-4">L'Espace Elite LEVELMAK</h2>
-                    <p className="mt-6 text-slate-400 font-bold uppercase tracking-widest text-xs">Guide Complet de ton Ascension</p>
+                    <div className="w-20 h-20 bg-blue-500/10 dark:bg-blue-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 text-blue-600 dark:text-blue-400 ring-4 ring-blue-500/10 scale-110"><Sparkles size={40} /></div>
+                    <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter mb-4">L'Espace Elite LEVELMAK</h2>
+                    <p className="mt-6 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">Guide Complet de ton Ascension</p>
                   </div>
                   <div className="space-y-12">
                     <section className="space-y-6">
-                      <div className="flex items-center gap-3 text-blue-400"><BrainCircuit size={28} /><h3 className="text-2xl font-black uppercase tracking-widest">C'est quoi LEVELMAK ?</h3></div>
+                      <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400"><BrainCircuit size={28} /><h3 className="text-2xl font-black uppercase tracking-widest text-slate-900 dark:text-white">C'est quoi LEVELMAK ?</h3></div>
                       <div className="space-y-4">
-                        <p className="text-slate-200 leading-relaxed text-lg font-medium">LEVELMAK est une plateforme éducative de nouvelle génération développée par la société technologique <span className="text-blue-400 font-bold">TMAB GROUP</span>. C'est bien plus qu'une simple application : c'est un véritable écosystème d'apprentissage intelligent.</p>
-                        <p className="text-slate-300 leading-relaxed text-base">Nous avons conçu LEVELMAK pour qu'elle agisse comme un tuteur personnel pour chaque élève. En utilisant l'Intelligence Artificielle de façon encadrée, LEVELMAK s'adapte au niveau de l'élève, identifie ses lacunes et l'accompagne pas à pas vers la maîtrise de ses cours.</p>
+                        <p className="text-slate-800 dark:text-slate-200 leading-relaxed text-lg font-medium">LEVELMAK est une plateforme éducative de nouvelle génération développée par la société technologique <span className="text-blue-600 dark:text-blue-400 font-bold">TMAB GROUP</span>. C'est bien plus qu'une simple application : c'est un véritable écosystème d'apprentissage intelligent.</p>
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-base">Nous avons conçu LEVELMAK pour qu'elle agisse comme un tuteur personnel pour chaque élève. En utilisant l'Intelligence Artificielle de façon encadrée, LEVELMAK s'adapte au niveau de l'élève, identifie ses lacunes et l'accompagne pas à pas vers la maîtrise de ses cours.</p>
                         <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20 mt-4">
-                          <p className="text-blue-400 font-bold mb-2">Les avantages majeurs :</p>
-                          <ul className="list-disc list-inside text-slate-300 space-y-2 text-sm">
+                          <p className="text-blue-700 dark:text-blue-400 font-bold mb-2">Les avantages majeurs :</p>
+                          <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 space-y-2 text-sm">
                             <li>Un apprentissage personnalisé et ciblé sur les difficultés de l'élève.</li>
                             <li>Une disponibilité 24h/24 et 7j/7 pour réviser, poser des questions et s'exercer.</li>
                             <li>Des outils innovants : Quiz intelligents, Flashcards, Résumés automatiques, et Atlas interactif.</li>
@@ -588,35 +588,35 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                       </div>
                     </section>
                     <section className="space-y-6">
-                      <div className="flex items-center gap-3 text-red-400"><AlertCircle size={28} /><h3 className="text-2xl font-black uppercase tracking-widest">Notre Mission & Les Risques</h3></div>
+                      <div className="flex items-center gap-3 text-red-600 dark:text-red-400"><AlertCircle size={28} /><h3 className="text-2xl font-black uppercase tracking-widest text-slate-900 dark:text-white">Notre Mission & Les Risques</h3></div>
                       <div className="space-y-4">
-                        <p className="text-slate-200 leading-relaxed text-lg">Pourquoi avons-nous créé LEVELMAK ? La réponse vient d'un constat alarmant sur le terrain. Les administrateurs de TMAB GROUP, témoins directs de l'évolution de l'éducation, ont remarqué que de plus en plus d'élèves se tournaient vers des Intelligences Artificielles génériques (comme ChatGPT) sans aucun encadrement.</p>
-                        <p className="text-rose-300 leading-relaxed text-base font-medium">Cette utilisation non guidée présente des risques majeurs et dévastateurs pour l'apprentissage :</p>
-                        <ul className="list-none space-y-3 text-slate-300 text-sm">
-                          <li className="flex items-start gap-2"><span className="text-red-500 font-black">X</span> <strong>La perte de l'esprit critique :</strong> L'élève demande la réponse directe au lieu d'apprendre à réfléchir et à résoudre le problème par lui-même.</li>
-                          <li className="flex items-start gap-2"><span className="text-red-500 font-black">X</span> <strong>La dépendance intellectuelle :</strong> L'incapacité à produire un travail de réflexion personnel sans l'assistance d'une machine.</li>
-                          <li className="flex items-start gap-2"><span className="text-red-500 font-black">X</span> <strong>La destruction de la formation :</strong> Un élève qui fait faire ses devoirs par l'IA arrive aux examens ou dans la vie professionnelle sans aucune compétence réelle, voué à l'échec.</li>
+                        <p className="text-slate-800 dark:text-slate-200 leading-relaxed text-lg">Pourquoi avons-nous créé LEVELMAK ? La réponse vient d'un constat alarmant sur le terrain. Les administrateurs de TMAB GROUP, témoins directs de l'évolution de l'éducation, ont remarqué que de plus en plus d'élèves se tournaient vers des Intelligences Artificielles génériques (comme ChatGPT) sans aucun encadrement.</p>
+                        <p className="text-rose-700 dark:text-rose-300 leading-relaxed text-base font-medium">Cette utilisation non guidée présente des risques majeurs et dévastateurs pour l'apprentissage :</p>
+                        <ul className="list-none space-y-3 text-slate-700 dark:text-slate-300 text-sm">
+                          <li className="flex items-start gap-2"><span className="text-red-600 dark:text-red-500 font-black">X</span> <strong>La perte de l'esprit critique :</strong> L'élève demande la réponse directe au lieu d'apprendre à réfléchir et à résoudre le problème par lui-même.</li>
+                          <li className="flex items-start gap-2"><span className="text-red-600 dark:text-red-500 font-black">X</span> <strong>La dépendance intellectuelle :</strong> L'incapacité à produire un travail de réflexion personnel sans l'assistance d'une machine.</li>
+                          <li className="flex items-start gap-2"><span className="text-red-600 dark:text-red-500 font-black">X</span> <strong>La destruction de la formation :</strong> Un élève qui fait faire ses devoirs par l'IA arrive aux examens ou dans la vie professionnelle sans aucune compétence réelle, voué à l'échec.</li>
                         </ul>
-                        <p className="text-slate-200 leading-relaxed text-lg font-bold mt-4 border-l-4 border-blue-500 pl-4 py-2 bg-white/5 rounded-r-xl">C'est ce qui nous a poussés à agir.</p>
-                        <p className="text-slate-300 leading-relaxed text-base">Nous avons conçu LEVELMAK pour combler ce vide. Notre plateforme offre un cadre pédagogique ultra-sécurisé où l'IA est bridée pour <strong className="text-white">ne jamais donner la réponse directe</strong>, mais pour agir comme un tuteur socratique qui accompagne, stimule et encadre l'élève pour maximiser son potentiel sans jamais faire le travail à sa place.</p>
+                        <p className="text-slate-900 dark:text-slate-200 leading-relaxed text-lg font-bold mt-4 border-l-4 border-blue-500 pl-4 py-2 bg-slate-100 dark:bg-white/5 rounded-r-xl">C'est ce qui nous a poussés à agir.</p>
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-base">Nous avons conçu LEVELMAK pour combler ce vide. Notre plateforme offre un cadre pédagogique ultra-sécurisé où l'IA est bridée pour <strong className="text-slate-900 dark:text-white">ne jamais donner la réponse directe</strong>, mais pour agir comme un tuteur socratique qui accompagne, stimule et encadre l'élève pour maximiser son potentiel sans jamais faire le travail à sa place.</p>
                       </div>
                     </section>
-                    <section className="space-y-6 pb-6 border-t border-white/10 pt-6">
-                      <div className="flex items-center gap-3 text-purple-400"><Users size={28} /><h3 className="text-2xl font-black uppercase tracking-widest">Fondateurs & TMAB GROUP</h3></div>
+                    <section className="space-y-6 pb-6 border-t border-slate-200 dark:border-white/10 pt-6">
+                      <div className="flex items-center gap-3 text-purple-600 dark:text-purple-400"><Users size={28} /><h3 className="text-2xl font-black uppercase tracking-widest text-slate-900 dark:text-white">Fondateurs & TMAB GROUP</h3></div>
                       <div className="space-y-4">
-                        <p className="text-slate-200 leading-relaxed text-lg">L'application a été fondée et pensée par deux jeunes visionnaires guinéens engagés pour l'avenir de la jeunesse :</p>
+                        <p className="text-slate-800 dark:text-slate-200 leading-relaxed text-lg">L'application a été fondée et pensée par deux jeunes visionnaires guinéens engagés pour l'avenir de la jeunesse :</p>
                         <div className="flex flex-col gap-2 my-4">
-                          <span className="font-black text-white text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Thierno Mamadou Alimou Barry</span>
-                          <span className="font-black text-white text-2xl bg-gradient-to-r from-purple-400 to-orange-400 bg-clip-text text-transparent">Ibrahim Barry</span>
+                          <span className="font-black text-slate-900 dark:text-white text-2xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">Thierno Mamadou Alimou Barry</span>
+                          <span className="font-black text-slate-900 dark:text-white text-2xl bg-gradient-to-r from-purple-600 to-orange-600 dark:from-purple-400 dark:to-orange-400 bg-clip-text text-transparent">Ibrahim Barry</span>
                         </div>
-                        <p className="text-slate-300 leading-relaxed text-base">À travers la société <strong>TMAB GROUP</strong>, leur vision est de démocratiser l'accès à une éducation d'élite pour tous les élèves, peu importe leur localisation. Ils ont compris très tôt que l'innovation technologique devait servir de levier pour propulser l'éducation, et non pour l'affaiblir.</p>
-                        <p className="text-slate-300 leading-relaxed text-base">Avec LEVELMAK, TMAB GROUP réaffirme son engagement profond : aider les élèves, protéger leur capacité d'analyse, et les équiper des meilleures ressources pour affronter les défis du monde de demain. C'est un projet fait par la jeunesse, pour la jeunesse.</p>
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-base">À travers la société <strong className="text-slate-900 dark:text-white">TMAB GROUP</strong>, leur vision est de démocratiser l'accès à une éducation d'élite pour tous les élèves, peu importe leur localisation. Ils ont compris très tôt que l'innovation technologique devait servir de levier pour propulser l'éducation, et non pour l'affaiblir.</p>
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-base">Avec LEVELMAK, TMAB GROUP réaffirme son engagement profond : aider les élèves, protéger leur capacité d'analyse, et les équiper des meilleures ressources pour affronter les défis du monde de demain. C'est un projet fait par la jeunesse, pour la jeunesse.</p>
                       </div>
                     </section>
                   </div>
                 </div>
-                <div className="p-6 bg-slate-950/50 border-t border-white/5">
-                  <button onClick={() => setIsInfoOpen(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest">C'est compris !</button>
+                <div className="p-6 bg-slate-100 dark:bg-slate-950/50 border-t border-slate-200 dark:border-white/5">
+                  <button onClick={() => setIsInfoOpen(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-500 transition-colors">C'est compris !</button>
                 </div>
               </motion.div>
             </div>
@@ -640,15 +640,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         <AnimatePresence>
           {isHelpOpen && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-6 lg:p-10">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsHelpOpen(false)} className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" />
-              <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-4xl h-full md:h-[85vh] bg-slate-900 border border-white/10 md:rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row">
-                <div className="w-full md:w-80 bg-black/20 border-r border-white/5 p-6 flex flex-col">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsHelpOpen(false)} className="absolute inset-0 bg-slate-950/70 dark:bg-slate-950/90 backdrop-blur-xl" />
+              <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-4xl h-full md:h-[85vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 md:rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row">
+                <div className="w-full md:w-80 bg-slate-100/90 dark:bg-black/20 border-r border-slate-200 dark:border-white/5 p-6 flex flex-col">
                   <div className="flex items-center justify-between mb-8 md:mb-10">
                     <div>
-                      <h3 className="text-xl font-black text-white tracking-tight">{t('help.title')}</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{t('help.subtitle')}</p>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t('help.title')}</h3>
+                      <p className="text-[10px] text-slate-600 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">{t('help.subtitle')}</p>
                     </div>
-                    <button onClick={() => setIsHelpOpen(false)} className="md:hidden p-2 text-slate-400"><X size={20} /></button>
+                    <button onClick={() => setIsHelpOpen(false)} className="md:hidden p-2 text-slate-500 dark:text-slate-400"><X size={20} /></button>
                   </div>
                   <nav className="flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide">
                     {[
@@ -660,56 +660,56 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                       { id: 'settings', label: t('help.categories.settings'), icon: Settings },
                       { id: 'support', label: 'Support & FAQ', icon: Mail },
                     ].map(cat => (
-                      <button key={cat.id} onClick={() => { setActiveHelpCategory(cat.id); }} className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap md:whitespace-normal ${activeHelpCategory === cat.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}>
+                      <button key={cat.id} onClick={() => { setActiveHelpCategory(cat.id); }} className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap md:whitespace-normal ${activeHelpCategory === cat.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5'}`}>
                         <cat.icon size={18} />
                         <span>{cat.label}</span>
                       </button>
                     ))}
                   </nav>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 md:p-12 custom-scrollbar bg-gradient-to-br from-slate-900 to-[#0A0F1D]">
+                <div className="flex-1 overflow-y-auto p-6 md:p-12 custom-scrollbar bg-slate-50 dark:bg-gradient-to-br dark:from-slate-900 dark:to-[#0A0F1D]">
                   <div className="max-w-2xl mx-auto space-y-10">
                     <AnimatePresence mode="wait">
                       <motion.div key={activeHelpCategory} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-8">
                         {activeHelpCategory === 'account' && (
                           <>
-                            <HelpItem title={t('help.topics.createAccount')} desc={t('help.topics.createAccountDesc')} icon={<UserIcon className="text-blue-400" />} />
-                            <HelpItem title={t('help.topics.login')} desc={t('help.topics.loginDesc')} icon={<CheckCircle2 className="text-emerald-400" />} />
+                            <HelpItem title={t('help.topics.createAccount')} desc={t('help.topics.createAccountDesc')} icon={<UserIcon className="text-blue-500 dark:text-blue-400" />} />
+                            <HelpItem title={t('help.topics.login')} desc={t('help.topics.loginDesc')} icon={<CheckCircle2 className="text-emerald-500 dark:text-emerald-400" />} />
                           </>
                         )}
                         {activeHelpCategory === 'ai' && (
                           <>
-                            <HelpItem title={t('help.topics.quizIA')} desc={t('help.topics.quizIADesc')} icon={<BrainCircuit className="text-purple-400" />} />
-                            <HelpItem title={t('help.topics.summaryIA')} desc={t('help.topics.summaryIADesc')} icon={<Sparkles className="text-yellow-400" />} />
+                            <HelpItem title={t('help.topics.quizIA')} desc={t('help.topics.quizIADesc')} icon={<BrainCircuit className="text-purple-500 dark:text-purple-400" />} />
+                            <HelpItem title={t('help.topics.summaryIA')} desc={t('help.topics.summaryIADesc')} icon={<Sparkles className="text-amber-500 dark:text-yellow-400" />} />
                           </>
                         )}
                         {activeHelpCategory === 'tools' && (
                           <>
-                            <HelpItem title={t('help.topics.planner')} desc={t('help.topics.plannerDesc')} icon={<Calendar className="text-orange-400" />} />
-                            <HelpItem title={t('help.topics.flashcards')} desc={t('help.topics.flashcardsDesc')} icon={<Layers className="text-indigo-400" />} />
+                            <HelpItem title={t('help.topics.planner')} desc={t('help.topics.plannerDesc')} icon={<Calendar className="text-orange-500 dark:text-orange-400" />} />
+                            <HelpItem title={t('help.topics.flashcards')} desc={t('help.topics.flashcardsDesc')} icon={<Layers className="text-indigo-500 dark:text-indigo-400" />} />
                           </>
                         )}
                         {activeHelpCategory === 'discovery' && (
                           <>
-                            <HelpItem title={t('help.topics.atlas')} desc={t('help.topics.atlasDesc')} icon={<Map className="text-green-400" />} />
+                            <HelpItem title={t('help.topics.atlas')} desc={t('help.topics.atlasDesc')} icon={<Map className="text-emerald-500 dark:text-green-400" />} />
                           </>
                         )}
                         {activeHelpCategory === 'progression' && (
                           <>
-                            <HelpItem title={t('help.topics.ranking')} desc={t('help.topics.rankingDesc')} icon={<Trophy className="text-yellow-500" />} />
-                            <HelpItem title={t('help.topics.missions')} desc={t('help.topics.missionsDesc')} icon={<Target className="text-rose-400" />} />
+                            <HelpItem title={t('help.topics.ranking')} desc={t('help.topics.rankingDesc')} icon={<Trophy className="text-amber-500 dark:text-yellow-500" />} />
+                            <HelpItem title={t('help.topics.missions')} desc={t('help.topics.missionsDesc')} icon={<Target className="text-rose-500 dark:text-rose-400" />} />
                           </>
                         )}
                         {activeHelpCategory === 'settings' && (
                           <>
-                            <HelpItem title={t('help.topics.mySettings')} desc={t('help.topics.settingsDesc')} icon={<Settings className="text-slate-400" />} />
+                            <HelpItem title={t('help.topics.mySettings')} desc={t('help.topics.settingsDesc')} icon={<Settings className="text-slate-600 dark:text-slate-400" />} />
                           </>
                         )}
                         {activeHelpCategory === 'support' && (
                           <div className="space-y-8">
                             <div className="space-y-4">
-                              <h4 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
-                                <HelpCircle className="text-blue-400" size={20} />
+                              <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                                <HelpCircle className="text-blue-600 dark:text-blue-400" size={20} />
                                 Foire Aux Questions (FAQ)
                               </h4>
                               <div className="space-y-3">
@@ -735,21 +735,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                                     answer: "Rendez-vous dans les Paramètres (icône d'engrenage), où vous pouvez activer le mode sombre par défaut, changer de langue ou ajuster la taille de la police pour un meilleur confort visuel."
                                   }
                                 ].map((faq, i) => (
-                                  <div key={i} className="border border-white/5 bg-white/5 rounded-2xl overflow-hidden">
+                                  <div key={i} className="border border-slate-200 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm dark:shadow-none rounded-2xl overflow-hidden">
                                     <button
                                       type="button"
                                       onClick={() => {
                                         HapticFeedback.selection();
                                         setExpandedFaq(expandedFaq === i ? null : i);
                                       }}
-                                      className="w-full flex items-center justify-between p-5 text-left text-white font-bold text-sm hover:bg-white/[0.03] transition-colors"
+                                      className="w-full flex items-center justify-between p-5 text-left text-slate-900 dark:text-white font-extrabold text-sm hover:bg-slate-100/70 dark:hover:bg-white/[0.03] transition-colors"
                                     >
                                       <span>{faq.question}</span>
                                       <motion.div
                                         animate={{ rotate: expandedFaq === i ? 90 : 0 }}
                                         transition={{ duration: 0.2 }}
                                       >
-                                        <ChevronRight size={18} className="text-slate-400" />
+                                        <ChevronRight size={18} className="text-slate-500 dark:text-slate-400" />
                                       </motion.div>
                                     </button>
                                     <AnimatePresence initial={false}>
@@ -761,7 +761,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                                           transition={{ duration: 0.25, ease: 'easeInOut' }}
                                           className="overflow-hidden"
                                         >
-                                          <div className="p-5 pt-0 text-slate-400 text-sm leading-relaxed border-t border-white/5 bg-black/10">
+                                          <div className="p-5 pt-0 text-slate-700 dark:text-slate-400 text-sm leading-relaxed border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-black/10">
                                             {faq.answer}
                                           </div>
                                         </motion.div>
@@ -772,32 +772,32 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                               </div>
                             </div>
 
-                            <div className="space-y-6 pt-6 border-t border-white/5">
-                              <h4 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
-                                <Mail className="text-blue-400" size={20} />
+                            <div className="space-y-6 pt-6 border-t border-slate-200 dark:border-white/5">
+                              <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                                <Mail className="text-blue-600 dark:text-blue-400" size={20} />
                                 Contacter le Support
                               </h4>
-                              <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                                Vous rencontrez un problème technique ou avez une question spécifique ? Remplissez ce formulaire pour envoyer un ticket d'assistance à l'adresse <span className="text-blue-400 font-bold">{supportEmail}</span>. Notre équipe vous répondra dans les plus brefs délais.
+                              <p className="text-xs text-slate-700 dark:text-slate-400 leading-relaxed font-medium">
+                                Vous rencontrez un problème technique ou avez une question spécifique ? Remplissez ce formulaire pour envoyer un ticket d'assistance à l'adresse <span className="text-blue-600 dark:text-blue-400 font-bold">{supportEmail}</span>. Notre équipe vous répondra dans les plus brefs délais.
                               </p>
                               <div className="space-y-4">
                                 <div className="space-y-2">
-                                  <label className="text-[10px] font-black text-white uppercase tracking-wider block">Sujet</label>
+                                  <label className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-wider block">Sujet</label>
                                   <input
                                     type="text"
                                     value={supportSubject}
                                     onChange={(e) => setSupportSubject(e.target.value)}
                                     placeholder="Ex: Problème d'achat de LevelCoins..."
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder-slate-500 outline-none focus:border-blue-500/50 transition-colors"
+                                    className="w-full bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl p-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500/50 transition-colors shadow-sm dark:shadow-none"
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className="text-[10px] font-black text-white uppercase tracking-wider block">Votre Message</label>
+                                  <label className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-wider block">Votre Message</label>
                                   <textarea
                                     value={supportMessage}
                                     onChange={(e) => setSupportMessage(e.target.value)}
                                     placeholder="Expliquez en détail votre situation..."
-                                    className="w-full h-36 bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder-slate-500 outline-none focus:border-blue-500/50 resize-none transition-colors"
+                                    className="w-full h-36 bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl p-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500/50 resize-none transition-colors shadow-sm dark:shadow-none"
                                   />
                                 </div>
                                 <button
@@ -806,23 +806,28 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                                     if (!supportSubject.trim() || !supportMessage.trim() || isSubmittingSupport || !user) return;
                                     setIsSubmittingSupport(true);
                                     try {
+                                      const submittedSubject = supportSubject.trim();
+                                      const submittedMsg = supportMessage.trim();
                                       await submitComment({
                                         userId: user.id,
                                         userName: user.name,
-                                        userPhone: user.phoneNumber,
-                                        content: `[SUPPORT TICKET] Sujet: ${supportSubject.trim()}\n\n${supportMessage.trim()}`,
+                                        userPhone: user.phoneNumber || 'N/A',
+                                        content: `[SUPPORT TICKET] Sujet: ${submittedSubject}\n\n${submittedMsg}`,
                                         category: 'support',
                                         rating: 0
                                       });
-                                      const emailSubject = encodeURIComponent(`[SUPPORT TICKET] ${supportSubject.trim()}`);
-                                      const emailBody = encodeURIComponent(`Bonjour,\n\nVoici mon message de support :\n\n${supportMessage.trim()}\n\n---\nUtilisateur: ${user.name}\nTéléphone: ${user.phoneNumber || 'Non renseigné'}`);
+                                      const emailSubject = encodeURIComponent(`[SUPPORT TICKET] ${submittedSubject}`);
+                                      const emailBody = encodeURIComponent(`Bonjour Support LEVELMAK,\n\nVoici mon ticket d'assistance :\n\nSujet: ${submittedSubject}\nMessage:\n${submittedMsg}\n\n---\nExpéditeur: ${user.name}\nTéléphone: ${user.phoneNumber || 'Non renseigné'}\nID Utilisateur: ${user.id}`);
 
                                       setSupportSubject('');
                                       setSupportMessage('');
-                                      addNotification('success', 'Ticket Envoyé', `Votre message a bien été envoyé au support (${supportEmail}).`);
+                                      addNotification('success', 'Ticket Transmis au Support', `Votre ticket a été enregistré et transmis avec succès à l'équipe LEVELMAK (${supportEmail}).`);
 
-                                      // Ouvrir le client mail natif
-                                      window.open(`mailto:${supportEmail}?subject=${emailSubject}&body=${emailBody}`, '_system');
+                                      try {
+                                        window.location.href = `mailto:${supportEmail}?subject=${emailSubject}&body=${emailBody}`;
+                                      } catch (mailErr) {
+                                        console.warn("Mailto client trigger notice:", mailErr);
+                                      }
                                     } catch (error) {
                                       console.error("Error submitting support comment:", error);
                                       addNotification('error', 'Erreur', "Impossible d'envoyer votre ticket. Réessayez.");
@@ -881,12 +886,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
 };
 
 const HelpItem: React.FC<{ title: string; desc: string; icon: React.ReactNode }> = ({ title, desc, icon }) => (
-  <div className="bg-white/5 border border-white/5 p-6 rounded-[2rem] hover:bg-white/[0.08] transition-all group">
+  <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 p-6 rounded-[2rem] hover:bg-slate-100/80 dark:hover:bg-white/[0.08] transition-all group shadow-sm dark:shadow-none">
     <div className="flex items-start gap-5">
-      <div className="w-12 h-12 rounded-2xl bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">{icon}</div>
+      <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">{icon}</div>
       <div className="space-y-2">
-        <h4 className="text-lg font-black text-white tracking-tight">{title}</h4>
-        <div className="text-slate-400 leading-relaxed text-sm font-medium space-y-3">
+        <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">{title}</h4>
+        <div className="text-slate-700 dark:text-slate-400 leading-relaxed text-sm font-medium space-y-3">
           {typeof desc === 'string' ? desc.split('\n\n').map((paragraph, idx) => (
              <p key={idx} dangerouslySetInnerHTML={{ __html: paragraph }} />
           )) : desc}

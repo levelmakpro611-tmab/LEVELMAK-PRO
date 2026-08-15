@@ -109,18 +109,18 @@ export const MindGarden: React.FC = () => {
   };
 
   const getGardenStatus = () => {
-    if (!garden || garden.plants.length === 0) return { title: "Ton jardin est vide", text: "Plante tes premières graines après un quiz.", color: "text-slate-400" };
+    if (!garden || garden.plants.length === 0) return { title: "Ton jardin est vide", text: "Plante tes premières graines après un quiz.", color: "text-slate-700 dark:text-slate-400" };
     
     const needsWater = garden.plants.some(p => p.state !== 'healthy');
-    if (needsWater) return { title: "Alerte sécheresse", text: "Utilise tes bidons d'eau pour sauver tes plantes !", color: "text-amber-500" };
+    if (needsWater) return { title: "Alerte sécheresse", text: "Utilise tes bidons d'eau pour sauver tes plantes !", color: "text-amber-600 dark:text-amber-500" };
     
-    return { title: "Jardin luxuriant", text: "Tes plantes grandissent bien, continue de les chouchouter.", color: "text-emerald-500" };
+    return { title: "Jardin luxuriant", text: "Tes plantes grandissent bien, continue de les chouchouter.", color: "text-emerald-700 dark:text-emerald-500" };
   };
 
   const status = getGardenStatus();
 
   return (
-    <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/10 p-6 md:p-8 rounded-[2.5rem] border border-green-500/20 shadow-xl overflow-hidden relative group">
+    <div className="bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-teal-500/10 dark:from-green-900/20 dark:to-emerald-900/10 p-6 md:p-8 rounded-[2.5rem] border border-green-500/20 shadow-xl overflow-hidden relative group">
       {/* Decors */}
       <div className="absolute -bottom-10 -right-10 opacity-10">
         <Leaf size={150} className="text-emerald-500 rotate-45" />
@@ -128,18 +128,18 @@ export const MindGarden: React.FC = () => {
       
       <div className="flex justify-between items-start mb-6 relative z-10">
         <div>
-          <h2 className="text-2xl font-black text-white flex items-center gap-3">
-            <Sprout className="text-emerald-400" size={28} />
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+            <Sprout className="text-emerald-500 dark:text-emerald-400" size={28} />
             Jardin de l'Esprit
           </h2>
-          <p className={`text-sm font-bold mt-1 ${status.color}`}>{status.title} : <span className="text-slate-400 font-medium">{status.text}</span></p>
+          <p className={`text-sm font-bold mt-1 ${status.color}`}>{status.title} : <span className="text-slate-700 dark:text-slate-400 font-semibold">{status.text}</span></p>
         </div>
         
         <div className="flex gap-2">
-            <div className="px-3 py-1.5 bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-400 text-xs font-black flex items-center gap-2">
+            <div className="px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-700 dark:text-blue-400 text-xs font-black flex items-center gap-2">
                 <Droplets size={14} /> {waterCans}
             </div>
-            <div className="px-3 py-1.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-400 text-xs font-black flex items-center gap-2">
+            <div className="px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-black flex items-center gap-2">
                 <Sparkles size={14} /> {fertilizers}
             </div>
         </div>
@@ -147,9 +147,9 @@ export const MindGarden: React.FC = () => {
 
       <div className="mt-8 relative z-10">
         {!garden || garden.plants.length === 0 ? (
-          <div className="h-40 flex flex-col items-center justify-center text-center opacity-50 border-2 border-dashed border-emerald-500/20 rounded-3xl">
-            <Sprout size={48} className="text-emerald-700 mb-2" />
-            <p className="text-emerald-200/50 font-bold uppercase tracking-widest text-sm">Terre fertile</p>
+          <div className="h-40 flex flex-col items-center justify-center text-center border-2 border-dashed border-emerald-500/30 rounded-3xl bg-emerald-500/5">
+            <Sprout size={48} className="text-emerald-600 dark:text-emerald-700 mb-2" />
+            <p className="text-emerald-800 dark:text-emerald-200/60 font-black uppercase tracking-widest text-sm">Terre fertile</p>
           </div>
         ) : (
           <div className="flex flex-wrap gap-4 items-end min-h-[160px] bg-gradient-to-t from-emerald-950/40 to-transparent p-6 rounded-3xl border-b-[8px] border-emerald-900/40">
@@ -162,7 +162,7 @@ export const MindGarden: React.FC = () => {
         )}
       </div>
       
-      <p className="mt-4 text-[10px] text-slate-500 italic text-center">
+      <p className="mt-4 text-[10px] text-slate-600 dark:text-slate-500 italic text-center font-medium">
           Clique sur une plante pour l'arroser ou utiliser de l'engrais.
       </p>
     </div>

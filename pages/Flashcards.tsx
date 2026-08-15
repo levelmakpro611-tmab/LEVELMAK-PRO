@@ -115,21 +115,21 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
     return (
         <div className="max-w-6xl mx-auto py-4 md:py-8 px-4 space-y-8 md:space-y-12 animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-200 dark:border-white/5 pb-10">
                 <div className="space-y-3 md:space-y-4">
                     <h1 className="text-2xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">Flashcards</h1>
-                    <p className="text-slate-400 text-base md:text-lg font-medium max-w-xl">{t('flashcards.aiSubtitle')}</p>
+                    <p className="text-slate-700 dark:text-slate-300 text-base md:text-lg font-bold max-w-xl">{t('flashcards.aiSubtitle')}</p>
                 </div>
 
                 <div className="flex gap-4">
                     <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={20} />
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Rechercher une leçon..."
-                            className="bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-primary/50 text-white font-bold transition-all w-full md:w-64"
+                            className="bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all w-full md:w-64 placeholder:text-slate-400 shadow-sm"
                         />
                     </div>
                 </div>
@@ -138,7 +138,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
             {/* AI Generator Box */}
             <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-[2.5rem] blur opacity-75 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative glass p-5 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/10 overflow-hidden">
+                <div className="relative bg-white dark:bg-slate-900/80 p-5 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 dark:border-white/10 overflow-hidden shadow-xl">
                     <div className="flex flex-col lg:flex-row items-center gap-6 md:gap-8">
                         <div className="flex-1 space-y-4 md:space-y-6 w-full">
                             <h2 className="text-xl md:text-3xl font-display font-black text-slate-900 dark:text-white leading-tight">
@@ -147,12 +147,12 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                 {selectedImage && (
                                     <div className="flex items-center gap-4 animate-fade-in mb-2">
                                         <div className="relative">
-                                            <img src={selectedImage} alt="Preview" className="h-20 w-20 object-cover rounded-xl border border-white/20 shadow-lg" />
+                                            <img src={selectedImage} alt="Preview" className="h-20 w-20 object-cover rounded-xl border border-slate-300 dark:border-white/20 shadow-lg" />
                                             <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center border border-white/20 hover:bg-slate-700 shadow-xl transition-colors">
                                                 <X size={12} />
                                             </button>
                                         </div>
-                                        <p className="text-xs text-slate-400 font-bold italic">Image sélectionnée pour analyse...</p>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 font-bold italic">Image sélectionnée pour analyse...</p>
                                     </div>
                                 )}
                                 
@@ -213,7 +213,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                                     fileInputRef.current.click();
                                                 }
                                             }}
-                                            className="flex-1 md:flex-none h-12 md:h-14 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-blue-500/30"
+                                            className="flex-1 md:flex-none h-12 md:h-14 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-blue-500/20"
                                             title="Prendre en photo mon cours"
                                         >
                                             <Camera className="w-5 h-5 md:w-6 md:h-6" />
@@ -226,7 +226,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                                     fileInputRef.current.click();
                                                 }
                                             }}
-                                            className="flex-1 md:flex-none h-12 md:h-14 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-white/5"
+                                            className="flex-1 md:flex-none h-12 md:h-14 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-all border border-slate-200 dark:border-white/5"
                                             title="Choisir une image"
                                         >
                                             <ImageIcon className="w-5 h-5 md:w-6 md:h-6" />
@@ -238,7 +238,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                             value={generatorInput}
                                             onChange={(e) => setGeneratorInput(e.target.value)}
                                             placeholder={t('flashcards.subjectPlaceholder')}
-                                            className="w-full p-4 md:p-5 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl outline-none focus:border-primary transition-all text-white font-bold text-sm md:text-base"
+                                            className="w-full p-4 md:p-5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl md:rounded-2xl outline-none focus:border-primary transition-all text-slate-900 dark:text-white font-bold text-sm md:text-base placeholder:text-slate-400"
                                         />
                                         <button
                                             type="submit"
@@ -257,16 +257,16 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                             <motion.div
                                 animate={{ y: [0, -10, 0], rotate: [5, 2, 5] }}
                                 transition={{ duration: 4, repeat: Infinity }}
-                                className="absolute top-4 right-12 w-48 h-32 glass rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center p-6 text-center"
+                                className="absolute top-4 right-12 w-48 h-32 bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200 dark:border-white/20 shadow-2xl flex items-center justify-center p-6 text-center"
                             >
-                                <span className="text-white font-bold text-sm">Quelles sont les trois lois de Newton ?</span>
+                                <span className="text-slate-900 dark:text-white font-bold text-sm">Quelles sont les trois lois de Newton ?</span>
                             </motion.div>
                             <motion.div
                                 animate={{ y: [0, 10, 0], rotate: [-5, -2, -5] }}
                                 transition={{ duration: 5, repeat: Infinity, delay: 0.5 }}
-                                className="absolute bottom-4 left-4 w-48 h-32 glass rounded-2xl border border-white/10 shadow-2xl flex items-center justify-center p-6 text-center"
+                                className="absolute bottom-4 left-4 w-48 h-32 bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl flex items-center justify-center p-6 text-center"
                             >
-                                <span className="text-primary-light font-black text-xs uppercase tracking-widest">Activer le Mode Elite</span>
+                                <span className="text-primary dark:text-primary-light font-black text-xs uppercase tracking-widest">Activer le Mode Elite</span>
                             </motion.div>
                         </div>
                     </div>
@@ -356,14 +356,14 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                     onStartSession(deck, uniqueCards);
                                 }}
                             >
-                                <div className="glass p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 shadow-xl hover:border-primary/40 transition-all relative overflow-hidden h-full flex flex-col">
+                                <div className="bg-white dark:bg-slate-900/60 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-white/5 shadow-xl hover:border-primary/40 transition-all relative overflow-hidden h-full flex flex-col">
                                     <div className="absolute top-0 right-0 p-4 md:p-6 opacity-5 group-hover:opacity-10 transition-opacity">
                                         <Brain className="w-[60px] h-[60px] md:w-[80px] md:h-[80px]" />
                                     </div>
 
                                     <div className="space-y-4 md:space-y-6 relative z-10">
                                         <div className="flex justify-between items-start">
-                                            <div className="px-2.5 py-1 bg-white/5 rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                            <div className="px-2.5 py-1 bg-slate-100 dark:bg-white/5 rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
                                                 {deck.subject}
                                             </div>
                                             <div className="flex items-center gap-4">
@@ -376,8 +376,8 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                                         await downloadCourse(deck.id);
                                                     }}
                                                     className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${offlinePacks.includes(deck.id)
-                                                        ? 'bg-green-500/20 text-green-500'
-                                                        : 'bg-white/5 text-slate-500 hover:bg-primary/20 hover:text-primary'
+                                                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-green-500'
+                                                        : 'bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-primary/20 hover:text-primary'
                                                         }`}
                                                     title="Télécharger pour le mode hors-ligne"
                                                 >
@@ -391,7 +391,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                                             addActivity('study', t('common.delete'), deck.title);
                                                         }
                                                     }}
-                                                    className="w-8 h-8 rounded-xl bg-white/5 text-slate-500 hover:bg-red-500/20 hover:text-red-500 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                                                    className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-red-500/20 hover:text-red-500 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -399,14 +399,14 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                         </div>
 
                                         <div>
-                                            <h4 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-1.5 md:mb-2 leading-tight group-hover:text-primary-light transition-colors">{deck.title}</h4>
-                                            <div className="flex items-center gap-3 md:gap-4 text-[10px] md:text-xs text-slate-500 font-medium">
+                                            <h4 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-1.5 md:mb-2 leading-tight group-hover:text-primary transition-colors">{deck.title}</h4>
+                                            <div className="flex items-center gap-3 md:gap-4 text-[10px] md:text-xs text-slate-600 dark:text-slate-500 font-bold">
                                                 <span className="flex items-center gap-1.5"><Clock className="w-2.5 h-2.5 md:w-3 md:h-3" /> {deck.lastStudied ? t('flashcards.studiedYesterday') : t('flashcards.neverStudied')}</span>
                                                 <span className="flex items-center gap-1.5"><Calendar className="w-2.5 h-2.5 md:w-3 md:h-3" /> {new Date(deck.createdAt).toLocaleDateString()}</span>
                                             </div>
                                         </div>
 
-                                        <div className="pt-4 md:pt-6 border-t border-white/5 mt-auto flex items-center justify-between">
+                                        <div className="pt-4 md:pt-6 border-t border-slate-200 dark:border-white/5 mt-auto flex items-center justify-between">
                                             <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1">
                                                 {t('flashcards.launch')} <ChevronRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
                                             </span>

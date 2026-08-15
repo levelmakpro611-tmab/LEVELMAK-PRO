@@ -54,13 +54,13 @@ const Ranking: React.FC = () => {
                         </div>
                         <h1 className="text-4xl font-display font-black text-slate-900 dark:text-white tracking-tight">{t('ranking.title')}</h1>
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] ml-15">{t('ranking.subtitle')}</p>
+                    <p className="text-slate-800 dark:text-slate-400 font-black uppercase tracking-widest text-[10px] ml-15">{t('ranking.subtitle')}</p>
                 </div>
 
                 <button
                     onClick={fetchRankings}
                     disabled={refreshing}
-                    className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all group"
+                    className="flex items-center gap-2 px-6 py-3 bg-slate-200/80 dark:bg-white/5 hover:bg-slate-300/80 dark:hover:bg-white/10 border border-slate-300/80 dark:border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all group"
                 >
                     <RefreshCw size={14} className={`${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
                     {refreshing ? t('ranking.refreshing') : t('ranking.refresh')}
@@ -293,7 +293,7 @@ const Ranking: React.FC = () => {
 
             {/* Bottom Disclaimer */}
             <div className="text-center p-8 bg-primary/5 rounded-[2rem] border border-primary/10">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed italic whitespace-pre-line">
+                <p className="text-xs text-slate-800 dark:text-slate-300 font-semibold leading-relaxed italic whitespace-pre-line">
                     {t('ranking.disclaimer')}
                 </p>
             </div>

@@ -244,13 +244,13 @@ const Auth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060915] overflow-y-auto overflow-x-hidden selection:bg-primary/30 flex items-start md:items-center justify-center p-4 md:p-8 relative">
+    <div className="min-h-screen bg-slate-100 dark:bg-[#060915] overflow-y-auto overflow-x-hidden selection:bg-primary/30 flex items-start md:items-center justify-center p-4 md:p-8 relative">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-purple-600/5"></div>
       <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-600/5 rounded-full blur-[60px] animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/5 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: '1s' }}></div>
 
       <div className="relative z-20 w-full max-w-xl mt-4 md:mt-0">
-        <div className="glass p-8 md:p-12 lg:p-14 rounded-[3rem] md:rounded-[4rem] border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.6)] space-y-8 animate-slide-up relative overflow-hidden">
+        <div className="glass p-8 md:p-12 lg:p-14 rounded-[3rem] md:rounded-[4rem] bg-white/95 dark:bg-[#0c1226]/90 border border-slate-200 dark:border-white/10 shadow-2xl dark:shadow-[0_0_80px_rgba(0,0,0,0.6)] space-y-8 animate-slide-up relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
 
           <div className="text-center space-y-4">
@@ -268,13 +268,13 @@ const Auth: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <h1 className="text-2xl md:text-3xl font-display font-black text-white leading-tight tracking-tighter">
+              <h1 className="text-2xl md:text-3xl font-display font-black text-slate-900 dark:text-white leading-tight tracking-tighter">
                 {mode === 'register' ? (
-                  <>{t('auth.joinElite').split(' ')[0]} <span className="text-blue-400 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]">{t('auth.joinElite').split(' ')[1]}</span></>
+                  <>{t('auth.joinElite').split(' ')[0]} <span className="text-blue-600 dark:text-blue-400 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]">{t('auth.joinElite').split(' ')[1]}</span></>
                 ) : mode === 'login' ? (
-                  <>{t('auth.championReturn').split(' ').slice(0, 2).join(' ')} <span className="text-purple-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">{t('auth.championReturn').split(' ').slice(2).join(' ')}</span></>
+                  <>{t('auth.championReturn').split(' ').slice(0, 2).join(' ')} <span className="text-purple-600 dark:text-purple-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">{t('auth.championReturn').split(' ').slice(2).join(' ')}</span></>
                 ) : (
-                  <>{t('auth.claimThrone').split(' ').slice(0, 1).join(' ')} <span className="text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">{t('auth.claimThrone').split(' ').slice(1).join(' ')}</span></>
+                  <>{t('auth.claimThrone').split(' ').slice(0, 1).join(' ')} <span className="text-orange-600 dark:text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">{t('auth.claimThrone').split(' ').slice(1).join(' ')}</span></>
                 )}
               </h1>
             </div>
@@ -282,23 +282,23 @@ const Auth: React.FC = () => {
 
           {mode === 'register' && (
             <div className="flex justify-center gap-2 mb-4">
-              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 1 ? 'bg-blue-500 shadow-glow' : 'bg-white/10'}`} />
-              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 2 ? 'bg-blue-500 shadow-glow' : 'bg-white/10'}`} />
+              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 1 ? 'bg-blue-500 shadow-glow' : 'bg-slate-200 dark:bg-white/10'}`} />
+              <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${registerStep === 2 ? 'bg-blue-500 shadow-glow' : 'bg-slate-200 dark:bg-white/10'}`} />
             </div>
           )}
 
           {mode !== 'forgot' && (
             <div className="space-y-4">
-              <div className="flex glass-light p-1 rounded-xl border border-white/5 w-full max-w-[280px] mx-auto backdrop-blur-md">
+              <div className="flex p-1 rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-[280px] mx-auto backdrop-blur-md bg-slate-100 dark:bg-white/5">
                 <button
                   onClick={() => { setMode('register'); resetForm(); }}
-                  className={`flex-1 py-2 px-3 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${mode === 'register' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`flex-1 py-2.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-[0.15em] transition-all ${mode === 'register' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'}`}
                 >
                   {t('auth.register')}
                 </button>
                 <button
                   onClick={() => { setMode('login'); resetForm(); }}
-                  className={`flex-1 py-2 px-3 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${mode === 'login' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`flex-1 py-2.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-[0.15em] transition-all ${mode === 'login' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'}`}
                 >
                   {t('auth.login')}
                 </button>
@@ -407,8 +407,8 @@ const Auth: React.FC = () => {
                     {registerStep === 1 ? (
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <UserIcon size={12} className="text-blue-500" />
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
+                            <UserIcon size={12} className="text-blue-600 dark:text-blue-400" />
                             {t('auth.pseudo')}
                           </label>
                           <input
@@ -416,13 +416,13 @@ const Auth: React.FC = () => {
                             required
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                            className="w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm dark:shadow-none"
                             placeholder={t('auth.placeholderPseudo')}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <Mail size={12} className="text-blue-500" />
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
+                            <Mail size={12} className="text-blue-600 dark:text-blue-400" />
                             {t('auth.email')}
                           </label>
                           <input
@@ -430,20 +430,20 @@ const Auth: React.FC = () => {
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                            className="w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm dark:shadow-none"
                             placeholder={t('auth.placeholderEmail')}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <Phone size={12} className="text-blue-500" />
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
+                            <Phone size={12} className="text-blue-600 dark:text-blue-400" />
                             {t('auth.phoneNumber') || 'Numéro de Téléphone'}
                           </label>
                           <input
                             type="tel"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
-                            className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700"
+                            className="w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm dark:shadow-none"
                             placeholder="Ex: +224..."
                           />
                         </div>
@@ -452,14 +452,14 @@ const Auth: React.FC = () => {
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.gender')}</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1">{t('auth.gender')}</label>
                             <div className="flex gap-2">
                               {(['HOMME', 'FEMME'] as const).map((g) => (
                                 <button
                                   key={g}
                                   type="button"
                                   onClick={() => setGender(g)}
-                                  className={`flex-1 py-4 rounded-xl text-[10px] font-black transition-all border ${gender === g ? 'bg-blue-600 border-blue-500 text-white shadow-glow' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                                  className={`flex-1 py-4 rounded-xl text-[10px] font-black transition-all border ${gender === g ? 'bg-blue-600 border-blue-500 text-white shadow-glow' : 'bg-slate-100 dark:bg-white/5 border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-400'}`}
                                 >
                                   {g}
                                 </button>
@@ -468,55 +468,55 @@ const Auth: React.FC = () => {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">{t('auth.ageRange')}</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1">{t('auth.ageRange')}</label>
                             <select
                               value={ageRange}
                               onChange={(e) => setAgeRange(e.target.value as any)}
-                              className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[11px] outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
+                              className="w-full px-4 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-bold text-[11px] outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
                             >
-                              <option value="15-18" className="bg-slate-900">{t('auth.age1518')}</option>
-                              <option value="19-23" className="bg-slate-900">{t('auth.age1923')}</option>
-                              <option value="24+" className="bg-slate-900">{t('auth.age24plus')}</option>
+                              <option value="15-18" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('auth.age1518')}</option>
+                              <option value="19-23" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('auth.age1923')}</option>
+                              <option value="24+" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">{t('auth.age24plus')}</option>
                             </select>
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <Book size={12} className="text-blue-500" />
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
+                            <Book size={12} className="text-blue-600 dark:text-blue-400" />
                             Classe d'études (Niveau)
                           </label>
                           <select
                             value={gradeClass}
                             onChange={(e) => setGradeClass(e.target.value as GradeClass)}
-                            className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-xs outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
+                            className="w-full px-4 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-xs outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
                           >
-                            <optgroup label="Primaire & Collège (1ère à 9ème)" className="bg-slate-900 text-blue-400 font-bold">
-                              <option value="1ère" className="bg-slate-900 text-white">1ère année (Primaire)</option>
-                              <option value="2ème" className="bg-slate-900 text-white">2ème année (Primaire)</option>
-                              <option value="3ème" className="bg-slate-900 text-white">3ème année (Primaire)</option>
-                              <option value="4ème" className="bg-slate-900 text-white">4ème année (Primaire)</option>
-                              <option value="5ème" className="bg-slate-900 text-white">5ème année (Primaire)</option>
-                              <option value="6ème" className="bg-slate-900 text-white">6ème année (Primaire)</option>
-                              <option value="7ème" className="bg-slate-900 text-white">7ème année (Collège)</option>
-                              <option value="8ème" className="bg-slate-900 text-white">8ème année (Collège)</option>
-                              <option value="9ème" className="bg-slate-900 text-white">9ème année (Collège)</option>
+                            <optgroup label="Primaire & Collège (1ère à 9ème)" className="bg-slate-100 text-blue-600 dark:bg-slate-900 dark:text-blue-400 font-bold">
+                              <option value="1ère" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">1ère année (Primaire)</option>
+                              <option value="2ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">2ème année (Primaire)</option>
+                              <option value="3ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">3ème année (Primaire)</option>
+                              <option value="4ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">4ème année (Primaire)</option>
+                              <option value="5ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">5ème année (Primaire)</option>
+                              <option value="6ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">6ème année (Primaire)</option>
+                              <option value="7ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">7ème année (Collège)</option>
+                              <option value="8ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">8ème année (Collège)</option>
+                              <option value="9ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">9ème année (Collège)</option>
                             </optgroup>
-                            <optgroup label="Secondaire / Lycée (10ème à Terminale)" className="bg-slate-900 text-purple-400 font-bold">
-                              <option value="10ème" className="bg-slate-900 text-white">10ème année</option>
-                              <option value="11ème" className="bg-slate-900 text-white">11ème année</option>
-                              <option value="12ème" className="bg-slate-900 text-white">12ème année</option>
-                              <option value="Terminale" className="bg-slate-900 text-white">Terminale (BAC)</option>
+                            <optgroup label="Secondaire / Lycée (10ème à Terminale)" className="bg-slate-100 text-purple-600 dark:bg-slate-900 dark:text-purple-400 font-bold">
+                              <option value="10ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">10ème année</option>
+                              <option value="11ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">11ème année</option>
+                              <option value="12ème" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">12ème année</option>
+                              <option value="Terminale" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Terminale (BAC)</option>
                             </optgroup>
-                            <optgroup label="Enseignement Supérieur" className="bg-slate-900 text-emerald-400 font-bold">
-                              <option value="Université" className="bg-slate-900 text-white">Université</option>
+                            <optgroup label="Enseignement Supérieur" className="bg-slate-100 text-emerald-600 dark:bg-slate-900 dark:text-emerald-400 font-bold">
+                              <option value="Université" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Université</option>
                             </optgroup>
                           </select>
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                            <Lock size={12} className="text-blue-500" />
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
+                            <Lock size={12} className="text-blue-600 dark:text-blue-400" />
                             {t('auth.password')}
                           </label>
                           <div className="relative group">
@@ -525,28 +525,28 @@ const Auth: React.FC = () => {
                               required
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
-                              className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-700 pr-12"
+                              className="w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 pr-12 shadow-sm dark:shadow-none"
                               placeholder="••••••••"
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                             >
                               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                           </div>
                         </div>
 
-                        <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex items-start gap-4 group">
+                        <div className="p-4 bg-blue-50/90 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/10 rounded-2xl flex items-start gap-4 group shadow-sm dark:shadow-none">
                           <button
                             type="button"
                             onClick={() => setAcceptedPolicies(!acceptedPolicies)}
-                            className={`w-5 h-5 mt-0.5 rounded-md border-2 transition-all flex items-center justify-center shrink-0 ${acceptedPolicies ? 'bg-blue-600 border-blue-500 shadow-glow' : 'border-white/20'}`}
+                            className={`w-5 h-5 mt-0.5 rounded-md border-2 transition-all flex items-center justify-center shrink-0 ${acceptedPolicies ? 'bg-blue-600 border-blue-500 shadow-glow' : 'border-slate-300 dark:border-white/20'}`}
                           >
                             {acceptedPolicies && <Sparkles size={10} className="text-white" />}
                           </button>
-                          <p className="text-[10px] text-slate-300 font-bold leading-relaxed select-none">
+                          <p className="text-[10px] text-slate-700 dark:text-slate-300 font-bold leading-relaxed select-none">
                             {language === 'ar' ? (
                               <>
                                 أوافق على <span onClick={() => { window.open(getLegalUrl('#p-sec-1'), '_system'); }} className="text-blue-400 hover:text-blue-300 underline cursor-pointer">سياسات الخصوصية</span> و <span onClick={() => { window.open(getLegalUrl('#t-sec-1'), '_system'); }} className="text-blue-400 hover:text-blue-300 underline cursor-pointer">شروط الاستخدام (CGU)</span> لـ LEVELMAK.
@@ -574,8 +574,8 @@ const Auth: React.FC = () => {
                     className="space-y-4"
                   >
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1 flex items-center gap-2">
-                        <UserIcon size={12} className="text-purple-500" />
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
+                        <UserIcon size={12} className="text-purple-600 dark:text-purple-400" />
                         {t('auth.email')}
                       </label>
                       <input
@@ -583,17 +583,17 @@ const Auth: React.FC = () => {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700"
+                        className="w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm dark:shadow-none"
                         placeholder={t('auth.placeholderEmail')}
                       />
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center px-1">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
-                          <Lock size={12} className="text-purple-500" />
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 flex items-center gap-2">
+                          <Lock size={12} className="text-purple-600 dark:text-purple-400" />
                           {t('auth.password')}
                         </label>
-                        <button type="button" onClick={() => setMode('forgot')} className="text-[9px] font-black text-slate-500 hover:text-purple-400 uppercase tracking-widest transition-colors">{t('auth.forgot')}</button>
+                        <button type="button" onClick={() => setMode('forgot')} className="text-[9px] font-black text-slate-600 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 uppercase tracking-widest transition-colors">{t('auth.forgot')}</button>
                       </div>
                       <div className="relative group">
                         <input
@@ -601,13 +601,13 @@ const Auth: React.FC = () => {
                           required
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-700 pr-12"
+                          className="w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-purple-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 pr-12 shadow-sm dark:shadow-none"
                           placeholder="••••••••"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                         >
                           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -616,21 +616,21 @@ const Auth: React.FC = () => {
 
                     {canShowBiometricToggle && (
                       <div 
-                        className="flex items-center gap-3 p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl cursor-pointer group transition-all hover:bg-purple-500/10"
+                        className="flex items-center gap-3 p-4 bg-purple-50/90 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-2xl cursor-pointer group transition-all hover:bg-purple-100 dark:hover:bg-purple-500/20 shadow-sm dark:shadow-none"
                         onClick={() => setActivateBiometric(!activateBiometric)}
                       >
-                        <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${activateBiometric ? 'bg-purple-600 border-purple-500 shadow-glow-purple' : 'border-white/20 group-hover:border-purple-500/50'}`}>
+                        <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${activateBiometric ? 'bg-purple-600 border-purple-500 shadow-glow-purple' : 'border-slate-300 dark:border-white/20 group-hover:border-purple-500/50'}`}>
                           {activateBiometric && <Sparkles size={10} className="text-white" />}
                         </div>
                         <div className="flex-1">
-                          <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest">
+                          <p className="text-[10px] text-slate-900 dark:text-slate-200 font-black uppercase tracking-widest">
                             {t('auth.activateBiometric') || 'Activer la connexion biométrique'}
                           </p>
-                          <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight">
+                          <p className="text-[8px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-tight">
                             {t('auth.biometricDesc') || 'Accès rapide par empreinte ou visage'}
                           </p>
                         </div>
-                        <Fingerprint size={16} className={activateBiometric ? 'text-purple-400 animate-pulse' : 'text-slate-600'} />
+                        <Fingerprint size={16} className={activateBiometric ? 'text-purple-600 dark:text-purple-400 animate-pulse' : 'text-slate-500 dark:text-slate-400'} />
                       </div>
                     )}
                   </motion.div>

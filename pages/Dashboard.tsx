@@ -161,13 +161,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   const today = React.useMemo(() => new Date().toISOString().split('T')[0], []);
   
-  const { getCardsToReview } = useFlashcardStore();
-  const [localCardsToReview, setLocalCardsToReview] = React.useState(getCardsToReview());
-
-  React.useEffect(() => {
-    // Refresh quand on revient sur le dashboard
-    setLocalCardsToReview(getCardsToReview());
-  }, [getCardsToReview]);
+  const srsCards = useFlashcardStore(state => state.cards);
+  const localCardsToReview = React.useMemo(() => {
+    const now = Date.now();
+    return srsCards.filter(c => c.nextReviewDate <= now);
+  }, [srsCards]);
 
   const dueQuizzes = React.useMemo(() =>
     quizzes.filter(q => q.nextReviewDate && new Date(q.nextReviewDate) <= new Date()),
@@ -209,25 +207,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-6 md:space-y-10">
           {/* Profile Card Header (Top of Dashboard) */}
-          <section className="relative overflow-hidden glass p-4 sm:p-8 md:p-10 rounded-[2rem] md:rounded-[3.5rem] border border-white/10 shadow-2xl bg-slate-900/80 backdrop-blur-xl group">
+          <section className="relative overflow-hidden glass p-4 sm:p-8 md:p-10 rounded-[2rem] md:rounded-[3.5rem] border border-white/60 dark:border-white/10 shadow-xl dark:shadow-2xl bg-white/65 dark:bg-slate-900/80 backdrop-blur-xl group transition-all duration-300">
             {/* Ambient Background Glows */}
-            <div className="absolute top-0 right-1/4 w-72 h-72 bg-purple-600/15 rounded-full blur-[110px] pointer-events-none"></div>
-            <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-amber-500/15 rounded-full blur-[110px] pointer-events-none"></div>
+            <div className="absolute top-0 right-1/4 w-72 h-72 bg-purple-600/10 dark:bg-purple-600/15 rounded-full blur-[110px] pointer-events-none"></div>
+            <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-amber-500/10 dark:bg-amber-500/15 rounded-full blur-[110px] pointer-events-none"></div>
 
             <div className="flex flex-col items-center justify-center text-center space-y-6 relative z-10">
               {/* Hero Avatar & Level Badge */}
               <div className="relative group/avatar">
                 <div className="w-28 md:w-36 h-28 md:h-36 rounded-full p-1 bg-gradient-to-tr from-amber-400 via-purple-500 to-indigo-500 shadow-[0_0_35px_rgba(245,158,11,0.35)] group-hover/avatar:scale-105 transition-transform duration-500">
-                  <div className="w-full h-full rounded-full overflow-hidden bg-slate-950 border-4 border-slate-950 flex items-center justify-center">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-950 border-4 border-white dark:border-slate-950 flex items-center justify-center">
                     {user.avatar?.image ? (
                       <img src={user.avatar.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-3xl md:text-5xl font-black text-white">{(user.name || 'U').charAt(0).toUpperCase()}</span>
+                      <span className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white">{(user.name || 'U').charAt(0).toUpperCase()}</span>
                     )}
                   </div>
                 </div>
                 <div className="absolute -bottom-2 inset-x-0 flex justify-center">
-                  <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-black text-[10px] md:text-xs px-3.5 py-1 rounded-full shadow-lg border-2 border-slate-950 flex items-center gap-1 uppercase tracking-widest">
+                  <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-black text-[10px] md:text-xs px-3.5 py-1 rounded-full shadow-lg border-2 border-white dark:border-slate-950 flex items-center gap-1 uppercase tracking-widest">
                     ⭐ {t('dashboard.profile.level')} {user.avatar?.currentLevel || 1}
                   </span>
                 </div>
@@ -235,8 +233,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
               {/* User Name & 3D Metallic League Badge */}
               <div className="space-y-2.5 flex flex-col items-center">
-                <h2 className="text-3xl md:text-5xl font-display font-black text-white tracking-tight leading-none">
-                  {user.name}<span className="text-amber-400">.</span>
+                <h2 className="text-3xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                  {user.name}<span className="text-amber-500 dark:text-amber-400">.</span>
                 </h2>
 
                 {(() => {
@@ -247,7 +245,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-950/60 via-amber-900/40 to-amber-950/60 shadow-[0_0_20px_rgba(245,158,11,0.2)] text-amber-300 font-black uppercase text-xs tracking-[0.2em]"
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-amber-400/20 to-amber-500/10 dark:from-amber-950/60 dark:via-amber-900/40 dark:to-amber-950/60 shadow-[0_0_20px_rgba(245,158,11,0.15)] text-amber-700 dark:text-amber-300 font-black uppercase text-xs tracking-[0.2em]"
                     >
                       <span className="text-lg">{league.icon}</span>
                       <span>{league.name}</span>
@@ -259,24 +257,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               {/* Side-by-Side Stat Cards (Streak & LevelCoins) */}
               <div className="grid grid-cols-2 gap-3 md:gap-5 w-full max-w-full sm:max-w-md">
                 {/* Streak Card */}
-                <div className="bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-red-500/20 border border-orange-500/30 p-3.5 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(249,115,22,0.15)] group/streak">
-                  <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center border border-orange-500/40 shrink-0 group-hover/streak:scale-110 transition-transform">
-                    <Flame className="w-5 h-5 md:w-6 md:h-6 fill-orange-500 text-orange-400 animate-pulse" />
+                <div className="bg-gradient-to-br from-orange-500/15 via-orange-500/5 to-red-500/15 dark:from-orange-500/20 dark:via-orange-500/10 dark:to-red-500/20 border border-orange-500/30 p-3.5 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-center gap-3 shadow-sm dark:shadow-[0_0_20px_rgba(249,115,22,0.15)] group/streak">
+                  <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-orange-500/20 text-orange-500 dark:text-orange-400 flex items-center justify-center border border-orange-500/40 shrink-0 group-hover/streak:scale-110 transition-transform">
+                    <Flame className="w-5 h-5 md:w-6 md:h-6 fill-orange-500 text-orange-500 dark:text-orange-400 animate-pulse" />
                   </div>
                   <div className="text-left">
-                    <p className="text-[8px] md:text-[9px] font-black text-orange-400 uppercase tracking-widest">Série</p>
-                    <p className="text-sm md:text-xl font-display font-black text-white">{user.streak?.current || 0} Jour{(user.streak?.current || 0) > 1 ? 's' : ''}</p>
+                    <p className="text-[8px] md:text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Série</p>
+                    <p className="text-sm md:text-xl font-display font-black text-slate-900 dark:text-white">{user.streak?.current || 0} Jour{(user.streak?.current || 0) > 1 ? 's' : ''}</p>
                   </div>
                 </div>
 
                 {/* LevelCoins Card */}
-                <div className="bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-yellow-500/20 border border-amber-500/30 p-3.5 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(245,158,11,0.15)] group/coins">
-                  <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40 shrink-0 group-hover/coins:rotate-12 transition-transform">
-                    <Coins className="w-5 h-5 md:w-6 md:h-6 text-amber-400" />
+                <div className="bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-yellow-500/15 dark:from-amber-500/20 dark:via-amber-500/10 dark:to-yellow-500/20 border border-amber-500/30 p-3.5 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-center gap-3 shadow-sm dark:shadow-[0_0_20px_rgba(245,158,11,0.15)] group/coins">
+                  <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-400 flex items-center justify-center border border-amber-500/40 shrink-0 group-hover/coins:rotate-12 transition-transform">
+                    <Coins className="w-5 h-5 md:w-6 md:h-6 text-amber-500 dark:text-amber-400" />
                   </div>
                   <div className="text-left">
-                    <p className="text-[8px] md:text-[9px] font-black text-amber-400 uppercase tracking-widest">{t('shop.balance')}</p>
-                    <p className="text-sm md:text-xl font-display font-black text-white">{user.levelCoins || 0}</p>
+                    <p className="text-[8px] md:text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">{t('shop.balance')}</p>
+                    <p className="text-sm md:text-xl font-display font-black text-slate-900 dark:text-white">{user.levelCoins || 0}</p>
                   </div>
                 </div>
               </div>
@@ -285,55 +283,55 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
                 {isPremiumActive ? (
                   <>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-300 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-blue-500/30 shadow-glow-blue">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-blue-500/30">
                       <Sparkles size={12} /> {t('dashboard.profile.studentPro')}
                     </div>
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border ${isOnline
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                      : 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
                       }`}>
                       {isOnline ? (<><Wifi size={12} /> {t('dashboard.online')}</>) : (<><WifiOff size={12} /> {t('dashboard.offline')}</>)}
                     </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 text-purple-300 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-purple-500/30">
-                      <Star size={12} className="fill-purple-300" /> {t('dashboard.profile.eliteMember')}
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-purple-500/30">
+                      <Star size={12} className="fill-purple-700 dark:fill-purple-300" /> {t('dashboard.profile.eliteMember')}
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-400 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-white/10">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
                       {settings.language === 'fr' ? 'Étudiant Gratuit' : 'Free Student'}
                     </div>
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border ${isOnline
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                      : 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
                       }`}>
                       {isOnline ? (<><Wifi size={12} /> {t('dashboard.online')}</>) : (<><WifiOff size={12} /> {t('dashboard.offline')}</>)}
                     </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-400 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-white/10">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
                       {settings.language === 'fr' ? 'Membre Standard' : 'Standard Member'}
                     </div>
                   </>
                 )}
               </div>
 
-              {/* Neon Energy Progress Bar */}
+              {/* Energy Progress Bar */}
               <div className="w-full max-w-lg space-y-2 pt-2">
-                <p className="text-xs md:text-sm text-slate-300 font-bold text-center leading-relaxed">
-                  Tu es à <span className="text-amber-400 font-black text-sm md:text-base">{Math.round(xpPercentage)}%</span> du Niveau {(user.avatar?.currentLevel || 1) + 1} !
+                <p className="text-xs md:text-sm text-slate-700 dark:text-slate-300 font-bold text-center leading-relaxed">
+                  Tu es à <span className="text-amber-600 dark:text-amber-400 font-black text-sm md:text-base">{Math.round(xpPercentage)}%</span> du Niveau {(user.avatar?.currentLevel || 1) + 1} !
                 </p>
 
-                <div className="w-full bg-slate-950/80 rounded-full h-4 md:h-5 p-1 border border-white/10 shadow-inner relative overflow-hidden">
+                <div className="w-full bg-slate-200/80 dark:bg-slate-950/80 rounded-full h-4 md:h-5 p-1 border border-slate-300/60 dark:border-white/10 shadow-inner relative overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(139,92,246,0.5)] relative"
+                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(139,92,246,0.4)] relative"
                     style={{ width: `${xpPercentage}%` }}
                   >
                     <div className="absolute right-0 top-0 bottom-0 w-2 bg-white blur-[1px] opacity-75 animate-pulse"></div>
                   </div>
                 </div>
 
-                <div className="flex justify-between text-[9px] md:text-xs font-black uppercase tracking-wider text-slate-400 px-1">
+                <div className="flex justify-between text-[9px] md:text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
                   <span>{user.xp} XP</span>
-                  <span className="text-amber-400">
+                  <span className="text-amber-600 dark:text-amber-400">
                     {Math.round(getXpForNextLevel(user.avatar?.currentLevel || 1) - user.xp)} {t('dashboard.profile.remaining')}
                   </span>
                 </div>
@@ -578,35 +576,35 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <div className="space-y-8">
           {/* Premium Status / Countdown Widget */}
           {isPremiumActive && (
-            <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border-blue-500/30 bg-gradient-to-br from-blue-950/10 via-slate-900/40 to-indigo-950/10 shadow-premium relative overflow-hidden ring-1 ring-blue-500/10">
+            <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border-blue-500/30 bg-gradient-to-br from-blue-500/10 via-slate-100/60 to-indigo-500/10 dark:from-blue-950/10 dark:via-slate-900/40 dark:to-indigo-950/10 shadow-premium relative overflow-hidden ring-1 ring-blue-500/10">
               {/* Pulsing glow background */}
               <div className="absolute -right-12 -top-12 w-36 h-36 bg-blue-500/15 rounded-full blur-2xl animate-pulse" />
               
               <div className="flex items-center justify-between mb-4 relative z-10">
-                <h3 className="text-lg md:text-xl font-display font-black text-white flex items-center gap-2.5">
+                <h3 className="text-lg md:text-xl font-display font-black text-slate-900 dark:text-white flex items-center gap-2.5">
                   <span className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                   </span>
                   Levelmak Pro
                 </h3>
-                <span className="text-[9px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full">
+                <span className="text-[9px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full">
                   Elite
                 </span>
               </div>
 
               <div className="space-y-4 relative z-10">
-                <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5 text-center">
+                <div className="bg-white/80 dark:bg-slate-950/60 p-4 rounded-2xl border border-slate-200/80 dark:border-white/5 text-center">
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Temps restant</p>
-                  <p className="text-3xl font-mono font-black text-blue-400 tracking-tight">{timeLeft || 'Calcul en cours...'}</p>
+                  <p className="text-3xl font-mono font-black text-blue-600 dark:text-blue-400 tracking-tight">{timeLeft || 'Calcul en cours...'}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-400 px-0.5">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-0.5">
                     <span>Abonnement Actif</span>
-                    <span className="text-blue-300 font-bold">{Math.round(percentLeft)}% restants</span>
+                    <span className="text-blue-600 dark:text-blue-300 font-bold">{Math.round(percentLeft)}% restants</span>
                   </div>
-                  <div className="h-2.5 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/5">
+                  <div className="h-2.5 bg-slate-200/80 dark:bg-black/40 rounded-full overflow-hidden p-0.5 border border-slate-300/60 dark:border-white/5">
                     <motion.div
                       className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_12px_rgba(59,130,246,0.3)]"
                       style={{ width: `${percentLeft}%` }}
@@ -627,7 +625,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </React.Suspense>
 
           {/* Goals Checklist Widget */}
-          <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 shadow-premium">
+          <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-200/80 dark:border-white/10 shadow-premium">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg md:text-xl font-display font-bold text-slate-900 dark:text-white flex items-center gap-3">
                 <Target size={20} className="text-secondary" />
@@ -661,12 +659,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 return (
                   <>
                     {/* Goals completion progress */}
-                    <div className="space-y-2 pb-4 border-b border-white/5">
+                    <div className="space-y-2 pb-4 border-b border-slate-200/80 dark:border-white/5">
                       <div className="flex justify-between items-end text-xs">
-                        <span className="font-semibold text-slate-400">{settings.language === 'fr' ? 'Progression' : 'Progress'}</span>
+                        <span className="font-semibold text-slate-500 dark:text-slate-400">{settings.language === 'fr' ? 'Progression' : 'Progress'}</span>
                         <span className="font-bold text-slate-900 dark:text-white">{completedGoals} / {totalGoals} {settings.language === 'fr' ? 'objectifs' : 'goals'}</span>
                       </div>
-                      <div className="h-2 bg-black/20 rounded-full overflow-hidden p-0.5 border border-white/5">
+                      <div className="h-2 bg-slate-200/80 dark:bg-black/20 rounded-full overflow-hidden p-0.5 border border-slate-300/60 dark:border-white/5">
                         <div
                           className="h-full rounded-full bg-secondary shadow-[0_0_12px_rgba(245,158,11,0.25)] transition-all duration-500"
                           style={{ width: `${goalsPct}%` }}
@@ -682,14 +680,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                           onClick={() => handleToggleGoal(goal.id)}
                           className={`w-full p-3 rounded-2xl border flex items-center gap-3 transition-all ${
                             goal.completed
-                              ? 'bg-green-500/10 border-green-500/20 text-green-400 line-through'
-                              : 'bg-black/10 border-white/5 text-slate-300 hover:bg-black/25'
+                              ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400 line-through'
+                              : 'bg-slate-100/90 dark:bg-black/10 border-slate-200/80 dark:border-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-black/25'
                           }`}
                         >
                           <div className={`w-4 h-4 rounded border flex items-center justify-center ${
                             goal.completed
                               ? 'bg-green-500 border-green-500 text-slate-950'
-                              : 'border-white/30 text-transparent'
+                              : 'border-slate-400 dark:border-white/30 text-transparent'
                           }`}>
                             {goal.completed && <CheckCircle2 size={10} className="text-white" />}
                           </div>

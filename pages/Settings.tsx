@@ -204,7 +204,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                                     >
-                                        <div className="p-6 md:p-8 border-t border-black/5 dark:border-white/10 bg-slate-950/20 space-y-6">
+                                        <div className="p-6 md:p-8 border-t border-black/5 dark:border-white/10 bg-slate-50 dark:bg-slate-950/20 space-y-6">
                                             {section.id === 'profile' && (
                                                 <div className="space-y-6">
                                                     <div className="flex items-center gap-6">
@@ -227,17 +227,17 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
 
                                                     <div className="grid grid-cols-1 gap-6">
                                                         <div className="space-y-2">
-                                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 pl-1">{t('settings.fullName')}</label>
+                                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 pl-1">{t('settings.fullName')}</label>
                                                             <input
                                                                 type="text"
                                                                 value={name}
                                                                 onChange={(e) => setName(e.target.value)}
                                                                 placeholder="Ex: Mouctar"
-                                                                className="w-full p-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all text-sm md:text-base placeholder:text-slate-400"
+                                                                className="w-full p-4 bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all text-sm md:text-base placeholder:text-slate-400"
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 pl-1">{t('settings.phoneNum')}</label>
+                                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 pl-1">{t('settings.phoneNum')}</label>
                                                             <div className="relative">
                                                                 <Smartphone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                                                                 <input
@@ -245,12 +245,12 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                     value={phone}
                                                                     onChange={(e) => setPhone(e.target.value)}
                                                                     placeholder="+224 6100000000"
-                                                                    className="w-full pl-12 pr-4 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all text-sm md:text-base placeholder:text-slate-400"
+                                                                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all text-sm md:text-base placeholder:text-slate-400"
                                                                 />
                                                             </div>
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 pl-1">Classe</label>
+                                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 pl-1">Classe</label>
                                                             <div className="relative">
                                                                 <GraduationCap size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                                                                 <input
@@ -258,7 +258,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                     value={education}
                                                                     onChange={(e) => setEducation(e.target.value)}
                                                                     placeholder="Ex: 10ème, Terminale SM, Université..."
-                                                                    className="w-full pl-12 pr-4 py-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all text-sm md:text-base placeholder:text-slate-400"
+                                                                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl outline-none focus:border-primary/50 text-slate-900 dark:text-white font-bold transition-all text-sm md:text-base placeholder:text-slate-400"
                                                                 />
                                                             </div>
                                                         </div>
@@ -296,26 +296,26 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                             {section.id === 'subscription' && (
                                                 <div className="space-y-6">
                                                     <div className="flex flex-col gap-4">
-                                                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
+                                                        <div className="p-4 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex justify-between items-center shadow-md">
                                                             <div>
-                                                                <h4 className="font-bold text-sm">Statut de l'abonnement</h4>
-                                                                <p className="text-xs text-slate-400 mt-1">
+                                                                <h4 className="font-black text-sm text-slate-900 dark:text-white">Statut de l'abonnement</h4>
+                                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-300 mt-1">
                                                                     {user.is_premium 
                                                                         ? `Premium (Expire le : ${new Date(user.premium_until!).toLocaleString()})`
                                                                         : 'Plan Gratuit'}
                                                                 </p>
                                                             </div>
-                                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${user.is_premium ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/30 text-slate-400 border border-slate-700/40'}`}>
+                                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${user.is_premium ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30' : 'bg-slate-200 dark:bg-slate-700/30 text-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700/40'}`}>
                                                                 {user.is_premium ? 'Premium' : 'Gratuit'}
                                                             </span>
                                                         </div>
 
-                                                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center">
+                                                        <div className="p-4 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex justify-between items-center shadow-md">
                                                             <div>
-                                                                <h4 className="font-bold text-sm">Solde de LevelCoins</h4>
-                                                                <p className="text-xs text-slate-400 mt-1">Utilisables dans la boutique et le jardin</p>
+                                                                <h4 className="font-black text-sm text-slate-900 dark:text-white">Solde de LevelCoins</h4>
+                                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-300 mt-1">Utilisables dans la boutique et le jardin</p>
                                                             </div>
-                                                            <span className="text-lg font-black text-yellow-500">
+                                                            <span className="text-lg font-black text-yellow-600 dark:text-yellow-500">
                                                                 {user.levelCoins || 0} 🪙
                                                             </span>
                                                         </div>
@@ -340,7 +340,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.darkMode')}</h4>
-                                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
+                                                                    <p className="text-[9px] text-slate-800 dark:text-slate-300 font-extrabold uppercase tracking-widest leading-none mt-1">
                                                                         {settings.theme === 'dark' ? 'Mode Sombre Activé' : 'Mode Clair Activé'}
                                                                     </p>
                                                                 </div>
@@ -352,7 +352,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                     className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${
                                                                         settings.theme === 'light'
                                                                             ? 'bg-white/10 border-primary shadow-glow text-primary scale-[1.02]'
-                                                                            : 'bg-black/25 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                                                            : 'bg-slate-100 dark:bg-black/25 border-slate-300/80 dark:border-white/5 text-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
                                                                     }`}
                                                                 >
                                                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
@@ -368,7 +368,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                     className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${
                                                                         settings.theme === 'dark'
                                                                             ? 'bg-white/10 border-primary shadow-glow text-primary scale-[1.02]'
-                                                                            : 'bg-black/25 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                                                            : 'bg-slate-100 dark:bg-black/25 border-slate-300/80 dark:border-white/5 text-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
                                                                     }`}
                                                                 >
                                                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
@@ -391,7 +391,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.appSounds')}</h4>
-                                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
+                                                                    <p className="text-[9px] text-slate-800 dark:text-slate-300 font-extrabold uppercase tracking-widest leading-none mt-1">
                                                                         {settings.soundEnabled ? t('settings.soundsOn') : t('settings.soundsOff')}
                                                                     </p>
                                                                 </div>
@@ -408,7 +408,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                         exit={{ height: 0, opacity: 0 }}
                                                                         className="space-y-3 pt-4 border-t border-white/5 overflow-hidden"
                                                                     >
-                                                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{t('settings.soundSettings.title')}</p>
+                                                                        <p className="text-[10px] font-black text-slate-800 dark:text-slate-300 uppercase tracking-widest mb-2">{t('settings.soundSettings.title')}</p>
                                                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                                             {[
                                                                                 { id: 'quiz', label: t('settings.soundSettings.quiz') },
@@ -423,10 +423,10 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                                             [sub.id]: !settings.soundSettings[sub.id as keyof typeof settings.soundSettings]
                                                                                         }
                                                                                     })}
-                                                                                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${settings.soundSettings[sub.id as keyof typeof settings.soundSettings] ? 'bg-secondary/10 border-secondary/30 text-secondary' : 'bg-black/20 border-white/5 text-slate-500'}`}
+                                                                                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${settings.soundSettings[sub.id as keyof typeof settings.soundSettings] ? 'bg-secondary/10 border-secondary/30 text-secondary' : 'bg-slate-200/80 dark:bg-black/20 border-slate-300/80 dark:border-white/5 text-slate-800 dark:text-slate-300 font-extrabold'}`}
                                                                                 >
-                                                                                    <span className="text-[10px] font-bold uppercase tracking-tight">{sub.label}</span>
-                                                                                    <div className={`w-6 h-3 rounded-full relative ${settings.soundSettings[sub.id as keyof typeof settings.soundSettings] ? 'bg-secondary/40' : 'bg-slate-700'}`}>
+                                                                                    <span className="text-[10px] font-black uppercase tracking-tight">{sub.label}</span>
+                                                                                    <div className={`w-6 h-3 rounded-full relative ${settings.soundSettings[sub.id as keyof typeof settings.soundSettings] ? 'bg-secondary/40' : 'bg-slate-400 dark:bg-slate-700'}`}>
                                                                                         <div className={`absolute top-0.5 w-2 h-2 bg-white rounded-full transition-all ${settings.soundSettings[sub.id as keyof typeof settings.soundSettings] ? 'right-0.5' : 'left-0.5'}`}></div>
                                                                                     </div>
                                                                                 </div>
@@ -444,7 +444,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.lang')}</h4>
-                                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none">
+                                                                    <p className="text-[9px] text-slate-800 dark:text-slate-300 font-extrabold uppercase tracking-widest leading-none mt-1">
                                                                         {settings.language === 'fr' ? 'Français' : settings.language === 'ar' ? 'العربية' : 'English'}
                                                                     </p>
                                                                 </div>
@@ -464,12 +464,12 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                             className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-2 text-center ${
                                                                                 isActive
                                                                                     ? 'bg-white/10 border-accent shadow-glow text-accent scale-[1.02]'
-                                                                                    : 'bg-black/25 border-white/5 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                                                                    : 'bg-white/80 dark:bg-black/25 border-slate-200/80 dark:border-white/5 text-slate-800 dark:text-slate-300 font-bold hover:bg-white dark:hover:bg-white/5'
                                                                             }`}
                                                                         >
                                                                             <span className="text-2xl md:text-3xl filter saturate-100">{lang.flag}</span>
                                                                             <span className="font-bold text-xs md:text-sm text-slate-900 dark:text-white transition-colors">{lang.name}</span>
-                                                                            <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-60">{lang.label}</span>
+                                                                            <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-80">{lang.label}</span>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -483,17 +483,17 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <h4 className="font-bold text-slate-900 dark:text-white text-xs md:text-sm transition-colors">{t('settings.fontSize')}</h4>
-                                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">{t('settings.fontSizeDesc')}</p>
+                                                                    <p className="text-[9px] text-slate-800 dark:text-slate-300 font-extrabold uppercase tracking-widest mt-1">{t('settings.fontSizeDesc')}</p>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex items-center justify-between gap-2 bg-black/20 p-2 rounded-2xl border border-white/5">
+                                                            <div className="flex items-center justify-between gap-2 bg-slate-200/60 dark:bg-black/20 p-2 rounded-2xl border border-slate-300/80 dark:border-white/5">
                                                                 {(['xs', 'sm', 'base', 'lg', 'xl'] as const).map((size) => (
                                                                     <button
                                                                         key={size}
                                                                         onClick={() => updateSettings({ fontSize: size })}
                                                                         className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all ${settings.fontSize === size
                                                                             ? 'bg-primary text-white shadow-glow'
-                                                                            : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                                                                            : 'text-slate-800 dark:text-slate-300 font-extrabold hover:text-slate-950 dark:hover:text-white hover:bg-slate-300/80 dark:hover:bg-white/10'
                                                                             }`}
                                                                     >
                                                                         {size}
@@ -549,25 +549,25 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
 
                                             {section.id === 'security' && (
                                                 <div className="space-y-6">
-                                                    <div className="bg-black/20 p-5 md:p-8 rounded-3xl border border-white/5 space-y-6">
+                                                    <div className="bg-slate-100 dark:bg-black/20 p-5 md:p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
                                                         <div className="space-y-4">
                                                             <div>
-                                                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest block mb-2 px-1">{t('settings.oldPw')}</label>
+                                                                <label className="text-[10px] text-slate-700 dark:text-slate-400 font-black uppercase tracking-widest block mb-2 px-1">{t('settings.oldPw')}</label>
                                                                 <input
                                                                     type="password"
                                                                     value={oldPassword}
                                                                     onChange={(e) => setOldPassword(e.target.value)}
-                                                                    className="w-full bg-black/5 dark:bg-slate-900 border border-black/5 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-success/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
+                                                                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white font-bold focus:border-success/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
                                                                     placeholder="••••••••"
                                                                 />
                                                             </div>
                                                             <div>
-                                                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest block mb-2 px-1">{t('settings.newPw')}</label>
+                                                                <label className="text-[10px] text-slate-700 dark:text-slate-400 font-black uppercase tracking-widest block mb-2 px-1">{t('settings.newPw')}</label>
                                                                 <input
                                                                     type="password"
                                                                     value={newPassword}
                                                                     onChange={(e) => setNewPassword(e.target.value)}
-                                                                    className="w-full bg-black/5 dark:bg-slate-900 border border-black/5 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-success/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
+                                                                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white font-bold focus:border-success/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
                                                                     placeholder={t('settings.newPwPlaceholder')}
                                                                 />
                                                             </div>
@@ -587,7 +587,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                         <button
                                                             onClick={handlePasswordChange}
                                                             disabled={passwordLoading}
-                                                            className="w-full py-4 bg-success/20 hover:bg-success text-success hover:text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border border-success/30 disabled:opacity-50"
+                                                            className="w-full py-4 bg-emerald-600 dark:bg-success/20 hover:bg-emerald-700 dark:hover:bg-success text-white dark:text-success dark:hover:text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border border-emerald-600 dark:border-success/30 disabled:opacity-50"
                                                         >
                                                             {passwordLoading ? t('settings.saving') : t('settings.changePw')}
                                                         </button>
@@ -647,35 +647,35 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
 
                                             {section.id === 'legal' && (
                                                 <div className="space-y-6">
-                                                    <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                                                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4">
                                                         <div className="space-y-1">
                                                             <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white flex items-center gap-3 transition-colors">
                                                                 <FileText className="text-primary" /> Conditions et confidentialité
                                                             </h3>
-                                                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">LEVELMAK Pro • TMAB GROUP</p>
+                                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">LEVELMAK Pro • TMAB GROUP</p>
                                                         </div>
                                                     </div>
 
-                                                    <div className="bg-white/5 border border-white/5 p-6 rounded-3xl space-y-4">
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-left">
+                                                    <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-4">
+                                                        <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed text-left">
                                                             Pour vous offrir une expérience d'utilisation fluide et sécurisée, nos conditions générales et notre politique de confidentialité sont désormais hébergées et consultables en ligne.
                                                         </p>
 
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); window.open(getLegalUrl('#p-sec-1'), '_system'); }}
-                                                                className="p-5 rounded-2xl bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:border-primary/40 text-primary-light transition-all flex flex-col items-center justify-center gap-2 text-center"
+                                                                className="p-5 rounded-2xl bg-white dark:bg-primary/10 border border-slate-200 dark:border-primary/20 hover:bg-slate-50 dark:hover:bg-primary/20 text-primary dark:text-primary-light transition-all flex flex-col items-center justify-center gap-2 text-center shadow-sm"
                                                             >
                                                                 <span className="font-black text-xs uppercase tracking-wider text-primary">Politique de Confidentialité</span>
-                                                                <span className="text-[9px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-tight">Données & Sécurité</span>
+                                                                <span className="text-[9px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-tight">Données & Sécurité</span>
                                                             </button>
 
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); window.open(getLegalUrl('#t-sec-1'), '_system'); }}
-                                                                className="p-5 rounded-2xl bg-secondary/10 border border-secondary/20 hover:bg-secondary/20 hover:border-secondary/40 text-secondary-light transition-all flex flex-col items-center justify-center gap-2 text-center"
+                                                                className="p-5 rounded-2xl bg-white dark:bg-secondary/10 border border-slate-200 dark:border-secondary/20 hover:bg-slate-50 dark:hover:bg-secondary/20 text-secondary dark:text-secondary-light transition-all flex flex-col items-center justify-center gap-2 text-center shadow-sm"
                                                             >
                                                                 <span className="font-black text-xs uppercase tracking-wider text-secondary">Conditions d'Utilisation (CGU)</span>
-                                                                <span className="text-[9px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-tight">Règles & Engagements</span>
+                                                                <span className="text-[9px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-tight">Règles & Engagements</span>
                                                             </button>
                                                         </div>
                                                     </div>
@@ -690,24 +690,24 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                 })}
 
                 {/* Supprimer mon compte Collapsible Panel */}
-                <div className="bg-red-500/5 border border-red-500/20 rounded-3xl overflow-hidden shadow-xl transition-all">
+                <div className="bg-red-500/10 dark:bg-red-500/5 border border-red-500/30 dark:border-red-500/20 rounded-3xl overflow-hidden shadow-xl transition-all">
                     {/* Header */}
                     <button
                         onClick={() => setExpandedSection(expandedSection === 'delete_account' ? null : 'delete_account')}
-                        className="w-full flex items-center justify-between p-5 md:p-6 text-left hover:bg-red-500/10 transition-all outline-none"
+                        className="w-full flex items-center justify-between p-5 md:p-6 text-left hover:bg-red-500/15 transition-all outline-none"
                     >
                         <div className="flex items-center gap-4">
-                            <div className="p-3 rounded-2xl bg-red-500/10 text-red-500">
-                                <User size={22} className="text-red-500" />
+                            <div className="p-3 rounded-2xl bg-red-500/20 dark:bg-red-500/10 text-red-600 dark:text-red-500">
+                                <User size={22} className="text-red-600 dark:text-red-500" />
                             </div>
                             <div>
-                                <h3 className="font-black tracking-wide text-base md:text-lg text-red-500">Supprimer mon compte</h3>
-                                <p className="text-[9px] text-red-400 font-bold uppercase tracking-widest leading-none mt-1">
+                                <h3 className="font-black tracking-wide text-base md:text-lg text-red-600 dark:text-red-500">Supprimer mon compte</h3>
+                                <p className="text-[9px] text-red-700 dark:text-red-400 font-bold uppercase tracking-widest leading-none mt-1">
                                     Zone de danger • Irréversible
                                 </p>
                             </div>
                         </div>
-                        <ChevronRight size={18} className={`text-red-400 transition-transform ${expandedSection === 'delete_account' ? 'rotate-90' : ''}`} />
+                        <ChevronRight size={18} className={`text-red-500 dark:text-red-400 transition-transform ${expandedSection === 'delete_account' ? 'rotate-90' : ''}`} />
                     </button>
 
                     {/* Content */}
@@ -719,36 +719,36 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                 exit={{ height: 0, opacity: 0 }}
                                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                             >
-                                <div className="p-6 md:p-8 border-t border-red-500/10 bg-red-950/10 space-y-4">
-                                    <p className="text-xs text-red-400 font-medium leading-relaxed">
+                                <div className="p-6 md:p-8 border-t border-red-500/20 bg-red-500/10 dark:bg-red-950/10 space-y-4">
+                                    <p className="text-xs text-red-800 dark:text-red-400 font-bold leading-relaxed">
                                         Cette action supprimera définitivement votre compte, vos points, LevelCoins, badges, écrits, et toutes les données de Levelmak. Cette action est irréversible.
                                     </p>
                                     
                                     <div className="space-y-4">
                                         <div className="space-y-1">
-                                            <label className="text-[10px] text-red-400 font-black uppercase tracking-widest block">Confirmer votre mot de passe actuel</label>
+                                            <label className="text-[10px] text-red-900 dark:text-red-400 font-black uppercase tracking-widest block">Confirmer votre mot de passe actuel</label>
                                             <input
                                                 type="password"
                                                 value={deletePassword}
                                                 onChange={(e) => setDeletePassword(e.target.value)}
-                                                className="w-full bg-black/40 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-white focus:border-red-500 outline-none transition-all placeholder:text-slate-700"
+                                                className="w-full bg-white dark:bg-black/40 border border-red-300 dark:border-red-500/20 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white font-bold focus:border-red-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
                                                 placeholder="Saisissez votre mot de passe"
                                             />
                                         </div>
 
                                         <div className="space-y-1">
-                                            <label className="text-[10px] text-red-400 font-black uppercase tracking-widest block">Tapez "SUPPRIMER" pour confirmer</label>
+                                            <label className="text-[10px] text-red-900 dark:text-red-400 font-black uppercase tracking-widest block">Tapez "SUPPRIMER" pour confirmer</label>
                                             <input
                                                 type="text"
                                                 value={deleteConfirmText}
                                                 onChange={(e) => setDeleteConfirmText(e.target.value)}
-                                                className="w-full bg-black/40 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-white focus:border-red-500 outline-none transition-all placeholder:text-slate-700"
+                                                className="w-full bg-white dark:bg-black/40 border border-red-300 dark:border-red-500/20 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white font-bold focus:border-red-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
                                                 placeholder="SUPPRIMER"
                                             />
                                         </div>
 
                                         {deleteError && (
-                                            <div className="bg-red-500/10 text-red-400 p-3 rounded-xl border border-red-500/20 text-xs font-bold text-center">
+                                            <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-xl border border-red-500/20 text-xs font-bold text-center">
                                                 {deleteError}
                                             </div>
                                         )}

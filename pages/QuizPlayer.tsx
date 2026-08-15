@@ -378,31 +378,31 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
   if (showOracle) {
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-fade-in">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-xl animate-fade-in">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-[3rem] p-8 md:p-12 space-y-10 shadow-2xl relative overflow-hidden"
+          className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[3rem] p-8 md:p-12 space-y-10 shadow-2xl relative overflow-hidden"
         >
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
           <div className="text-center space-y-4">
-            <div className="w-20 h-20 bg-primary/20 rounded-[1.5rem] flex items-center justify-center mx-auto border border-primary/20 mb-6">
+            <div className="w-20 h-20 bg-primary/10 dark:bg-primary/20 rounded-[1.5rem] flex items-center justify-center mx-auto border border-primary/20 mb-6">
               <History size={40} className="text-primary animate-pulse" />
             </div>
-            <h2 className="text-3xl font-display font-bold text-white tracking-tight">{t('quiz.player.oracle.title')}</h2>
-            <p className="text-slate-500 text-sm font-medium">{t('quiz.player.oracle.subtitle')}</p>
+            <h2 className="text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">{t('quiz.player.oracle.title')}</h2>
+            <p className="text-slate-600 dark:text-slate-400 text-sm font-semibold">{t('quiz.player.oracle.subtitle')}</p>
           </div>
 
           <div className="space-y-8">
             <div className="space-y-4 text-center">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('quiz.player.oracle.betAmount')}</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-400">{t('quiz.player.oracle.betAmount')}</label>
               <div className="flex justify-center gap-3">
                 {[0, 10, 20, 50, 100].map(amount => (
                   <button
                     key={amount}
                     onClick={() => setBetAmount(amount)}
-                    className={`px-4 py-3 rounded-2xl font-black text-xs transition-all border ${betAmount === amount ? 'bg-primary border-primary text-white shadow-glow' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}`}
+                    className={`px-4 py-3 rounded-2xl font-black text-xs transition-all border ${betAmount === amount ? 'bg-primary border-primary text-white shadow-glow' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'}`}
                   >
                     {amount === 0 ? t('quiz.player.oracle.none') : `${amount} 🪙`}
                   </button>
@@ -411,13 +411,13 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
             </div>
 
             <div className="space-y-4 text-center">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('quiz.player.oracle.betTarget')}</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-400">{t('quiz.player.oracle.betTarget')}</label>
               <div className="flex justify-center gap-3">
                 {[75, 85, 95, 100].map(target => (
                   <button
                     key={target}
                     onClick={() => setBetTarget(target)}
-                    className={`px-4 py-3 rounded-2xl font-black text-xs transition-all border ${betTarget === target ? 'bg-secondary border-secondary text-white shadow-glow' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}`}
+                    className={`px-4 py-3 rounded-2xl font-black text-xs transition-all border ${betTarget === target ? 'bg-secondary border-secondary text-white shadow-glow' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'}`}
                   >
                     {target}%+
                   </button>
@@ -435,7 +435,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
             </button>
             <button
               onClick={handleInviteFromMap}
-              className="w-full py-4 bg-transparent border-2 border-primary/30 text-primary hover:bg-primary/10 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-glow"
+              className="w-full py-4 bg-slate-100 dark:bg-transparent border-2 border-primary/40 text-primary hover:bg-primary/10 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 shadow-sm dark:shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-glow"
             >
               Défier sur la Carte 🗺️
             </button>
@@ -490,8 +490,8 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
           )}
 
           <div className="space-y-2">
-            <h1 className="text-3xl md:text-5xl font-display font-black text-white tracking-tighter">{t('quiz.player.results.title')}</h1>
-            <p className="text-slate-400 font-medium">{t('quiz.player.results.completed')} <span className="text-white">{quiz.title}</span></p>
+            <h1 className="text-3xl md:text-5xl font-display font-black text-slate-900 dark:text-white tracking-tighter">{t('quiz.player.results.title')}</h1>
+            <p className="text-slate-600 dark:text-slate-400 font-bold">{t('quiz.player.results.completed')} <span className="text-slate-900 dark:text-white">{quiz.title}</span></p>
           </div>
         </div>
 
@@ -499,18 +499,18 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
             { label: t('quiz.player.results.score'), value: `${score}/${quiz.questions.length}`, color: 'text-primary' },
-            { label: t('quiz.player.results.precision'), value: `${Math.round((score / quiz.questions.length) * 100)}%`, color: 'text-success' },
+            { label: t('quiz.player.results.precision'), value: `${Math.round((score / quiz.questions.length) * 100)}%`, color: 'text-emerald-600 dark:text-success' },
             { label: t('quiz.player.results.xp'), value: resultsData.xpGained, color: 'text-secondary' },
-            { label: t('quiz.player.results.time'), value: `${Math.floor(resultsData.timeSpent / 60)}m ${resultsData.timeSpent % 60}s`, color: 'text-accent' }
+            { label: t('quiz.player.results.time'), value: `${Math.floor(resultsData.timeSpent / 60)}m ${resultsData.timeSpent % 60}s`, color: 'text-amber-600 dark:text-accent' }
           ].map((stat, i) => (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
               key={stat.label}
-              className="glass p-6 rounded-[2rem] border border-white/5 text-center space-y-2"
+              className="bg-white dark:bg-white/5 p-6 rounded-[2rem] border border-slate-200 dark:border-white/5 text-center space-y-2 shadow-md"
             >
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{stat.label}</p>
+              <p className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">{stat.label}</p>
               <p className={`text-2xl font-display font-black ${stat.color}`}>{stat.value}</p>
             </motion.div>
           ))}
@@ -519,8 +519,8 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         {/* Summary & Definitions (Prompt 7) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-12 space-y-8">
-            <div className="glass p-10 rounded-[3rem] border border-white/5 space-y-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-12 opacity-[0.03] -rotate-12 translate-x-1/4 -translate-y-1/4">
+            <div className="bg-white dark:bg-white/5 p-8 md:p-10 rounded-[3rem] border border-slate-200 dark:border-white/5 space-y-8 relative overflow-hidden shadow-xl">
+              <div className="absolute top-0 right-0 p-12 opacity-[0.03] dark:opacity-[0.05] -rotate-12 translate-x-1/4 -translate-y-1/4">
                 <BookOpen size={300} />
               </div>
 
@@ -530,26 +530,26 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                     <BookOpen size={24} />
                   </div>
                   <div>
-                    <h3 className="font-display font-bold text-2xl text-white">{t('quiz.player.results.summary')}</h3>
-                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{t('quiz.player.results.summarySub')}</p>
+                    <h3 className="font-display font-bold text-2xl text-slate-900 dark:text-white">{t('quiz.player.results.summary')}</h3>
+                    <p className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">{t('quiz.player.results.summarySub')}</p>
                   </div>
                 </div>
-                <p className="text-lg text-slate-300 leading-relaxed font-normal">
+                <p className="text-base md:text-lg text-slate-800 dark:text-slate-300 leading-relaxed font-medium">
                   {quiz.summary}
                 </p>
               </div>
 
               {quiz.keyPoints && quiz.keyPoints.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/5 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200 dark:border-white/5 relative z-10">
                   <div className="space-y-4">
                     <h4 className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs">
                       <Zap size={14} /> {t('quiz.player.results.keyPoints')}
                     </h4>
                     <ul className="space-y-3">
                       {quiz.keyPoints.map((pt, i) => (
-                        <li key={`pt-${i}`} className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5 group hover:border-primary/30 transition-colors">
+                        <li key={`pt-${i}`} className="flex items-start gap-3 bg-slate-100 dark:bg-white/5 p-3.5 rounded-xl border border-slate-200 dark:border-white/5 group hover:border-primary/30 transition-colors">
                           <Check className="text-primary mt-1 shrink-0" size={14} />
-                          <span className="text-xs text-slate-300 font-medium group-hover:text-white transition-colors">{pt}</span>
+                          <span className="text-xs text-slate-800 dark:text-slate-200 font-bold group-hover:text-primary transition-colors">{pt}</span>
                         </li>
                       ))}
                     </ul>
@@ -562,9 +562,9 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                       </h4>
                       <div className="space-y-3">
                         {quiz.definitions.map((def, i) => (
-                          <div key={def.term || `def-${i}`} className="bg-white/5 p-3 rounded-xl border border-white/5 group hover:border-secondary/30 transition-colors">
-                            <p className="font-bold text-white text-xs mb-1 group-hover:text-secondary-light transition-colors">{def.term}</p>
-                            <p className="text-[10px] text-slate-500 font-medium leading-relaxed uppercase tracking-wide">{def.definition}</p>
+                          <div key={def.term || `def-${i}`} className="bg-slate-100 dark:bg-white/5 p-3.5 rounded-xl border border-slate-200 dark:border-white/5 group hover:border-secondary/30 transition-colors">
+                            <p className="font-bold text-slate-900 dark:text-white text-xs mb-1 group-hover:text-secondary transition-colors">{def.term}</p>
+                            <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold leading-relaxed uppercase tracking-wide">{def.definition}</p>
                           </div>
                         ))}
                       </div>
@@ -625,7 +625,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
           <button
             onClick={handleExportPDF}
-            className="flex-1 py-6 bg-accent/10 hover:bg-accent/20 text-accent rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] border border-accent/20 transition-all flex items-center justify-center gap-3"
+            className="flex-1 py-6 bg-amber-500/10 dark:bg-accent/10 hover:bg-amber-500/20 text-amber-700 dark:text-accent rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] border border-amber-500/20 dark:border-accent/20 transition-all flex items-center justify-center gap-3"
           >
             <Download size={18} /> {t('common.exportPDF')}
           </button>
@@ -633,7 +633,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
           <button
             onClick={onClose}
-            className="flex-1 py-6 bg-white/5 hover:bg-white text-slate-400 hover:text-slate-900 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] border border-white/10 hover:border-white transition-all flex items-center justify-center gap-3"
+            className="flex-1 py-6 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white text-slate-700 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-900 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] border border-slate-200 dark:border-white/10 transition-all flex items-center justify-center gap-3 shadow-sm"
           >
             <Home size={18} /> {t('quiz.player.results.homeBtn')}
           </button>
@@ -644,16 +644,16 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
   return (
     <div className="min-h-[80vh] md:min-h-[85vh] flex items-center justify-center px-3 py-4 md:py-12">
-      <div className="w-full max-w-2xl bg-slate-900/60 backdrop-blur-3xl rounded-[2rem] md:rounded-[3.5rem] border border-white/10 shadow-premium overflow-hidden flex flex-col relative">
+      <div className="w-full max-w-2xl bg-white dark:bg-slate-900/80 backdrop-blur-3xl rounded-[2rem] md:rounded-[3.5rem] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col relative">
         {/* Progress Header */}
         <div className="p-4 md:p-8 md:pb-4 flex items-center justify-between relative z-10">
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 text-slate-400">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400">
               <Zap size={16} />
             </div>
             <div>
-              <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">{quiz.title}</p>
-              <h4 className="text-white font-display font-bold text-sm md:text-lg">Question {currentIdx + 1}/{quiz.questions.length}</h4>
+              <p className="text-[8px] md:text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">{quiz.title}</p>
+              <h4 className="text-slate-900 dark:text-white font-display font-bold text-sm md:text-lg">Question {currentIdx + 1}/{quiz.questions.length}</h4>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -662,7 +662,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
               <button
                 onClick={handleShieldPotion}
                 disabled={isAnswered || shieldActive}
-                className={`p-1 rounded-xl border flex items-center gap-1.5 transition-all overflow-hidden ${shieldActive ? 'bg-primary/20 border-primary/40 text-primary animate-pulse' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'}`}
+                className={`p-1 rounded-xl border flex items-center gap-1.5 transition-all overflow-hidden ${shieldActive ? 'bg-primary/20 border-primary/40 text-primary animate-pulse' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'}`}
                 title={t('quiz.player.potions.shield')}
               >
                 <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5">
@@ -675,7 +675,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
               <button
                 onClick={handleSkipPotion}
                 disabled={isAnswered}
-                className="p-1 bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl flex items-center gap-1.5 transition-all overflow-hidden"
+                className="p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl flex items-center gap-1.5 transition-all overflow-hidden"
                 title={t('quiz.player.potions.skip')}
               >
                 <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5">
@@ -684,7 +684,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                 <span className="text-[9px] md:text-[10px] font-black pr-1">{consumables['potion_skip']}</span>
               </button>
             )}
-            <button onClick={onClose} className="p-2 md:p-3 hover:bg-white/10 text-slate-500 hover:text-white rounded-xl md:rounded-2xl transition-all">
+            <button onClick={onClose} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl md:rounded-2xl transition-all">
               <X size={20} />
             </button>
           </div>
@@ -692,7 +692,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
         {/* Progress Bar */}
         <div className="px-4 mb-4 md:px-8 md:mb-8">
-          <div className="h-1.5 md:h-2 w-full bg-white/5 rounded-full overflow-hidden">
+          <div className="h-1.5 md:h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-gradient-to-r from-primary to-secondary w-full"
               style={{ originX: 0 }}
@@ -713,7 +713,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-3 md:space-y-8 flex-1 flex flex-col"
             >
-              <h2 className="text-sm md:text-xl font-bold text-white text-center leading-snug px-2 py-2 md:py-4 min-h-[3.5rem] md:min-h-[4rem] flex items-center justify-center">
+              <h2 className="text-base md:text-xl font-black text-slate-900 dark:text-white text-center leading-snug px-2 py-2 md:py-4 min-h-[3.5rem] md:min-h-[4rem] flex items-center justify-center">
                 {currentQuestion.text}
               </h2>
 
@@ -722,11 +722,11 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                   const isCorrect = i === currentQuestion.correctAnswer;
                   const isSelected = selectedOption === i;
 
-                  let stateStyle = "bg-white/5 border-white/5 text-slate-200 hover:bg-white/10 hover:border-white/10";
+                  let stateStyle = "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-900 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/10 hover:border-slate-300 dark:hover:border-white/10 shadow-sm";
                   if (isAnswered) {
-                    if (isCorrect) stateStyle = "bg-success/20 border-success/40 text-success shadow-[0_0_20px_rgba(34,197,94,0.1)]";
-                    else if (isSelected) stateStyle = "bg-danger/20 border-danger/40 text-danger";
-                    else stateStyle = "bg-white/5 border-white/5 text-slate-500 opacity-50";
+                    if (isCorrect) stateStyle = "bg-emerald-500/10 dark:bg-success/20 border-emerald-500/40 dark:border-success/40 text-emerald-700 dark:text-success shadow-[0_0_20px_rgba(34,197,94,0.15)]";
+                    else if (isSelected) stateStyle = "bg-red-500/10 dark:bg-danger/20 border-red-500/40 dark:border-danger/40 text-red-700 dark:text-danger";
+                    else stateStyle = "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400 dark:text-slate-500 opacity-50";
                   }
 
                   return (
@@ -741,14 +741,14 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                       `}
                     >
                       <div className="flex items-center gap-3 md:gap-4">
-                        <span className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center text-[10px] md:text-xs font-black uppercase transition-colors ${isSelected ? 'bg-white/20' : 'bg-white/5 text-slate-500'}`}>
+                        <span className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center text-[10px] md:text-xs font-black uppercase transition-colors ${isSelected ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-400'}`}>
                           {String.fromCharCode(65 + i)}
                         </span>
-                        <span className="text-xs md:text-sm tracking-tight leading-snug">{option}</span>
+                        <span className="text-xs md:text-sm tracking-tight leading-snug font-bold">{option}</span>
                       </div>
                       <AnimatePresence>
-                        {isAnswered && isCorrect && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><CheckCircle2 size={18} className="text-success md:w-[24px] md:h-[24px]" /></motion.div>}
-                        {isAnswered && isSelected && !isCorrect && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><XCircle size={18} className="text-danger md:w-[24px] md:h-[24px]" /></motion.div>}
+                        {isAnswered && isCorrect && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><CheckCircle2 size={18} className="text-emerald-600 dark:text-success md:w-[24px] md:h-[24px]" /></motion.div>}
+                        {isAnswered && isSelected && !isCorrect && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><XCircle size={18} className="text-red-600 dark:text-danger md:w-[24px] md:h-[24px]" /></motion.div>}
                       </AnimatePresence>
                     </button>
                   );
@@ -761,31 +761,31 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`p-4 md:p-6 rounded-2xl md:rounded-[2rem] border transition-all ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}
+                    className={`p-4 md:p-6 rounded-2xl md:rounded-[2rem] border transition-all ${selectedOption === currentQuestion.correctAnswer ? 'bg-emerald-500/10 dark:bg-success/5 border-emerald-500/20 dark:border-success/20' : 'bg-red-500/10 dark:bg-danger/5 border-red-500/20 dark:border-danger/20'}`}
                   >
                     <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
-                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center border ${selectedOption === currentQuestion.correctAnswer ? 'bg-success/20 border-success/30 text-success' : 'bg-danger/20 border-danger/30 text-danger animate-pulse'}`}>
+                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center border ${selectedOption === currentQuestion.correctAnswer ? 'bg-emerald-500/20 dark:bg-success/20 border-emerald-500/30 dark:border-success/30 text-emerald-600 dark:text-success' : 'bg-red-500/20 dark:bg-danger/20 border-red-500/30 dark:border-danger/30 text-red-600 dark:text-danger animate-pulse'}`}>
                         {selectedOption === currentQuestion.correctAnswer ? <Trophy size={16} /> : <AlertCircle size={16} />}
                       </div>
                       <div className="flex-1">
-                        <h5 className={`font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px] ${selectedOption === currentQuestion.correctAnswer ? 'text-success' : 'text-danger'}`}>
+                        <h5 className={`font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px] ${selectedOption === currentQuestion.correctAnswer ? 'text-emerald-700 dark:text-success' : 'text-red-700 dark:text-danger'}`}>
                           {encouragement}
                         </h5>
                         {selectedOption !== currentQuestion.correctAnswer && (
-                           <p className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Explication Pédagogique</p>
+                           <p className="text-[8px] md:text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest mt-0.5">Explication Pédagogique</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 border border-white/5 max-h-[8rem] overflow-y-auto custom-scrollbar">
-                      <p className="text-[11px] md:text-sm text-slate-300 leading-relaxed font-medium">
+                    <div className="bg-slate-100 dark:bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 border border-slate-200 dark:border-white/5 max-h-[8rem] overflow-y-auto custom-scrollbar">
+                      <p className="text-[11px] md:text-sm text-slate-800 dark:text-slate-300 leading-relaxed font-bold">
                         {currentQuestion.explanation || "L'IA n'a pas fourni d'explication pour cette question, mais la réponse correcte est mise en évidence."}
                       </p>
                     </div>
 
                     <button
                       onClick={nextQuestion}
-                      className="w-full mt-4 py-3 md:py-4 bg-white text-slate-900 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                      className="w-full mt-4 py-3.5 md:py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
                     >
                       {currentIdx === quiz.questions.length - 1 ? t('quiz.player.activity') : t('quiz.player.nextQuestion')} <ChevronRight size={10} className="md:w-[14px] md:h-[14px]" />
                     </button>
@@ -797,7 +797,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         </div>
 
         {/* Score Footer */}
-        <div className="p-4 md:p-6 bg-slate-950/50 border-t border-white/5 flex items-center justify-between relative z-0">
+        <div className="p-4 md:p-6 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-white/5 flex items-center justify-between relative z-0">
           <div className="flex gap-1 overflow-x-auto max-w-[60%] py-1">
             {quiz.questions.map((_, i) => (
               <div key={`dot-${i}`} className={`h-1.5 w-4 md:w-6 rounded-full transition-colors flex-shrink-0 ${i < currentIdx ? 'bg-success' : i === currentIdx ? 'bg-primary animate-pulse' : 'bg-white/5'}`}></div>
