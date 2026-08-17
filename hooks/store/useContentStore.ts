@@ -667,7 +667,7 @@ export const useContentStore = (
         if (quizData) {
             try { currentQuizzes = JSON.parse(quizData); } catch (e) { console.error(e); }
         }
-        const customQuizzes = currentQuizzes.filter(q => !defaultQuizzes.some(dq => dq.id === q.id));
+        const customQuizzes = currentQuizzes.filter(q => !defaultQuizzes.some(dq => dq.id === q.id)).slice(-25);
         const mergedQuizzes = [...defaultQuizzes, ...customQuizzes];
         setQuizzes(mergedQuizzes);
         localStorage.setItem(quizKey, JSON.stringify(mergedQuizzes));
@@ -690,7 +690,7 @@ export const useContentStore = (
         if (deckData) {
             try { currentDecks = JSON.parse(deckData); } catch (e) { console.error(e); }
         }
-        const customDecks = currentDecks.filter(d => !defaultDecks.some(dd => dd.id === d.id) && !deletedDeckIds.includes(d.id));
+        const customDecks = currentDecks.filter(d => !defaultDecks.some(dd => dd.id === d.id) && !deletedDeckIds.includes(d.id)).slice(-25);
         const mergedDecks = [...defaultDecks, ...customDecks];
         setDecks(mergedDecks);
         localStorage.setItem(deckKey, JSON.stringify(mergedDecks));
@@ -706,7 +706,7 @@ export const useContentStore = (
         if (fcData) {
             try { currentFlashcards = JSON.parse(fcData); } catch (e) { console.error(e); }
         }
-        const customFlashcards = currentFlashcards.filter(f => !defaultFlashcards.some(df => df.id === f.id) && !deletedDeckIds.includes(f.deckId));
+        const customFlashcards = currentFlashcards.filter(f => !defaultFlashcards.some(df => df.id === f.id) && !deletedDeckIds.includes(f.deckId)).slice(-60);
         const mergedFlashcards = [...defaultFlashcards, ...customFlashcards];
         setFlashcards(mergedFlashcards);
         localStorage.setItem(fcKey, JSON.stringify(mergedFlashcards));

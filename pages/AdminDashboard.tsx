@@ -28,6 +28,7 @@ import {
 } from '../types';
 import { adminNotificationService } from '../services/adminNotificationService';
 import AdminNotifPanel from '../components/admin/AdminNotifPanel';
+import { translations } from '../utils/translations';
 
 const StatisticsPanel = React.lazy(() => import('../components/admin/StatisticsPanel'));
 const UserManagement = React.lazy(() => import('../components/admin/UserManagement'));
@@ -48,7 +49,16 @@ const StudentBehaviorDataset = React.lazy(() => import('../components/admin/Stud
 type Tab = 'overview' | 'stats' | 'users' | 'subscriptions' | 'comments' | 'support' | 'ratings' | 'export' | 'monitor' | 'retention' | 'gamification' | 'security' | 'shop' | 'teachers' | 'notifications' | 'behavior';
 
 const AdminDashboard: React.FC = () => {
-    const { user, logout, changePassword, updateProfile } = useStore();
+    const { user, logout, changePassword, updateProfile, settings, updateSettings } = useStore();
+    const lang = settings?.language || 'fr';
+    const t = (key: string): string => {
+        const parts = key.split('.');
+        let val: any = translations[lang] || translations['fr'];
+        for (const p of parts) {
+            val = val?.[p];
+        }
+        return typeof val === 'string' ? val : key;
+    };
     const [activeTab, setActiveTab] = useState<Tab>('overview');
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [users, setUsers] = useState<AdminUserAnalytics[]>([]);
@@ -118,15 +128,16 @@ const AdminDashboard: React.FC = () => {
             }
         } catch (error: any) {
             console.error('Error updating admin profile:', error);
-            setProfileError(error.message || 'Une erreur est survenue lors de la mise à jour.');
+            setProfileError(error.message || 'Erreur lors de la mise à jour du profil.');
         } finally {
             setProfileLoading(false);
         }
     };
 
     const DEFAULT_STATS: AdminStats = {
-        totalUsers: 0, activeUsers: 0, newUsersToday: 0, newUsersWeek: 0, newUsersMonth: 0, newUsersYear: 0,
-        quizzesGenerated: 0, quizzesToday: 0, flashcardsCreated: 0, flashcardsToday: 0,
+        totalUsers: 0, activeUsers: 0, activeNow: 0, totalQuizzesTaken: 0, averageScore: 0,
+        quizzesToday: 0, totalFlashcardsReviewed: 0, totalSummariesGenerated: 0,
+        summariesToday: 0, totalMindmapsGenerated: 0, totalAudioNotesGenerated: 0,
         storiesWritten: 0, storiesToday: 0, booksRead: 0, booksToday: 0,
         totalLearningHours: 0, averageEngagementRate: 0
     };
@@ -174,29 +185,31 @@ const AdminDashboard: React.FC = () => {
     const handleRefresh = async () => {
         // Clear local cache for stats
         localStorage.removeItem('admin_cache_overview');
-        await loadTab(activeTab);
+        await loadTab(activeTab, true);
     };
 
     // Close sidebar on mobile when a tab is selected
     const handleTabChange = (tab: Tab) => {
         setActiveTab(tab);
-        if (window.innerWidth < 1024) {
-            setSidebarOpen(false);
+        setSidebarOpen(false);
+    };
+
+    const handleLogout = () => {
+        if (user) {
+            logAdminAction(user.id, user.name, 'logout', { timestamp: new Date().toISOString() });
         }
+        logout();
     };
 
     const handleNotificationClick = (notif: any) => {
         setHighlightItemId(null); // Reset first
 
-        if (notif.type === 'system') {
-            setActiveTab('support');
-            if (notif.metadata?.commentId) setHighlightItemId(notif.metadata.commentId);
-        } else if (notif.type === 'new_comment') {
+        if (notif.type === 'new_comment' || notif.type === 'flagged_comment') {
             setActiveTab('comments');
             if (notif.metadata?.commentId) setHighlightItemId(notif.metadata.commentId);
-        } else if (notif.type === 'new_rating') {
-            setActiveTab('ratings');
-            if (notif.metadata?.ratingId) setHighlightItemId(notif.metadata.ratingId);
+        } else if (notif.type === 'support_ticket') {
+            setActiveTab('support');
+            if (notif.metadata?.ticketId) setHighlightItemId(notif.metadata.ticketId);
         } else if (notif.type === 'new_teacher') {
             setActiveTab('teachers');
             if (notif.metadata?.teacherId) setHighlightItemId(notif.metadata.teacherId);
@@ -207,7 +220,7 @@ const AdminDashboard: React.FC = () => {
         setIsNotifOpen(false);
     };
 
-    const loadTab = async (tab: Tab) => {
+    const loadTab = async (tab: Tab, forceRefresh = false) => {
         if (loadingStates[tab]) return;
         setLoadingStates(prev => ({ ...prev, [tab]: true }));
         try {
@@ -223,14 +236,6 @@ const AdminDashboard: React.FC = () => {
                         getTotalTeachersCount()
                     ]);
                     
-                    if (sData.status === 'rejected') console.error('getGlobalStats rejected:', sData.reason);
-                    if (cData.status === 'rejected') console.error('getAllComments rejected:', cData.reason);
-                    if (supData.status === 'rejected') console.error('getSupportTickets rejected:', supData.reason);
-                    if (rData.status === 'rejected') console.error('getAllRatings rejected:', rData.reason);
-                    if (avgR.status === 'rejected') console.error('getAverageRatings rejected:', avgR.reason);
-                    if (tData.status === 'rejected') console.error('getPendingApplications rejected:', tData.reason);
-                    if (teachersCountResult.status === 'rejected') console.error('getTotalTeachersCount rejected:', teachersCountResult.reason);
-
                     const newStats = sData.status === 'fulfilled' ? sData.value : null;
                     const newComments = cData.status === 'fulfilled' ? cData.value : [];
                     const newSupport = supData.status === 'fulfilled' ? supData.value : [];
@@ -240,7 +245,7 @@ const AdminDashboard: React.FC = () => {
                     const newTotalTeachers = teachersCountResult.status === 'fulfilled' ? teachersCountResult.value : 0;
 
                     if (newStats) setStats(newStats);
-                    else if (!stats) setStats(DEFAULT_STATS); // Prevent infinite skeleton state
+                    else if (!stats) setStats(DEFAULT_STATS);
 
                     setComments(newComments);
                     setSupportTickets(newSupport);
@@ -259,130 +264,82 @@ const AdminDashboard: React.FC = () => {
                         timestamp: Date.now()
                     }));
                     break;
+                case 'stats':
+                    if (forceRefresh || !demographicStats) {
+                        const dStats = await getDemographicStats();
+                        setDemographicStats(dStats);
+                    }
+                    break;
                 case 'users':
                 case 'subscriptions':
-                    try {
-                        const result = await getUserAnalytics(500);
-                        setUsers(result);
-                    } catch (e) {
-                        console.error('getUserAnalytics failed:', e);
-                        setUsers([]);
+                case 'security':
+                    if (forceRefresh || users.length === 0) {
+                        const uData = await getUserAnalytics(100);
+                        setUsers(uData);
                     }
                     break;
                 case 'comments':
-                    try {
-                        const result = await getAllComments(100);
-                        setComments(result);
-                    } catch (e) {
-                        console.error('getAllComments failed:', e);
-                        setComments([]);
-                    }
+                    const freshComments = await getAllComments(100);
+                    setComments(freshComments);
                     break;
                 case 'support':
-                    try {
-                        const result = await getSupportTickets(100);
-                        setSupportTickets(result);
-                    } catch (e) {
-                        console.error('getSupportTickets failed:', e);
-                        setSupportTickets([]);
-                    }
+                    const freshSupport = await getSupportTickets(100);
+                    setSupportTickets(freshSupport);
                     break;
                 case 'ratings':
-                    try {
-                        const [ratingsData, avgRatingsData] = await Promise.all([getAllRatings(50), getAverageRatings()]);
-                        setRatings(ratingsData);
-                        setAverageRatings(avgRatingsData);
-                    } catch (e) {
-                        console.error('ratings/averageRatings load failed:', e);
-                        setRatings([]);
-                    }
+                    const freshRatings = await getAllRatings(100);
+                    const avgRData = await getAverageRatings();
+                    setRatings(freshRatings);
+                    setAverageRatings(avgRData);
                     break;
-                case 'stats':
-                    if (!demographicStats) {
-                        const [statsResult, demogResult] = await Promise.allSettled([getGlobalStats(period), getDemographicStats()]);
-                        if (statsResult.status === 'fulfilled') setStats(statsResult.value);
-                        if (demogResult.status === 'fulfilled') setDemographicStats(demogResult.value);
-                    } else {
-                        const statsData = await getGlobalStats(period);
-                        setStats(statsData);
-                    }
-                    break;
-                case 'export':
-                    try {
-                        const [uData, cData, dData] = await Promise.all([
-                            exportUserData(),
-                            getAllComments(100),
-                            getDemographicStats()
-                        ]);
-                        setUsers(uData);
-                        setComments(cData);
-                        setDemographicStats(dData);
-                    } catch (err) {
-                        console.error("Error loading export data", err);
-                    }
-                    break;
-                case 'monitor':
-                case 'retention':
-                case 'gamification':
-                case 'security':
-                    // Add a small delay for demo/visual consistency if needed, 
-                    // but usually we just wait for the component to be ready via Suspense
-                    await new Promise(resolve => setTimeout(resolve, 800));
+                case 'teachers':
+                    const freshTeachers = await getPendingApplications();
+                    const teacherCount = await getTotalTeachersCount();
+                    setTeacherApps(freshTeachers);
+                    setTotalTeachers(teacherCount);
                     break;
             }
         } catch (error) {
-            console.error(`Error loading ${tab} data:`, error);
+            console.error(`Error loading tab ${tab}:`, error);
         } finally {
             setLoadingStates(prev => ({ ...prev, [tab]: false }));
-            setLoading(false); // No longer blocks the whole UI, but keeps compatibility
+            setLoading(false);
         }
     };
 
-    const handleLogout = () => {
-        if (user) logAdminAction(user.id, user.name, 'logout', { timestamp: new Date().toISOString() });
-        logout();
-    };
-
-    const markAllAsRead = () => {
-        adminNotificationService.markAllAsRead();
-    };
-
     const handleResetRatings = async () => {
-        if (!window.confirm("Êtes-vous sûr de vouloir supprimer TOUTES les évaluations de la plateforme ? Cette action est irréversible et ramènera la note à zéro.")) return;
+        if (!window.confirm("Êtes-vous sûr de vouloir réinitialiser toutes les évaluations ? Cette action est irréversible.")) {
+            return;
+        }
         setLoading(true);
         try {
             await resetAllRatings();
-            localStorage.removeItem('admin_cache_overview');
+            alert("Toutes les évaluations ont été réinitialisées avec succès.");
             await loadTab('ratings');
-            alert("Toutes les évaluations ont été réinitialisées à zéro.");
         } catch (error: any) {
-            console.error("Error resetting ratings:", error);
             alert("Erreur lors de la réinitialisation : " + error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    // Initial loading is now handled inside the content area with skeletons
-    // to allow the sidebar and header to be interactive immediately.
-
     const navItems = [
-        { id: 'overview' as Tab, icon: Home, label: "Vue d'ensemble", badge: null },
-        { id: 'notifications' as Tab, icon: Bell, label: 'Notifications', badge: adminNotifCount },
-        { id: 'monitor' as Tab, icon: Activity, label: 'Spy Mode', badge: null },
-        { id: 'retention' as Tab, icon: Magnet, label: 'Rétention', badge: null },
-        { id: 'gamification' as Tab, icon: Trophy, label: 'Gamification', badge: null },
-        { id: 'security' as Tab, icon: Shield, label: 'Sécurité', badge: null },
-        { id: 'stats' as Tab, icon: TrendingUp, label: 'Statistiques', badge: null },
-        { id: 'users' as Tab, icon: Users, label: 'Utilisateurs', badge: users.length },
-        { id: 'subscriptions' as Tab, icon: Crown, label: 'Abonnements & Premium', badge: users.filter(u => u.isPremium || u.subscriptionTier !== 'free').length },
-        { id: 'comments' as Tab, icon: MessageSquare, label: 'Commentaires Élèves', badge: comments.filter(c => c.status === 'pending').length },
-        { id: 'support' as Tab, icon: LifeBuoy, label: 'Messages & Support', badge: supportTickets.filter(c => c.status === 'pending').length },
-        { id: 'ratings' as Tab, icon: Star, label: 'Évaluations', badge: null },
-        { id: 'export' as Tab, icon: Download, label: 'Exports', badge: null },
-        { id: 'shop' as Tab, icon: ShoppingBag, label: 'Boutique', badge: null },
-        { id: 'teachers' as Tab, icon: Shield, label: 'Enseignants', badge: null },
-        { id: 'behavior' as Tab, icon: Brain, label: 'Comportement Élèves & IA', badge: null },
+        { id: 'overview' as Tab, icon: Home, label: t('admin.overview'), badge: null },
+        { id: 'notifications' as Tab, icon: Bell, label: t('admin.notifications'), badge: adminNotifCount },
+        { id: 'monitor' as Tab, icon: Activity, label: t('admin.spyMode'), badge: null },
+        { id: 'retention' as Tab, icon: Magnet, label: t('admin.retention'), badge: null },
+        { id: 'gamification' as Tab, icon: Trophy, label: t('admin.gamification'), badge: null },
+        { id: 'security' as Tab, icon: Shield, label: t('admin.security'), badge: null },
+        { id: 'stats' as Tab, icon: TrendingUp, label: t('admin.statistics'), badge: null },
+        { id: 'users' as Tab, icon: Users, label: t('admin.users'), badge: users.length },
+        { id: 'subscriptions' as Tab, icon: Crown, label: t('admin.subscriptions'), badge: users.filter(u => u.isPremium || u.subscriptionTier !== 'free').length },
+        { id: 'comments' as Tab, icon: MessageSquare, label: t('admin.studentComments'), badge: comments.filter(c => c.status === 'pending').length },
+        { id: 'support' as Tab, icon: LifeBuoy, label: t('admin.supportMessages'), badge: supportTickets.filter(c => c.status === 'pending').length },
+        { id: 'ratings' as Tab, icon: Star, label: t('admin.evaluations'), badge: null },
+        { id: 'export' as Tab, icon: Download, label: t('admin.exports'), badge: null },
+        { id: 'shop' as Tab, icon: ShoppingBag, label: t('admin.shop'), badge: null },
+        { id: 'teachers' as Tab, icon: Shield, label: t('admin.teachers'), badge: null },
+        { id: 'behavior' as Tab, icon: Brain, label: t('admin.aiBehavior'), badge: null },
     ];
 
     const activeNav = navItems.find(item => item.id === activeTab);
@@ -481,7 +438,7 @@ const AdminDashboard: React.FC = () => {
                             className="w-full py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2"
                         >
                             <LogOut size={12} />
-                            Déconnexion
+                            {t('admin.logout')}
                         </button>
                     </div>
                 </div>
@@ -504,28 +461,15 @@ const AdminDashboard: React.FC = () => {
                             <h2 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white truncate transition-colors">
                                 {activeNav?.label}
                             </h2>
-                            <p className="text-xs text-slate-400 truncate hidden sm:block">
-                                {activeTab === 'overview' && 'Tableau de bord principal'}
-                                {activeTab === 'stats' && 'Analyses détaillées de la plateforme'}
-                                {activeTab === 'users' && 'Gestion complète des utilisateurs'}
-                                {activeTab === 'comments' && 'Modération des commentaires'}
-                                {activeTab === 'ratings' && 'Évaluations de la plateforme'}
-                                {activeTab === 'export' && 'Téléchargement des rapports'}
-                                {activeTab === 'monitor' && 'Surveillance temps réel des activités'}
-                                {activeTab === 'retention' && 'Analyse des cohortes et de la fidélisation'}
-                                {activeTab === 'gamification' && 'Gestion des récompenses, badges et classements'}
-                                {activeTab === 'security' && 'Modération et sécurité des utilisateurs'}
-                                {activeTab === 'shop' && 'Gestion de la boutique'}
-                            </p>
                         </div>
 
                             <button 
                                 onClick={handleRefresh}
                                 disabled={loadingStates[activeTab]}
-                                className={`p-2 rounded-xl transition-all bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 ${loadingStates[activeTab] ? 'animate-spin' : ''}`}
+                                className="p-2 rounded-xl transition-all bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50"
                                 title="Actualiser les données"
                             >
-                                <RefreshCw size={18} className="text-slate-500 dark:text-slate-400" />
+                                <RefreshCw size={18} className={`text-slate-500 dark:text-slate-400 ${loadingStates[activeTab] ? 'animate-spin' : ''}`} />
                             </button>
                             <button 
                                 onClick={() => setIsPrintModalOpen(true)}
@@ -571,48 +515,99 @@ const AdminDashboard: React.FC = () => {
                             <AnimatePresence>
                                 {isSettingsOpen && (
                                     <div 
-                                        className="absolute top-14 right-0 w-64 bg-slate-950 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                                        className="absolute top-14 right-0 w-64 bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
                                         style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))' }}
                                     >
-                                        <div className="p-4 border-b border-white/10 bg-white/5">
-                                            <h3 className="text-sm font-black text-white">Réglages Administration</h3>
+                                        <div className="p-4 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-between">
+                                            <h3 className="text-sm font-black text-slate-900 dark:text-white">{t('admin.settingsTitle')}</h3>
+                                            <button
+                                                onClick={() => setIsSettingsOpen(false)}
+                                                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                                title="Fermer"
+                                            >
+                                                <X size={16} />
+                                            </button>
                                         </div>
                                         <div className="p-3 space-y-2">
-                                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                            <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5">
                                                 <div className="flex items-center gap-3 mb-3">
                                                     <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-black text-xs">
                                                         {user?.name.charAt(0)}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-[11px] font-black text-white truncate">{user?.name}</p>
+                                                        <p className="text-[11px] font-black text-slate-900 dark:text-white truncate">{user?.name}</p>
                                                         <p className="text-[9px] text-slate-500 font-bold truncate">{user?.phoneNumber}</p>
                                                     </div>
                                                 </div>
-                                                <div className="py-2 border-t border-white/5">
+                                                <div className="py-2 border-t border-slate-200 dark:border-white/5">
                                                     <p className="text-[9px] text-blue-500 font-black uppercase tracking-widest">Rôle: FULL ADMIN</p>
                                                 </div>
                                             </div>
                                             <div className="space-y-1">
                                                 <button 
                                                     onClick={openProfileModal}
-                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-[11px] font-bold"
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all text-[11px] font-bold"
                                                 >
-                                                    <Settings size={14} /> Modifier Profil
+                                                    <Settings size={14} /> {t('admin.editProfile')}
                                                 </button>
                                                 <button 
                                                     onClick={() => { setActiveTab('security'); setIsSettingsOpen(false); }}
-                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-[11px] font-bold"
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all text-[11px] font-bold"
                                                 >
-                                                    <Shield size={14} /> Sécurité Table
+                                                    <Shield size={14} /> {t('admin.tableSecurity')}
                                                 </button>
                                             </div>
-                                            <div className="pt-2 border-t border-white/10">
+
+                                            {/* Preferences Controls (Theme, Language, Font Size) */}
+                                            <div className="pt-2 border-t border-slate-200 dark:border-white/10 space-y-2.5">
+                                                {/* Theme Toggle */}
+                                                <div className="flex items-center justify-between px-2">
+                                                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{t('admin.theme')}</span>
+                                                    <button
+                                                        onClick={() => updateSettings({ theme: settings?.theme === 'dark' ? 'light' : 'dark' })}
+                                                        className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-wider transition-all"
+                                                    >
+                                                        {settings?.theme === 'dark' ? '🌙 Sombre' : '☀️ Clair'}
+                                                    </button>
+                                                </div>
+
+                                                {/* Language Selector */}
+                                                <div className="flex items-center justify-between px-2">
+                                                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{t('admin.language')}</span>
+                                                    <select
+                                                        value={settings?.language || 'fr'}
+                                                        onChange={(e) => updateSettings({ language: e.target.value })}
+                                                        className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white text-[10px] font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
+                                                    >
+                                                        <option value="fr">Français 🇫🇷</option>
+                                                        <option value="en">English 🇬🇧</option>
+                                                        <option value="ar">العربية 🇸🇦</option>
+                                                    </select>
+                                                </div>
+
+                                                {/* Font Size Selector */}
+                                                <div className="flex items-center justify-between px-2">
+                                                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{t('admin.fontSize')}</span>
+                                                    <select
+                                                        value={(settings?.fontSize || 'base').split(' ')[0].replace('font-size-', '')}
+                                                        onChange={(e) => updateSettings({ fontSize: e.target.value })}
+                                                        className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white text-[10px] font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
+                                                    >
+                                                        <option value="sm">Normal</option>
+                                                        <option value="base">Grand</option>
+                                                        <option value="lg">Très Grand</option>
+                                                        <option value="xl">Maxi</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-2 border-t border-slate-200 dark:border-white/10">
                                                 <button 
                                                     onClick={handleLogout}
-                                                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all font-black text-[10px] uppercase tracking-widest"
+                                                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-500 dark:text-red-400 hover:bg-red-500/10 transition-all font-black text-[10px] uppercase tracking-widest"
                                                 >
                                                     <LogOut size={14} />
-                                                    Déconnexion
+                                                    {t('admin.logout')}
                                                 </button>
                                             </div>
                                         </div>
@@ -855,8 +850,8 @@ const AdminDashboard: React.FC = () => {
                                         <DemographicTable stats={demographicStats} />
                                     </div>
                                 )}
-                                {activeTab === 'users' && <UserManagement users={users} onRefresh={() => loadTab('users')} />}
-                                {activeTab === 'subscriptions' && <SubscriptionManager users={users} onRefresh={() => loadTab('subscriptions')} />}
+                                {activeTab === 'users' && <UserManagement users={users} onRefresh={() => loadTab('users', true)} />}
+                                {activeTab === 'subscriptions' && <SubscriptionManager users={users} onRefresh={() => loadTab('subscriptions', true)} />}
                                 {activeTab === 'comments' && <CommentManagement comments={comments} onRefresh={() => loadTab('comments')} highlightId={highlightItemId} />}
                                 {activeTab === 'support' && <SupportManager comments={supportTickets} onRefresh={() => loadTab('support')} />}
                                 {activeTab === 'ratings' && <RatingsTab ratings={ratings} averageRatings={averageRatings} totalUsers={stats?.totalUsers || 0} highlightId={highlightItemId} />}

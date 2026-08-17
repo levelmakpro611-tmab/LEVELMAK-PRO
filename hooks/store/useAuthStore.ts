@@ -1,3 +1,4 @@
+import { safeLocalStorageSet } from '../../services/storage';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Activity } from '../../types';
 import { supabase } from '../../services/supabase';
@@ -76,7 +77,7 @@ export const useAuthStore = () => {
                                     appUser.role = 'teacher';
                                 }
                                 setUser(appUser);
-                                localStorage.setItem('levelmak_user', JSON.stringify(appUser));
+                                safeLocalStorageSet('levelmak_user', JSON.stringify(appUser));
                                 triggerSync(appUser.id);
                             }
                         }
@@ -102,7 +103,7 @@ export const useAuthStore = () => {
                             user.role = 'teacher';
                         }
                         setUser(user);
-                        localStorage.setItem('levelmak_user', JSON.stringify(user));
+                        safeLocalStorageSet('levelmak_user', JSON.stringify(user));
                         triggerSync(user.id);
                     }
                 } else {
@@ -156,7 +157,7 @@ export const useAuthStore = () => {
                 });
             }
 
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
     }, []);
@@ -166,14 +167,14 @@ export const useAuthStore = () => {
             setLoading(true);
             const loggedUser = await signInWithPhone(phone, password);
             if (loggedUser) {
-                if (loggedUser.status && loggedUser.status !== 'active') {
+                if (loggedUser.status === 'blocked' || loggedUser.status === 'suspended') {
                     await signOutUser();
                     throw new Error(loggedUser.status === 'blocked'
                         ? 'Ton compte a été bloqué définitivement.'
                         : 'Ton compte est suspendu.');
                 }
                 setUser(loggedUser);
-                localStorage.setItem('levelmak_user', JSON.stringify(loggedUser));
+                safeLocalStorageSet('levelmak_user', JSON.stringify(loggedUser));
                 triggerSync(loggedUser.id);
             }
         } finally {
@@ -187,7 +188,7 @@ export const useAuthStore = () => {
             const newUser = await signUpWithPhone(params);
             if (newUser) {
                 setUser(newUser);
-                localStorage.setItem('levelmak_user', JSON.stringify(newUser));
+                safeLocalStorageSet('levelmak_user', JSON.stringify(newUser));
                 triggerSync(newUser.id);
             }
         } finally {
@@ -201,7 +202,7 @@ export const useAuthStore = () => {
             const newUser = await signUpWithEmail(email, password, name, gender, ageRange, extra?.phoneNumber, extra?.gradeClass);
             if (newUser) {
                 setUser(newUser);
-                localStorage.setItem('levelmak_user', JSON.stringify(newUser));
+                safeLocalStorageSet('levelmak_user', JSON.stringify(newUser));
                 triggerSync(newUser.id);
             }
         } finally {
@@ -214,14 +215,14 @@ export const useAuthStore = () => {
             setLoading(true);
             const loggedUser = await signInWithEmail(email, password);
             if (loggedUser) {
-                if (loggedUser.status && loggedUser.status !== 'active') {
+                if (loggedUser.status === 'blocked' || loggedUser.status === 'suspended') {
                     await signOutUser();
                     throw new Error(loggedUser.status === 'blocked'
                         ? 'Ton compte a été bloqué définitivement.'
                         : 'Ton compte est suspendu.');
                 }
                 setUser(loggedUser);
-                localStorage.setItem('levelmak_user', JSON.stringify(loggedUser));
+                safeLocalStorageSet('levelmak_user', JSON.stringify(loggedUser));
                 triggerSync(loggedUser.id);
             }
         } finally {
@@ -235,7 +236,7 @@ export const useAuthStore = () => {
             const loggedUser = await signInWithGoogle();
             if (loggedUser) {
                 setUser(loggedUser);
-                localStorage.setItem('levelmak_user', JSON.stringify(loggedUser));
+                safeLocalStorageSet('levelmak_user', JSON.stringify(loggedUser));
                 triggerSync(loggedUser.id);
             }
         } finally {
@@ -269,7 +270,7 @@ export const useAuthStore = () => {
                 ...updates,
                 stats: updatedStats
             };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
 
             // Immediately sync to Supabase DB
             if (prev.id && !prev.id.includes('anon')) {
@@ -299,7 +300,7 @@ export const useAuthStore = () => {
     useEffect(() => {
         if (!loading) {
             if (user) {
-                localStorage.setItem('levelmak_user', JSON.stringify(user));
+                safeLocalStorageSet('levelmak_user', JSON.stringify(user));
             } else {
                 localStorage.removeItem('levelmak_user');
             }
@@ -330,7 +331,7 @@ export const useAuthStore = () => {
                     coach_sessions: user.coachSessions
                 }).eq('id', user.id);
                 
-                localStorage.setItem('levelmak_last_sync', Date.now().toString());
+                safeLocalStorageSet('levelmak_last_sync', Date.now().toString());
             } catch (e) {
                 console.error("Sync error", e);
             }
@@ -338,6 +339,36 @@ export const useAuthStore = () => {
 
         return () => clearTimeout(timer);
     }, [user]);
+
+    // Periodic active session security check & status enforcement (every 8s)
+    useEffect(() => {
+        if (!user || !user.id || user.id.includes('anon')) return;
+
+        const checkSecurityStatus = async () => {
+            try {
+                const { data: profile } = await supabase.from('profiles').select('status, is_premium, premium_until, stats').eq('id', user.id).maybeSingle();
+                if (profile) {
+                    if (profile.status === 'blocked' || profile.status === 'suspended') {
+                        console.warn("Security Check: Account status is blocked/suspended. Evicting active session...");
+                        await signOutUser();
+                        setUser(null);
+                        localStorage.removeItem('levelmak_user');
+                        const blockMsg = profile.status === 'blocked'
+                            ? "⛔ Votre compte a été bloqué par l'administration Levelmak. Contactez-nous pour plus d'informations."
+                            : "⚠️ Votre compte est suspendu temporairement. Contactez l'administration Levelmak.";
+                        alert(blockMsg);
+                        window.location.reload();
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn("Security check failed silently:", e);
+            }
+        };
+
+        const interval = setInterval(checkSecurityStatus, 8000);
+        return () => clearInterval(interval);
+    }, [user?.id]);
 
     // Real-time listener for profile updates (admin notifications, block/suspend, or resource adjustments)
     useEffect(() => {
@@ -362,7 +393,7 @@ export const useAuthStore = () => {
                             signOutUser().then(() => {
                                 setUser(null);
                                 localStorage.removeItem('levelmak_user');
-                                alert("ALERTE SÉCURITÉ: Ton compte a été bloqué.");
+                                alert("ALERTE SÉCURITÉ: Ton compte a été bloqué par l'administration Levelmak.");
                                 window.location.reload();
                             });
                             return;
@@ -375,7 +406,7 @@ export const useAuthStore = () => {
                         }
 
                         // Compare key values to prevent infinite update loop
-                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'badges'];
+                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'badges', 'is_premium', 'premium_until'];
                         const hasChanges = keysToCompare.some(key => {
                             const val1 = JSON.stringify((user as any)[key]);
                             const val2 = JSON.stringify((mappedUser as any)[key]);
@@ -409,7 +440,7 @@ export const useAuthStore = () => {
                             }
 
                             setUser(mappedUser);
-                            localStorage.setItem('levelmak_user', JSON.stringify(mappedUser));
+                            safeLocalStorageSet('levelmak_user', JSON.stringify(mappedUser));
                         }
                     }
                 }
@@ -419,7 +450,7 @@ export const useAuthStore = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user?.id, user]);
+    }, [user?.id]);
 
     // Periodically sync user content (quizzes, stories, flashcards) every 5 minutes
     useEffect(() => {

@@ -33,7 +33,7 @@ export const PremiumAlertModal: React.FC<PremiumAlertModalProps> = ({
 
   const handleActionClick = () => {
     if (isMobile) {
-      navigator.clipboard.writeText('https://levelmak.app');
+      navigator.clipboard.writeText('https://levelmak.com');
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } else {

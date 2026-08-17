@@ -1,3 +1,4 @@
+import { safeLocalStorageSet } from '../../services/storage';
 import React, { useState, useCallback } from 'react';
 import { User, Mission, GardenPlant } from '../../types';
 import { XP_PER_LEVEL, POTIONS, getXpForNextLevel } from '../../constants';
@@ -32,7 +33,7 @@ export const useGamificationStore = (
                     currentLevel: updatedLevel
                 }
             };
-            localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
             return updatedUser;
         });
     }, [setUser]);
@@ -41,7 +42,7 @@ export const useGamificationStore = (
         setUser(prev => {
             if (!prev) return null;
             const updated = { ...prev, levelCoins: (prev.levelCoins || 0) + amount };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
     }, [setUser]);
@@ -52,7 +53,7 @@ export const useGamificationStore = (
             if (!prev || (prev.levelCoins || 0) < amount) return prev;
             success = true;
             const updated = { ...prev, levelCoins: prev.levelCoins - amount };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
         return success;
@@ -70,7 +71,7 @@ export const useGamificationStore = (
                 ...prev,
                 badges: [...(prev.badges || []), badgeId]
             };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
     }, [setUser, addActivity]);
@@ -98,7 +99,7 @@ export const useGamificationStore = (
                     garden: newGarden
                 }
             };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
     }, [setUser]);
@@ -141,7 +142,7 @@ export const useGamificationStore = (
                     garden: newGarden
                 }
             };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
     }, [setUser]);
@@ -157,7 +158,7 @@ export const useGamificationStore = (
                 levelCoins: prev.levelCoins - price,
                 inventory: [...(prev.inventory || []), itemId]
             };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
         return true;
@@ -186,7 +187,7 @@ export const useGamificationStore = (
                     wallpaper: image
                 };
             }
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
     }, [setUser]);
@@ -206,7 +207,7 @@ export const useGamificationStore = (
                     [key]: (prev.consumables?.[key] || 0) + 1
                 }
             };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
         return true;
@@ -229,7 +230,7 @@ export const useGamificationStore = (
                     [key]: prev.consumables[key] - 1
                 }
             };
-            localStorage.setItem('levelmak_user', JSON.stringify(updated));
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
     }, [setUser]);

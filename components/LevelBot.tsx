@@ -372,7 +372,7 @@ const LevelBot: React.FC = () => {
         ) : (
           <>
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-              <div className="min-h-full flex flex-col justify-end space-y-4 md:space-y-6">
+              <div className="min-h-full flex flex-col space-y-4 md:space-y-6">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                     {msg.role === 'bot' && (

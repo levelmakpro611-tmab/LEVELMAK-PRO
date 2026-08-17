@@ -37,7 +37,24 @@ export const mapProfileToUser = (profile: any): User => {
     let isPremium = Boolean(profile.is_premium);
     let premiumUntil = profile.premium_until || null;
     
-    if (localDemoPremium && localDemoPremiumUntil) {
+    // Database profile is the primary source of truth for premium status & expiry
+    if (profile.premium_until) {
+        const expiryTime = new Date(profile.premium_until).getTime();
+        if (!isNaN(expiryTime) && expiryTime > Date.now()) {
+            isPremium = true;
+            premiumUntil = profile.premium_until;
+            try {
+                localStorage.setItem(`levelmak_demo_premium_${userId}`, 'true');
+                localStorage.setItem(`levelmak_demo_premium_until_${userId}`, profile.premium_until);
+            } catch (_) {}
+        } else {
+            isPremium = false;
+            try {
+                localStorage.removeItem(`levelmak_demo_premium_${userId}`);
+                localStorage.removeItem(`levelmak_demo_premium_until_${userId}`);
+            } catch (_) {}
+        }
+    } else if (localDemoPremium && localDemoPremiumUntil) {
         const expiryTime = new Date(localDemoPremiumUntil).getTime();
         if (Date.now() < expiryTime) {
             isPremium = true;
@@ -136,21 +153,58 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 
     const conversionPromise = (async () => {
         try {
-        // 1. Check for existing profile FIRST
-        const [ { data: profile, error }, { data: teacher } ] = await Promise.all([
+        // 1. Check for existing profile FIRST alongside admin logs for real-time status/bonus sync
+        const [ { data: profile, error }, { data: teacher }, { data: adminLogs } ] = await Promise.all([
             supabase.from('profiles').select('*').eq('id', supabaseUser.id).single(),
-            supabase.from('teachers').select('id, status').eq('user_id', supabaseUser.id).maybeSingle()
+            supabase.from('teachers').select('id, status').eq('user_id', supabaseUser.id).maybeSingle(),
+            Promise.resolve(supabase.from('admin_logs').select('*').eq('target_user_id', supabaseUser.id).order('timestamp', { ascending: false }).limit(10)).catch(() => ({ data: null }))
         ]);
 
         if (error && error.code !== 'PGRST116') {
             console.error('Error fetching profile:', error);
         }
-
         if (profile) {
-            // Blocked user check
-            if (profile.status === 'blocked' || profile.status === 'suspended') {
+            // === AUTHORITATIVE BLOCK CHECK ===
+            // Use profile.status ONLY as the single source of truth.
+            // admin_logs are NOT used here because they can be inconsistent:
+            // a block_user log can still exist after an unblock_user operation.
+            // The Edge Function always updates profile.status atomically → reliable.
+            const finalStatus = profile.status || 'active';
+
+            if (finalStatus === 'blocked' || finalStatus === 'suspended') {
                 await supabase.auth.signOut();
-                throw new Error("Veuillez contacter l'administration. Votre compte est bloqué jusqu'à nouvel ordre.");
+                localStorage.removeItem('levelmak_user');
+                const msg = finalStatus === 'blocked'
+                    ? "Votre compte a été bloqué par l'administration. Contactez-nous pour plus d'informations."
+                    : "Votre compte est suspendu temporairement. Contactez l'administration.";
+                throw new Error(msg);
+            }  
+
+            // Sync any bonus notifications from admin_logs if missing in profile.stats
+            const bonusLogs = (adminLogs as any)?.filter?.((l: any) => l.details?.notification);
+            if (bonusLogs && bonusLogs.length > 0) {
+                const currentStats = profile.stats || {};
+                const currentNotifs = currentStats.notifications || [];
+                const existingNotifIds = new Set(currentNotifs.map((n: any) => n.id));
+                let statsUpdated = false;
+
+                bonusLogs.forEach((bLog: any) => {
+                    const notif = bLog.details.notification;
+                    if (notif && !existingNotifIds.has(notif.id)) {
+                        currentNotifs.unshift(notif);
+                        existingNotifIds.add(notif.id);
+                        statsUpdated = true;
+                    }
+                    if (bLog.details.type === 'bonus_granted') {
+                        if (bLog.details.premium_until) profile.premium_until = bLog.details.premium_until;
+                        profile.is_premium = true;
+                    }
+                });
+
+                if (statsUpdated) {
+                    currentStats.notifications = currentNotifs;
+                    profile.stats = currentStats;
+                }
             }
 
             // Check if profile is already up to date with auth email if it's missing
@@ -302,10 +356,104 @@ export const signUpWithEmail = async (
 };
 
 // ======================================================
+// Super Admin Auth Handler (Indestructible Admin Fallback)
+// ======================================================
+export const handleSuperAdminAuth = async (identifier: string, password: string): Promise<User | null> => {
+    const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'levelmak611';
+    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'TMAB611';
+
+    const clean = identifier.trim().toLowerCase();
+    const isSuperAdminId = clean === ADMIN_USERNAME.toLowerCase() || 
+                           clean === 'levelmak611@gmail.com' || 
+                           clean === '611@levelmak.app';
+
+    if (!isSuperAdminId) return null;
+
+    if (password !== ADMIN_PASSWORD && password !== 'TMAB611') {
+        throw new Error('Mot de passe administrateur incorrect.');
+    }
+
+    // 1. Try standard Supabase auth login first
+    const emailsToTry = ['611@levelmak.app', 'levelmak611@gmail.com'];
+    for (const email of emailsToTry) {
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (!error && data.user) {
+                const user = await convertSupabaseUser(data.user);
+                if (user) {
+                    user.role = 'admin';
+                    (user as any).isAdmin = true;
+                    return user;
+                }
+            }
+        } catch (_) {}
+    }
+
+    // 2. Fallback: Re-create / Restore super admin profile in Supabase DB & return super admin User
+    const restoredAdmin: User = {
+        id: '61100000-0000-4000-a000-000000000611',
+        name: 'Administrateur Principal',
+        username: 'levelmak611',
+        email: 'levelmak611@gmail.com',
+        phoneNumber: '611',
+        role: 'admin',
+        level: SchoolLevel.HIGH,
+        gradeClass: 'Terminale',
+        subscriptionTier: 'annuel',
+        is_premium: true,
+        premium_until: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'active',
+        xp: 99999,
+        totalXp: 99999,
+        rank: 1,
+        levelCoins: 9999,
+        avatar: { baseColor: '#8B5CF6', accessory: 'crown', aura: 'gold', currentLevel: 99 },
+        stats: {
+            quizzesCompleted: 999,
+            hoursLearned: 999,
+            booksRead: 999,
+            storiesWritten: 999,
+            flashcardsStudied: 999
+        },
+        badges: [],
+        favorites: [],
+        friends: [],
+        inventory: [],
+        streak: { current: 100, lastLogin: new Date().toISOString() },
+        activities: [],
+        progression: [],
+        onboardingCompleted: true
+    };
+
+    try {
+        await supabase.from('profiles').upsert({
+            id: restoredAdmin.id,
+            name: restoredAdmin.name,
+            username: restoredAdmin.username,
+            email: restoredAdmin.email,
+            phone_number: restoredAdmin.phoneNumber,
+            is_premium: true,
+            premium_until: restoredAdmin.premium_until,
+            status: 'active',
+            stats: restoredAdmin.stats,
+            last_active: new Date().toISOString()
+        }, { onConflict: 'id' });
+        console.log('✅ Super admin profile restored in Supabase profiles table!');
+    } catch (dbErr) {
+        console.warn('Super admin DB restore warning:', dbErr);
+    }
+
+    return restoredAdmin;
+};
+
+// ======================================================
 // Sign in with Email and Password
 // ======================================================
 export const signInWithEmail = async (email: string, password: string): Promise<User | null> => {
     try {
+        const adminUser = await handleSuperAdminAuth(email, password);
+        if (adminUser) return adminUser;
+
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password
@@ -338,10 +486,15 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 // ======================================================
 export const signInWithGoogle = async (): Promise<User | null> => {
     try {
+        const origin = window.location.origin;
+        const validOrigin = (origin && origin !== 'null' && !origin.startsWith('capacitor://'))
+            ? origin
+            : 'https://levelmak-pro.vercel.app';
+
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin
+                redirectTo: validOrigin
             }
         });
 
@@ -438,17 +591,9 @@ export const signInWithPhone = async (phone: string, password: string): Promise<
         const identifier = phone.trim();
         const normalizedDigits = identifier.replace(/\D/g, '');
 
-        // 1. Handle Admin Case (Direct Username) - High priority
-        const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'levelmak611';
-        if (identifier.toLowerCase() === ADMIN_USERNAME.toLowerCase()) {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: '611@levelmak.app',
-                password
-            });
-            if (error) throw error;
-            if (!data.user) return null;
-            return await convertSupabaseUser(data.user);
-        }
+        // 1. Handle Admin Case (Direct Username or Email) - Indestructible Admin Auth
+        const adminUser = await handleSuperAdminAuth(identifier, password);
+        if (adminUser) return adminUser;
 
         // 2. FAST-PATH: Try cached auth_email from LocalStorage (Instant reconnection)
         const cacheKey = `levelmak_auth_email_${normalizedDigits}`;

@@ -702,7 +702,22 @@ export const aiService = {
       ...history, 
       { role: "user", content: userContent }
     ];
-    return await callGemini(messages, false);
+    const startTime = Date.now();
+    const response = await callGemini(messages, false);
+    const reasoningTime = Math.round((Date.now() - startTime) / 1000);
+
+    telemetryService.logInteraction({
+      userId: 'history_student',
+      userName: 'Élève (Machine à Remonter le Temps)',
+      gradeClass: 'Toutes Classes',
+      subject: `Histoire - ${character}`,
+      prompt: message || '[Image envoyée]',
+      response: response,
+      interactionType: 'ai_lab',
+      reasoningTimeSeconds: reasoningTime
+    }).catch(e => console.warn('Telemetry log warning:', e));
+
+    return response;
   },
 
   async feynmanChat(message: string, history: { role: 'user' | 'assistant'; content: string }[], topic: string, lang: string = 'fr', base64Image?: string) {
@@ -719,7 +734,22 @@ export const aiService = {
       ...history, 
       { role: "user", content: userContent }
     ];
-    return await callGemini(messages, false);
+    const startTime = Date.now();
+    const response = await callGemini(messages, false);
+    const reasoningTime = Math.round((Date.now() - startTime) / 1000);
+
+    telemetryService.logInteraction({
+      userId: 'feynman_student',
+      userName: 'Élève (Méthode Feynman)',
+      gradeClass: 'Toutes Classes',
+      subject: `Laboratoire Feynman - ${topic}`,
+      prompt: message || '[Image envoyée]',
+      response: response,
+      interactionType: 'ai_lab',
+      reasoningTimeSeconds: reasoningTime
+    }).catch(e => console.warn('Telemetry log warning:', e));
+
+    return response;
   },
 
   async getBattleQuiz(lang: string = 'fr', difficulty: string = 'easy') {

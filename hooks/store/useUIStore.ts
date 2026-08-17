@@ -31,6 +31,10 @@ export const useUIStore = () => {
         if (stored) {
             try { 
                 const parsed = JSON.parse(stored);
+                if (parsed.fontSize) {
+                    const rawSize = String(parsed.fontSize).split(' ')[0].replace(/font-size-/g, '');
+                    parsed.fontSize = ['xs', 'sm', 'base', 'lg', 'xl'].includes(rawSize) ? rawSize : 'base';
+                }
                 setSettings(prev => {
                     const merged = { ...prev, ...parsed };
                     audioService.setEnabled(merged.soundEnabled);
@@ -45,6 +49,10 @@ export const useUIStore = () => {
 
     const updateSettings = useCallback((newSettings: any) => {
         setSettings(prev => {
+            if (newSettings.fontSize) {
+                const rawSize = String(newSettings.fontSize).split(' ')[0].replace(/font-size-/g, '');
+                newSettings.fontSize = ['xs', 'sm', 'base', 'lg', 'xl'].includes(rawSize) ? rawSize : 'base';
+            }
             const updated = { ...prev, ...newSettings };
             localStorage.setItem('levelmak_settings', JSON.stringify(updated));
             if (newSettings.soundEnabled !== undefined) {

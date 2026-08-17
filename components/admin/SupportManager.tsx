@@ -159,6 +159,8 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
                 {filteredSupport.map(item => {
                     const isCrash = item.content.startsWith('[CRASH') || item.userPhone === 'crash-reporter';
                     const displayTitle = isCrash ? getHumanReadableCrashTitle(item.content) : item.userName;
+                    const cleanContent = item.content.replace(/^\[SUPPORT TICKET\]\s*/i, '');
+                    const isTeacher = (item as any).userRole === 'teacher' || (item as any).role === 'teacher';
 
                     return (
                         <div
@@ -182,9 +184,13 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
                                                 {displayTitle}
                                             </h4>
                                             <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-                                                isCrash ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                                isCrash 
+                                                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' 
+                                                    : isTeacher
+                                                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                                             }`}>
-                                                {isCrash ? 'CRASH REPORT' : 'SUPPORT ÉLÈVE'}
+                                                {isCrash ? 'CRASH REPORT' : isTeacher ? 'SUPPORT ENSEIGNANT' : 'SUPPORT ÉLÈVE'}
                                             </span>
                                         </div>
                                         <p className="text-[11px] text-slate-500 mt-0.5">
@@ -225,7 +231,7 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
 
                             {/* Content box */}
                             <div className="bg-black/30 p-4 rounded-xl border border-white/5 font-mono text-xs text-slate-300 leading-relaxed overflow-x-auto whitespace-pre-wrap">
-                                {item.content}
+                                {cleanContent}
                             </div>
 
                             {/* Admin response if exists */}

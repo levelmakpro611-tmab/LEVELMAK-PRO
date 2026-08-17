@@ -549,13 +549,15 @@ serve(async (req) => {
       formattedPayerNumber = "00" + formattedPayerNumber;
     }
 
-    // Ensure returnUrl is HTTPS as strictly required by Djomy API docs
-    let safeReturnUrl = returnUrl;
-    if (!safeReturnUrl || !safeReturnUrl.startsWith("https://")) {
-      safeReturnUrl = "https://levelmak.app/pricing?success=true";
+    // Ensure returnUrl is valid (use client returnUrl, fallback to levelmak.com)
+    let safeReturnUrl = returnUrl ? String(returnUrl).trim() : "";
+    if (!safeReturnUrl) {
+      safeReturnUrl = "https://levelmak.com/pricing?success=true";
     }
 
-    let safeCancelUrl = "https://levelmak.app/pricing?cancelled=true";
+    let safeCancelUrl = safeReturnUrl.includes("success=true")
+      ? safeReturnUrl.replace("success=true", "cancelled=true")
+      : (safeReturnUrl.includes("?") ? `${safeReturnUrl}&cancelled=true` : `${safeReturnUrl}?cancelled=true`);
 
     const gatewayBody = {
       amount: amount,

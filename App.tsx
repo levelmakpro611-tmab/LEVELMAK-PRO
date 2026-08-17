@@ -35,6 +35,7 @@ const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
 
 import AppShell from './components/AppShell';
 import { PremiumAlertModal } from './components/PremiumAlertModal';
+import BlockedAccountModal from './components/BlockedAccountModal';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
 import { Loader2, AlertTriangle, RefreshCw, Check } from 'lucide-react';
 import { aiService } from './services/aiService';
@@ -171,7 +172,7 @@ const AppContent: React.FC = () => {
     onAction?: () => void;
   } | null>(null);
 
-  // Global custom event listener to show luxury premium alerts from anywhere in the app
+  // Global custom event listener to show luxury premium alerts & admin notifications from anywhere in the app
   useEffect(() => {
     const handleAlert = (e: any) => {
       const { title, message, actionText, onAction } = e.detail;
@@ -182,8 +183,20 @@ const AppContent: React.FC = () => {
         onAction
       });
     };
+    const handleAdminNotif = (e: any) => {
+      const { title, message } = e.detail;
+      setPremiumAlert({
+        title: title || 'Notification Administrateur',
+        message: message || '',
+        actionText: 'Compris'
+      });
+    };
     window.addEventListener('show_premium_alert', handleAlert);
-    return () => window.removeEventListener('show_premium_alert', handleAlert);
+    window.addEventListener('show_admin_notif_modal', handleAdminNotif);
+    return () => {
+      window.removeEventListener('show_premium_alert', handleAlert);
+      window.removeEventListener('show_admin_notif_modal', handleAdminNotif);
+    };
   }, []);
 
   // Strict premium check: user must have is_premium=true AND a valid non-expired premium_until date
@@ -198,7 +211,7 @@ const AppContent: React.FC = () => {
         message: "Cette partie n'est pas accessible depuis l'application mobile. Il vous suffira d'aller sur notre page web pour plus d'explications.",
         actionText: "Copier l'adresse de notre site",
         onAction: () => {
-          navigator.clipboard.writeText('https://levelmak.app');
+          navigator.clipboard.writeText('https://levelmak.com');
         }
       });
       return;
@@ -212,7 +225,7 @@ const AppContent: React.FC = () => {
           message: "Cette partie n'est pas accessible depuis l'application mobile. Il vous suffira d'aller sur notre page web pour plus d'explications.",
           actionText: "Copier l'adresse de notre site",
           onAction: () => {
-            navigator.clipboard.writeText('https://levelmak.app');
+            navigator.clipboard.writeText('https://levelmak.com');
           }
         });
       } else {
@@ -274,9 +287,9 @@ const AppContent: React.FC = () => {
     return () => clearInterval(interval);
   }, [user?.is_premium, user?.premium_until, updateProfile, user?.name, user?.phoneNumber]);
 
-  // Apply theme and font size to body
+  // Apply theme, font size, and language to body/document
   useEffect(() => {
-    // Theme
+    // 1. Theme
     if (settings.theme === 'light') {
       document.documentElement.classList.remove('dark');
       document.body.classList.add('light');
@@ -285,11 +298,18 @@ const AppContent: React.FC = () => {
       document.body.classList.remove('light');
     }
 
-    // Font Size
+    // 2. Font Size (Hardened against spaces and unexpected string formats)
+    const rawSize = (settings.fontSize || 'base').split(' ')[0].replace(/font-size-/g, '');
+    const cleanSize = ['xs', 'sm', 'base', 'lg', 'xl'].includes(rawSize) ? rawSize : 'base';
     const fontSizeClasses = ['font-size-xs', 'font-size-sm', 'font-size-base', 'font-size-lg', 'font-size-xl'];
     document.documentElement.classList.remove(...fontSizeClasses);
-    document.documentElement.classList.add(`font-size-${settings.fontSize}`);
-  }, [settings.theme, settings.fontSize]);
+    document.documentElement.classList.add(`font-size-${cleanSize}`);
+
+    // 3. Language & RTL Direction (Arabic support)
+    const currentLang = settings.language || 'fr';
+    document.documentElement.setAttribute('lang', currentLang);
+    document.documentElement.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+  }, [settings.theme, settings.fontSize, settings.language]);
 
   const [showForceEntry, setShowForceEntry] = useState(false);
 
@@ -383,6 +403,11 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Security Guard: Check if account status is blocked or suspended
+  if (user && (user.status === 'blocked' || user.status === 'suspended')) {
+    return <BlockedAccountModal status={user.status} />;
+  }
+
   // Define Admin Check explicitly - Hardened
   const isAdmin = Boolean(user && user.role === 'admin');
 
@@ -455,7 +480,7 @@ const AppContent: React.FC = () => {
       case 'ranking': return <Ranking />;
       case 'analytics': return <Analytics />;
       case 'settings': return <Settings onNavigate={handleSetActiveTab} />;
-      case 'pricing': return <Pricing />;
+      case 'pricing': return <Pricing onChoosePremium={() => handleSetActiveTab('dashboard')} onChooseFree={() => handleSetActiveTab('dashboard')} />;
       case 'atlas': return <AtlasLibrary onNavigate={handleSetActiveTab} />;
       case 'map': return <WorldBrainMap onCloseMap={() => handleSetActiveTab('atlas')} onNavigate={handleSetActiveTab} />;
       case 'flashcard_mode': return <FlashcardMode onClose={() => handleSetActiveTab('dashboard')} />;
@@ -630,7 +655,10 @@ const AppContent: React.FC = () => {
 
                 {/* CTA Button */}
                 <button
-                  onClick={() => setGlobalReceiptData(null)}
+                  onClick={() => {
+                    setGlobalReceiptData(null);
+                    handleSetActiveTab('dashboard');
+                  }}
                   className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white rounded-2xl font-black uppercase tracking-widest text-[12px] sm:text-[13px] transition-all shadow-lg shadow-blue-900/40 shrink-0"
                 >
                   Commencer à Réviser

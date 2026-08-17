@@ -281,7 +281,8 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         <button
                             onClick={() => {
                                 setValidationStatus('idle');
-                                if (onChoosePremium) onChoosePremium(); // exit pricing
+                                if (onChoosePremium) onChoosePremium();
+                                window.dispatchEvent(new CustomEvent('nav_change', { detail: 'dashboard' }));
                             }}
                             className="w-full py-4 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] transition-all active:scale-[0.98] shadow-lg shadow-yellow-950/20"
                         >
@@ -1227,6 +1228,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 onClick={() => {
                                     setReceiptData(null);
                                     if (onChoosePremium) onChoosePremium();
+                                    window.dispatchEvent(new CustomEvent('nav_change', { detail: 'dashboard' }));
                                 }}
                                 className="w-full py-4 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white rounded-2xl font-black uppercase tracking-widest text-[13px] transition-all shadow-lg shadow-blue-900/40"
                             >

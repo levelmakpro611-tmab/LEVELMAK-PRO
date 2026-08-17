@@ -84,33 +84,34 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         return;
       }
 
-      // Calculate time components
+      // Calculate time components with DAYS
       const totalSecs = Math.floor(diff / 1000);
-      const hours = Math.floor(totalSecs / 3600);
+      const days = Math.floor(totalSecs / 86400);
+      const hours = Math.floor((totalSecs % 86400) / 3600);
       const mins = Math.floor((totalSecs % 3600) / 60);
       const secs = totalSecs % 60;
 
-      // Formatting
-      const formatted = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+      // Formatting: show days if >= 1 day, else show hours
+      let formatted = '';
+      if (days > 0) {
+        formatted = `${days}j ${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+      } else {
+        formatted = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+      }
       setTimeLeft(formatted);
 
-      // Calculate total duration based on plan / expiry diff
-      const activePlanId = localStorage.getItem(`levelmak_demo_premium_plan_id_${user.id}`);
-      let totalDurationMs = 30 * 24 * 3600 * 1000; // Default 30 days
+      // Calculate total duration dynamically without hardcoded capping
+      let totalDurationMs = 30 * 24 * 3600 * 1000; // Default fallback
 
       if (user.stats?.premium_started_at) {
-        totalDurationMs = Math.max(1000, expiry - new Date(user.stats.premium_started_at).getTime());
-      } else if (activePlanId?.includes('weekly')) {
-        totalDurationMs = 7 * 24 * 3600 * 1000;
-      } else if (activePlanId?.includes('annual') || diff > 30 * 24 * 3600 * 1000) {
-        totalDurationMs = 365 * 24 * 3600 * 1000;
-      } else if (diff > 7 * 24 * 3600 * 1000) {
-        totalDurationMs = 30 * 24 * 3600 * 1000;
+        totalDurationMs = Math.max(diff, expiry - new Date(user.stats.premium_started_at).getTime());
+      } else if (user.created_at) {
+        totalDurationMs = Math.max(diff, expiry - new Date(user.created_at).getTime());
       } else {
-        totalDurationMs = 7 * 24 * 3600 * 1000;
+        totalDurationMs = Math.max(diff, 365 * 24 * 3600 * 1000);
       }
 
-      const pct = Math.max(0, Math.min(100, (diff / totalDurationMs) * 100));
+      const pct = Math.max(5, Math.min(100, (diff / totalDurationMs) * 100));
       setPercentLeft(pct);
     };
 

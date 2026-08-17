@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, MoreVertical, Shield, Ban, Trash2, CheckCircle, XCircle, Filter, ChevronDown, User, UserX, Lock, Unlock, Mail, Phone, Calendar, GraduationCap, Award, Zap, Printer, Bell } from 'lucide-react';
-import { UserAnalytics } from '../../types';
+import { AdminUserAnalytics, UserAnalytics } from '../../types';
 import { deleteUser, suspendUser, blockUser, unblockUser, sanctionUser, deleteUserContentAndResetPoints, sendUserNotification, sendBulkNotification } from '../../services/adminService';
 import { Gavel, AlertTriangle } from 'lucide-react';
 
@@ -36,12 +36,17 @@ import { Share } from '@capacitor/share';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import { useStore } from '../../hooks/useStore';
+
 interface UserManagementProps {
     users: UserAnalytics[];
     onRefresh: () => void;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => {
+    const { user: currentUser } = useStore();
+    const isAdmin = currentUser?.role === 'admin' || currentUser?.email === '611@levelmak.app' || (currentUser as any)?.isAdmin === true;
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended' | 'blocked'>('all');
     const [filterRole, setFilterRole] = useState<'all' | 'student' | 'teacher'>('all');
@@ -97,14 +102,36 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
         }
     };
 
+    const isSuperAdminUser = (user: AdminUserAnalytics) => {
+        const e = (user.email || '').toLowerCase();
+        const u = (user.userName || '').toLowerCase();
+        const id = (user.userId || '').toLowerCase();
+        return e === 'levelmak611@gmail.com' ||
+               e === '611@levelmak.app' ||
+               u === 'levelmak611' ||
+               id === '61100000-0000-4000-a000-000000000611' ||
+               id === 'admin_levelmak611_id' ||
+               id === 'levelmak611' ||
+               (user as any).role === 'admin';
+    };
+
     const filteredUsers = users.filter(user => {
+        if (isSuperAdminUser(user)) return false; // Hide super admin account from regular user list
+
         const uName = user.userName || '';
         const uEmail = user.email || '';
         const uPhone = user.phoneNumber || '';
         const matchesSearch = uName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             uEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
             uPhone.includes(searchTerm);
-        const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
+        const isBlocked = user.status === 'blocked' || (user as any).isBlocked === true;
+        const isSuspended = user.status === 'suspended' || (user as any).isSuspended === true;
+        const isActive = !isBlocked && !isSuspended;
+
+        const matchesStatus = filterStatus === 'all' || 
+                            (filterStatus === 'blocked' && isBlocked) ||
+                            (filterStatus === 'suspended' && isSuspended) ||
+                            (filterStatus === 'active' && isActive);
         const matchesRole = filterRole === 'all' || 
                             (filterRole === 'teacher' && (user as any).role === 'teacher') ||
                             (filterRole === 'student' && (user as any).role !== 'teacher');
@@ -112,6 +139,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
     });
 
     const handleAction = async (type: 'delete' | 'suspend' | 'block' | 'activate' | 'sanction' | 'reset_all', userId: string) => {
+        const targetUser = users.find(u => u.userId === userId);
+        if (targetUser && isSuperAdminUser(targetUser)) {
+            alert("Action interdite : Le compte Administrateur Principal ne peut pas être modifié ou supprimé !");
+            return;
+        }
         setLoading(true);
         try {
             if (type === 'delete') await deleteUser(userId);
@@ -123,9 +155,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
 
             onRefresh();
             setConfirmAction({ type: null, userId: null });
-        } catch (error) {
+        } catch (error: any) {
             console.error(`Error performing ${type}:`, error);
-            alert(`Erreur lors de l'action ${type}`);
+            alert(error.message || `Erreur lors de l'action ${type}`);
         } finally {
             setLoading(false);
         }
@@ -197,21 +229,21 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 print:hidden">
                 <StatCard label="Élèves" value={users.filter(u => (u as any).role !== 'teacher').length} color="blue" />
                 <StatCard label="Enseignants" value={users.filter(u => (u as any).role === 'teacher').length} color="purple" />
-                <StatCard label="Actifs" value={users.filter(u => u.status === 'active').length} color="green" />
-                <StatCard label="Suspendus" value={users.filter(u => u.status === 'suspended').length} color="orange" />
-                <StatCard label="Bloqués" value={users.filter(u => u.status === 'blocked').length} color="red" />
+                <StatCard label="Actifs" value={users.filter(u => u.status !== 'blocked' && u.status !== 'suspended' && !(u as any).isBlocked && !(u as any).isSuspended).length} color="green" />
+                <StatCard label="Suspendus" value={users.filter(u => u.status === 'suspended' || (u as any).isSuspended === true).length} color="orange" />
+                <StatCard label="Bloqués" value={users.filter(u => u.status === 'blocked' || (u as any).isBlocked === true).length} color="red" />
             </div>
 
             {/* Controls */}
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 print:hidden">
+            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-white dark:bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm print:hidden">
                 <div className="relative w-full lg:w-96 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400 transition-colors" size={18} />
                     <input
                         type="text"
                         placeholder="Rechercher par nom ou email..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white text-sm outline-none focus:border-blue-500/50 focus:bg-black/40 transition-all placeholder:text-slate-600"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-400"
                     />
                 </div>
 
@@ -263,11 +295,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
             </div>
 
             {/* Table */}
-            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+            <div className="bg-white dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-black/20 border-b border-white/10">
+                            <tr className="bg-slate-100 dark:bg-black/20 border-b border-slate-200 dark:border-white/10">
                                 <th className="px-4 py-4 text-center w-12">
                                     <input 
                                         type="checkbox"
@@ -279,20 +311,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                                 setSelectedUserIds([]);
                                             }
                                         }}
-                                        className="w-4 h-4 rounded border-white/10 bg-black/20 text-blue-600 focus:ring-0 outline-none cursor-pointer"
+                                        className="w-4 h-4 rounded border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-blue-600 focus:ring-0 outline-none cursor-pointer"
                                     />
                                 </th>
-                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider min-w-[250px]">Utilisateur</th>
-                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Rôle</th>
-                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Niveau & XP</th>
-                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Statut</th>
-                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider">Activité</th>
-                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 tracking-wider text-right">Actions</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider min-w-[250px]">Utilisateur</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Rôle</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Niveau & XP</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Statut</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Activité</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                             {filteredUsers.map((user) => (
-                                <tr key={user.userId} className="hover:bg-white/5 transition-colors group">
+                                <tr key={user.userId} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
                                     <td className="px-4 py-4 text-center">
                                         <input 
                                             type="checkbox"
@@ -304,16 +336,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                                     setSelectedUserIds(prev => prev.filter(id => id !== user.userId));
                                                 }
                                             }}
-                                            className="w-4 h-4 rounded border-white/10 bg-black/20 text-blue-600 focus:ring-0 outline-none cursor-pointer"
+                                            className="w-4 h-4 rounded border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-blue-600 focus:ring-0 outline-none cursor-pointer"
                                         />
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black shadow-lg">
+                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black shadow-md">
                                                 {(user.userName || 'Utilisateur').substring(0, 2).toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{user.userName || 'Utilisateur'}</p>
+                                                <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{user.userName || 'Utilisateur'}</p>
                                                 <p className="text-[10px] text-slate-500">{user.email || 'N/A'}</p>
                                                 {user.phoneNumber && <p className="text-[10px] text-slate-500 font-bold">{user.phoneNumber}</p>}
                                             </div>
@@ -321,8 +353,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${(user as any).role === 'teacher'
-                                            ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-glow-purple/10'
-                                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                            ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20'
+                                            : 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
                                         }`}>
                                             {(user as any).role === 'teacher' ? 'Enseignant' : 'Élève'}
                                         </span>
@@ -331,26 +363,26 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <Award size={14} className="text-yellow-500" />
-                                                <span className="text-xs font-bold text-white">Lvl {user.level}</span>
+                                                <span className="text-xs font-bold text-slate-900 dark:text-white">Lvl {user.level}</span>
                                             </div>
-                                            <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
+                                            <div className="w-24 h-1 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
                                                 <div className="h-full bg-blue-500 rounded-full" style={{ width: '60%' }}></div>
                                             </div>
                                             <p className="text-[10px] text-slate-500 font-bold uppercase">{user.xp} XP total</p>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${user.status === 'active'
-                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                            : user.status === 'suspended'
-                                                ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                                                : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${user.status === 'suspended' || (user as any).isSuspended
+                                            ? 'bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/20'
+                                            : user.status === 'blocked' || (user as any).isBlocked
+                                                ? 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20'
+                                                : 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20'
                                             }`}>
-                                            {user.status}
+                                            {user.status === 'suspended' || (user as any).isSuspended ? 'Suspendu' : user.status === 'blocked' || (user as any).isBlocked ? 'Bloqué' : 'Actif'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-xs text-white font-medium">{new Date(user.lastActive).toLocaleDateString('fr-FR')}</p>
+                                        <p className="text-xs text-slate-900 dark:text-white font-medium">{new Date(user.lastActive).toLocaleDateString('fr-FR')}</p>
                                         <p className="text-[10px] text-slate-500 font-bold uppercase">Dernière activité</p>
                                     </td>
                                     <td className="px-6 py-4 text-right">
@@ -363,47 +395,51 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                                 <Shield size={16} />
                                             </button>
 
-                                            {user.status === 'active' ? (
+                                            {isAdmin && (
                                                 <>
+                                                    {user.status !== 'suspended' && user.status !== 'blocked' && !(user as any).isSuspended && !(user as any).isBlocked ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => setConfirmAction({ type: 'suspend', userId: user.userId })}
+                                                                className="p-2 bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 rounded-lg transition-all"
+                                                                title="Suspendre"
+                                                            >
+                                                                <Ban size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmAction({ type: 'block', userId: user.userId })}
+                                                                className="p-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg transition-all"
+                                                                title="Bloquer"
+                                                            >
+                                                                <Lock size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmAction({ type: 'sanction', userId: user.userId })}
+                                                                className="p-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 rounded-lg transition-all"
+                                                                title="Sanctionner"
+                                                            >
+                                                                <Gavel size={16} />
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setConfirmAction({ type: 'activate', userId: user.userId })}
+                                                            className="p-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg transition-all"
+                                                            title="Réactiver"
+                                                        >
+                                                            <Unlock size={16} />
+                                                        </button>
+                                                    )}
+
                                                     <button
-                                                        onClick={() => setConfirmAction({ type: 'suspend', userId: user.userId })}
-                                                        className="p-2 bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 rounded-lg transition-all"
-                                                        title="Suspendre"
+                                                        onClick={() => setConfirmAction({ type: 'delete', userId: user.userId })}
+                                                        className="p-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-all"
+                                                        title="Supprimer"
                                                     >
-                                                        <Ban size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setConfirmAction({ type: 'block', userId: user.userId })}
-                                                        className="p-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg transition-all"
-                                                        title="Bloquer"
-                                                    >
-                                                        <Lock size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setConfirmAction({ type: 'sanction', userId: user.userId })}
-                                                        className="p-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 rounded-lg transition-all"
-                                                        title="Sanctionner"
-                                                    >
-                                                        <Gavel size={16} />
+                                                        <Trash2 size={16} />
                                                     </button>
                                                 </>
-                                            ) : (
-                                                <button
-                                                    onClick={() => setConfirmAction({ type: 'activate', userId: user.userId })}
-                                                    className="p-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg transition-all"
-                                                    title="Réactiver"
-                                                >
-                                                    <Unlock size={16} />
-                                                </button>
                                             )}
-
-                                            <button
-                                                onClick={() => setConfirmAction({ type: 'delete', userId: user.userId })}
-                                                className="p-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-all"
-                                                title="Supprimer"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -718,27 +754,27 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
 // Sub-components
 const StatCard: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => {
     const colors: Record<string, string> = {
-        blue: 'bg-blue-600/10 border-blue-500/20 text-blue-400',
-        purple: 'bg-purple-600/10 border-purple-500/20 text-purple-400',
-        green: 'bg-green-600/10 border-green-500/20 text-green-400',
-        orange: 'bg-orange-600/10 border-orange-500/20 text-orange-400',
-        red: 'bg-red-600/10 border-red-500/20 text-red-400'
+        blue: 'bg-blue-50 dark:bg-blue-600/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 shadow-sm',
+        purple: 'bg-purple-50 dark:bg-purple-600/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-400 shadow-sm',
+        green: 'bg-emerald-50 dark:bg-green-600/10 border-emerald-200 dark:border-green-500/20 text-emerald-700 dark:text-green-400 shadow-sm',
+        orange: 'bg-orange-50 dark:bg-orange-600/10 border-orange-200 dark:border-orange-500/20 text-orange-700 dark:text-orange-400 shadow-sm',
+        red: 'bg-red-50 dark:bg-red-600/10 border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 shadow-sm'
     };
     return (
-        <div className={`${colors[color]} border rounded-2xl p-6 backdrop-blur-xl`}>
+        <div className={`${colors[color]} border rounded-2xl p-6 backdrop-blur-xl transition-all`}>
             <p className="text-3xl font-black tracking-tighter">{value}</p>
-            <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-60 text-current">{label}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-90 text-current">{label}</p>
         </div>
     );
 };
 
 const DetailItem: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
-    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-        <div className="flex items-center gap-2 text-slate-500 mb-1">
+    <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors">
+        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
             <span className="scale-75 origin-left">{icon}</span>
             <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
         </div>
-        <p className="text-white font-bold">{value}</p>
+        <p className="text-slate-900 dark:text-white font-bold">{value}</p>
     </div>
 );
 

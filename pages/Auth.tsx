@@ -207,33 +207,49 @@ const Auth: React.FC = () => {
 
     try {
       if (recoveryStep === 1) {
-        if (!name.trim()) throw new Error(t('auth.identityRequired'));
+        if (!name.trim()) throw new Error(t('auth.identityRequired') || 'Veuillez saisir votre pseudo, email ou téléphone');
         
         const isGoogle = name.includes('@gmail') || name.includes('@google');
         setIsGoogleRecovery(isGoogle);
         
         if (isGoogle) {
-          // Go to step 2 to show Google instructions
           setRecoveryStep(2);
         } else {
-          // Standard email: submit recovery help request to user_comments table
-          const { error: insertError } = await supabase.from('user_comments').insert({
+          const userIdentifier = name.trim();
+          const timestamp = new Date().toISOString();
+
+          // 1. Submit recovery request to user_comments for admin visibility
+          const { error: insertCommentError } = await supabase.from('user_comments').insert({
             user_id: 'guest_recovery',
-            user_name: 'Système (Aide Récupération)',
-            user_phone: 'N/A',
-            content: `DEMANDE DE RÉINITIALISATION : L'adresse de connexion "${name.trim()}" demande une réinitialisation de mot de passe. Veuillez contacter l'utilisateur pour vérifier son identité.`,
+            user_name: `Récupération: ${userIdentifier}`,
+            user_phone: userIdentifier.match(/^[0-9+ ]+$/) ? userIdentifier : 'N/A',
+            content: `🚨 DEMANDE DE RÉCUPÉRATION DE COMPTE / VÉRIFICATION D'IDENTITÉ : L'utilisateur avec l'identifiant (pseudo/email/téléphone) "${userIdentifier}" demande une réinitialisation de son mot de passe. Veuillez vérifier son identité et accorder l'accès.`,
             rating: 5,
             category: 'password_reset',
-            timestamp: new Date().toISOString(),
+            timestamp: timestamp,
             status: 'pending'
           });
-          
-          if (insertError) throw insertError;
+
+          if (insertCommentError) {
+            console.warn('Comment table insert fallback:', insertCommentError);
+          }
+
+          // 2. Also push an admin notification for real-time alert
+          try {
+            await supabase.from('admin_notifications').insert({
+              title: `🔑 Demande Récupération Compte: ${userIdentifier}`,
+              message: `Un élève tente de récupérer son compte avec l'identifiant ${userIdentifier}. Cliquez pour valider son identité et réinitialiser.`,
+              category: 'account_recovery',
+              created_at: timestamp,
+              read: false
+            });
+          } catch (notifErr) {
+            console.warn('Admin notification table insert fallback:', notifErr);
+          }
           
           setResetSuccess(true);
         }
       } else {
-        // Step 2 is only reached for Google recovery, which has a Google login button
         await handleGoogleLogin();
       }
     } catch (err: any) {
@@ -723,9 +739,9 @@ const Auth: React.FC = () => {
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isLoading}
-                  className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl font-black text-[10px] text-white uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all"
+                  className="w-full py-4 bg-slate-200/80 dark:bg-white/5 hover:bg-slate-300 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10 rounded-2xl font-black text-[10px] text-slate-900 dark:text-white uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-sm dark:shadow-none"
                 >
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 grayscale group-hover:grayscale-0" />
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
                   {t('auth.googleAuth')}
                 </button>
               </div>

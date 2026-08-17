@@ -74,19 +74,25 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
       });
 
       if (res && res.success) {
-        setActionSuccessMsg(`Félicitations ! +${bonusDays} jours accordés à ${selectedUser.userName}.`);
-        if (res.newExpiry) {
-          setSelectedUser(prev => prev ? {
-            ...prev,
-            isPremium: true,
-            premiumUntil: res.newExpiry,
-            subscriptionTier: targetTier
-          } : null);
-        }
+        const newExpiry = res.newExpiry;
+        const formattedExpiry = newExpiry
+          ? new Date(newExpiry).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          : '';
+        setActionSuccessMsg(`✅ +${bonusDays} jour(s) accordé(s) à ${selectedUser.userName} (${targetTier.toUpperCase()}). Expiration : ${formattedExpiry}`);
+        // Immediately update local state so the table refreshes without waiting
+        setSelectedUser(prev => prev ? {
+          ...prev,
+          isPremium: true,
+          premiumUntil: newExpiry,
+          subscriptionTier: targetTier
+        } : null);
+        // Double refresh: immediate + after 2s to allow DB propagation
+        onRefresh();
+        setTimeout(() => onRefresh(), 2000);
       } else {
         setActionErrorMsg(res?.message || "Erreur lors de l'attribution du bonus");
+        onRefresh();
       }
-      onRefresh();
     } catch (err: any) {
       setActionErrorMsg(err.message || "Erreur lors de l'attribution du bonus");
     } finally {
@@ -333,7 +339,7 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
                             : 'text-amber-300'
                         }`}>
                           <Clock size={12} />
-                          {new Date(user.premiumUntil).toLocaleDateString()}
+                          {new Date(user.premiumUntil).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           {new Date(user.premiumUntil).getTime() <= Date.now() && (
                             <span className="text-[9px] px-1.5 py-0.5 bg-rose-500/20 text-rose-300 rounded-md font-black border border-rose-500/30 uppercase tracking-wider">
                               Expiré
@@ -347,7 +353,7 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
 
                     <td className="p-5">
                       {user.adminMessageBoost ? (
-                        <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 rounded-lg text-[10px] font-black">
+                        <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-[10px] font-black whitespace-nowrap inline-block">
                           +{user.adminMessageBoost} msgs/j
                         </span>
                       ) : (

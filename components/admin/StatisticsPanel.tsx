@@ -191,20 +191,20 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
     return (
         <div className="space-y-6">
             {/* Header with Period Selector */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2 w-full md:w-auto">
-                    <TrendingUp className="text-blue-500" size={18} />
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 w-full md:w-auto">
+                    <TrendingUp className="text-blue-600 dark:text-blue-500" size={18} />
                     Analyses Détaillées
                 </h3>
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                    <div className="flex gap-1 bg-black/40 p-1 rounded-lg w-full md:w-auto">
+                    <div className="flex gap-1 bg-slate-100 dark:bg-black/40 p-1 rounded-lg w-full md:w-auto">
                         {(['day', 'week', 'month', 'year'] as const).map((p) => (
                             <button
                                 key={p}
                                 onClick={() => onPeriodChange(p)}
                                 className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${period === p
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                        ? 'bg-blue-600 text-white shadow-md'
+                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5'
                                     }`}
                             >
                                 {p === 'day' && 'Jour'}
@@ -218,7 +218,7 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                         <button
                             onClick={handlePrint}
                             disabled={isExportingPDF}
-                            className="flex-1 md:flex-none flex justify-center items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-slate-700 disabled:opacity-50"
+                            className="flex-1 md:flex-none flex justify-center items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-slate-200 dark:border-slate-700 disabled:opacity-50"
                             title="Imprimer"
                         >
                             {isExportingPDF ? <Loader className="animate-spin" size={14} /> : <Printer size={14} />}
@@ -227,7 +227,7 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                         <button
                             onClick={handleExportStats}
                             disabled={isExportingCSV}
-                            className="flex-1 md:flex-none flex justify-center items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                            className="flex-1 md:flex-none flex justify-center items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 shadow-md"
                             title="Exporter CSV"
                         >
                             {isExportingCSV ? <Loader className="animate-spin" size={14} /> : <Download size={14} />}
@@ -242,38 +242,38 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                 <MetricBox
                     label="Utilisateurs"
                     value={stats.totalUsers}
-                    icon={<Users className="text-blue-400" size={16} />}
+                    icon={<Users className="text-blue-600 dark:text-blue-400" size={16} />}
                     trend={`+${stats.newUsersMonth}`}
-                    color="bg-slate-900/50 border-slate-800"
+                    color="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm"
                 />
                 <MetricBox
                     label="Engagement"
                     value={`${(stats.averageEngagementRate || 0).toFixed(1)}%`}
-                    icon={<Zap className="text-yellow-400" size={16} />}
+                    icon={<Zap className="text-yellow-500 dark:text-yellow-400" size={16} />}
                     trend="Stable"
-                    color="bg-slate-900/50 border-slate-800"
+                    color="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm"
                 />
                 <MetricBox
                     label="Temps Moyen"
                     value={`${((stats.totalLearningHours || 0) / Math.max(1, stats.totalUsers || 0)).toFixed(1)}h`}
-                    icon={<Clock className="text-purple-400" size={16} />}
+                    icon={<Clock className="text-purple-600 dark:text-purple-400" size={16} />}
                     trend="+15%"
-                    color="bg-slate-900/50 border-slate-800"
+                    color="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm"
                 />
                 <MetricBox
                     label="Nouveaux (24h)"
                     value={stats.newUsersToday}
-                    icon={<Sparkles className="text-green-400" size={16} />}
+                    icon={<Sparkles className="text-emerald-600 dark:text-green-400" size={16} />}
                     trend="Top"
-                    color="bg-slate-900/50 border-slate-800"
+                    color="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm"
                 />
             </div>
 
             {/* Charts Row 1: Flow & Growth */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Flow Chart */}
-                <div className="bg-slate-900/30 p-5 rounded-xl border border-slate-800 relative overflow-hidden">
-                    <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-900/30 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-300 mb-4 flex items-center gap-2">
                         <Activity className="text-emerald-500" size={16} />
                         Flux d'Activité en Temps Réel
                     </h3>
@@ -296,8 +296,8 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                 </div>
 
                 {/* Growth Chart */}
-                <div className="bg-slate-900/30 p-5 rounded-xl border border-slate-800 relative overflow-hidden">
-                    <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-900/30 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-300 mb-4 flex items-center gap-2">
                         <TrendingUp className="text-blue-500" size={16} />
                         Croissance Cumulative
                     </h3>
@@ -317,9 +317,9 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
             {/* Main Charts Row 2 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* User Distribution Chart */}
-                <div className="bg-slate-900/30 p-5 rounded-xl border border-slate-800 relative overflow-hidden">
-                    <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-                        <Users className="text-blue-400" size={16} /> Nouveaux Utilisateurs
+                <div className="bg-white dark:bg-slate-900/30 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-300 mb-4 flex items-center gap-2">
+                        <Users className="text-blue-600 dark:text-blue-400" size={16} /> Nouveaux Utilisateurs
                     </h3>
                     <div className="h-[200px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -330,7 +330,7 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                                         <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
                                 <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '10px' }} axisLine={false} tickLine={false} />
                                 <YAxis stroke="#64748b" style={{ fontSize: '10px' }} axisLine={false} tickLine={false} width={30} />
                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', color: '#fff' }} />
@@ -341,14 +341,14 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                 </div>
 
                 {/* Activity Distribution */}
-                <div className="bg-slate-900/30 p-5 rounded-xl border border-slate-800 relative overflow-hidden">
-                    <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-                        <BookOpen className="text-purple-400" size={16} /> Activités & Contenu
+                <div className="bg-white dark:bg-slate-900/30 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-300 mb-4 flex items-center gap-2">
+                        <BookOpen className="text-purple-600 dark:text-purple-400" size={16} /> Activités & Contenu
                     </h3>
                     <div className="h-[200px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={activityData} barSize={12}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
                                 <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '10px' }} axisLine={false} tickLine={false} />
                                 <YAxis stroke="#64748b" style={{ fontSize: '10px' }} axisLine={false} tickLine={false} width={30} />
                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', color: '#fff' }} />
@@ -364,8 +364,8 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
             {/* Bottom Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Engagement Pie */}
-                <div className="bg-slate-900/30 p-5 rounded-xl border border-slate-800 flex flex-col items-center justify-center relative overflow-hidden">
-                    <h3 className="text-sm font-bold text-slate-300 mb-2 w-full text-left">👥 Taux d'Activité</h3>
+                <div className="bg-white dark:bg-slate-900/30 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-300 mb-2 w-full text-left">👥 Taux d'Activité</h3>
                     <div className="h-[150px] w-full relative">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -387,8 +387,8 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-2xl font-bold text-white">{stats.averageEngagementRate.toFixed(0)}%</span>
-                            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Actifs</span>
+                            <span className="text-2xl font-bold text-slate-900 dark:text-white">{stats.averageEngagementRate.toFixed(0)}%</span>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Actifs</span>
                         </div>
                     </div>
                 </div>
@@ -397,16 +397,16 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                     <MetricBox
                         label="Histoires Créées"
                         value={stats.storiesWritten}
-                        icon={<Award className="text-orange-400" size={16} />}
+                        icon={<Award className="text-orange-500 dark:text-orange-400" size={16} />}
                         trend="+12%"
-                        color="bg-slate-900/50 border-slate-800"
+                        color="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm"
                     />
                     <MetricBox
                         label="Quiz Complétés"
                         value={stats.quizzesGenerated}
-                        icon={<Zap className="text-purple-400" size={16} />}
+                        icon={<Zap className="text-purple-600 dark:text-purple-400" size={16} />}
                         trend="+24%"
-                        color="bg-slate-900/50 border-slate-800"
+                        color="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm"
                     />
                 </div>
             </div>
@@ -415,14 +415,14 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
 };
 
 const MetricBox = ({ label, value, icon, trend, color }: any) => (
-    <div className={`p-4 rounded-xl border flex flex-col justify-between ${color} hover:bg-slate-800/50 transition-colors`}>
+    <div className={`p-4 rounded-xl border flex flex-col justify-between ${color} hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors`}>
         <div className="flex justify-between items-start mb-2">
-            <div className="p-1.5 bg-slate-800 rounded-md border border-slate-700">{icon}</div>
-            <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">{trend}</span>
+            <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">{icon}</div>
+            <span className="text-[10px] font-bold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-400/10 px-2 py-0.5 rounded-full">{trend}</span>
         </div>
         <div>
-            <h4 className="text-lg font-bold text-white">{value}</h4>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider truncate">{label}</p>
+            <h4 className="text-lg font-bold text-slate-900 dark:text-white">{value}</h4>
+            <p className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider truncate font-bold">{label}</p>
         </div>
     </div>
 );

@@ -64,8 +64,8 @@ export const syncService = {
         }
       }
 
-      // Save back to local storage
-      const finalQuizzes = [...defaultLocalQuizzes, ...mergedCustomQuizzes];
+      // Save back to local storage (capped to recent 25)
+      const finalQuizzes = [...defaultLocalQuizzes, ...mergedCustomQuizzes.slice(-25)];
       localStorage.setItem(quizKey, JSON.stringify(finalQuizzes));
 
       // 2. Sync Stories
@@ -132,7 +132,7 @@ export const syncService = {
           mergedCustomDecks.push(dbD);
         }
       }
-      const finalDecks = [...defaultLocalDecks, ...mergedCustomDecks];
+      const finalDecks = [...defaultLocalDecks, ...mergedCustomDecks.slice(-25)];
       localStorage.setItem(deckKey, JSON.stringify(finalDecks));
 
       // Merge cards
@@ -142,7 +142,7 @@ export const syncService = {
           mergedCustomCards.push(dbC);
         }
       }
-      const finalCards = [...defaultLocalCards, ...mergedCustomCards];
+      const finalCards = [...defaultLocalCards, ...mergedCustomCards.slice(-60)];
       localStorage.setItem(fcKey, JSON.stringify(finalCards));
 
       console.log('[Sync] Bi-directional sync completed successfully');

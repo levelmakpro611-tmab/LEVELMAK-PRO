@@ -1,3 +1,4 @@
+import { safeLocalStorageSet } from '../services/storage';
 import React, { createContext, useContext, ReactNode, useMemo, useEffect, useState, useCallback } from 'react';
 
 import { useAuthStore } from './store/useAuthStore';
@@ -111,7 +112,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           ...prev,
           analytics: seededAnalytics
         };
-        localStorage.setItem('levelmak_user', JSON.stringify(updated));
+        safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
         return updated;
       });
     }
@@ -149,7 +150,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
-      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
           if (error) console.error('[Notification Add Supabase Sync Error]:', error);
@@ -172,7 +173,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
-      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
           if (error) console.error('[Notification Mark Read Supabase Sync Error]:', error);
@@ -195,7 +196,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
-      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
           if (error) console.error('[Notification Toggle Read Supabase Sync Error]:', error);
@@ -218,7 +219,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
-      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
           if (error) console.error('[Notification Mark All Read Supabase Sync Error]:', error);
@@ -241,7 +242,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
-      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
           if (error) console.error('[Notification Delete Supabase Sync Error]:', error);
@@ -263,7 +264,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
-      localStorage.setItem('levelmak_user', JSON.stringify(updatedUser));
+      safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
           if (error) console.error('[Notification Clear Supabase Sync Error]:', error);
@@ -356,7 +357,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const registerTeacher = useCallback(async (data: any) => {
     auth.setLoading(true);
     try {
-      localStorage.setItem('levelmak_signing_up_teacher', 'true');
+      safeLocalStorageSet('levelmak_signing_up_teacher', 'true');
       const { signUpWithEmail } = await import('../services/authService');
       const { applyAsTeacher } = await import('../services/tutorService');
 
@@ -377,7 +378,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }, data.proofFiles, data.avatarFile);
 
         auth.setUser({ ...newUser, role: 'teacher' } as any);
-        localStorage.setItem('levelmak_user', JSON.stringify({ ...newUser, role: 'teacher' }));
+        safeLocalStorageSet('levelmak_user', JSON.stringify({ ...newUser, role: 'teacher' }));
       }
       localStorage.removeItem('levelmak_signing_up_teacher');
     } catch (e: any) {

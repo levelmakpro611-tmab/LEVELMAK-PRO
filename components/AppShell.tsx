@@ -824,7 +824,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                                       addNotification('success', 'Ticket Transmis au Support', `Votre ticket a été enregistré et transmis avec succès à l'équipe LEVELMAK (${supportEmail}).`);
 
                                       try {
-                                        window.location.href = `mailto:${supportEmail}?subject=${emailSubject}&body=${emailBody}`;
+                                        const mailUrl = `mailto:${supportEmail}?subject=${emailSubject}&body=${emailBody}`;
+                                        window.open(mailUrl, '_system') || (window.location.href = mailUrl);
                                       } catch (mailErr) {
                                         console.warn("Mailto client trigger notice:", mailErr);
                                       }
