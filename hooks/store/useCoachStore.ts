@@ -40,11 +40,21 @@ export const useCoachStore = (
         const coachKey = userId ? `levelmak_${userId}_coach_sessions` : 'levelmak_coach_sessions';
         
         setCoachSessions(prev => {
-            const updated = prev.map(s => 
-                s.id === sessionId 
-                ? { ...s, messages: [...s.messages, message], lastMessageAt: new Date().toISOString() } 
-                : s
-            );
+            const updated = prev.map(s => {
+                if (s.id !== sessionId) return s;
+                let title = s.title;
+                if ((title === 'Nouvelle session' || title === 'Nouvelle Discussion' || !title) && message.role === 'user' && message.text) {
+                    const clean = message.text.replace(/^[^\wÀ-ÿ]+/i, '').trim();
+                    title = clean.length > 32 ? clean.substring(0, 30) + '...' : (clean || 'Discussion');
+                }
+                return {
+                    ...s,
+                    title,
+                    messages: [...s.messages, message],
+                    lastMessageAt: new Date().toISOString(),
+                    lastUpdated: new Date().toISOString()
+                };
+            });
             localStorage.setItem(coachKey, JSON.stringify(updated));
             return updated;
         });
@@ -53,11 +63,21 @@ export const useCoachStore = (
             setUser(prev => {
                 if (!prev) return prev;
                 const currentSessions = prev.coachSessions || [];
-                const updated = currentSessions.map(s => 
-                    s.id === sessionId 
-                    ? { ...s, messages: [...s.messages, message], lastMessageAt: new Date().toISOString() } 
-                    : s
-                );
+                const updated = currentSessions.map(s => {
+                    if (s.id !== sessionId) return s;
+                    let title = s.title;
+                    if ((title === 'Nouvelle session' || title === 'Nouvelle Discussion' || !title) && message.role === 'user' && message.text) {
+                        const clean = message.text.replace(/^[^\wÀ-ÿ]+/i, '').trim();
+                        title = clean.length > 32 ? clean.substring(0, 30) + '...' : (clean || 'Discussion');
+                    }
+                    return {
+                        ...s,
+                        title,
+                        messages: [...s.messages, message],
+                        lastMessageAt: new Date().toISOString(),
+                        lastUpdated: new Date().toISOString()
+                    };
+                });
                 return {
                     ...prev,
                     coachSessions: updated

@@ -208,7 +208,7 @@ const TutorHub: React.FC = () => {
                   {teacher.avatar ? (
                     <img src={teacher.avatar} alt={teacher.name} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-black text-white">{teacher.name.charAt(0)}</span>
+                    <span className="text-2xl font-black text-white">{(String(teacher?.name || 'T')).charAt(0)}</span>
                   )}
                   {/* Subtle info indicator overlay */}
                   <div className="absolute inset-0 bg-black/55 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-black text-white uppercase tracking-wider">

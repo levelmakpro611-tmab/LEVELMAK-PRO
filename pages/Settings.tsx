@@ -214,7 +214,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                     <img src={user.avatar.image} alt={user.name} className="w-full h-full object-cover" />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center text-2xl md:text-3xl font-black text-white bg-gradient-to-br from-slate-700 to-slate-900">
-                                                                        {user?.name.charAt(0).toUpperCase()}
+                                                                        {(String(user?.name || 'U')).charAt(0).toUpperCase()}
                                                                     </div>
                                                                 )}
                                                             </div>

@@ -455,8 +455,12 @@ export const aiService = {
       currentMessageContent.push({ type: "image_url", image_url: { url: imgData } });
     }
 
+    const fullSystemPrompt = userContext 
+      ? `${systemPrompt}\n\n══════════════════════════════════════════════════════════════════════════════\nPROFIL ET CLASSE DE L'ÉLÈVE ACTUEL :\n${userContext}\n══════════════════════════════════════════════════════════════════════════════`
+      : systemPrompt;
+
     const messages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: fullSystemPrompt },
       ...recentHistory,
       { role: "user", content: currentMessageContent }
     ];

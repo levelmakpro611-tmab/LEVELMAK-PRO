@@ -51,7 +51,19 @@ const MessageFormatter: React.FC<{ text: string }> = ({ text }) => {
 
 
 const formatInline = (text: string) => {
-  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+  // Clean up any stray LaTeX delimiters like $...$ or $$...$$
+  const cleanText = text
+    .replace(/\$\$(.*?)\$\$/g, '$1')
+    .replace(/\$(.*?)\$/g, '$1')
+    .replace(/\\times/g, '×')
+    .replace(/\\cdot/g, '·')
+    .replace(/\\rightarrow/g, '→')
+    .replace(/\\leq/g, '≤')
+    .replace(/\\geq/g, '≥')
+    .replace(/\\neq/g, '≠')
+    .replace(/\\approx/g, '≈');
+
+  const parts = cleanText.split(/(\*\*.*?\*\*|\*.*?\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={`part-${i}`} className="font-black text-slate-900 dark:text-white decoration-primary/50 underline-offset-2">{part.slice(2, -2)}</strong>;
@@ -230,7 +242,8 @@ const LevelBot: React.FC = () => {
         let finalUserMsg = userMsg;
         let imageToSubmit = currentImage;
 
-        const profileContext = user ? `Élève: ${user.name}, Niveau: ${user.level}, XP: ${user.xp}, Rank: ${user.rank}, Heures apprises: ${user.stats?.hoursLearned?.toFixed(1) || 0}h` : "";
+        const studentClass = user.gradeClass || user.level || 'Collège/Lycée';
+        const profileContext = user ? `Élève: ${user.name || 'Élève'}, Classe/Niveau: ${studentClass}, XP: ${user.xp || 0}, Rang: #${user.rank || 1}, Heures apprises: ${user.stats?.hoursLearned?.toFixed(1) || 0}h` : "";
         response = await aiService.coachChat(finalUserMsg, messages, profileContext, imageToSubmit || undefined);
       }
 

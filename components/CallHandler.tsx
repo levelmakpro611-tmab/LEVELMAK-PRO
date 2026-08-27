@@ -105,7 +105,7 @@ const CallHandler: React.FC<CallHandlerProps> = ({ currentUserId, activeCall, on
                     className="fixed bottom-8 left-8 right-8 md:left-auto md:right-8 md:w-96 glass rounded-[2.5rem] border border-white/20 shadow-premium p-8 z-[100] flex flex-col items-center gap-6"
                 >
                     <div className="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-[1.5rem] flex items-center justify-center text-white text-3xl font-bold animate-float ring-4 ring-primary/20">
-                        {activeCall.callerName.charAt(0)}
+                        {(String(activeCall?.callerName || 'U')).charAt(0)}
                     </div>
 
                     <div className="text-center">
@@ -168,7 +168,7 @@ const CallHandler: React.FC<CallHandlerProps> = ({ currentUserId, activeCall, on
                     {!isMinimized && (
                         <div className="absolute top-6 left-6 z-[110] p-4 glass rounded-2xl flex items-center gap-3">
                             <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary font-bold">
-                                {activeCall.callerId === currentUserId ? activeCall.receiverId.charAt(0) : activeCall.callerName.charAt(0)}
+                                {(String(activeCall?.callerId === currentUserId ? activeCall?.receiverId : activeCall?.callerName || 'U')).charAt(0)}
                             </div>
                             <div>
                                 <p className="text-white font-bold text-sm">Conversation en cours</p>

@@ -532,7 +532,7 @@ const AdminDashboard: React.FC = () => {
                                             <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5">
                                                 <div className="flex items-center gap-3 mb-3">
                                                     <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-black text-xs">
-                                                        {user?.name.charAt(0)}
+                                                        {(String(user?.name || 'A')).charAt(0)}
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-[11px] font-black text-slate-900 dark:text-white truncate">{user?.name}</p>

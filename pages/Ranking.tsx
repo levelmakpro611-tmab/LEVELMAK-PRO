@@ -84,7 +84,7 @@ const Ranking: React.FC = () => {
                                     <img src={top3[1].avatar.image} alt={top3[1].name || 'Élève'} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-4xl font-black text-slate-400 bg-slate-100">
-                                        {(top3[1].name || 'Élève').charAt(0)}
+                                        {(String(top3[1]?.name || 'Élève')).charAt(0)}
                                     </div>
                                 )}
                             </div>
@@ -122,7 +122,7 @@ const Ranking: React.FC = () => {
                                         <img src={top3[0].avatar.image} alt={top3[0].name || 'Élève'} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-6xl font-black text-amber-500">
-                                            {(top3[0].name || 'Élève').charAt(0)}
+                                            {(String(top3[0]?.name || 'Élève')).charAt(0)}
                                         </div>
                                     )}
                                 </div>
@@ -156,7 +156,7 @@ const Ranking: React.FC = () => {
                                     <img src={top3[2].avatar.image} alt={top3[2].name || 'Élève'} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-4xl font-black text-orange-500">
-                                        {(top3[2].name || 'Élève').charAt(0)}
+                                        {(String(top3[2]?.name || 'Élève')).charAt(0)}
                                     </div>
                                 )}
                             </div>
@@ -246,7 +246,7 @@ const Ranking: React.FC = () => {
                                                 <img src={player.avatar.image} alt={player.name || 'Élève'} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-xl font-black text-white" style={{ backgroundColor: player.avatar?.baseColor || '#3B82F6' }}>
-                                                    {(player.name || 'Élève').charAt(0)}
+                                                    {(String(player?.name || 'Élève')).charAt(0)}
                                                 </div>
                                             )}
                                         </div>

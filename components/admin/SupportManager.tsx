@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LifeBuoy, AlertTriangle, CheckCircle, Trash2, Reply, Send, Printer, ShieldAlert, User, Search, MessageSquare, Clock } from 'lucide-react';
+import { LifeBuoy, AlertTriangle, CheckCircle, Trash2, Reply, Send, Printer, ShieldAlert, User, Search, MessageSquare, Clock, Copy, Check } from 'lucide-react';
 import { UserComment } from '../../types';
 import { updateCommentStatus, deleteComment } from '../../services/adminService';
 
@@ -23,6 +23,17 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
     const [responseModal, setResponseModal] = useState<UserComment | null>(null);
     const [responseText, setResponseText] = useState('');
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+
+    const handleCopyTicket = (item: UserComment, displayTitle: string, cleanContent: string) => {
+        const fullText = `[${displayTitle.toUpperCase()}]\nDate: ${new Date(item.timestamp).toLocaleString('fr-FR')}\n${item.userPhone ? `Utilisateur: ${item.userPhone}\n` : ''}\n--- DÉTAILS ---\n${cleanContent}${item.adminResponse ? `\n\n--- PRISE EN CHARGE ADMIN ---\n${item.adminResponse}` : ''}`;
+        navigator.clipboard.writeText(fullText).then(() => {
+            setCopiedId(item.id);
+            setTimeout(() => setCopiedId(null), 2000);
+        }).catch(err => {
+            console.error('Erreur lors de la copie :', err);
+        });
+    };
 
     // Support items are comments with category 'support', user_phone 'crash-reporter', or starting with [CRASH
     const supportComments = comments.filter(c => 
@@ -201,6 +212,28 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
                                 </div>
 
                                 <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleCopyTicket(item, displayTitle, cleanContent)}
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                                            copiedId === item.id
+                                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-glow'
+                                                : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border-white/10 hover:border-white/20'
+                                        }`}
+                                        title="Copier le rapport complet dans le presse-papiers"
+                                    >
+                                        {copiedId === item.id ? (
+                                            <>
+                                                <Check size={14} className="text-emerald-400" />
+                                                <span className="text-emerald-400">Copié !</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy size={14} />
+                                                <span>Copier</span>
+                                            </>
+                                        )}
+                                    </button>
+
                                     <span className={`px-3 py-1 rounded-full text-xs font-black uppercase border ${
                                         item.status === 'pending'
                                             ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'

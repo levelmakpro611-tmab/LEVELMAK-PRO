@@ -323,7 +323,7 @@ const TeacherDashboard: React.FC = () => {
             {teacher.avatarUrl ? (
               <img src={teacher.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-sm font-black">{teacher.firstName?.charAt(0)}</span>
+              <span className="text-sm font-black">{(String(teacher?.firstName || 'E')).charAt(0)}</span>
             )}
           </div>
           <span className="text-xs font-black uppercase tracking-widest">{teacher.firstName} {teacher.lastName}</span>
@@ -344,7 +344,7 @@ const TeacherDashboard: React.FC = () => {
               {teacher.avatarUrl ? (
                 <img src={teacher.avatarUrl} alt={teacher.firstName} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-lg font-black">{teacher.firstName?.charAt(0)}</span>
+                <span className="text-lg font-black">{(String(teacher?.firstName || 'E')).charAt(0)}</span>
               )}
             </div>
           </div>
@@ -424,7 +424,7 @@ const TeacherDashboard: React.FC = () => {
                         {teacher.avatarUrl ? (
                           <img src={teacher.avatarUrl} alt={teacher.firstName} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-xl font-black">{teacher.firstName?.charAt(0)}</span>
+                          <span className="text-xl font-black">{(String(teacher?.firstName || 'E')).charAt(0)}</span>
                         )}
                       </div>
                     </div>
