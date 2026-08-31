@@ -439,7 +439,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </div>
 
-        {activeTab !== 'social' && !isKeyboardOpen && (
+        {activeTab !== 'social' && (
           <nav className="md:hidden fixed bottom-0 left-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transition-all duration-500">
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },

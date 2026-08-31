@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
     <title>LevelMak Pro</title>
     <script src="https://meet.jit.si/external_api.js"></script>
     <script>
@@ -15,24 +15,6 @@
                 }
             });
         }
-
-        // Viewport height recalibration for Android WebView after notification shade or keyboard dismissal
-        function recalibrateViewport() {
-            requestAnimationFrame(function() {
-                const height = window.innerHeight;
-                document.documentElement.style.setProperty('--app-height', height + 'px');
-                window.scrollTo(0, 0);
-            });
-        }
-        window.addEventListener('resize', recalibrateViewport);
-        window.addEventListener('focus', recalibrateViewport);
-        document.addEventListener('visibilitychange', function() {
-            if (document.visibilityState === 'visible') {
-                setTimeout(recalibrateViewport, 50);
-                setTimeout(recalibrateViewport, 300);
-            }
-        });
-        window.addEventListener('DOMContentLoaded', recalibrateViewport);
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

@@ -32,7 +32,7 @@ const config: CapacitorConfig = {
         Keyboard: {
             resize: KeyboardResize.None,
             style: KeyboardStyle.Dark,
-            resizeOnFullScreen: true
+            resizeOnFullScreen: false
         },
         Haptics: {
             // Enable haptic feedback for premium experience
