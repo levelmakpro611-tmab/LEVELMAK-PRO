@@ -125,14 +125,36 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
+    const handleResetViewport = () => {
+      window.scrollTo(0, 0);
+      if (document.documentElement) {
+        document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+      }
+      window.dispatchEvent(new Event('resize'));
+    };
+
     if (Capacitor.isNativePlatform()) {
-      Keyboard.addListener('keyboardWillShow', () => setIsKeyboardOpen(true));
-      Keyboard.addListener('keyboardWillHide', () => setIsKeyboardOpen(false));
-      return () => { Keyboard.removeAllListeners(); };
+      const showSub = Keyboard.addListener('keyboardWillShow', () => setIsKeyboardOpen(true));
+      const hideSub = Keyboard.addListener('keyboardWillHide', () => {
+        setIsKeyboardOpen(false);
+        handleResetViewport();
+      });
+      const didHideSub = Keyboard.addListener('keyboardDidHide', () => {
+        setIsKeyboardOpen(false);
+        handleResetViewport();
+      });
+      return () => {
+        showSub.then(s => s.remove()).catch(() => {});
+        hideSub.then(s => s.remove()).catch(() => {});
+        didHideSub.then(s => s.remove()).catch(() => {});
+      };
     } else {
       const handleResize = () => {
         if (window.innerHeight < window.screen.height * 0.75) setIsKeyboardOpen(true);
-        else setIsKeyboardOpen(false);
+        else {
+          setIsKeyboardOpen(false);
+          handleResetViewport();
+        }
       };
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);

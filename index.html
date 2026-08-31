@@ -15,6 +15,24 @@
                 }
             });
         }
+
+        // Viewport height recalibration for Android WebView after notification shade or keyboard dismissal
+        function recalibrateViewport() {
+            requestAnimationFrame(function() {
+                const height = window.innerHeight;
+                document.documentElement.style.setProperty('--app-height', height + 'px');
+                window.scrollTo(0, 0);
+            });
+        }
+        window.addEventListener('resize', recalibrateViewport);
+        window.addEventListener('focus', recalibrateViewport);
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                setTimeout(recalibrateViewport, 50);
+                setTimeout(recalibrateViewport, 300);
+            }
+        });
+        window.addEventListener('DOMContentLoaded', recalibrateViewport);
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -199,6 +217,11 @@
 
         .dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        /* Leaflet Dark Tile Styling */
+        .dark .leaflet-tile {
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
         }
 
         /* Leaflet Premium Labels */

@@ -30,7 +30,7 @@ const config: CapacitorConfig = {
             overlaysWebView: true
         },
         Keyboard: {
-            resize: KeyboardResize.Native,
+            resize: KeyboardResize.Body,
             style: KeyboardStyle.Dark,
             resizeOnFullScreen: true
         },
