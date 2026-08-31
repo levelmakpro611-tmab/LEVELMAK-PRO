@@ -66,6 +66,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Keyboard } from '@capacitor/keyboard';
+import { App as CapacitorApp } from '@capacitor/app';
 import { useStore } from '../hooks/useStore';
 import { HapticFeedback } from '../services/nativeAdapters';
 import NotificationCenter from './NotificationCenter';
@@ -126,15 +127,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
 
   React.useEffect(() => {
     const handleResetViewport = () => {
-      window.scrollTo(0, 0);
+      // Clean any inline styles that could have been injected by webview plugins
+      if (document.body) {
+        document.body.style.removeProperty('height');
+        document.body.style.removeProperty('padding-bottom');
+      }
       if (document.documentElement) {
+        document.documentElement.style.removeProperty('height');
         document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
       }
+      window.scrollTo(0, 0);
       window.dispatchEvent(new Event('resize'));
     };
 
     if (Capacitor.isNativePlatform()) {
       const showSub = Keyboard.addListener('keyboardWillShow', () => setIsKeyboardOpen(true));
+      const didShowSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardOpen(true));
       const hideSub = Keyboard.addListener('keyboardWillHide', () => {
         setIsKeyboardOpen(false);
         handleResetViewport();
@@ -143,10 +151,30 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         setIsKeyboardOpen(false);
         handleResetViewport();
       });
+      
+      // Native App resume listener: guarantees full layout recovery when returning from notification shade
+      const resumeSub = CapacitorApp.addListener('resume', () => {
+        setIsKeyboardOpen(false);
+        handleResetViewport();
+        setTimeout(handleResetViewport, 100);
+        setTimeout(handleResetViewport, 350);
+      });
+
+      const stateSub = CapacitorApp.addListener('appStateChange', (state) => {
+        if (state.isActive) {
+          setIsKeyboardOpen(false);
+          handleResetViewport();
+          setTimeout(handleResetViewport, 100);
+        }
+      });
+
       return () => {
         showSub.then(s => s.remove()).catch(() => {});
+        didShowSub.then(s => s.remove()).catch(() => {});
         hideSub.then(s => s.remove()).catch(() => {});
         didHideSub.then(s => s.remove()).catch(() => {});
+        resumeSub.then(s => s.remove()).catch(() => {});
+        stateSub.then(s => s.remove()).catch(() => {});
       };
     } else {
       const handleResize = () => {
