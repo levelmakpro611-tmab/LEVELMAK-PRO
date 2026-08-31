@@ -85,15 +85,12 @@ export const mapProfileToUser = (profile: any): User => {
         if (diffDays === 1) {
             currentStreak += 1;
             lastLoginIso = nowDate.toISOString();
-            supabase.from('profiles').update({
-                streak: { current: currentStreak, lastLogin: lastLoginIso }
-            }).eq('id', profile.id).then(() => {});
+            // ✅ FIX 14: Streak DB write is now ONLY triggered at login via updateStreakIfNeeded()
+            // NOT here in mapProfileToUser, because this function is called on every Realtime event.
         } else if (diffDays > 1) {
             currentStreak = 1;
             lastLoginIso = nowDate.toISOString();
-            supabase.from('profiles').update({
-                streak: { current: currentStreak, lastLogin: lastLoginIso }
-            }).eq('id', profile.id).then(() => {});
+            // ✅ FIX 14: Same as above — no DB write inside a pure mapping function.
         }
     }
 
@@ -703,10 +700,47 @@ export const signInWithPhone = async (phone: string, password: string): Promise<
 };
 
 // ======================================================
+// Update streak on login (called ONCE at login, not in mapProfileToUser)
+// ✅ FIX 14: Extracted from mapProfileToUser to avoid DB writes on every Realtime event
+// ======================================================
+export const updateStreakIfNeeded = async (userId: string, currentStreak: any): Promise<void> => {
+    if (!userId || userId.includes('anon') || !currentStreak?.lastLogin) return;
+    try {
+        const lastDate = new Date(currentStreak.lastLogin);
+        const nowDate = new Date();
+        const lastDay = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+        const nowDay = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate());
+        const diffDays = Math.round((nowDay.getTime() - lastDay.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 1) {
+            const newStreak = diffDays === 1
+                ? { current: (Number(currentStreak.current) || 1) + 1, lastLogin: nowDate.toISOString() }
+                : { current: 1, lastLogin: nowDate.toISOString() };
+            await supabase.from('profiles').update({ streak: newStreak }).eq('id', userId);
+        }
+    } catch (e) {
+        console.warn('[updateStreakIfNeeded] Failed:', e);
+    }
+};
+
+// ======================================================
 // Sign out
 // ======================================================
 export const signOutUser = async (): Promise<void> => {
     try {
+        // ✅ FIX 1: Reset online status to 'offline' BEFORE signing out
+        // This ensures the user won't remain visible as 'online' on the map for other users.
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user?.id) {
+                await supabase.from('profiles').update({
+                    status: 'active', // Reset to default (not 'online')
+                    last_active: new Date().toISOString()
+                }).eq('id', session.user.id);
+            }
+        } catch (statusError) {
+            console.warn('[signOutUser] Could not reset online status:', statusError);
+        }
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
     } catch (error) {

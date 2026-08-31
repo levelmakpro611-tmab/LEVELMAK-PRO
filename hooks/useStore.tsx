@@ -144,7 +144,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const currentNotifications = currentStats.notifications || [];
       const updatedStats = {
         ...currentStats,
-        notifications: [newNotif, ...currentNotifications]
+        // ✅ FIX 3: Cap notifications at 50 to prevent localStorage overflow
+        notifications: [newNotif, ...currentNotifications].slice(0, 50)
       };
       const updatedUser = {
         ...prev,

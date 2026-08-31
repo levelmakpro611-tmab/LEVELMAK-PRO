@@ -195,17 +195,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   }, [user?.id]); // Only re-run if user ID changes
 
 
-  const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && user) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        updateProfile(user.name || 'Utilisateur', undefined, { avatar: { ...(user.avatar || {}), image: base64String } });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleSaveName = () => {
     if (newName.trim()) {

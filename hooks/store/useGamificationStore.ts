@@ -2,6 +2,7 @@ import { safeLocalStorageSet } from '../../services/storage';
 import React, { useState, useCallback } from 'react';
 import { User, Mission, GardenPlant } from '../../types';
 import { XP_PER_LEVEL, POTIONS, getXpForNextLevel } from '../../constants';
+import { supabase } from '../../services/supabase';
 
 export const useGamificationStore = (
     user: User | null, 
@@ -148,11 +149,15 @@ export const useGamificationStore = (
     }, [setUser]);
 
     const purchaseItem = useCallback((itemId: string, price: number, originalId?: string) => {
-        if (!user || (user.levelCoins || 0) < price) return false;
-        if (user.inventory?.includes(itemId) || (originalId && user.inventory?.includes(originalId))) return false;
-
+        // ✅ FIX 2: Guard against race condition — check balance inside setUser on 'prev'
+        // to use the most up-to-date state, not a stale closure capture of 'user'.
+        let success = false;
         setUser(prev => {
             if (!prev) return null;
+            // Check balance and inventory on 'prev' (the guaranteed latest state)
+            if ((prev.levelCoins || 0) < price) return prev;
+            if (prev.inventory?.includes(itemId) || (originalId && prev.inventory?.includes(originalId))) return prev;
+            success = true;
             const updated = {
                 ...prev,
                 levelCoins: prev.levelCoins - price,
@@ -161,8 +166,8 @@ export const useGamificationStore = (
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;
         });
-        return true;
-    }, [user, setUser]);
+        return success;
+    }, [setUser]);
 
     const equipItem = useCallback((itemId: string, category: string, image?: string, originalId?: string) => {
         setUser(prev => {
@@ -181,11 +186,32 @@ export const useGamificationStore = (
                         image: image
                     }
                 };
+                // ✅ FIX Bug 1: Persist avatar to Supabase immediately so the Realtime
+                // listener doesn't overwrite it with the stale DB value.
+                if (prev.id && !prev.id.includes('anon')) {
+                    supabase.from('profiles')
+                        .update({ avatar_config: updated.avatar })
+                        .eq('id', prev.id)
+                        .then(({ error }) => {
+                            if (error) console.error('[equipItem] avatar sync error:', error);
+                            else console.log('[equipItem] avatar persisted to Supabase');
+                        });
+                }
             } else if (category === 'wallpaper' && image) {
                 updated = {
                     ...prev,
                     wallpaper: image
                 };
+                // ✅ FIX Bug 1: Persist wallpaper to Supabase immediately
+                if (prev.id && !prev.id.includes('anon')) {
+                    supabase.from('profiles')
+                        .update({ wallpaper: image })
+                        .eq('id', prev.id)
+                        .then(({ error }) => {
+                            if (error) console.error('[equipItem] wallpaper sync error:', error);
+                            else console.log('[equipItem] wallpaper persisted to Supabase');
+                        });
+                }
             }
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
             return updated;

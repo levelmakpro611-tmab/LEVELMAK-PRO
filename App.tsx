@@ -334,6 +334,13 @@ const AppContent: React.FC = () => {
         if (isActive) {
           console.log('⚡ App returned to foreground (Instant Resume)');
           hideSplashScreen();
+          // ✅ FIX Bug 3: Force viewport recalculation to fix split-screen / grey bottom
+          // on Android when returning from the notification panel or system UI.
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+            // Also scroll to top to restore the correct layout position
+            window.scrollTo(0, 0);
+          }, 100);
         }
       });
       

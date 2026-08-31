@@ -24,11 +24,28 @@ const getTodayKey = (): string => {
 };
 
 /**
+ * ✅ FIX 12: Generate an obfuscated storage key to make client-side manipulation harder.
+ * The key includes the user ID mixed with a static salt so it's not guessable.
+ * Note: This is NOT a security guarantee (client-side quotas can always be bypassed
+ * by determined users). True enforcement requires server-side validation in the Edge Function.
+ */
+const getQuotaStorageKey = (userId: string): string => {
+  // Simple obfuscation: XOR-hash the userId chars with a salt
+  const salt = 'lmk_q_v2';
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+    hash |= 0;
+  }
+  return `_lmk_${Math.abs(hash).toString(36)}_${salt}`;
+};
+
+/**
  * Gets daily usage for a user. Resets automatically at 00:00.
  */
 export const getDailyUsage = (userId: string): DailyUsage => {
   const today = getTodayKey();
-  const storageKey = `levelmak_daily_usage_${userId}`;
+  const storageKey = getQuotaStorageKey(userId);
   const stored = localStorage.getItem(storageKey);
 
   if (stored) {
@@ -57,7 +74,7 @@ export const getDailyUsage = (userId: string): DailyUsage => {
  * Saves updated daily usage to localStorage
  */
 const saveDailyUsage = (userId: string, usage: DailyUsage): void => {
-  const storageKey = `levelmak_daily_usage_${userId}`;
+  const storageKey = getQuotaStorageKey(userId);
   localStorage.setItem(storageKey, JSON.stringify(usage));
 };
 

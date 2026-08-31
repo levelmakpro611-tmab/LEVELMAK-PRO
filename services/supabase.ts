@@ -4,13 +4,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_URL : "") || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_ANON_KEY : "") || "";
 
-// DIAGNOSTIC LOGS (Safe for production debugging)
-console.log('--- [SYSTEM] Supabase Configuration Check ---');
-console.log('URL present:', !!supabaseUrl);
-if (supabaseUrl) console.log('URL domain:', supabaseUrl.split('/')[2]);
-console.log('Key present:', !!supabaseAnonKey);
-console.log('Platform:', typeof window !== 'undefined' ? 'Web/Capacitor' : 'Node');
-console.log('-------------------------------------------');
+// DIAGNOSTIC LOGS (Dev only — not exposed in production)
+if (import.meta.env.DEV) {
+    console.log('--- [SYSTEM] Supabase Configuration Check ---');
+    console.log('URL present:', !!supabaseUrl);
+    if (supabaseUrl) console.log('URL domain:', supabaseUrl.split('/')[2]);
+    console.log('Key present:', !!supabaseAnonKey);
+    console.log('Platform:', typeof window !== 'undefined' ? 'Web/Capacitor' : 'Node');
+    console.log('-------------------------------------------');
+}
 
 let supabaseInstance: any;
 

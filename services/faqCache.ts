@@ -233,13 +233,17 @@ class SmartFAQCache {
 // Instance singleton
 export const faqCache = new SmartFAQCache();
 
-// Nettoyage automatique toutes les 6 heures
-setInterval(() => {
+// ✅ FIX 4: Export the interval reference so it can be cleared if needed
+// (e.g., during hot module replacement or app cleanup).
+export let faqCacheCleanupInterval: ReturnType<typeof setInterval> | null = null;
+faqCacheCleanupInterval = setInterval(() => {
     faqCache.cleanup();
 }, 6 * 60 * 60 * 1000);
 
-// Log des stats au démarrage
-setTimeout(() => {
-    const stats = faqCache.getStats();
-    console.log('📊 FAQ Cache Stats:', stats);
-}, 2000);
+// Log stats at startup (dev only)
+if (import.meta.env.DEV) {
+    setTimeout(() => {
+        const stats = faqCache.getStats();
+        console.log('📊 FAQ Cache Stats:', stats);
+    }, 2000);
+}

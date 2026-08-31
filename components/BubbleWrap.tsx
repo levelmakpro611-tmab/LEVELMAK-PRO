@@ -22,7 +22,9 @@ export const BubbleWrap: React.FC<BubbleWrapProps> = ({ onClose }) => {
   ];
 
   const [bubbles, setBubbles] = useState<boolean[]>(Array(GRID_SIZE).fill(false));
-  const [bubbleStyles, setBubbleStyles] = useState<number[]>([]);
+  const [bubbleStyles] = useState<number[]>(() => 
+    Array(GRID_SIZE).fill(0).map(() => Math.floor(Math.random() * BUBBLE_GRADIENTS.length))
+  );
   const [poppedCount, setPoppedCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
 
@@ -37,12 +39,6 @@ export const BubbleWrap: React.FC<BubbleWrapProps> = ({ onClose }) => {
     }, 1000);
     return () => clearTimeout(timer);
   }, [timeLeft, onClose]);
-
-  // Initialize bubble colors
-  useEffect(() => {
-    const styles = Array(GRID_SIZE).fill(0).map(() => Math.floor(Math.random() * BUBBLE_GRADIENTS.length));
-    setBubbleStyles(styles);
-  }, []);
 
   const playPopSound = () => {
     try {

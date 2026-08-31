@@ -78,14 +78,14 @@ const pushGhostStatus = async (userId: string, isGhost: boolean) => {
 
 const isAdminUser = (u: any) => {
     if (!u) return false;
+    // ✅ FIX 13: Check the 'role' field from DB first as primary source of truth.
+    // Name/phone matching is kept as a fallback but should never be the sole check.
+    if (u.role === 'admin') return true;
     const name = (u.name || '').toLowerCase();
     const phone = (u.phone_number || u.phoneNumber || '').toLowerCase();
     const id = u.id || u.user_id || '';
-    return name.includes('administrateur') || 
-           name.includes('admin') || 
-           phone.includes('levelmak611') ||
-           id === 'admin' ||
-           id === 'levelmak611';
+    // Secondary check: only for IDs that are hard-coded admin IDs
+    return id === 'admin' || id === 'levelmak611' || phone.includes('levelmak611');
 };
 
 export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
@@ -150,6 +150,9 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
 
   // Device-specific session ID
   const deviceSessionId = useMemo(() => `device_${Math.random().toString(36).substring(2, 12)}`, []);
+
+  // ✅ FIX 15: Cache avatar_config locally at mount to avoid re-fetching every 10s in heartbeat
+  const cachedAvatarConfigRef = useRef<any>(null);
 
   // initial load of location
   useEffect(() => {
@@ -315,14 +318,21 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       });
 
     // Fetch profiles from Supabase database for metadata enrichment
-    supabase.from('profiles').select('id, name, phone_number, avatar_config').then(({data}) => {
+    // ✅ FIX 8: Added .limit(300) to avoid loading the entire profiles table at once
+    supabase.from('profiles').select('id, name, phone_number, avatar_config, role').limit(300).then(({data}) => {
         if (data) {
           setAllProfiles(data.map(p => ({ 
             user_id: p.id, 
             name: p.name || 'Étudiant Elite', 
             phone_number: p.phone_number,
+            role: p.role,
             avatar: p.avatar_config?.image 
           })));
+          // ✅ FIX 15: Also cache this user's avatar_config to avoid re-fetching in heartbeat
+          const myProfile = data.find(p => p.id === user?.id);
+          if (myProfile?.avatar_config) {
+              cachedAvatarConfigRef.current = myProfile.avatar_config;
+          }
         }
     });
 
@@ -344,8 +354,6 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     const currentCoords = myLocation || { lat: 9.5370, lng: -13.6785 }; // Fallback to Conakry coordinates
 
     const track = async () => {
-        console.log("📍 [Map] Heartbeat track sending location:", currentCoords);
-        
         // 1. Broadcast in Realtime Channel
         channelRef.current.track({ 
             user_id: user.id, 
@@ -357,10 +365,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
             last_seen: Date.now()
         });
 
-        // 2. Also write/save to Supabase profiles database to guarantee fallback is 100% up to date
+        // 2. ✅ FIX 15: Use cached avatar_config instead of SELECT+UPDATE every 10s
+        // Only one UPDATE per heartbeat (no more double request)
         try {
-            const { data: profile } = await supabase.from('profiles').select('avatar_config').eq('id', user.id).single();
-            const config = profile?.avatar_config || {};
+            const config = cachedAvatarConfigRef.current || user.avatar || {};
             const updatedConfig = {
                 ...config,
                 location: {
@@ -369,8 +377,13 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                     isPublic: !isGhostMode
                 }
             };
-            await supabase.from('profiles').update({ status: 'online', last_active: new Date().toISOString(), avatar_config: updatedConfig }).eq('id', user.id);
-            console.log("📍 [Map] Geolocation successfully saved to Supabase profiles database");
+            // Update local cache
+            cachedAvatarConfigRef.current = updatedConfig;
+            await supabase.from('profiles').update({
+                status: 'online',
+                last_active: new Date().toISOString(),
+                avatar_config: updatedConfig
+            }).eq('id', user.id);
         } catch (e) {
             console.warn("📍 [Map] Could not write location to Supabase profiles fallback:", e);
         }
@@ -910,18 +923,18 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         )}
 
         {incomingInvite && (
-           <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="fixed bottom-10 left-6 right-6 z-[2000] bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-2xl border-2 border-blue-500 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center text-white font-black text-xl">
+           <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="fixed bottom-10 left-6 right-6 z-[2000] bg-white dark:bg-slate-900 p-4 rounded-[2rem] shadow-2xl border-2 border-blue-500 flex items-center gap-3 justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 flex-shrink-0 bg-blue-500 rounded-2xl flex items-center justify-center text-white font-black text-lg">
                       {incomingInvite.host.name[0]}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                       <p className="text-xs font-black text-blue-500 uppercase">Nouveau Défi !</p>
-                      <p className="text-sm font-bold dark:text-white">{incomingInvite.host.name} te défie au {incomingInvite.type === 'quiz' ? 'Quiz' : incomingInvite.type === 'doodle' ? 'Doodle' : 'Morpion'}</p>
+                      <p className="text-sm font-bold dark:text-white truncate">{incomingInvite.host.name} te défie au {incomingInvite.type === 'quiz' ? 'Quiz' : incomingInvite.type === 'doodle' ? 'Doodle' : 'Morpion'}</p>
                   </div>
               </div>
-              <div className="flex gap-2">
-                  <button onClick={() => setIncomingInvite(null)} className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl text-slate-500"><X size={20}/></button>
+              <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={() => setIncomingInvite(null)} className="p-2.5 bg-slate-100 dark:bg-white/5 rounded-xl text-slate-500"><X size={18}/></button>
                   <button 
                     onClick={() => {
                         HapticFeedback.success();
@@ -930,7 +943,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                         setIncomingInvite(null);
                         startBattle(req, false);
                     }}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs shadow-lg"
+                    className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black uppercase text-xs shadow-lg whitespace-nowrap"
                   >
                     Accepter
                   </button>

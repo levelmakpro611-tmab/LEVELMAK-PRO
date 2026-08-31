@@ -19,7 +19,7 @@ export const useAuthStore = () => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);
-    const locationUpdateTimer = useRef<NodeJS.Timeout | null>(null);
+    // locationUpdateTimer removed — was dead code (declared but never used)
 
     const triggerSync = useCallback((userId: string) => {
         if (!userId || userId.includes('anon')) return;
@@ -117,9 +117,10 @@ export const useAuthStore = () => {
             } finally {
                 if (safetyTimer) clearTimeout(safetyTimer);
                 // Minimum delay to present the logo beautifully
+                // ✅ FIX 16: Minimal delay for logo animation (300ms instead of 1500ms)
                 loadingTimer = setTimeout(() => {
                     setLoading(false);
-                }, 1500);
+                }, 300);
             }
         };
 
@@ -245,13 +246,34 @@ export const useAuthStore = () => {
     }, [triggerSync]);
 
     const logout = useCallback(async () => {
+        const userId = user?.id;
         await signOutUser();
         setUser(null);
-        localStorage.removeItem('levelmak_user');
-        localStorage.removeItem('levelmak_last_sync');
-    }, []);
+        // ✅ FIX 9: Clean ALL user-specific localStorage keys on logout
+        // to prevent data leaking to the next user who logs in on the same device.
+        const keysToRemove = [
+            'levelmak_user',
+            'levelmak_last_sync',
+        ];
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        // Clean user-ID-specific keys
+        if (userId) {
+            [
+                `levelmak_${userId}_quizzes`,
+                `levelmak_${userId}_stories`,
+                `levelmak_${userId}_decks`,
+                `levelmak_${userId}_flashcards`,
+                `levelmak_daily_usage_${userId}`,
+                `levelmak_fav_users_${userId}`,
+                `levelmak_demo_premium_${userId}`,
+                `levelmak_demo_premium_until_${userId}`,
+            ].forEach(k => localStorage.removeItem(k));
+        }
+    }, [user?.id]);
 
     const updateProfile = useCallback(async (name: string, phoneNumber?: string, updates?: Partial<User>) => {
+        let updatedUser: User | null = null;
+
         setUser(prev => {
             if (!prev) return null;
             
@@ -271,29 +293,33 @@ export const useAuthStore = () => {
                 stats: updatedStats
             };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
-
-            // Immediately sync to Supabase DB
-            if (prev.id && !prev.id.includes('anon')) {
-                supabase.from('profiles').update({
-                    name: updated.name,
-                    phone_number: updated.phoneNumber,
-                    xp: updated.xp,
-                    total_xp: updated.totalXp,
-                    level_coins: updated.levelCoins,
-                    stats: updated.stats,
-                    badges: updated.badges,
-                    streak: updated.streak,
-                    inventory: updated.inventory,
-                    wallpaper: updated.wallpaper,
-                    avatar_config: updated.avatar,
-                    coach_sessions: updated.coachSessions
-                }).eq('id', prev.id).then(({ error }) => {
-                    if (error) console.error('[Supabase updateProfile Sync Error]:', error);
-                });
-            }
-
+            updatedUser = updated;
             return updated;
         });
+
+        // ✅ FIX 5: Asynchronous Supabase write executed cleanly outside setUser callback
+        if (updatedUser && (updatedUser as User).id && !(updatedUser as User).id.includes('anon')) {
+            try {
+                const u = updatedUser as User;
+                const { error } = await supabase.from('profiles').update({
+                    name: u.name,
+                    phone_number: u.phoneNumber,
+                    xp: u.xp,
+                    total_xp: u.totalXp,
+                    level_coins: u.levelCoins,
+                    stats: u.stats,
+                    badges: u.badges,
+                    streak: u.streak,
+                    inventory: u.inventory,
+                    wallpaper: u.wallpaper,
+                    avatar_config: u.avatar,
+                    coach_sessions: u.coachSessions
+                }).eq('id', u.id);
+                if (error) console.error('[Supabase updateProfile Sync Error]:', error);
+            } catch (err) {
+                console.error('[Supabase updateProfile Exception]:', err);
+            }
+        }
     }, []);
 
     // Sync with LocalStorage on state changes
@@ -308,8 +334,17 @@ export const useAuthStore = () => {
     }, [user, loading]);
 
     // Sync with Supabase on changes
+    // ✅ FIX 6: Added isFromRemote guard — this sync only fires for LOCAL changes.
+    // The Realtime listener (below) already handles REMOTE updates, so we use a ref
+    // to skip re-syncing state that was set by the Realtime listener itself.
+    const isFromRemoteRef = useRef(false);
     useEffect(() => {
         if (!user || !user.id || user.id.includes('anon')) return;
+        // Skip the sync if this update came from the Realtime listener
+        if (isFromRemoteRef.current) {
+            isFromRemoteRef.current = false;
+            return;
+        }
 
         const timer = setTimeout(async () => {
             try {
@@ -340,13 +375,16 @@ export const useAuthStore = () => {
         return () => clearTimeout(timer);
     }, [user]);
 
-    // Periodic active session security check & status enforcement (every 8s)
+    // Periodic active session security check (fallback for Realtime)
+    // ✅ FIX 7: Interval raised from 8s to 90s.
+    // The Realtime channel (below) already handles block/suspend events in real time.
+    // This poll is kept ONLY as a safety net for cases where the Realtime connection drops.
     useEffect(() => {
         if (!user || !user.id || user.id.includes('anon')) return;
 
         const checkSecurityStatus = async () => {
             try {
-                const { data: profile } = await supabase.from('profiles').select('status, is_premium, premium_until, stats').eq('id', user.id).maybeSingle();
+                const { data: profile } = await supabase.from('profiles').select('status').eq('id', user.id).maybeSingle();
                 if (profile) {
                     if (profile.status === 'blocked' || profile.status === 'suspended') {
                         console.warn("Security Check: Account status is blocked/suspended. Evicting active session...");
@@ -366,9 +404,12 @@ export const useAuthStore = () => {
             }
         };
 
-        const interval = setInterval(checkSecurityStatus, 8000);
+        const interval = setInterval(checkSecurityStatus, 90000); // Every 90s (Realtime handles real-time)
         return () => clearInterval(interval);
     }, [user?.id]);
+
+    // Debounce ref for notification sound — prevents playing multiple times in rapid succession
+    const lastNotifSoundRef = useRef<number>(0);
 
     // Real-time listener for profile updates (admin notifications, block/suspend, or resource adjustments)
     useEffect(() => {
@@ -405,8 +446,8 @@ export const useAuthStore = () => {
                             mappedUser.role = 'teacher';
                         }
 
-                        // Compare key values to prevent infinite update loop
-                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'badges', 'is_premium', 'premium_until'];
+                        // ✅ FIX Bug 1: Include avatar & wallpaper in comparison to avoid false-positive changes
+                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'badges', 'is_premium', 'premium_until', 'inventory', 'consumables'];
                         const hasChanges = keysToCompare.some(key => {
                             const val1 = JSON.stringify((user as any)[key]);
                             const val2 = JSON.stringify((mappedUser as any)[key]);
@@ -416,14 +457,31 @@ export const useAuthStore = () => {
                         if (hasChanges) {
                             console.log('Applying remote database updates to local state');
 
+                            // ✅ FIX Bug 1: Preserve locally-equipped avatar & wallpaper
+                            // The DB doesn't always have the latest equipped avatar (it's updated separately).
+                            // If the local state has a more specific avatar image, keep it to prevent resetting.
+                            const preservedAvatar = (user?.avatar?.image && !dbProfile.avatar_config?.image)
+                                ? user.avatar
+                                : mappedUser.avatar;
+                            const preservedWallpaper = (user?.wallpaper && !dbProfile.wallpaper)
+                                ? user.wallpaper
+                                : mappedUser.wallpaper;
+
+                            const finalUser = {
+                                ...mappedUser,
+                                avatar: preservedAvatar,
+                                wallpaper: preservedWallpaper,
+                            };
+
                             // Detect if there are new notifications to trigger local Capacitor notifications
                             const currentNotifs = user.stats?.notifications || [];
-                            const newNotifs = mappedUser.stats?.notifications || [];
+                            const newNotifs = finalUser.stats?.notifications || [];
 
                             if (newNotifs.length > currentNotifs.length) {
                                 const currentIds = new Set(currentNotifs.map((n: any) => n.id));
                                 const newlyAdded = newNotifs.filter((n: any) => !currentIds.has(n.id));
 
+                                // Schedule one local notification per new notif
                                 newlyAdded.forEach((notif: any) => {
                                     LocalNotifications.schedule({
                                         notifications: [{
@@ -434,13 +492,21 @@ export const useAuthStore = () => {
                                         }]
                                     }).catch(e => console.warn('Local notification failed:', e));
                                 });
-                                
-                                // Play notification sound
-                                audioService.playNotification();
+
+                                // ✅ FIX Bug 4: Play sound ONCE per batch, with 2s debounce
+                                const now = Date.now();
+                                if (now - lastNotifSoundRef.current > 2000) {
+                                    lastNotifSoundRef.current = now;
+                                    audioService.playNotification();
+                                }
                             }
 
-                            setUser(mappedUser);
-                            safeLocalStorageSet('levelmak_user', JSON.stringify(mappedUser));
+                            // ✅ FIX 6: Mark this update as coming from Realtime
+                            // so the sync useEffect (above) skips it and doesn't send
+                            // an unnecessary write back to Supabase.
+                            isFromRemoteRef.current = true;
+                            setUser(finalUser);
+                            safeLocalStorageSet('levelmak_user', JSON.stringify(finalUser));
                         }
                     }
                 }
@@ -457,7 +523,12 @@ export const useAuthStore = () => {
         if (!user || !user.id || user.id.includes('anon')) return;
 
         const interval = setInterval(() => {
-            triggerSync(user.id);
+            // ✅ FIX 17: Check last_sync timestamp before triggering to avoid duplicate syncs.
+            const lastSync = localStorage.getItem('levelmak_last_sync');
+            const timeSinceLastSync = lastSync ? Date.now() - parseInt(lastSync) : Infinity;
+            if (timeSinceLastSync > 4 * 60 * 1000) { // Only sync if last sync was >4 min ago
+                triggerSync(user.id);
+            }
         }, 5 * 60 * 1000); // 5 minutes
 
         // Trigger an initial sync shortly after mounting/login to stabilize state

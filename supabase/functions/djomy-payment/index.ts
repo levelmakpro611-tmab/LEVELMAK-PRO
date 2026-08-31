@@ -6,6 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-signature",
 };
 
+// Timing-safe comparison to prevent side-channel timing attacks
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 // HMAC-SHA256 Helper using Deno Web Crypto API
 async function calculateHmacHex(message: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -40,9 +52,9 @@ serve(async (req) => {
   // Load environment variables
   const isProduction = Deno.env.get("DJOMY_ENV") !== "sandbox";
   
-  const DJOMY_CLIENT_ID = (Deno.env.get("DJOMY_CLIENT_ID") || (isProduction ? "djomy-client-1785975328862-31a0" : "djomy-client-1781800938488-6dd9")).trim();
-  const DJOMY_CLIENT_SECRET = (Deno.env.get("DJOMY_CLIENT_SECRET") || (isProduction ? "s3cr3t-wi7-BwBfmzR0ulY4Aioe7bCwEoOYoGzu" : "s3cr3t-2MkVrxI58qJt0QfedkILKMk8N1WmZbzB")).trim();
-  const DJOMY_PARTNER_DOMAIN = (Deno.env.get("DJOMY_PARTNER_DOMAIN") || "d30285448f9d800ee6ba9d58e2c6c9f8fac408b414dd13782bd0b4e8c39306b4").trim();
+  const DJOMY_CLIENT_ID = (Deno.env.get("DJOMY_CLIENT_ID") || "").trim();
+  const DJOMY_CLIENT_SECRET = (Deno.env.get("DJOMY_CLIENT_SECRET") || "").trim();
+  const DJOMY_PARTNER_DOMAIN = (Deno.env.get("DJOMY_PARTNER_DOMAIN") || "").trim();
   const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") || "").trim();
   const SERVICE_ROLE_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "").trim();
   
@@ -73,10 +85,11 @@ serve(async (req) => {
         }
       });
       
-      // Verify webhook authenticity
+      // Verify webhook authenticity (timing-safe)
       const cleanSignature = webhookSignature.startsWith("v1:") ? webhookSignature.slice(3) : webhookSignature;
       const expectedSignature = await calculateHmacHex(rawBody, DJOMY_CLIENT_SECRET);
-      if (expectedSignature !== cleanSignature && expectedSignature !== webhookSignature) {
+      const isSignatureValid = timingSafeEqualHex(expectedSignature, cleanSignature) || timingSafeEqualHex(expectedSignature, webhookSignature);
+      if (!isSignatureValid) {
         console.warn("Invalid webhook signature received:", webhookSignature, "expected:", expectedSignature);
         
         await supabaseAdmin.from("admin_logs").insert({

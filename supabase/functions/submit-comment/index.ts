@@ -434,32 +434,24 @@ serve(async (req) => {
           totalUsers = count || 0;
         }
 
-        // QUIZ COUNT — vraie table user_quizzes
-        const { count: quizzesGenerated } = await supabaseAdmin
-          .from('user_quizzes').select('*', { count: 'exact', head: true });
-        const { count: quizzesToday } = await supabaseAdmin
-          .from('user_quizzes').select('*', { count: 'exact', head: true })
-          .gte('created_at', startOfToday.toISOString());
+        // Parallelized count queries for performance
+        const [
+          { count: quizzesGenerated },
+          { count: quizzesToday },
+          { count: flashcardsCreated },
+          { count: flashcardsToday },
+          { count: activeUsers },
+          aiCountRes
+        ] = await Promise.all([
+          supabaseAdmin.from('user_quizzes').select('*', { count: 'exact', head: true }),
+          supabaseAdmin.from('user_quizzes').select('*', { count: 'exact', head: true }).gte('created_at', startOfToday.toISOString()),
+          supabaseAdmin.from('user_flashcard_decks').select('*', { count: 'exact', head: true }),
+          supabaseAdmin.from('user_flashcard_decks').select('*', { count: 'exact', head: true }).gte('created_at', startOfToday.toISOString()),
+          supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).gte('last_active', startOfWeek.toISOString()),
+          supabaseAdmin.from('student_ai_interactions').select('*', { count: 'exact', head: true }).catch(() => ({ count: 0 }))
+        ]);
 
-        // FLASHCARDS COUNT — vraie table user_flashcard_decks
-        const { count: flashcardsCreated } = await supabaseAdmin
-          .from('user_flashcard_decks').select('*', { count: 'exact', head: true });
-        const { count: flashcardsToday } = await supabaseAdmin
-          .from('user_flashcard_decks').select('*', { count: 'exact', head: true })
-          .gte('created_at', startOfToday.toISOString());
-
-        // ACTIVE USERS — profiles.last_active dans les 7 derniers jours
-        const { count: activeUsers } = await supabaseAdmin
-          .from('profiles').select('*', { count: 'exact', head: true })
-          .gte('last_active', startOfWeek.toISOString());
-
-        // AI INTERACTIONS
-        let aiInteractionsCount = 0;
-        try {
-          const { count: aiCount } = await supabaseAdmin
-            .from('student_ai_interactions').select('*', { count: 'exact', head: true });
-          aiInteractionsCount = aiCount || 0;
-        } catch (_) {}
+        const aiInteractionsCount = aiCountRes?.count || 0;
 
         const total = totalUsers;
         const active = activeUsers || 0;

@@ -183,15 +183,16 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
                     growthMap[d2.toLocaleDateString('fr-FR', { weekday: 'short' })] = 0;
                 }
                 fullUsers.forEach(u => {
-                    if (u.created_at) {
-                        const d2 = new Date(u.created_at);
+                    const regDate = u.registrationDate;
+                    if (regDate) {
+                        const d2 = new Date(regDate);
                         if (d2 >= sevenDaysAgo) {
                             const k = d2.toLocaleDateString('fr-FR', { weekday: 'short' });
                             if (growthMap[k] !== undefined) growthMap[k]++;
                         }
                     }
                 });
-                const recentCount = fullUsers.filter(u => u.created_at && new Date(u.created_at) >= sevenDaysAgo).length;
+                const recentCount = fullUsers.filter(u => u.registrationDate && new Date(u.registrationDate) >= sevenDaysAgo).length;
                 let cumulative = Math.max(0, d.totalUsers - recentCount);
                 growthData = Object.keys(growthMap).map(date => {
                     cumulative += growthMap[date];
@@ -260,7 +261,7 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             totalUsersClean = fullAnalyticsUsers.length;
             const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             activeUsersClean = fullAnalyticsUsers.filter(u => {
-                const act = u.last_active || u.createdAt;
+                const act = u.lastActive || u.registrationDate;
                 if (!act) return false;
                 return new Date(act) >= sevenDaysAgo;
             }).length;
