@@ -384,8 +384,8 @@ const LevelBot: React.FC = () => {
           </div>
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-              <div className="min-h-full flex flex-col space-y-4 md:space-y-6">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 md:p-6 custom-scrollbar">
+              <div className="min-h-full flex flex-col justify-end space-y-3 md:space-y-4">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                     {msg.role === 'bot' && (
@@ -440,7 +440,7 @@ const LevelBot: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-3 md:p-6 border-t border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,1.5rem)+1.5rem)] md:pb-6">
+            <div className="p-3 md:p-5 border-t border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,0.75rem)+0.75rem)] md:pb-5">
               {isLimitReached && (
                 <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 text-center animate-fade-in">
                   {language === 'fr' 
