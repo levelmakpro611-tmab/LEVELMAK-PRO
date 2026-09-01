@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { MessageCircle, X, Send, Sparkles, Loader2, Minimize2, Camera, Image as ImageIcon, History, Plus, Trash2, ChevronLeft, GraduationCap, RefreshCw } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
 import { aiService } from '../services/aiService';
 import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
@@ -88,9 +90,33 @@ const LevelBot: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [lastFailedMsg, setLastFailedMsg] = useState<{ text: string; image?: string | null } | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      const showSub = Keyboard.addListener('keyboardWillShow', (info) => {
+        setKeyboardHeight(info.keyboardHeight || 0);
+      });
+      const didShowSub = Keyboard.addListener('keyboardDidShow', (info) => {
+        setKeyboardHeight(info.keyboardHeight || 0);
+      });
+      const hideSub = Keyboard.addListener('keyboardWillHide', () => {
+        setKeyboardHeight(0);
+      });
+      const didHideSub = Keyboard.addListener('keyboardDidHide', () => {
+        setKeyboardHeight(0);
+      });
+      return () => {
+        showSub.then(s => s.remove()).catch(() => {});
+        didShowSub.then(s => s.remove()).catch(() => {});
+        hideSub.then(s => s.remove()).catch(() => {});
+        didHideSub.then(s => s.remove()).catch(() => {});
+      };
+    }
+  }, []);
 
   const currentSession = useMemo(() => 
     coachSessions.find(s => s.id === activeSessionId), 
@@ -308,15 +334,29 @@ const LevelBot: React.FC = () => {
     );
   }
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping, keyboardHeight, isOpen]);
+
   return (
-    <div className={`
-      fixed transition-[opacity,transform] duration-300 z-[2000]
-      bottom-0 right-0 md:bottom-6 md:right-6 
-      w-full md:w-[450px] md:max-w-[calc(100vw-3rem)]
-      h-[calc(100dvh-env(safe-area-inset-top))] md:h-[650px] md:max-h-[85vh]
-      rounded-t-3xl md:rounded-[2rem]
-      bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden animate-slide-up
-    `}>
+    <div 
+      style={{
+        bottom: `${keyboardHeight}px`,
+        height: keyboardHeight > 0 
+          ? `calc(100dvh - env(safe-area-inset-top) - ${keyboardHeight}px)` 
+          : undefined
+      }}
+      className={`
+        fixed transition-[bottom,height,opacity,transform] duration-200 z-[2000]
+        bottom-0 right-0 md:bottom-6 md:right-6 
+        w-full md:w-[450px] md:max-w-[calc(100vw-3rem)]
+        h-[calc(100dvh-env(safe-area-inset-top))] md:h-[650px] md:max-h-[85vh]
+        rounded-t-3xl md:rounded-[2rem]
+        bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden animate-slide-up
+      `}
+    >
       {/* Header */}
       <div className="bg-slate-100 dark:bg-slate-800 p-4 md:p-6 text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-white/10 shrink-0">
         <div className="flex items-center gap-3 md:gap-4">
@@ -384,8 +424,8 @@ const LevelBot: React.FC = () => {
           </div>
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 md:p-6 custom-scrollbar">
-              <div className="min-h-full flex flex-col justify-end space-y-3 md:space-y-4">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 md:p-5 custom-scrollbar">
+              <div className="flex flex-col space-y-3 md:space-y-4">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                     {msg.role === 'bot' && (
@@ -440,7 +480,7 @@ const LevelBot: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-3 md:p-5 border-t border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-slate-900/80 backdrop-blur-xl pb-[calc(env(safe-area-inset-bottom,0.75rem)+0.75rem)] md:pb-5">
+            <div className={`p-3 md:p-4 border-t border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-slate-900/80 backdrop-blur-xl ${keyboardHeight > 0 ? 'pb-2' : 'pb-[calc(env(safe-area-inset-bottom,0.75rem)+0.75rem)]'} md:pb-4`}>
               {isLimitReached && (
                 <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 text-center animate-fade-in">
                   {language === 'fr' 
