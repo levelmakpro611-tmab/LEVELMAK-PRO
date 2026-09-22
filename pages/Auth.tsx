@@ -110,20 +110,25 @@ const Auth: React.FC = () => {
     try {
       if (mode === 'register') {
         if (registerStep === 1) {
-          if (!name.trim() || !email.trim()) {
-            throw new Error(t('auth.authRequired'));
+          const cleanName = name.trim();
+          const cleanEmail = email.trim().toLowerCase();
+          if (!cleanName || !cleanEmail) {
+            throw new Error(t('auth.authRequired') || 'Veuillez renseigner votre nom et votre adresse email.');
+          }
+          if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+            throw new Error('Veuillez saisir une adresse email valide (ex: élève@gmail.com).');
           }
           setRegisterStep(2);
           return;
         }
 
-        if (!password.trim()) throw new Error(t('auth.pwRequired'));
-        if (!acceptedPolicies) throw new Error(t('auth.acceptRequired'));
-        if (password.length < 6) throw new Error(t('auth.pwShort'));
+        if (!password.trim()) throw new Error(t('auth.pwRequired') || 'Le mot de passe est obligatoire.');
+        if (!acceptedPolicies) throw new Error(t('auth.acceptRequired') || 'Veuillez accepter les conditions d\'utilisation.');
+        if (password.length < 6) throw new Error(t('auth.pwShort') || 'Le mot de passe doit contenir au moins 6 caractères.');
 
         await registerWithEmail(
           name.trim(),
-          email.trim(),
+          email.trim().toLowerCase(),
           password,
           gender,
           ageRange,
@@ -158,7 +163,11 @@ const Auth: React.FC = () => {
     } catch (err: any) {
       console.error('SUBMISSION ERROR:', err);
       let msg = err.message || t('auth.errorUnknown');
-      if (msg === 'Invalid login credentials' || msg.includes('invalid_credentials') || msg.includes('Invalid credentials')) {
+      if (msg.includes('User already registered') || msg.includes('already registered')) {
+        msg = "Cet email est déjà utilisé par un autre compte. Connecte-toi ou choisis un autre email.";
+      } else if (msg.includes('over_email_send_rate_limit') || msg.includes('rate limit') || msg.includes('once every')) {
+        msg = "Sécurité : Trop de tentatives rapides. Veuillez patienter une minute avant de réessayer.";
+      } else if (msg === 'Invalid login credentials' || msg.includes('invalid_credentials') || msg.includes('Invalid credentials')) {
         msg = 'Mot de passe ou compte incorrect.';
       }
       setError(msg);

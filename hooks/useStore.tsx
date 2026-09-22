@@ -118,6 +118,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [auth.user, auth.setUser]);
 
+  // Auto-seed official welcome notification for any user with 0 notifications (e.g. kaka or new signups)
+  useEffect(() => {
+    if (auth.user) {
+      const currentStats = auth.user.stats || {};
+      const currentNotifications = currentStats.notifications || [];
+      if (currentNotifications.length === 0) {
+        const firstName = (auth.user.name || 'Apprenant').split(' ')[0];
+        const welcomeNotif: AppNotification = {
+          id: `welcome_${auth.user.id}`,
+          type: 'achievement',
+          title: `Bienvenue dans l'Élite LEVELMAK, ${firstName} ! 🎉`,
+          message: `Ton espace d'apprentissage d'excellence est prêt !\n\n• 🤖 Coach IA LevelBot : Pose toutes tes questions sur tes cours, tes devoirs et envoie tes exercices 24h/24.\n• 📚 Cours & Résumés Complets : Révise avec des fiches de synthèse, méthodes et exercices adaptés à ton niveau.\n• ⚔️ Quiz Battles : Défie tes camarades en direct, remporte des LevelCoins et hisse-toi en haut du classement !\n\nBonne réussite dans tes études ! L'équipe LEVELMAK est avec toi.`,
+          timestamp: new Date().toISOString(),
+          read: false
+        };
+
+        const updatedStats = {
+          ...currentStats,
+          notifications: [welcomeNotif]
+        };
+
+        auth.setUser(prev => {
+          if (!prev) return null;
+          const updated = {
+            ...prev,
+            stats: updatedStats
+          };
+          safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
+          return updated;
+        });
+
+        if (auth.user.id && !auth.user.id.includes('anon')) {
+          supabase.from('profiles').update({ stats: updatedStats }).eq('id', auth.user.id).then(({ error }) => {
+            if (error) console.error('[Welcome Notif Sync Error]:', error);
+          });
+        }
+      }
+    }
+  }, [auth.user, auth.setUser]);
+
   const addNotification = useCallback((notificationOrType: any, title?: string, message?: string) => {
     let newNotif: AppNotification;
     if (typeof notificationOrType === 'string' && title && message) {

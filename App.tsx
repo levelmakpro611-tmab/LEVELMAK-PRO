@@ -143,15 +143,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const hasPaymentParam = params.get('transactionId') || 
-                             params.get('payment_status') || 
-                             params.get('status') || 
-                             params.get('reference') || 
-                             params.get('merchantPaymentReference') ||
-                             params.get('paymentId') ||
-                             params.get('simulate') === 'true' ||
-                             params.get('success') === 'true';
-      if (hasPaymentParam) {
+      if (params.get('success') === 'true') {
         setActiveTab('pricing');
       }
     }
@@ -199,11 +191,18 @@ const AppContent: React.FC = () => {
         actionText: 'Compris'
       });
     };
+    const handleNavigateTab = (e: any) => {
+      if (e.detail?.tab) {
+        handleSetActiveTab(e.detail.tab);
+      }
+    };
     window.addEventListener('show_premium_alert', handleAlert);
     window.addEventListener('show_admin_notif_modal', handleAdminNotif);
+    window.addEventListener('navigate_tab', handleNavigateTab);
     return () => {
       window.removeEventListener('show_premium_alert', handleAlert);
       window.removeEventListener('show_admin_notif_modal', handleAdminNotif);
+      window.removeEventListener('navigate_tab', handleNavigateTab);
     };
   }, []);
 
@@ -495,13 +494,7 @@ const AppContent: React.FC = () => {
       case 'ranking': return <Ranking />;
       case 'analytics': return <Analytics />;
       case 'settings': return <Settings onNavigate={handleSetActiveTab} />;
-      case 'pricing': return (
-        <Pricing 
-          onChoosePremium={() => handleSetActiveTab('dashboard')} 
-          onChooseFree={() => handleSetActiveTab('dashboard')} 
-          onPaymentSuccess={(data: any) => setGlobalReceiptData({ ...data, userName: user?.name, userPhone: user?.phoneNumber })}
-        />
-      );
+      case 'pricing': return <Pricing onChoosePremium={() => handleSetActiveTab('dashboard')} onChooseFree={() => handleSetActiveTab('dashboard')} />;
       case 'atlas': return <AtlasLibrary onNavigate={handleSetActiveTab} />;
       case 'map': return <WorldBrainMap onCloseMap={() => handleSetActiveTab('atlas')} onNavigate={handleSetActiveTab} />;
       case 'flashcard_mode': return <FlashcardMode onClose={() => handleSetActiveTab('dashboard')} />;

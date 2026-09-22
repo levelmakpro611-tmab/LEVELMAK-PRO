@@ -181,7 +181,19 @@ serve(async (req) => {
         const userId = transaction.user_id;
         const duration = transaction.plan_duration || "monthly";
 
-        const expirationDate = new Date();
+        // Smart Rollover Cumul: check if user already has an active subscription
+        const { data: existingProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("is_premium, premium_until")
+          .eq("id", userId)
+          .maybeSingle();
+
+        const now = Date.now();
+        const baseDate = (existingProfile?.is_premium && existingProfile?.premium_until && new Date(existingProfile.premium_until).getTime() > now)
+          ? new Date(existingProfile.premium_until)
+          : new Date();
+
+        const expirationDate = new Date(baseDate);
         if (duration === "weekly") {
           expirationDate.setDate(expirationDate.getDate() + 7);
         } else if (duration === "monthly") {

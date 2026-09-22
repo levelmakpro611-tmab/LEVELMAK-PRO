@@ -258,10 +258,17 @@ export const convertSupabaseUser = async (supabaseUser: any): Promise<User | nul
 
         // 2. Profile doesn't exist yet - create it from auth metadata
         const metadata = supabaseUser.user_metadata || {};
+        const rawBase = (metadata.name || supabaseUser.email?.split('@')[0] || 'user')
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '')
+            .substring(0, 10) || 'eleve';
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        const uniqueUsername = `${rawBase}_${randomSuffix}`;
+
         const newUser: User = {
             id: supabaseUser.id,
             name: metadata.name || 'Nouvel Apprenant',
-            username: (supabaseUser.email?.split('@')[0] || 'user').replace(/[^a-zA-Z0-9]/g, '').substring(0, 15),
+            username: uniqueUsername,
             email: metadata.real_email || supabaseUser.email || '',
             phoneNumber: metadata.phone ? metadata.phone.replace(/\D/g, '') : undefined,
             gender: metadata.gender || undefined,
@@ -358,24 +365,49 @@ export const signUpWithEmail = async (
     gradeClass?: GradeClass
 ): Promise<User | null> => {
     try {
+        const cleanEmail = email.trim().toLowerCase();
+        const cleanName = name.trim();
+        const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+
         const { data, error } = await supabase.auth.signUp({
-            email,
+            email: cleanEmail,
             password,
             options: {
                 data: { 
-                    name, 
-                    real_email: email, 
+                    name: cleanName, 
+                    real_email: cleanEmail, 
                     gender, 
                     age_range: ageRange,
-                    phone: phone || '',
+                    phone: cleanPhone,
                     grade_class: gradeClass || 'Terminale'
                 }
             }
         });
 
-        if (error) throw error;
+        if (error) {
+            const errStr = error.message || '';
+            if (errStr.includes('User already registered') || errStr.includes('already registered')) {
+                throw new Error("Cet email est déjà utilisé par un autre compte. Connecte-toi ou choisis un autre email.");
+            }
+            if (errStr.includes('over_email_send_rate_limit') || errStr.includes('rate limit') || errStr.includes('once every')) {
+                throw new Error("Sécurité : Plusieurs tentatives d'inscription détectées. Veuillez patienter une minute avant de réessayer.");
+            }
+            if (errStr.includes('Password should be')) {
+                throw new Error("Ton mot de passe doit contenir au moins 6 caractères.");
+            }
+            if (errStr.includes('Unable to validate email address') || errStr.includes('invalid format')) {
+                throw new Error("Format d'email non valide. Utilise un email valide (ex: élève@gmail.com).");
+            }
+            throw new Error(error.message);
+        }
+
+        // Supabase with email confirmation returns user with empty identities when email already exists
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+            throw new Error("Cet email est déjà utilisé par un autre compte. Connecte-toi ou choisis un autre email.");
+        }
+
         if (!data.user) {
-            throw new Error('Compte créé ! Vérifie tes emails pour confirmer ton compte.');
+            throw new Error('Erreur lors de la création du compte. Vérifie tes informations et réessaie.');
         }
 
         return await convertSupabaseUser(data.user);

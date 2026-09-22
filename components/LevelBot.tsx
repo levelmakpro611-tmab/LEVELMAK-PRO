@@ -536,26 +536,100 @@ const LevelBot: React.FC = () => {
 
             {/* Input Area */}
             <div className={`p-3 md:p-4 border-t border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-slate-900/80 backdrop-blur-xl ${keyboardHeight > 0 ? 'pb-2' : 'pb-[calc(env(safe-area-inset-bottom,0.75rem)+0.75rem)]'} md:pb-4`}>
-              {/* Quota indicator or limit reached banner */}
-              {isLimitReached ? (
-                <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 text-center animate-fade-in">
-                  {quotaResult.message || (language === 'fr' 
-                    ? "⚠️ Limite de messages atteinte. Abonnez-vous à un forfait Premium pour continuer à discuter avec le Coach IA !"
-                    : language === 'ar'
-                    ? "⚠️ تم الوصول إلى حد الرسائل. اشترك في باقة Premium لمواصلة التحدث مع مدرب الذكاء الاصطناعي!"
-                    : "⚠️ Limit of messages reached. Subscribe to a Premium plan to continue chatting with the AI Coach!")}
-                </div>
-              ) : (
-                <div className="mb-2 flex items-center justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 px-1 select-none">
-                  <span>
-                    {!isPremiumActive
-                      ? `Essai gratuit : ${quotaResult.remaining} / ${quotaResult.limit} messages restants`
-                      : `Quota du jour : ${quotaResult.remaining} / ${quotaResult.limit} messages restants`}
-                  </span>
-                  {isPremiumActive && (
-                    <span className="text-[9px] text-slate-400 dark:text-slate-500">
-                      Recharge cette nuit à 00h00
-                    </span>
+              {/* Quota limit reached smart banner (completely silent until quota is reached) */}
+              {isLimitReached && (
+                <div className="mb-3 p-3.5 md:p-4 rounded-2xl bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-blue-600/5 border border-blue-500/30 text-left animate-fade-in shadow-xl shadow-blue-950/10 space-y-2.5">
+                  {!isPremiumActive ? (
+                    <>
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-xl shrink-0">🎯</span>
+                        <div>
+                          <h5 className="text-xs md:text-sm font-black text-slate-900 dark:text-white">
+                            Tes 10 messages d'essai gratuit sont terminés !
+                          </h5>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                            Tu as pu découvrir la puissance de ton Coach IA LevelBot. Pour continuer à poser toutes tes questions chaque jour, faire corriger tes photos d'exercices et débloquer tous les quiz en illimité, active ton accès PRO !
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOpen(false);
+                          window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'pricing' } }));
+                        }}
+                        className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <Sparkles size={14} />
+                        <span>💎 Découvrir les Forfaits PRO (dès 15 000 FG)</span>
+                      </button>
+                    </>
+                  ) : quotaResult.limit <= 25 ? (
+                    <>
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-xl shrink-0">⏳</span>
+                        <div>
+                          <h5 className="text-xs md:text-sm font-black text-slate-900 dark:text-white">
+                            Quota du jour atteint (25 messages).
+                          </h5>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                            Ton Coach IA recharge tes 25 messages cette nuit à 00h00.<br />
+                            <strong className="text-blue-600 dark:text-blue-400">🚀 Envie de continuer à travailler sans attendre ?</strong><br />
+                            Passe au <span className="font-bold text-slate-900 dark:text-white">Forfait Mensuel (75 messages/jour + 15 photos/jour)</span> : <em>tes jours restants seront automatiquement ajoutés à ton nouveau mois !</em>
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOpen(false);
+                          window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'pricing' } }));
+                        }}
+                        className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <Sparkles size={14} />
+                        <span>⚡ Passer au Forfait Mensuel (avec cumul de tes jours)</span>
+                      </button>
+                    </>
+                  ) : quotaResult.limit <= 75 ? (
+                    <>
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-xl shrink-0">🌟</span>
+                        <div>
+                          <h5 className="text-xs md:text-sm font-black text-slate-900 dark:text-white">
+                            Super travail aujourd'hui ! (75 messages atteints)
+                          </h5>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                            Tu as beaucoup progressé ! Ton coach recharge tes 75 messages cette nuit à 00h00.<br />
+                            <strong className="text-amber-500">👑 Tu prépares ton examen ou ton passage en classe supérieure ?</strong><br />
+                            Passe au <span className="font-bold text-slate-900 dark:text-white">Forfait Annuel (150 messages/jour + sujets complets)</span> et conserve ton accès jusqu'à la fin de l'année scolaire !
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOpen(false);
+                          window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'pricing' } }));
+                        }}
+                        className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <Sparkles size={14} />
+                        <span>👑 Découvrir le Forfait Annuel</span>
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-xl shrink-0">🌟</span>
+                      <div>
+                        <h5 className="text-xs md:text-sm font-black text-slate-900 dark:text-white">
+                          Quota exceptionnel du jour atteint (150 messages).
+                        </h5>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                          Tu as été remarquablement assidu aujourd'hui ! Ton coach LevelBot se recharge cette nuit à 00h00.
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
