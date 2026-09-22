@@ -143,17 +143,11 @@ const FeynmanChallenge = ({ onBack, initialSession }: { onBack: () => void, init
     }
   }, [messages, loading, isStarted]);
 
-  useEffect(() => {
-    if (isStarted && messages.length === 0 && topic) {
-      const welcome = { role: 'assistant' as const, content: t('ailab.feynmanWelcome', { topic }) };
-      setMessages([welcome]);
-    }
-  }, [isStarted, messages.length, topic]);
-
   const handleStart = () => {
     if (topic.trim()) {
       setIsStarted(true);
-      // Messages will be initialized by useEffect
+      const welcome = { role: 'assistant' as const, content: t('ailab.feynmanWelcome', { topic: topic.trim() }) };
+      setMessages([welcome]);
       HapticFeedback.success();
     }
   };
