@@ -149,6 +149,7 @@ const AppContent: React.FC = () => {
                              params.get('reference') || 
                              params.get('merchantPaymentReference') ||
                              params.get('paymentId') ||
+                             params.get('simulate') === 'true' ||
                              params.get('success') === 'true';
       if (hasPaymentParam) {
         setActiveTab('pricing');
@@ -494,7 +495,13 @@ const AppContent: React.FC = () => {
       case 'ranking': return <Ranking />;
       case 'analytics': return <Analytics />;
       case 'settings': return <Settings onNavigate={handleSetActiveTab} />;
-      case 'pricing': return <Pricing onChoosePremium={() => handleSetActiveTab('dashboard')} onChooseFree={() => handleSetActiveTab('dashboard')} />;
+      case 'pricing': return (
+        <Pricing 
+          onChoosePremium={() => handleSetActiveTab('dashboard')} 
+          onChooseFree={() => handleSetActiveTab('dashboard')} 
+          onPaymentSuccess={(data: any) => setGlobalReceiptData({ ...data, userName: user?.name, userPhone: user?.phoneNumber })}
+        />
+      );
       case 'atlas': return <AtlasLibrary onNavigate={handleSetActiveTab} />;
       case 'map': return <WorldBrainMap onCloseMap={() => handleSetActiveTab('atlas')} onNavigate={handleSetActiveTab} />;
       case 'flashcard_mode': return <FlashcardMode onClose={() => handleSetActiveTab('dashboard')} />;

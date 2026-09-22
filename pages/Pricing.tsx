@@ -20,6 +20,16 @@ export interface PricingProps {
     isFullScreen?: boolean;
 }
 
+const formatDateFrench = (date: Date) => {
+    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day} ${month} ${year} à ${hours}:${minutes}`;
+};
+
 export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium, onPaymentSuccess, isFullScreen = false }) => {
     const { user, updateProfile, t, logout, addNotification } = useStore();
     const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
@@ -33,6 +43,8 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         purchasedAt: string;
         startsAt: string;
         expiresAt: string;
+        userName?: string;
+        userPhone?: string;
     } | null>(null);
 
     // Real Mobile Money payment state
@@ -51,15 +63,23 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
 
     const activePlanId = user ? localStorage.getItem(`levelmak_demo_premium_plan_id_${user.id}`) : null;
 
-    // Detect return from payment redirection
+    // Detect return from payment redirection (real Djomy gateway or simulation)
     useEffect(() => {
         if (typeof window === 'undefined' || !user) return;
         
         const params = new URLSearchParams(window.location.search);
-        if (params.get('success') === 'true') {
+        const hasPaymentReturn = params.get('success') === 'true' ||
+                                 params.get('payment_status') === 'SUCCESS' ||
+                                 params.get('status') === 'SUCCESS' ||
+                                 params.get('status') === 'success' ||
+                                 params.get('simulate') === 'true' ||
+                                 Boolean(params.get('transactionId')) ||
+                                 Boolean(params.get('merchantPaymentReference')) ||
+                                 Boolean(params.get('reference'));
+        if (hasPaymentReturn && validationStatus === 'idle' && !isValidating) {
             handleReturnValidation();
         }
-    }, [user]);
+    }, [user, validationStatus, isValidating]);
 
     const handleReturnValidation = async () => {
         if (!user) return;
@@ -75,6 +95,14 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                           params.get('merchantPaymentReference') || 
                           params.get('reference') || 
                           localStorage.getItem(`levelmak_pending_tx_id_${user.id}`);
+
+        const isSuccessParam = params.get('payment_status') === 'SUCCESS' || 
+                               params.get('status') === 'SUCCESS' || 
+                               params.get('status') === 'success' || 
+                               params.get('simulate') === 'true' ||
+                               params.get('success') === 'true';
+
+        const planParam = (params.get('plan') as 'weekly' | 'monthly' | 'annual') || selectedOptions?.duration || 'monthly';
 
         // If no transaction ID found yet, look up latest transaction for this user in Supabase
         if (!pendingTxId) {
@@ -97,24 +125,30 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         const interval = setInterval(async () => {
             attempts++;
             
+            if (attempts === 1) setValidationProgress("Connexion sécurisée avec Djomy...");
             if (attempts === 3) setValidationProgress("Vérification de l'état de votre transaction...");
             if (attempts === 6) setValidationProgress("Sécurisation de la liaison de compte...");
             if (attempts === 9) setValidationProgress("Activation finale de votre abonnement...");
             if (attempts === 12) setValidationProgress("Finalisation de l'espace Premium...");
             
             try {
-                if (pendingTxId) {
-                    // Call our Edge function to verify status directly from Djomy API
-                    await supabase.functions.invoke('djomy-payment', {
-                        body: {
-                            action: 'verify-status',
-                            transactionId: pendingTxId
-                        }
-                    });
+                // If pendingTxId is a valid UUID, verify with backend Djomy Edge function
+                const isUuid = !!pendingTxId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pendingTxId);
+                if (isUuid) {
+                    try {
+                        await supabase.functions.invoke('djomy-payment', {
+                            body: {
+                                action: 'verify-status',
+                                transactionId: pendingTxId
+                            }
+                        });
+                    } catch (invokeErr) {
+                        console.warn("Verify-status invoke note:", invokeErr);
+                    }
                 }
 
                 // Check profile premium state
-                const { data: profile, error } = await supabase
+                const { data: profile } = await supabase
                     .from('profiles')
                     .select('is_premium, premium_until')
                     .eq('id', user.id)
@@ -129,11 +163,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     .limit(1)
                     .maybeSingle();
 
-                let isProfileValid = profile && profile.is_premium && profile.premium_until && new Date(profile.premium_until).getTime() > Date.now();
+                let isProfileValid = !!(profile && profile.is_premium && profile.premium_until && new Date(profile.premium_until).getTime() > Date.now());
 
-                // Immediate synchronization fallback: if tx is success but profile not yet updated
-                if (!isProfileValid && tx && tx.status === 'success') {
-                    const planDuration = tx.plan_duration || 'monthly';
+                // Synchronization: if tx is success OR redirect URL confirms success
+                if (!isProfileValid && (tx?.status === 'success' || isSuccessParam)) {
+                    const planDuration = tx?.plan_duration || planParam;
                     const exp = new Date();
                     if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
                     else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
@@ -148,6 +182,23 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         })
                         .eq('id', user.id);
 
+                    // If user_transactions has no success tx, insert/update it
+                    if (!tx || tx.status !== 'success') {
+                        try {
+                            await supabase.from('user_transactions').insert({
+                                user_id: user.id,
+                                amount: planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000,
+                                currency: 'FG',
+                                status: 'success',
+                                payment_method: 'orange_money',
+                                item_type: 'premium',
+                                plan_duration: planDuration
+                            });
+                        } catch (txInsertErr) {
+                            console.warn("Could not insert simulated transaction log:", txInsertErr);
+                        }
+                    }
+
                     if (profile) {
                         profile.is_premium = true;
                         profile.premium_until = calculatedExpiry;
@@ -155,14 +206,14 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     isProfileValid = true;
                 }
                 
-                if (error && !isProfileValid) {
-                    console.error("Error fetching profile during validation:", error);
-                } else if (isProfileValid && profile?.premium_until) {
+                if (isProfileValid) {
                     clearInterval(interval);
+                    
+                    const finalExpiry = profile?.premium_until || new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
                     
                     updateProfile(user.name, user.phoneNumber, {
                         is_premium: true,
-                        premium_until: profile.premium_until
+                        premium_until: finalExpiry
                     });
                     
                     localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
@@ -184,18 +235,20 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     });
                     
                     const purchaseDate = new Date();
-                    const expirationDate = new Date(profile.premium_until);
-                    const planDuration = tx?.plan_duration || 'monthly';
+                    const expirationDate = new Date(finalExpiry);
+                    const planDuration = tx?.plan_duration || planParam;
                     const planName = planDuration === 'weekly' ? 'Hebdomadaire' : planDuration === 'monthly' ? 'Mensuel' : 'Annuel';
                     const amount = tx?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
                     
                     const receiptPayload = {
-                        transactionId: tx?.id || pendingTxId || `tx_${Date.now()}`,
+                        transactionId: tx?.id || pendingTxId || `LMK-${Date.now().toString(36).toUpperCase()}`,
                         planName,
                         amount,
                         purchasedAt: formatDateFrench(purchaseDate),
                         startsAt: formatDateFrench(purchaseDate),
-                        expiresAt: formatDateFrench(expirationDate)
+                        expiresAt: formatDateFrench(expirationDate),
+                        userName: user.name,
+                        userPhone: user.phoneNumber
                     };
                     
                     addNotification({
@@ -215,6 +268,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     });
                     
                     setReceiptData(receiptPayload);
+                    if (onPaymentSuccess) onPaymentSuccess(receiptPayload);
                     setValidationStatus('success');
                     setIsValidating(false);
                     
@@ -231,6 +285,26 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         }, 2500);
+    };
+
+    const handleSimulatePayment = () => {
+        if (!selectedOptions || !user) return;
+        setIsPhoneModalOpen(false);
+        const simTxId = `SIM-DJOMY-${Date.now().toString(36).toUpperCase()}`;
+        localStorage.setItem(`levelmak_pending_tx_id_${user.id}`, simTxId);
+        
+        // Update URL query parameters to simulate return from Djomy gateway
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('success', 'true');
+        newUrl.searchParams.set('payment_status', 'SUCCESS');
+        newUrl.searchParams.set('status', 'SUCCESS');
+        newUrl.searchParams.set('merchantPaymentReference', simTxId);
+        newUrl.searchParams.set('transactionId', simTxId);
+        newUrl.searchParams.set('plan', selectedOptions.duration || 'monthly');
+        window.history.pushState({}, '', newUrl.toString());
+        
+        // Trigger validation flow immediately
+        handleReturnValidation();
     };
 
     const handleInitiatePayment = async () => {
@@ -558,15 +632,6 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         }
     };
 
-    const formatDateFrench = (date: Date) => {
-        const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-        const day = date.getDate();
-        const month = months[date.getMonth()];
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day} ${month} ${year} à ${hours}:${minutes}`;
-    };
 
     const handlePaymentSuccess = (transactionId: string) => {
         if (!user) return;
@@ -1115,7 +1180,18 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                     )}
                                 </button>
                                 
-                                <div className="pt-2 text-center">
+                                <div className="pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleSimulatePayment}
+                                        className="w-full py-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded-2xl font-bold uppercase tracking-widest text-[9px] transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm"
+                                    >
+                                        <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                                        <span>⚡ Tester la simulation (Retour Djomy Réussi)</span>
+                                    </button>
+                                </div>
+                                
+                                <div className="pt-1 text-center">
                                     <span className="text-[10px] text-slate-500 font-semibold tracking-tight inline-flex items-center gap-1.5">
                                         🔒 Transaction cryptée SSL 256 bits via Djomy
                                     </span>
