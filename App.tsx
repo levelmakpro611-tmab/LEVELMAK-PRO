@@ -143,7 +143,14 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('success') === 'true') {
+      const hasPaymentParam = params.get('transactionId') || 
+                             params.get('payment_status') || 
+                             params.get('status') || 
+                             params.get('reference') || 
+                             params.get('merchantPaymentReference') ||
+                             params.get('paymentId') ||
+                             params.get('success') === 'true';
+      if (hasPaymentParam) {
         setActiveTab('pricing');
       }
     }
