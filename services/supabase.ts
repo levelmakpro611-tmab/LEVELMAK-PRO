@@ -94,7 +94,23 @@ if (!supabaseInstance) {
         },
         functions: {
             invoke: () => mockError('functions.invoke')
-        }
+        },
+        channel: (name: string, _opts?: any) => {
+            console.warn(`Supabase channel("${name}") called on fallback mock`);
+            const mockChannel: any = {
+                on: () => mockChannel,
+                subscribe: (cb?: (status: string) => void) => {
+                    if (cb) setTimeout(() => cb('SUBSCRIBED'), 0);
+                    return mockChannel;
+                },
+                unsubscribe: () => Promise.resolve('ok'),
+                send: () => Promise.resolve('ok'),
+                track: () => Promise.resolve('ok'),
+                untrack: () => Promise.resolve('ok')
+            };
+            return mockChannel;
+        },
+        removeChannel: (_channel: any) => Promise.resolve('ok')
     };
 }
 

@@ -28,6 +28,8 @@ import { feedbackService } from '../services/feedbackService';
 import { Fingerprint } from 'lucide-react';
 import { PRIVACY_POLICY_SECTIONS, TERMS_OF_SERVICE_SECTIONS } from '../utils/legalTexts';
 import { getSupportEmail } from '../services/adminService';
+import { SchoolLevel } from '../types';
+import { LegalModal } from '../components/LegalModal';
 
 const getLegalUrl = (anchor: string) => {
   const isNative = window.location.origin.includes('https://localhost') || window.location.origin.startsWith('capacitor://');
@@ -40,13 +42,23 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
     const [expandedSection, setExpandedSection] = useState<string | null>(null);
     const [name, setName] = useState(user?.name || '');
     const [phone, setPhone] = useState(user?.phoneNumber || '');
-    const [education, setEducation] = useState(user?.education || '');
+    const [education, setEducation] = useState(user?.education || user?.gradeClass || '');
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [biometricEnabled, setBiometricEnabled] = useState(false);
     const [legalTab, setLegalTab] = useState<'privacy' | 'terms'>('privacy');
+    const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
 
     const [supportEmail, setSupportEmail] = useState('Tmab6544@gmail.com');
+
+    // Sync input fields whenever user object updates or loads
+    React.useEffect(() => {
+        if (user) {
+            if (user.name !== undefined) setName(user.name || '');
+            if (user.phoneNumber !== undefined) setPhone(user.phoneNumber || '');
+            if (user.education || user.gradeClass) setEducation(user.education || user.gradeClass || '');
+        }
+    }, [user?.name, user?.phoneNumber, user?.education, user?.gradeClass]);
 
     React.useEffect(() => {
         const checkBiometric = async () => {
@@ -99,7 +111,41 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
         if (!user) return;
         setIsSaving(true);
         try {
-            await updateProfile(name, phone, { education });
+            const cleanName = name.trim();
+            const cleanPhone = phone.trim();
+            const cleanEducation = education.trim();
+
+            let deducedGrade = cleanEducation;
+            let deducedLevel: SchoolLevel = SchoolLevel.HIGH;
+            const lower = cleanEducation.toLowerCase();
+
+            if (lower.includes('univ') || lower.includes('fac') || lower.includes('licence') || lower.includes('master') || lower.includes('doctorat')) {
+                deducedLevel = SchoolLevel.UNIVERSITY;
+                deducedGrade = 'Université';
+            } else if (lower.includes('collège') || lower.includes('college') || lower.includes('10ème') || lower.includes('10eme') || /^[789]/.test(lower)) {
+                deducedLevel = SchoolLevel.MIDDLE;
+                if (lower.includes('10')) deducedGrade = '10ème';
+                else if (lower.includes('9')) deducedGrade = '9ème';
+                else if (lower.includes('8')) deducedGrade = '8ème';
+                else if (lower.includes('7')) deducedGrade = '7ème';
+            } else if (lower.includes('prim') || /^[1-6]/.test(lower)) {
+                deducedLevel = SchoolLevel.PRIMARY;
+            } else if (lower.includes('terminale') || lower.includes('bac')) {
+                deducedLevel = SchoolLevel.HIGH;
+                deducedGrade = 'Terminale';
+            } else if (lower.includes('11')) {
+                deducedLevel = SchoolLevel.HIGH;
+                deducedGrade = '11ème';
+            } else if (lower.includes('12')) {
+                deducedLevel = SchoolLevel.HIGH;
+                deducedGrade = '12ème';
+            }
+
+            await updateProfile(cleanName, cleanPhone, { 
+                education: cleanEducation,
+                gradeClass: (deducedGrade || cleanEducation || 'Terminale') as any,
+                level: deducedLevel
+            });
             addActivity('profile', t('settings.success'), '');
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
@@ -663,7 +709,8 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
 
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); window.open(getLegalUrl('#p-sec-1'), '_system'); }}
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); setLegalTab('privacy'); setIsLegalModalOpen(true); }}
                                                                 className="p-5 rounded-2xl bg-white dark:bg-primary/10 border border-slate-200 dark:border-primary/20 hover:bg-slate-50 dark:hover:bg-primary/20 text-primary dark:text-primary-light transition-all flex flex-col items-center justify-center gap-2 text-center shadow-sm"
                                                             >
                                                                 <span className="font-black text-xs uppercase tracking-wider text-primary">Politique de Confidentialité</span>
@@ -671,7 +718,8 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                             </button>
 
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); window.open(getLegalUrl('#t-sec-1'), '_system'); }}
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); setLegalTab('terms'); setIsLegalModalOpen(true); }}
                                                                 className="p-5 rounded-2xl bg-white dark:bg-secondary/10 border border-slate-200 dark:border-secondary/20 hover:bg-slate-50 dark:hover:bg-secondary/20 text-secondary dark:text-secondary-light transition-all flex flex-col items-center justify-center gap-2 text-center shadow-sm"
                                                             >
                                                                 <span className="font-black text-xs uppercase tracking-wider text-secondary">Conditions d'Utilisation (CGU)</span>
@@ -767,6 +815,13 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                     </AnimatePresence>
                 </div>
             </div>
+
+            {/* Legal Modal Component */}
+            <LegalModal
+                isOpen={isLegalModalOpen}
+                onClose={() => setIsLegalModalOpen(false)}
+                initialTab={legalTab}
+            />
         </div>
     );
 };

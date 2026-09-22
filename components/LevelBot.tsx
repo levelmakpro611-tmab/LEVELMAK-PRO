@@ -6,6 +6,7 @@ import { aiService } from '../services/aiService';
 import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
 import { translations } from '../utils/translations';
+import { checkMessageQuota, incrementMessageUsage, isUserPremiumActive } from '../services/aiQuotaService';
 
 const MessageFormatter: React.FC<{ text: string }> = ({ text }) => {
   // Split text into lines but filter out separators like --- or ===
@@ -89,7 +90,9 @@ const LevelBot: React.FC = () => {
   const [input, setInput] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [lastFailedMsg, setLastFailedMsg] = useState<{ text: string; image?: string | null } | null>(null);
+  const [lastFailedMsg, setLastFailedMsg] = useState<{ text: string; image?: string | null; isExpert?: boolean } | null>(null);
+  const [showExpertSuggestion, setShowExpertSuggestion] = useState(false);
+  const [lastUserQuestion, setLastUserQuestion] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -125,8 +128,9 @@ const LevelBot: React.FC = () => {
 
   const messages = currentSession?.messages || [];
   // Strict premium check: requires is_premium=true AND valid non-expired premium_until
-  const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
-  const isLimitReached = !isPremiumActive && messages.filter(m => m.role === 'user').length >= 10;
+  const isPremiumActive = isUserPremiumActive(user);
+  const quotaResult = checkMessageQuota(user);
+  const isLimitReached = !quotaResult.allowed;
 
   // Ephemeral chat cleanup for non-premium users on unmount or window close
   useEffect(() => {
@@ -232,7 +236,7 @@ const LevelBot: React.FC = () => {
     return () => document.body.classList.remove('bot-open');
   }, [isOpen]);
 
-  const handleSend = async (e: React.FormEvent, retryMsg?: { text: string; image?: string | null }) => {
+  const handleSend = async (e: React.FormEvent, retryMsg?: { text: string; image?: string | null; isExpert?: boolean }) => {
     e.preventDefault();
     if (!activeSessionId) return;
 
@@ -240,12 +244,19 @@ const LevelBot: React.FC = () => {
 
     const userMsg = retryMsg ? retryMsg.text : input.trim();
     const currentImage = retryMsg ? retryMsg.image ?? null : selectedImage;
+    const isExpertMode = !!retryMsg?.isExpert;
 
     if ((!userMsg && !currentImage) || isTyping) return;
+
+    // Détection de l'incompréhension de l'élève pour lui proposer le Coach Expert
+    const isConfused = /(pas compris|je ne comprends pas|comprends pas|c'est pas clair|ce n'est pas clair|r[ée]explique|explique autrement|explique mieux|pourquoi|aide-moi encore|je bloque|difficile)/i.test(userMsg);
 
     if (!retryMsg) {
       setInput('');
       setSelectedImage(null);
+      setLastUserQuestion(userMsg);
+      // Consume 1 message from the unified AI pool (shared with Savants & Feynman)
+      incrementMessageUsage(user);
       // Save user message to store only on new send (not retry)
       saveCoachMessage(activeSessionId, {
         id: `msg_${Date.now()}`,
@@ -258,6 +269,7 @@ const LevelBot: React.FC = () => {
 
     setLastFailedMsg(null);
     setIsTyping(true);
+    setShowExpertSuggestion(false);
 
     try {
       let response: string = "";
@@ -268,21 +280,27 @@ const LevelBot: React.FC = () => {
         let finalUserMsg = userMsg;
         let imageToSubmit = currentImage;
 
-        const studentClass = user.gradeClass || user.level || 'Collège/Lycée';
-        const profileContext = user ? `Élève: ${user.name || 'Élève'}, Classe/Niveau: ${studentClass}, XP: ${user.xp || 0}, Rang: #${user.rank || 1}, Heures apprises: ${user.stats?.hoursLearned?.toFixed(1) || 0}h` : "";
-        response = await aiService.coachChat(finalUserMsg, messages, profileContext, imageToSubmit || undefined);
+        const studentClass = user?.education || user?.gradeClass || user?.level || 'Collège/Lycée';
+        const profileContext = user ? `Élève: ${user.name || 'Élève'}, Classe/Niveau scolaire: ${studentClass}, XP: ${user.xp || 0}, Rang: #${user.rank || 1}, Heures apprises: ${user.stats?.hoursLearned?.toFixed(1) || 0}h. CONSIGNE STRICTE: L'élève est en "${studentClass}". Adapte STRICTEMENT ton vocabulaire, ton niveau d'explication, ta rigueur et tes exemples pour correspondre exactement au programme et aux exigences du niveau "${studentClass}".` : "";
+        response = await aiService.coachChat(finalUserMsg, messages, profileContext, imageToSubmit || undefined, language, isExpertMode);
       }
 
       saveCoachMessage(activeSessionId, {
         id: `msg_${Date.now() + 1}`,
         role: 'bot',
         text: response || t.error,
+        isExpert: isExpertMode,
         timestamp: new Date().toISOString()
       });
+
+      // Si l'élève a manifesté de l'incompréhension et que ce n'était pas déjà le mode expert, on lui tend la main
+      if (isConfused && !isExpertMode) {
+        setShowExpertSuggestion(true);
+      }
     } catch (error: any) {
       console.error("Erreur Gemini Flash:", error);
       // Store for retry
-      setLastFailedMsg({ text: userMsg, image: currentImage });
+      setLastFailedMsg({ text: userMsg, image: currentImage, isExpert: isExpertMode });
 
       saveCoachMessage(activeSessionId, {
         id: `msg_${Date.now() + 1}`,
@@ -293,6 +311,13 @@ const LevelBot: React.FC = () => {
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleAskCoachExpert = () => {
+    setShowExpertSuggestion(false);
+    const target = lastUserQuestion || [...messages].reverse().find(m => m.role === 'user')?.text || "cette notion";
+    const prompt = `Peux-tu me réexpliquer en détail et pas à pas la notion suivante : "${target}" ? Décompose la démarche étape par étape, donne-moi un exemple concret du quotidien pour illustrer et assure-toi que je comprenne facilement.`;
+    handleSend({ preventDefault: () => {} } as any, { text: prompt, isExpert: true });
   };
 
   const handleNewChat = () => {
@@ -320,6 +345,12 @@ const LevelBot: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (isOpen && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping, keyboardHeight, isOpen]);
+
   if (!isOpen) {
     return (
       <button
@@ -333,12 +364,6 @@ const LevelBot: React.FC = () => {
       </button>
     );
   }
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isTyping, keyboardHeight, isOpen]);
 
   return (
     <div 
@@ -444,6 +469,12 @@ const LevelBot: React.FC = () => {
                           <img src={msg.image} alt="User upload" className="max-w-full h-auto max-h-[250px] object-contain bg-black/20" />
                         </div>
                       )}
+                      {msg.isExpert && msg.role === 'bot' && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider mb-2">
+                          <Sparkles size={11} className="text-amber-500" />
+                          <span>Explication du Coach Expert</span>
+                        </div>
+                      )}
                       {msg.role === 'bot' ? <MessageFormatter text={msg.text} /> : msg.text}
                     </div>
                   </div>
@@ -479,15 +510,53 @@ const LevelBot: React.FC = () => {
               </div>
             </div>
 
+            {/* Contextual Coach Expert Help Card */}
+            {showExpertSuggestion && !isTyping && !isLimitReached && (
+              <div className="px-3 md:px-4 pt-2">
+                <div className="p-3 md:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-500/30 flex items-center justify-between gap-3 animate-fade-in shadow-lg shadow-amber-950/10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                      <Sparkles size={14} />
+                    </div>
+                    <div className="text-[11px] text-slate-800 dark:text-slate-200">
+                      <span className="font-extrabold text-amber-600 dark:text-amber-400 block">Besoin d'un coup de pouce ?</span>
+                      Veux-tu que ton Coach Expert te réexplique la méthode pas à pas avec un exemple concret ?
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAskCoachExpert}
+                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] rounded-xl shrink-0 transition-transform active:scale-95 shadow-md shadow-amber-500/20"
+                  >
+                    Réexpliquer pas à pas
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Input Area */}
             <div className={`p-3 md:p-4 border-t border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-slate-900/80 backdrop-blur-xl ${keyboardHeight > 0 ? 'pb-2' : 'pb-[calc(env(safe-area-inset-bottom,0.75rem)+0.75rem)]'} md:pb-4`}>
-              {isLimitReached && (
+              {/* Quota indicator or limit reached banner */}
+              {isLimitReached ? (
                 <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-bold text-red-600 dark:text-red-400 text-center animate-fade-in">
-                  {language === 'fr' 
-                    ? "⚠️ Limite de 10 messages atteinte. Abonnez-vous à un forfait Premium pour continuer à discuter avec le Coach IA !"
+                  {quotaResult.message || (language === 'fr' 
+                    ? "⚠️ Limite de messages atteinte. Abonnez-vous à un forfait Premium pour continuer à discuter avec le Coach IA !"
                     : language === 'ar'
-                    ? "⚠️ تم الوصول إلى حد 10 رسائل. اشترك في باقة Premium لمواصلة التحدث مع مدرب الذكاء الاصطناعي!"
-                    : "⚠️ Limit of 10 messages reached. Subscribe to a Premium plan to continue chatting with the AI Coach!"}
+                    ? "⚠️ تم الوصول إلى حد الرسائل. اشترك في باقة Premium لمواصلة التحدث مع مدرب الذكاء الاصطناعي!"
+                    : "⚠️ Limit of messages reached. Subscribe to a Premium plan to continue chatting with the AI Coach!")}
+                </div>
+              ) : (
+                <div className="mb-2 flex items-center justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 px-1 select-none">
+                  <span>
+                    {!isPremiumActive
+                      ? `Essai gratuit : ${quotaResult.remaining} / ${quotaResult.limit} messages restants`
+                      : `Quota du jour : ${quotaResult.remaining} / ${quotaResult.limit} messages restants`}
+                  </span>
+                  {isPremiumActive && (
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500">
+                      Recharge cette nuit à 00h00
+                    </span>
+                  )}
                 </div>
               )}
               {selectedImage && !isLimitReached && (

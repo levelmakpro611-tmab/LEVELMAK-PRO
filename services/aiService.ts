@@ -78,9 +78,9 @@ async function getHistoricalQuotes(lang: string): Promise<string[]> {
 /**
  * Appelle l'IA de manière ultra rapide et stable (100% direct)
  */
-async function callGemini(messages: any[], jsonMode: boolean = false) {
+async function callGemini(messages: any[], jsonMode: boolean = false, tier: 'fast' | 'expert' = 'fast') {
   try {
-    return await geminiService.generateContent(messages, jsonMode);
+    return await geminiService.generateContent(messages, jsonMode, tier);
   } catch (error: any) {
     console.error("⚠️ Échec du service d'intelligence artificielle:", error.message);
     throw new Error(
@@ -441,7 +441,7 @@ export const aiService = {
     }
   },
 
-  async coachChat(message: string, history: { role: 'user' | 'bot'; text: string }[], userContext: string, base64Image?: string, lang: string = 'fr') {
+  async coachChat(message: string, history: { role: 'user' | 'bot'; text: string }[], userContext: string, base64Image?: string, lang: string = 'fr', isExpert: boolean = false) {
     const systemPrompt = COACH_SYSTEM_PROMPT(lang);
 
     const recentHistory = history.slice(-10).map(msg => ({
@@ -455,9 +455,13 @@ export const aiService = {
       currentMessageContent.push({ type: "image_url", image_url: { url: imgData } });
     }
 
-    const fullSystemPrompt = userContext 
+    let fullSystemPrompt = userContext 
       ? `${systemPrompt}\n\n══════════════════════════════════════════════════════════════════════════════\nPROFIL ET CLASSE DE L'ÉLÈVE ACTUEL :\n${userContext}\n══════════════════════════════════════════════════════════════════════════════`
       : systemPrompt;
+
+    if (isExpert) {
+      fullSystemPrompt += `\n\n══════════════════════════════════════════════════════════════════════════════\nMODE INTERVENTION DU COACH EXPERT :\nL'élève a besoin d'une explication approfondie et pas à pas. Fais preuve d'une pédagogie d'excellence : décompose la méthode étape par étape, utilise des exemples concrets et des analogies simples du quotidien pour rendre la notion évidente et rassurante.\n══════════════════════════════════════════════════════════════════════════════`;
+    }
 
     const messages = [
       { role: "system", content: fullSystemPrompt },
@@ -466,7 +470,8 @@ export const aiService = {
     ];
 
     const startTime = Date.now();
-    const response = await callGemini(messages, false);
+    const effectiveTier = (isExpert || !!base64Image) ? 'expert' : 'fast';
+    const response = await callGemini(messages, false, effectiveTier);
     const reasoningTime = Math.round((Date.now() - startTime) / 1000);
 
     // Enregistrement silencieux du comportement élève pour le Fine-Tuning IA
@@ -667,7 +672,7 @@ export const aiService = {
       { role: "system", content: systemPrompt },
       { role: "user", content: `Voici mon texte :\nTitre : "${title}"\nContenu : "${text}"` }
     ];
-    return await callGemini(messages, false);
+    return await callGemini(messages, false, 'expert');
   },
 
   async solveScientificProblem(problem: string, context?: string, base64Image?: string, lang: string = 'fr') {
@@ -677,7 +682,7 @@ export const aiService = {
       const imgData = base64Image.includes(',') ? base64Image : `data:image/jpeg;base64,${base64Image}`;
       userContent.push({ type: "image_url", image_url: { url: imgData } });
     }
-    const response = await callGemini([{ role: "system", content: systemPrompt }, { role: "user", content: userContent }], true);
+    const response = await callGemini([{ role: "system", content: systemPrompt }, { role: "user", content: userContent }], true, 'expert');
     return JSON.parse(response);
   },
 
@@ -688,7 +693,7 @@ export const aiService = {
       { role: "system", content: systemPrompt },
       { role: "user", content: [{ type: "text", text: `Énoncé: ${problemContext}` }, { type: "image_url", image_url: { url: imgData } }]}
     ];
-    const response = await callGemini(messages, true);
+    const response = await callGemini(messages, true, 'expert');
     return JSON.parse(response);
   },
 
@@ -707,7 +712,7 @@ export const aiService = {
       { role: "user", content: userContent }
     ];
     const startTime = Date.now();
-    const response = await callGemini(messages, false);
+    const response = await callGemini(messages, false, 'expert');
     const reasoningTime = Math.round((Date.now() - startTime) / 1000);
 
     telemetryService.logInteraction({
@@ -739,7 +744,7 @@ export const aiService = {
       { role: "user", content: userContent }
     ];
     const startTime = Date.now();
-    const response = await callGemini(messages, false);
+    const response = await callGemini(messages, false, 'expert');
     const reasoningTime = Math.round((Date.now() - startTime) / 1000);
 
     telemetryService.logInteraction({
@@ -1005,7 +1010,7 @@ Texte soumis :
         }
       ];
 
-      const responseText = await callGemini(messages, true);
+      const responseText = await callGemini(messages, true, 'expert');
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       const result = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
       return {

@@ -22,7 +22,7 @@ export const BubbleWrap: React.FC<BubbleWrapProps> = ({ onClose }) => {
   ];
 
   const [bubbles, setBubbles] = useState<boolean[]>(Array(GRID_SIZE).fill(false));
-  const [bubbleStyles] = useState<number[]>(() => 
+  const [bubbleStyles, setBubbleStyles] = useState<number[]>(() => 
     Array(GRID_SIZE).fill(0).map(() => Math.floor(Math.random() * BUBBLE_GRADIENTS.length))
   );
   const [poppedCount, setPoppedCount] = useState(0);

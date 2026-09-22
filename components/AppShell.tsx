@@ -357,16 +357,16 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                 <Info size={22} />
                 <span className="tracking-wide text-[15px]">{t('layout.important')}</span>
               </button>
-              <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold transition-all ${activeTab === 'settings' ? 'bg-blue-500/10 text-blue-600 dark:text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-white/5'}`}>
+              <button onClick={() => { HapticFeedback.navigation(); setActiveTab('settings'); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold transition-all ${activeTab === 'settings' ? 'bg-blue-500/10 text-blue-600 dark:text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20' : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-white/5'}`}>
                 <Settings className={`transition-all duration-300 ${activeTab === 'settings' ? 'text-blue-500 scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'group-hover:scale-110'}`} size={22} />
                 <span className="tracking-wide text-[15px]">{t('nav.settings')}</span>
               </button>
-              <button onClick={logout} className="w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold text-red-600 dark:text-danger/80 hover:text-red-700 dark:hover:text-danger hover:bg-red-500/10 transition-all">
+              <button onClick={() => { setIsSidebarOpen(false); logout(); }} className="w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-bold text-red-600 dark:text-danger/80 hover:text-red-700 dark:hover:text-danger hover:bg-red-500/10 transition-all">
                 <LogOut size={22} />
                 <span className="tracking-wide text-[15px]">{t('auth.logout')}</span>
               </button>
               
-              <button onClick={() => { HapticFeedback.selection(); setIsHelpOpen(true); }} className="mt-4 p-4 rounded-2xl bg-slate-200/80 dark:bg-white/5 border border-slate-300/80 dark:border-white/5 hover:bg-slate-300/80 dark:hover:bg-white/10 transition-all group flex items-center gap-3 w-full shadow-sm dark:shadow-none">
+              <button onClick={() => { HapticFeedback.selection(); setIsSidebarOpen(false); setIsHelpOpen(true); }} className="mt-4 p-4 rounded-2xl bg-slate-200/80 dark:bg-white/5 border border-slate-300/80 dark:border-white/5 hover:bg-slate-300/80 dark:hover:bg-white/10 transition-all group flex items-center gap-3 w-full shadow-sm dark:shadow-none">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <HelpCircle size={18} className="animate-pulse" />
                 </div>

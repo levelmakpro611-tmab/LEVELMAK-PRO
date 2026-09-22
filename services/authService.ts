@@ -94,18 +94,51 @@ export const mapProfileToUser = (profile: any): User => {
         }
     }
 
+    const rawEducation = stats.education || profile.education || '';
+    let computedGradeClass = (stats.gradeClass || profile.grade_class) as GradeClass;
+    let computedLevel = profile.level as SchoolLevel;
+
+    const lowerEd = String(rawEducation).toLowerCase();
+    if (lowerEd.includes('univ') || lowerEd.includes('fac') || lowerEd.includes('licence') || lowerEd.includes('master') || lowerEd.includes('doctorat')) {
+        computedGradeClass = 'Université';
+        computedLevel = SchoolLevel.UNIVERSITY;
+    } else if (lowerEd.includes('collège') || lowerEd.includes('college') || lowerEd.includes('10ème') || lowerEd.includes('10eme') || /^[789]/.test(lowerEd)) {
+        computedLevel = SchoolLevel.MIDDLE;
+        if (lowerEd.includes('10')) computedGradeClass = '10ème';
+        else if (lowerEd.includes('9')) computedGradeClass = '9ème';
+        else if (lowerEd.includes('8')) computedGradeClass = '8ème';
+        else if (lowerEd.includes('7')) computedGradeClass = '7ème';
+    } else if (lowerEd.includes('prim') || /^[1-6]/.test(lowerEd)) {
+        computedLevel = SchoolLevel.PRIMARY;
+    } else if (lowerEd.includes('terminale') || lowerEd.includes('bac')) {
+        computedGradeClass = 'Terminale';
+        computedLevel = SchoolLevel.HIGH;
+    } else if (lowerEd.includes('11')) {
+        computedGradeClass = '11ème';
+        computedLevel = SchoolLevel.HIGH;
+    } else if (lowerEd.includes('12')) {
+        computedGradeClass = '12ème';
+        computedLevel = SchoolLevel.HIGH;
+    } else if (rawEducation && rawEducation.trim() && (!computedGradeClass || computedGradeClass === 'Terminale')) {
+        computedGradeClass = rawEducation as GradeClass;
+    }
+
+    if (computedGradeClass === 'Université' && (!computedLevel || computedLevel === SchoolLevel.HIGH)) {
+        computedLevel = SchoolLevel.UNIVERSITY;
+    }
+
     return {
         ...profile,
         streak: { current: currentStreak, lastLogin: lastLoginIso },
         is_premium: isPremium,
         premium_until: premiumUntil,
-        education: stats.education || profile.education || '',
+        education: rawEducation,
         phoneNumber: profile.phone_number,
         totalXp: profile.total_xp || 0,
         levelCoins: profile.level_coins || 50,
         onboardingCompleted: profile.onboarding_completed || false,
-        level: profile.level as SchoolLevel,
-        gradeClass: (profile.grade_class || stats.gradeClass || 'Terminale') as GradeClass,
+        level: computedLevel || SchoolLevel.HIGH,
+        gradeClass: computedGradeClass || 'Terminale',
         subscriptionTier: calculatedTier as any,
         avatar: profile.avatar_config || {
             baseColor: '#3B82F6',
@@ -845,21 +878,55 @@ export const deleteCurrentUserAccount = async (password: string): Promise<void> 
         const token = session?.access_token;
 
         // 4. Call Edge Function which uses service_role to delete auth account + all data
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const response = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            },
-            body: JSON.stringify({ userId }),
-        });
+        let edgeFunctionSucceeded = false;
+        try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const response = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                },
+                body: JSON.stringify({ userId }),
+            });
 
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || 'Erreur lors de la suppression du compte.');
+            if (response.ok) {
+                edgeFunctionSucceeded = true;
+            } else {
+                const err = await response.json().catch(() => ({}));
+                console.warn('Edge Function delete-user failed, triggering client fallback:', err);
+            }
+        } catch (edgeErr) {
+            console.warn('Error invoking delete-user Edge Function, triggering client fallback:', edgeErr);
         }
+
+        // Fallback sécurisé côté client : si la fonction Edge échoue, supprimer les données directes
+        if (!edgeFunctionSucceeded) {
+            try {
+                await Promise.allSettled([
+                    supabase.from('user_comments').delete().eq('user_id', userId),
+                    supabase.from('user_ratings').delete().eq('user_id', userId),
+                    supabase.from('messages').delete().eq('sender_id', userId),
+                    supabase.from('user_activities').delete().eq('user_id', userId),
+                    supabase.from('notifications').delete().eq('user_id', userId),
+                    supabase.from('profiles').delete().eq('id', userId)
+                ]);
+            } catch (fallbackErr) {
+                console.warn('Client fallback deletion error:', fallbackErr);
+            }
+        }
+
+        // Nettoyage local complet
+        try {
+            [
+                'levelmak_user',
+                `levelmak_pending_tx_id_${userId}`,
+                `levelmak_demo_premium_${userId}`,
+                `levelmak_demo_premium_until_${userId}`,
+                `levelmak_demo_premium_plan_id_${userId}`,
+            ].forEach(k => localStorage.removeItem(k));
+        } catch (_) {}
 
         // 5. Sign out locally
         await supabase.auth.signOut();

@@ -69,7 +69,30 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         
         let attempts = 0;
         const maxAttempts = 15; // 37.5 seconds total
-        const pendingTxId = localStorage.getItem(`levelmak_pending_tx_id_${user.id}`);
+        
+        const params = new URLSearchParams(window.location.search);
+        let pendingTxId = params.get('transactionId') || 
+                          params.get('merchantPaymentReference') || 
+                          params.get('reference') || 
+                          localStorage.getItem(`levelmak_pending_tx_id_${user.id}`);
+
+        // If no transaction ID found yet, look up latest transaction for this user in Supabase
+        if (!pendingTxId) {
+            try {
+                const { data: latestTx } = await supabase
+                    .from('user_transactions')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                if (latestTx?.id) {
+                    pendingTxId = latestTx.id;
+                }
+            } catch (err) {
+                console.warn("Impossible de récupérer la dernière transaction:", err);
+            }
+        }
         
         const interval = setInterval(async () => {
             attempts++;
@@ -90,25 +113,52 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     });
                 }
 
+                // Check profile premium state
                 const { data: profile, error } = await supabase
                     .from('profiles')
                     .select('is_premium, premium_until')
                     .eq('id', user.id)
                     .single();
+
+                // Check transaction state in user_transactions
+                const { data: tx } = await supabase
+                    .from('user_transactions')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                let isProfileValid = profile && profile.is_premium && profile.premium_until && new Date(profile.premium_until).getTime() > Date.now();
+
+                // Immediate synchronization fallback: if tx is success but profile not yet updated
+                if (!isProfileValid && tx && tx.status === 'success') {
+                    const planDuration = tx.plan_duration || 'monthly';
+                    const exp = new Date();
+                    if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
+                    else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
+                    else if (planDuration === 'annual') exp.setDate(exp.getDate() + 365);
+                    const calculatedExpiry = exp.toISOString();
+
+                    await supabase
+                        .from('profiles')
+                        .update({
+                            is_premium: true,
+                            premium_until: calculatedExpiry
+                        })
+                        .eq('id', user.id);
+
+                    if (profile) {
+                        profile.is_premium = true;
+                        profile.premium_until = calculatedExpiry;
+                    }
+                    isProfileValid = true;
+                }
                 
-                if (error) {
+                if (error && !isProfileValid) {
                     console.error("Error fetching profile during validation:", error);
-                } else if (profile && profile.is_premium && profile.premium_until && new Date(profile.premium_until).getTime() > Date.now()) {
+                } else if (isProfileValid && profile?.premium_until) {
                     clearInterval(interval);
-                    
-                    const { data: tx } = await supabase
-                        .from('user_transactions')
-                        .select('*')
-                        .eq('user_id', user.id)
-                        .eq('status', 'success')
-                        .order('created_at', { ascending: false })
-                        .limit(1)
-                        .maybeSingle();
                     
                     updateProfile(user.name, user.phoneNumber, {
                         is_premium: true,
@@ -140,7 +190,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     const amount = tx?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
                     
                     const receiptPayload = {
-                        transactionId: tx?.id || `tx_${Date.now()}`,
+                        transactionId: tx?.id || pendingTxId || `tx_${Date.now()}`,
                         planName,
                         amount,
                         purchasedAt: formatDateFrench(purchaseDate),
@@ -521,15 +571,15 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
     const handlePaymentSuccess = (transactionId: string) => {
         if (!user) return;
 
-        // Calculate matching simulated expiration date locally for instant state update
+        // Calculate matching expiration date locally for instant state update
         const expirationDate = new Date();
         const purchaseDate = new Date();
         if (selectedOptions?.duration === 'weekly') {
-            expirationDate.setMinutes(expirationDate.getMinutes() + 30);
+            expirationDate.setDate(expirationDate.getDate() + 7);
         } else if (selectedOptions?.duration === 'monthly') {
-            expirationDate.setHours(expirationDate.getHours() + 1);
+            expirationDate.setDate(expirationDate.getDate() + 30);
         } else if (selectedOptions?.duration === 'annual') {
-            expirationDate.setMinutes(expirationDate.getMinutes() + 90);
+            expirationDate.setDate(expirationDate.getDate() + 365);
         }
 
         // Save demo subscription keys locally to persist across DB background checks

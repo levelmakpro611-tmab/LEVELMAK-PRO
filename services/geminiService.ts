@@ -8,10 +8,10 @@ export const geminiService = {
   /**
    * Appel générique à Gemini via la Edge Function Supabase
    */
-  async generateContent(messages: any[], jsonMode: boolean = false) {
+  async generateContent(messages: any[], jsonMode: boolean = false, tier: 'fast' | 'expert' = 'fast') {
     try {
       const { data, error } = await supabase.functions.invoke('gemini', {
-        body: { messages, jsonMode }
+        body: { messages, jsonMode, tier }
       });
 
       if (error) {

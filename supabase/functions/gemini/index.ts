@@ -1,7 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-const MODELS_TO_TRY = ["gemini-flash-lite-latest", "gemini-pro-latest", "gemini-2.5-flash"];
+const FAST_MODELS = [
+  "gemini-2.0-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-pro-latest"
+];
+
+const EXPERT_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-2.5-flash",
+  "gemini-1.5-flash",
+  "gemini-pro-latest",
+  "gemini-2.0-flash-lite"
+];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,11 +32,13 @@ serve(async (req) => {
       throw new Error("Clé API Gemini manquante dans les secrets du projet Supabase.");
     }
 
-    const { messages, jsonMode } = await req.json();
+    const { messages, jsonMode, tier = "fast" } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       throw new Error("Le paramètre 'messages' est requis et doit être un tableau.");
     }
+
+    let hasImage = false;
 
     // Extraction du system prompt si présent
     const systemPrompt = messages.find((m: any) => m.role === "system")?.content;
@@ -40,11 +55,12 @@ serve(async (req) => {
             if (part.type === "text") {
               parts.push({ text: part.text });
             } else if (part.type === "image_url") {
+              hasImage = true;
               let mimeType = "image/jpeg";
-              if (part.image_url.url.startsWith("data:")) {
+              if (part.image_url?.url?.startsWith("data:")) {
                 mimeType = part.image_url.url.split(";")[0].split(":")[1];
               }
-              const base64Data = part.image_url.url.split(",")[1] || part.image_url.url;
+              const base64Data = part.image_url?.url?.split(",")[1] || part.image_url?.url || "";
               parts.push({
                 inlineData: {
                   mimeType: mimeType,
@@ -57,6 +73,10 @@ serve(async (req) => {
 
         return { role, parts };
       });
+
+    const effectiveTier = (tier === "expert" || hasImage) ? "expert" : "fast";
+    const modelsToTry = effectiveTier === "expert" ? EXPERT_MODELS : FAST_MODELS;
+    console.log(`[Edge Function] Routing Tier: ${effectiveTier} (requested: ${tier}, hasImage: ${hasImage})`);
 
     const payload: any = {
       contents,
@@ -78,7 +98,7 @@ serve(async (req) => {
     let success = false;
 
     // Boucle à travers les modèles de repli pour trouver un modèle opérationnel
-    for (const model of MODELS_TO_TRY) {
+    for (const model of modelsToTry) {
       try {
         console.log(`[Edge Function] Tentative avec le modèle : ${model}`);
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;

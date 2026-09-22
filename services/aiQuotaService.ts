@@ -1,4 +1,4 @@
-import { User, SUBSCRIPTION_QUOTAS, isElementaryOrMiddleSchool, AIQuotaLimits } from '../types';
+import { User, SUBSCRIPTION_QUOTAS, isElementaryOrMiddleSchool, AIQuotaLimits, SubscriptionTier } from '../types';
 
 export interface DailyUsage {
   date: string; // YYYY-MM-DD
@@ -79,18 +79,67 @@ const saveDailyUsage = (userId: string, usage: DailyUsage): void => {
 };
 
 /**
+ * Checks if user has an active, valid premium subscription
+ */
+export const isUserPremiumActive = (user: User | null): boolean => {
+  if (!user) return false;
+  return Boolean(user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
+};
+
+const getFreeLifetimeKey = (userId: string): string => `_lmk_free_lifetime_msgs_${userId}`;
+
+export const getFreeLifetimeMessagesUsed = (userId: string): number => {
+  try {
+    const val = localStorage.getItem(getFreeLifetimeKey(userId));
+    return val ? Math.max(0, parseInt(val, 10) || 0) : 0;
+  } catch (_) {
+    return 0;
+  }
+};
+
+export const setFreeLifetimeMessagesUsed = (userId: string, count: number): void => {
+  try {
+    localStorage.setItem(getFreeLifetimeKey(userId), String(count));
+  } catch (_) {}
+};
+
+// Free Quizzes & Flashcards lifetime tracking
+const getFreeLifetimeQuizzesKey = (userId: string): string => `_lmk_free_lifetime_quizzes_${userId}`;
+export const getFreeLifetimeQuizzesUsed = (userId: string): number => {
+  try {
+    const val = localStorage.getItem(getFreeLifetimeQuizzesKey(userId));
+    return val ? Math.max(0, parseInt(val, 10) || 0) : 0;
+  } catch (_) {
+    return 0;
+  }
+};
+
+const getFreeLifetimeFlashcardsKey = (userId: string): string => `_lmk_free_lifetime_flashcards_${userId}`;
+export const getFreeLifetimeFlashcardsUsed = (userId: string): number => {
+  try {
+    const val = localStorage.getItem(getFreeLifetimeFlashcardsKey(userId));
+    return val ? Math.max(0, parseInt(val, 10) || 0) : 0;
+  } catch (_) {
+    return 0;
+  }
+};
+
+/**
  * Gets user's active quota limits taking into account subscription tier and admin boosts
  */
 export const getUserQuotaLimits = (user: User | null): AIQuotaLimits => {
-  if (!user) {
+  if (!user || !isUserPremiumActive(user)) {
     return SUBSCRIPTION_QUOTAS['free'];
   }
 
-  // Check tier
-  const tier = user.subscriptionTier || (user.is_premium ? 'mensuel' : 'free');
-  const baseQuotas = SUBSCRIPTION_QUOTAS[tier] || SUBSCRIPTION_QUOTAS['free'];
+  // Normalize tier name
+  let rawTier = (user.subscriptionTier || 'mensuel').toLowerCase();
+  let tier: SubscriptionTier = 'mensuel';
+  if (rawTier === 'hebdo' || rawTier === 'weekly') tier = 'hebdo';
+  else if (rawTier === 'annuel' || rawTier === 'annual') tier = 'annuel';
+  else tier = 'mensuel';
 
-  // Admin boost if present in user stats
+  const baseQuotas = SUBSCRIPTION_QUOTAS[tier] || SUBSCRIPTION_QUOTAS['mensuel'];
   const adminMessageBoost = user.stats?.adminMessageBoost || 0;
 
   return {
@@ -100,13 +149,43 @@ export const getUserQuotaLimits = (user: User | null): AIQuotaLimits => {
 };
 
 /**
- * Checks if user can make an AI message request today
+ * Checks if user can make an AI message request (Coach IA, Savants TimeMachine, Feynman Lab)
  */
 export const checkMessageQuota = (user: User | null): QuotaCheckResult => {
   if (!user) {
-    return { allowed: false, used: 0, limit: 0, remaining: 0, message: 'Utilisateur non connecté.' };
+    const guestKey = '_lmk_guest_lifetime_msgs';
+    const guestUsed = parseInt(localStorage.getItem(guestKey) || '0', 10);
+    const limit = 10;
+    const remaining = Math.max(0, limit - guestUsed);
+    const allowed = guestUsed < limit;
+    return {
+      allowed,
+      used: guestUsed,
+      limit,
+      remaining,
+      message: allowed ? undefined : "⚠️ Vous avez épuisé vos 10 messages d'essai gratuits. Abonnez-vous à un forfait PRO pour continuer à échanger avec le Coach IA et les Savants !"
+    };
   }
 
+  const isPremium = isUserPremiumActive(user);
+
+  if (!isPremium) {
+    // Mode Gratuit : strictement 10 messages au total (à vie, non renouvelable à minuit)
+    const freeUsed = getFreeLifetimeMessagesUsed(user.id);
+    const limit = 10;
+    const remaining = Math.max(0, limit - freeUsed);
+    const allowed = freeUsed < limit;
+
+    return {
+      allowed,
+      used: freeUsed,
+      limit,
+      remaining,
+      message: allowed ? undefined : "⚠️ Vous avez épuisé vos 10 messages d'essai gratuits. Abonnez-vous à un forfait PRO pour continuer à échanger avec le Coach IA et les Savants !"
+    };
+  }
+
+  // Mode Abonné : Quotas quotidiens renouvelés à 00h00
   const limits = getUserQuotaLimits(user);
   const usage = getDailyUsage(user.id);
 
@@ -118,18 +197,30 @@ export const checkMessageQuota = (user: User | null): QuotaCheckResult => {
     used: usage.messagesUsed,
     limit: limits.dailyMessages,
     remaining,
-    message: allowed ? undefined : `Quota quotidien atteint (${usage.messagesUsed}/${limits.dailyMessages} messages). Réinitialisation à minuit (00h00) !`
+    message: allowed ? undefined : `⚠️ Quota quotidien atteint (${usage.messagesUsed}/${limits.dailyMessages} messages). Votre quota se recharge cette nuit à minuit (00h00) !`
   };
 };
 
 /**
- * Increments user's message quota usage by 1
+ * Increments user's message quota usage by 1 (shared across all AI chats)
  */
 export const incrementMessageUsage = (user: User | null): void => {
-  if (!user) return;
-  const usage = getDailyUsage(user.id);
-  usage.messagesUsed += 1;
-  saveDailyUsage(user.id, usage);
+  if (!user) {
+    const guestKey = '_lmk_guest_lifetime_msgs';
+    const guestUsed = parseInt(localStorage.getItem(guestKey) || '0', 10);
+    localStorage.setItem(guestKey, String(guestUsed + 1));
+    return;
+  }
+
+  const isPremium = isUserPremiumActive(user);
+  if (!isPremium) {
+    const current = getFreeLifetimeMessagesUsed(user.id);
+    setFreeLifetimeMessagesUsed(user.id, current + 1);
+  } else {
+    const usage = getDailyUsage(user.id);
+    usage.messagesUsed += 1;
+    saveDailyUsage(user.id, usage);
+  }
 };
 
 /**
@@ -140,18 +231,22 @@ export const checkPhotoQuota = (user: User | null): QuotaCheckResult => {
     return { allowed: false, used: 0, limit: 0, remaining: 0, message: 'Utilisateur non connecté.' };
   }
 
+  const isPremium = isUserPremiumActive(user);
   const limits = getUserQuotaLimits(user);
   const usage = getDailyUsage(user.id);
 
-  const remaining = Math.max(0, limits.dailyPhotos - usage.photosUsed);
-  const allowed = usage.photosUsed < limits.dailyPhotos;
+  const limit = isPremium ? limits.dailyPhotos : 1;
+  const remaining = Math.max(0, limit - usage.photosUsed);
+  const allowed = usage.photosUsed < limit;
 
   return {
     allowed,
     used: usage.photosUsed,
-    limit: limits.dailyPhotos,
+    limit,
     remaining,
-    message: allowed ? undefined : `Quota quotidien de photos/scans atteint (${usage.photosUsed}/${limits.dailyPhotos}).`
+    message: allowed ? undefined : (isPremium 
+      ? `⚠️ Quota quotidien de photos/scans atteint (${usage.photosUsed}/${limit}). Recharge cette nuit à 00h00 !`
+      : `⚠️ Limite gratuite de 1 photo atteinte. Passez à un forfait PRO pour débloquer les scans quotidiens !`)
   };
 };
 
@@ -166,26 +261,55 @@ export const incrementPhotoUsage = (user: User | null): void => {
 };
 
 /**
- * Checks if user can generate a quiz today
+ * Checks if user can generate or play a quiz (free: max 5 lifetime, premium: unlimited)
  */
 export const checkQuizQuota = (user: User | null): QuotaCheckResult => {
   if (!user) {
     return { allowed: false, used: 0, limit: 0, remaining: 0, message: 'Utilisateur non connecté.' };
   }
 
-  const limits = getUserQuotaLimits(user);
-  const usage = getDailyUsage(user.id);
+  const isPremium = isUserPremiumActive(user);
+  if (!isPremium) {
+    const used = getFreeLifetimeQuizzesUsed(user.id);
+    const limit = 5;
+    const remaining = Math.max(0, limit - used);
+    const allowed = used < limit;
+    return {
+      allowed,
+      used,
+      limit,
+      remaining,
+      message: allowed ? undefined : "⚠️ Vous avez atteint la limite de 5 quiz gratuits. Passez au forfait PRO pour débloquer les quiz illimités !"
+    };
+  }
 
-  const remaining = limits.dailyQuizzes === 999 ? 999 : Math.max(0, limits.dailyQuizzes - usage.quizzesUsed);
-  const allowed = limits.dailyQuizzes === 999 || usage.quizzesUsed < limits.dailyQuizzes;
+  return { allowed: true, used: 0, limit: 999, remaining: 999 };
+};
 
-  return {
-    allowed,
-    used: usage.quizzesUsed,
-    limit: limits.dailyQuizzes,
-    remaining,
-    message: allowed ? undefined : `Quota quotidien de quiz atteint (${usage.quizzesUsed}/${limits.dailyQuizzes}).`
-  };
+/**
+ * Checks if user can create a flashcard (free: max 5 lifetime, premium: unlimited)
+ */
+export const checkFlashcardQuota = (user: User | null): QuotaCheckResult => {
+  if (!user) {
+    return { allowed: false, used: 0, limit: 0, remaining: 0, message: 'Utilisateur non connecté.' };
+  }
+
+  const isPremium = isUserPremiumActive(user);
+  if (!isPremium) {
+    const used = getFreeLifetimeFlashcardsUsed(user.id);
+    const limit = 5;
+    const remaining = Math.max(0, limit - used);
+    const allowed = used < limit;
+    return {
+      allowed,
+      used,
+      limit,
+      remaining,
+      message: allowed ? undefined : "⚠️ Vous avez atteint la limite de 5 flashcards gratuites. Passez au forfait PRO pour créer des flashcards sans limites !"
+    };
+  }
+
+  return { allowed: true, used: 0, limit: 999, remaining: 999 };
 };
 
 /**
@@ -193,9 +317,17 @@ export const checkQuizQuota = (user: User | null): QuotaCheckResult => {
  */
 export const incrementQuizUsage = (user: User | null): void => {
   if (!user) return;
-  const usage = getDailyUsage(user.id);
-  usage.quizzesUsed += 1;
-  saveDailyUsage(user.id, usage);
+  const isPremium = isUserPremiumActive(user);
+  if (!isPremium) {
+    const current = getFreeLifetimeQuizzesUsed(user.id);
+    try {
+      localStorage.setItem(getFreeLifetimeQuizzesKey(user.id), String(current + 1));
+    } catch (_) {}
+  } else {
+    const usage = getDailyUsage(user.id);
+    usage.quizzesUsed += 1;
+    saveDailyUsage(user.id, usage);
+  }
 };
 
 /**

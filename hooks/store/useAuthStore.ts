@@ -282,13 +282,15 @@ export const useAuthStore = () => {
             if (updates?.customSubjects !== undefined) updatedStats.customSubjects = updates.customSubjects;
             if ((updates as any)?.activeSubjects !== undefined) updatedStats.activeSubjects = (updates as any).activeSubjects;
             if ((updates as any)?.subjectTargets !== undefined) updatedStats.subjectTargets = (updates as any).subjectTargets;
+            if ((updates as any)?.education !== undefined) (updatedStats as any).education = (updates as any).education;
+            if (updates?.gradeClass !== undefined) (updatedStats as any).gradeClass = updates.gradeClass;
             if (updates?.analytics !== undefined) updatedStats.analytics = updates.analytics;
             if (updates?.stats !== undefined) updatedStats = { ...updatedStats, ...updates.stats };
 
             const updated = { 
                 ...prev, 
-                name, 
-                phoneNumber: phoneNumber || prev.phoneNumber, 
+                name: name !== undefined ? name : prev.name, 
+                phoneNumber: phoneNumber !== undefined ? phoneNumber : prev.phoneNumber, 
                 ...updates,
                 stats: updatedStats
             };
@@ -297,11 +299,11 @@ export const useAuthStore = () => {
             return updated;
         });
 
-        // ✅ FIX 5: Asynchronous Supabase write executed cleanly outside setUser callback
+        // ✅ Asynchronous Supabase write executed cleanly outside setUser callback
         if (updatedUser && (updatedUser as User).id && !(updatedUser as User).id.includes('anon')) {
             try {
                 const u = updatedUser as User;
-                const { error } = await supabase.from('profiles').update({
+                const updatePayload: any = {
                     name: u.name,
                     phone_number: u.phoneNumber,
                     xp: u.xp,
@@ -314,7 +316,13 @@ export const useAuthStore = () => {
                     wallpaper: u.wallpaper,
                     avatar_config: u.avatar,
                     coach_sessions: u.coachSessions
-                }).eq('id', u.id);
+                };
+                if (u.level) updatePayload.level = u.level;
+                if (u.gradeClass) updatePayload.grade_class = u.gradeClass;
+                if (u.is_premium !== undefined) updatePayload.is_premium = u.is_premium;
+                if (u.premium_until !== undefined) updatePayload.premium_until = u.premium_until;
+
+                const { error } = await supabase.from('profiles').update(updatePayload).eq('id', u.id);
                 if (error) console.error('[Supabase updateProfile Sync Error]:', error);
             } catch (err) {
                 console.error('[Supabase updateProfile Exception]:', err);

@@ -185,9 +185,9 @@ serve(async (req) => {
         if (duration === "weekly") {
           expirationDate.setDate(expirationDate.getDate() + 7);
         } else if (duration === "monthly") {
-          expirationDate.setMonth(expirationDate.getMonth() + 1);
+          expirationDate.setDate(expirationDate.getDate() + 30);
         } else if (duration === "annual") {
-          expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+          expirationDate.setDate(expirationDate.getDate() + 365);
         }
 
         const { error: profileError } = await supabaseAdmin
@@ -390,9 +390,9 @@ serve(async (req) => {
           if (duration === "weekly") {
             expirationDate.setDate(expirationDate.getDate() + 7);
           } else if (duration === "monthly") {
-            expirationDate.setMonth(expirationDate.getMonth() + 1);
+            expirationDate.setDate(expirationDate.getDate() + 30);
           } else if (duration === "annual") {
-            expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+            expirationDate.setDate(expirationDate.getDate() + 365);
           }
 
           await supabaseAdmin
@@ -461,9 +461,9 @@ serve(async (req) => {
       if (duration === "weekly") {
         expirationDate.setDate(expirationDate.getDate() + 7);
       } else if (duration === "monthly") {
-        expirationDate.setMonth(expirationDate.getMonth() + 1);
+        expirationDate.setDate(expirationDate.getDate() + 30);
       } else if (duration === "annual") {
-        expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+        expirationDate.setDate(expirationDate.getDate() + 365);
       }
 
       const { error: profileError } = await supabaseAdmin

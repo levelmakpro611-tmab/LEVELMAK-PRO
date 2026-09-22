@@ -8,6 +8,7 @@ import { isAdminCredentials } from '../services/adminService';
 import { logUserActivity } from '../services/activityService';
 import { biometricService } from '../services/biometricService';
 import { supabase } from '../services/supabase';
+import { LegalModal } from '../components/LegalModal';
 
 const getLegalUrl = (anchor: string) => {
   const isNative = window.location.origin.includes('https://localhost') || window.location.origin.startsWith('capacitor://');
@@ -565,15 +566,15 @@ const Auth: React.FC = () => {
                           <p className="text-[10px] text-slate-700 dark:text-slate-300 font-bold leading-relaxed select-none">
                             {language === 'ar' ? (
                               <>
-                                أوافق على <span onClick={() => { window.open(getLegalUrl('#p-sec-1'), '_system'); }} className="text-blue-400 hover:text-blue-300 underline cursor-pointer">سياسات الخصوصية</span> و <span onClick={() => { window.open(getLegalUrl('#t-sec-1'), '_system'); }} className="text-blue-400 hover:text-blue-300 underline cursor-pointer">شروط الاستخدام (CGU)</span> لـ LEVELMAK.
+                                أوافق على <span onClick={() => { setActivePolicyTab('privacy'); setShowPolicyDetail(true); }} className="text-blue-500 dark:text-blue-400 hover:underline cursor-pointer font-bold">سياسات الخصوصية</span> و <span onClick={() => { setActivePolicyTab('terms'); setShowPolicyDetail(true); }} className="text-blue-500 dark:text-blue-400 hover:underline cursor-pointer font-bold">شروط الاستخدام (CGU)</span> لـ LEVELMAK.
                               </>
                             ) : language === 'en' ? (
                               <>
-                                I accept the <span onClick={() => { window.open(getLegalUrl('#p-sec-1'), '_system'); }} className="text-blue-400 hover:text-blue-300 underline cursor-pointer">privacy policies</span> and <span onClick={() => { window.open(getLegalUrl('#t-sec-1'), '_system'); }} className="text-blue-400 hover:text-blue-300 underline cursor-pointer">terms of service (CGU)</span> of LEVELMAK.
+                                I accept the <span onClick={() => { setActivePolicyTab('privacy'); setShowPolicyDetail(true); }} className="text-blue-500 dark:text-blue-400 hover:underline cursor-pointer font-bold">privacy policies</span> and <span onClick={() => { setActivePolicyTab('terms'); setShowPolicyDetail(true); }} className="text-blue-500 dark:text-blue-400 hover:underline cursor-pointer font-bold">terms of service (CGU)</span> of LEVELMAK.
                               </>
                             ) : (
                               <>
-                                J'accepte les <span onClick={() => { window.open(getLegalUrl('#p-sec-1'), '_system'); }} className="text-blue-400 hover:text-blue-300 underline cursor-pointer">politiques de confidentialité</span> et les <span onClick={() => { window.open(getLegalUrl('#t-sec-1'), '_system'); }} className="text-blue-400 hover:text-blue-300 underline cursor-pointer">conditions d'utilisation (CGU)</span> de LEVELMAK.
+                                J'accepte les <span onClick={() => { setActivePolicyTab('privacy'); setShowPolicyDetail(true); }} className="text-blue-500 dark:text-blue-400 hover:underline cursor-pointer font-bold">politiques de confidentialité</span> et les <span onClick={() => { setActivePolicyTab('terms'); setShowPolicyDetail(true); }} className="text-blue-500 dark:text-blue-400 hover:underline cursor-pointer font-bold">conditions d'utilisation (CGU)</span> de LEVELMAK.
                               </>
                             )}
                           </p>
@@ -762,134 +763,12 @@ const Auth: React.FC = () => {
       </div >
 
       {/* Privacy Policy and CGU Modal */}
-      <AnimatePresence>
-        {showPolicyDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowPolicyDetail(false)}
-              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[2.5rem] h-[80vh] flex flex-col shadow-2xl overflow-hidden z-10"
-            >
-              {/* Header */}
-              <div className="p-6 md:p-8 border-b border-white/10 flex justify-between items-center bg-slate-950/40 shrink-0">
-                <div>
-                  <h2 className="text-lg md:text-xl font-display font-black text-white uppercase tracking-wider flex items-center gap-2">
-                    <Shield className="text-blue-400" />
-                    Politiques & Conditions
-                  </h2>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 text-left">LEVELMAK Pro • TMAB GROUP</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowPolicyDetail(false)}
-                  className="p-2 bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Tab Selector */}
-              <div className="flex bg-slate-950/50 p-1.5 border-b border-white/5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setActivePolicyTab('privacy')}
-                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                    activePolicyTab === 'privacy'
-                      ? 'bg-blue-600 text-white shadow-glow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Politique de Confidentialité
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePolicyTab('terms')}
-                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                    activePolicyTab === 'terms'
-                      ? 'bg-blue-600 text-white shadow-glow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Conditions d'Utilisation (CGU)
-                </button>
-              </div>
-
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 text-sm text-slate-300 leading-relaxed font-sans custom-scrollbar text-left">
-                {activePolicyTab === 'privacy' ? (
-                  <div className="space-y-6">
-                    <div className="bg-blue-500/5 border border-blue-500/10 p-5 rounded-2xl space-y-2">
-                      <h4 className="font-bold text-white text-xs uppercase tracking-wider">Notre engagement humain</h4>
-                      <p className="text-xs text-blue-200/80">
-                        Chez LEVELMAK, nous croyons qu'une éducation d'élite passe par le respect total de votre vie privée. Cette politique a été rédigée de manière simple, humaine et transparente pour vous rassurer à 100% sur l'usage de vos données.
-                      </p>
-                    </div>
-
-                    {PRIVACY_POLICY_SECTIONS.map((section, idx) => (
-                      <div key={idx} className="space-y-3">
-                        <h3 className="font-display font-bold text-white text-sm uppercase tracking-wider border-b border-white/5 pb-2">{section.title}</h3>
-                        {Array.isArray(section.content) ? (
-                          <div className="space-y-2">
-                            {section.content.map((p, pIdx) => (
-                              <p key={pIdx} className="text-xs text-slate-300 leading-relaxed">{p}</p>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-slate-300 leading-relaxed">{section.content}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="bg-purple-500/5 border border-purple-500/10 p-5 rounded-2xl space-y-2">
-                      <h4 className="font-bold text-white text-xs uppercase tracking-wider">Règles de l'Espace Élite</h4>
-                      <p className="text-xs text-purple-200/80">
-                        LEVELMAK est une plateforme d'excellence. Pour conserver un environnement sain, motivant et sécurisé, chaque utilisateur s'engage à respecter les règles d'utilisation ci-dessous.
-                      </p>
-                    </div>
-
-                    {TERMS_OF_SERVICE_SECTIONS.map((section, idx) => (
-                      <div key={idx} className="space-y-3">
-                        <h3 className="font-display font-bold text-white text-sm uppercase tracking-wider border-b border-white/5 pb-2">{section.title}</h3>
-                        {Array.isArray(section.content) ? (
-                          <div className="space-y-2">
-                            {section.content.map((p, pIdx) => (
-                              <p key={pIdx} className={p.includes('bannissement') ? 'text-xs text-red-400 font-bold leading-relaxed' : 'text-xs text-slate-300 leading-relaxed'}>{p}</p>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-slate-300 leading-relaxed">{section.content}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="p-6 border-t border-white/10 flex justify-end bg-slate-950/20 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowPolicyDetail(false)}
-                  className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-glow active:scale-95 transition-all"
-                >
-                  J'ai compris et j'accepte
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div >
+      <LegalModal
+        isOpen={showPolicyDetail}
+        onClose={() => setShowPolicyDetail(false)}
+        initialTab={activePolicyTab}
+      />
+    </div>
   );
 };
 

@@ -40,9 +40,9 @@ export interface AIQuotaLimits {
 }
 
 export const SUBSCRIPTION_QUOTAS: Record<SubscriptionTier, AIQuotaLimits> = {
-  free: { dailyMessages: 5, dailyPhotos: 1, dailyQuizzes: 2 },
-  hebdo: { dailyMessages: 35, dailyPhotos: 5, dailyQuizzes: 10 },
-  mensuel: { dailyMessages: 75, dailyPhotos: 15, dailyQuizzes: 30 },
+  free: { dailyMessages: 10, dailyPhotos: 1, dailyQuizzes: 5 },
+  hebdo: { dailyMessages: 25, dailyPhotos: 5, dailyQuizzes: 999 },
+  mensuel: { dailyMessages: 75, dailyPhotos: 15, dailyQuizzes: 999 },
   annuel: { dailyMessages: 150, dailyPhotos: 35, dailyQuizzes: 999 }
 };
 
@@ -112,6 +112,7 @@ export interface CoachMessage {
   text: string;
   image?: string;
   timestamp: string;
+  isExpert?: boolean;
 }
 
 export interface CoachSession {
