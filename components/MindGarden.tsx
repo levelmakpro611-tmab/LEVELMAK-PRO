@@ -136,20 +136,41 @@ export const MindGarden: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
-            <div className="px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-700 dark:text-blue-400 text-xs font-black flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'shop' } }))}
+              className="px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-700 dark:text-blue-400 text-xs font-black flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
+              title="Acheter des bidons d'eau dans la Boutique"
+            >
                 <Droplets size={14} /> {waterCans}
-            </div>
-            <div className="px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-black flex items-center gap-2">
+            </button>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'shop' } }))}
+              className="px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-500/20 hover:bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-black flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
+              title="Acheter de l'engrais magique dans la Boutique"
+            >
                 <Sparkles size={14} /> {fertilizers}
-            </div>
+            </button>
         </div>
       </div>
 
       <div className="mt-8 relative z-10">
         {!garden || garden.plants.length === 0 ? (
-          <div className="h-40 flex flex-col items-center justify-center text-center border-2 border-dashed border-emerald-500/30 rounded-3xl bg-emerald-500/5">
-            <Sprout size={48} className="text-emerald-600 dark:text-emerald-700 mb-2" />
-            <p className="text-emerald-800 dark:text-emerald-200/60 font-black uppercase tracking-widest text-sm">Terre fertile</p>
+          <div className="h-44 flex flex-col items-center justify-center text-center border-2 border-dashed border-emerald-500/30 rounded-3xl bg-emerald-500/5 p-4 space-y-2.5">
+            <Sprout size={36} className="text-emerald-500 animate-bounce" />
+            <div>
+              <p className="text-emerald-700 dark:text-emerald-300 font-black uppercase tracking-wider text-xs">Terre fertile prête à semer</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Complète un quiz pour faire pousser ta première plante !</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'quiz' } }))}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
+            >
+              <Sprout size={14} />
+              <span>🌱 Lancer un Quiz pour planter</span>
+            </button>
           </div>
         ) : (
           <div className="flex flex-wrap gap-4 items-end min-h-[160px] bg-gradient-to-t from-emerald-950/40 to-transparent p-6 rounded-3xl border-b-[8px] border-emerald-900/40">

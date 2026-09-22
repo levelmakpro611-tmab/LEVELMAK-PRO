@@ -92,15 +92,32 @@ export const useGamificationStore = (
                 ...prev.garden,
                 plants: [...(prev.garden?.plants || []), newPlant]
             };
+            // Award +1 water can upon planting so the student can water their new sprout!
+            const currentWater = prev.consumables?.['water_can'] || 0;
+            const newConsumables = {
+                ...prev.consumables,
+                water_can: currentWater + 1
+            };
+            const newStats = {
+                ...prev.stats,
+                garden: newGarden,
+                consumables: newConsumables
+            };
             const updated = {
                 ...prev,
                 garden: newGarden,
-                stats: {
-                    ...prev.stats,
-                    garden: newGarden
-                }
+                consumables: newConsumables,
+                stats: newStats
             };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
+
+            // Sync immediately to Supabase
+            if (prev.id && !prev.id.includes('anon')) {
+                supabase.from('profiles').update({ stats: newStats }).eq('id', prev.id).then(({ error }) => {
+                    if (error) console.error('[plantInGarden Sync Error]:', error);
+                });
+            }
+
             return updated;
         });
     }, [setUser]);
@@ -131,19 +148,32 @@ export const useGamificationStore = (
                 plants: updatedPlants
             };
 
+            const newConsumables = {
+                ...prev.consumables,
+                [itemType]: currentItemCount - 1
+            };
+
+            const newStats = {
+                ...prev.stats,
+                garden: newGarden,
+                consumables: newConsumables
+            };
+
             const updated = {
                 ...prev,
-                consumables: {
-                    ...prev.consumables,
-                    [itemType]: currentItemCount - 1
-                },
+                consumables: newConsumables,
                 garden: newGarden,
-                stats: {
-                    ...prev.stats,
-                    garden: newGarden
-                }
+                stats: newStats
             };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
+
+            // Sync immediately to Supabase
+            if (prev.id && !prev.id.includes('anon')) {
+                supabase.from('profiles').update({ stats: newStats }).eq('id', prev.id).then(({ error }) => {
+                    if (error) console.error('[waterGarden Sync Error]:', error);
+                });
+            }
+
             return updated;
         });
     }, [setUser]);
@@ -225,15 +255,31 @@ export const useGamificationStore = (
         setUser(prev => {
             if (!prev) return null;
             const key = originalId || potionId;
+            const newConsumables = {
+                ...prev.consumables,
+                [key]: (prev.consumables?.[key] || 0) + 1
+            };
+            const newStats = {
+                ...prev.stats,
+                consumables: newConsumables
+            };
             const updated = {
                 ...prev,
                 levelCoins: prev.levelCoins - potion.price,
-                consumables: {
-                    ...prev.consumables,
-                    [key]: (prev.consumables?.[key] || 0) + 1
-                }
+                consumables: newConsumables,
+                stats: newStats
             };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
+
+            if (prev.id && !prev.id.includes('anon')) {
+                supabase.from('profiles').update({ 
+                    level_coins: updated.levelCoins,
+                    stats: newStats
+                }).eq('id', prev.id).then(({ error }) => {
+                    if (error) console.error('[purchasePotion Sync Error]:', error);
+                });
+            }
+
             return updated;
         });
         return true;
