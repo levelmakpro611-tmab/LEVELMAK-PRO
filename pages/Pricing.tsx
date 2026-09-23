@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, X, Shield, Landmark, Star, Sparkles, Award, Zap, PenTool, BrainCircuit, Globe, Database, Headphones, Mail, Phone, Trophy, Map, Layers, AlertCircle, Loader2 } from 'lucide-react';
+import { Check, X, Shield, Landmark, Star, Sparkles, Award, Zap, PenTool, BrainCircuit, Globe, Database, Headphones, Mail, Phone, Trophy, Map, Layers, AlertCircle, Loader2, Crown, CheckCircle2, Lock } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { supabase } from '../services/supabase';
 import { paymentService, PaymentSessionOptions } from '../services/paymentService';
@@ -22,7 +22,6 @@ export interface PricingProps {
 
 export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium, onPaymentSuccess, isFullScreen = false }) => {
     const { user, updateProfile, t, logout, addNotification } = useStore();
-    const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
     const [isMobileInfoOpen, setIsMobileInfoOpen] = useState(false);
     const [selectedOptions, setSelectedOptions] = useState<PaymentSessionOptions | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -646,7 +645,13 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white py-12 px-4 sm:px-6 lg:px-8 relative">
+        <div className="min-h-screen bg-[#070b14] text-white py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+            {/* Ambient luxury light orbs in the background */}
+            <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] sm:w-[1000px] h-[550px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-purple-600/20 blur-[130px] rounded-full" />
+            <div className="pointer-events-none absolute top-1/4 -left-40 w-96 h-96 bg-purple-600/15 blur-[130px] rounded-full" />
+            <div className="pointer-events-none absolute top-1/2 -right-40 w-96 h-96 bg-rose-600/15 blur-[130px] rounded-full" />
+            <div className="pointer-events-none absolute bottom-10 left-1/4 w-96 h-96 bg-amber-600/15 blur-[130px] rounded-full" />
+
             {isFullScreen && (
                 <div className="absolute top-4 right-4 z-50">
                     <button 
@@ -657,21 +662,24 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     </button>
                 </div>
             )}
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto relative z-10">
                 {/* Title & Header with Logo */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-10 text-center sm:text-left relative px-4">
-                    <div className="w-16 h-16 bg-slate-900/80 border border-white/10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-black/25">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-12 text-center sm:text-left relative px-4">
+                    <div className="w-18 h-18 sm:w-20 sm:h-20 bg-gradient-to-br from-white/15 via-white/10 to-blue-500/15 border border-white/20 rounded-3xl p-1.5 flex items-center justify-center shrink-0 shadow-[0_0_25px_rgba(59,130,246,0.3)] backdrop-blur-md">
                         <img 
                             src="/logo.png" 
                             alt="LEVELMAK Logo" 
-                            className="h-12 w-auto object-contain brightness-110 drop-shadow-[0_0_12px_rgba(59,130,246,0.35)]" 
+                            className="w-full h-full object-contain filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] brightness-115" 
                         />
                     </div>
                     <div>
-                        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                            Abonnez-vous à <span className="text-blue-500">LEVELMAK PRO</span>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400 text-xs font-black uppercase tracking-widest mb-2">
+                            <Sparkles size={13} className="text-blue-400" /> Tarifs & Abonnements
+                        </div>
+                        <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+                            Passez à la vitesse <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">LEVELMAK PRO</span>
                         </h1>
-                        <p className="mt-1.5 text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+                        <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
                             Débloquez la puissance illimitée de l'IA pédagogique, défiez vos amis et réussissez vos études à votre rythme.
                         </p>
                     </div>
@@ -682,85 +690,81 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="mb-8 p-4 border border-emerald-500/30 bg-emerald-950/20 text-emerald-400 rounded-xl text-center font-bold"
+                        className="mb-8 p-4 border border-emerald-500/30 bg-emerald-950/30 text-emerald-300 rounded-2xl text-center font-black shadow-lg shadow-emerald-950/20"
                     >
                         {successMessage}
                     </motion.div>
                 )}
 
                 {/* Grid - Vertical stack block by block */}
-                <div className="flex flex-col gap-6 max-w-xl mx-auto w-full">
+                <div className="flex flex-col gap-7 max-w-xl mx-auto w-full">
                     
                     {/* 1. GRATUIT */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-5 sm:p-7 transition-all hover:border-slate-700 relative overflow-hidden w-full shadow-lg shadow-black/10">
+                    <div className="relative flex flex-col border border-purple-500/25 hover:border-purple-500/40 bg-gradient-to-b from-[#180e2d]/85 via-[#0d1222]/90 to-[#070b14]/95 rounded-[2.5rem] p-6 sm:p-8 transition-all duration-300 hover:shadow-[0_20px_50px_-10px_rgba(168,85,247,0.25)] hover:-translate-y-0.5 overflow-hidden w-full backdrop-blur-xl group">
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
+                        
                         <div className="flex-1">
-                            <div className="w-10 h-10 rounded-lg bg-purple-900/20 flex items-center justify-center text-purple-400 mb-4 border border-purple-500/20">
-                                <Sparkles className="w-5 h-5" />
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-900/30 border border-purple-500/30 flex items-center justify-center text-purple-300 mb-4 shadow-[0_0_20px_rgba(168,85,247,0.25)]">
+                                <Sparkles className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-bold text-white uppercase tracking-wider">Gratuit</h3>
-                            <p className="mt-2 text-xs text-slate-400">Pour découvrir l'IA et commencer à réviser</p>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-wider">Gratuit</h3>
+                            <p className="mt-1 text-xs text-slate-400">Pour découvrir l'IA et commencer à réviser</p>
                             
-                            <p className="mt-5">
-                                <span className="text-3xl sm:text-4xl font-extrabold text-white">0 FG</span>
-                                <span className="text-xs text-slate-400 font-semibold"> / à vie</span>
-                            </p>
+                            <div className="mt-5 pb-4 border-b border-white/5 flex items-baseline gap-2">
+                                <span className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-white via-purple-100 to-purple-300 bg-clip-text text-transparent">0 FG</span>
+                                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider"> / à vie</span>
+                            </div>
 
-                            <ul className="mt-4 sm:mt-6 space-y-2">
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-350 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                            <ul className="mt-6 space-y-2.5">
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                                     <span>Créer des fiches et contenus</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                                     <span>3 quiz personnalisés</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                                     <span>3 paquets de flashcards</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                                     <span>10 réponses à l'IA par jour</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
-                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
-                                    <span>Quiz illimités</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-500 font-medium opacity-60">
+                                    <X className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                                    <span className="line-through">Quiz illimités</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
-                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
-                                    <span>Accès complet à l'IA</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-500 font-medium opacity-60">
+                                    <X className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                                    <span className="line-through">Accès complet à l'IA</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
-                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
-                                    <span>Sauvegarde de tes quiz et contenus</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-500 font-medium opacity-60">
+                                    <X className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                                    <span className="line-through">Sauvegarde de tes quiz et contenus</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
-                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
-                                    <span>Défier ses amis sur Levelmark</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-500 font-medium opacity-60">
+                                    <X className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                                    <span className="line-through">Défier ses amis sur Levelmak</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
-                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
-                                    <span>Accès complet à l'application</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-500 font-medium opacity-60">
+                                    <X className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                                    <span className="line-through">Accès complet à l'application</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
-                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
-                                    <span>Fonctionnalités avancées</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
-                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
-                                    <span>Support client réactif</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-500 line-through">
-                                    <X className="w-3.5 h-3.5 sm:w-5 h-5 text-red-500/50 shrink-0 mt-0.5" />
-                                    <span>Sauvegarde de session (discussions éphémères)</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-500 font-medium opacity-60">
+                                    <X className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                                    <span className="line-through">Fonctionnalités avancées & support réactif</span>
                                 </li>
                             </ul>
                         </div>
 
                         {/* Info Box */}
-                        <div className="mt-4 p-3 rounded-xl bg-purple-950/20 border border-purple-500/10 text-[11px] text-purple-300">
-                            <span className="font-bold flex items-center gap-1 mb-0.5">🛈 Accès limité</span>
-                            <span className="opacity-80">Tu ne profites pas de toutes les fonctionnalités et avantages disponibles dans les autres plans.</span>
+                        <div className="mt-5 p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/20 text-xs text-purple-200/90 leading-relaxed">
+                            <span className="font-black flex items-center gap-1.5 mb-0.5 text-purple-300">
+                                <Sparkles size={13} /> Accès d'initiation
+                            </span>
+                            <span className="opacity-80">Parfait pour tester. Passez à Levelmak Pro à tout moment pour lever toutes les limites.</span>
                         </div>
 
                         {isFullScreen ? (
@@ -768,84 +772,70 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 onClick={() => {
                                     if (onChooseFree) onChooseFree();
                                 }}
-                                className="mt-5 w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-center text-sm shadow-lg shadow-purple-950/20 transition-all active:scale-[0.98]"
+                                className="mt-6 w-full py-4 px-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-2xl text-center text-xs uppercase tracking-widest shadow-xl shadow-purple-950/40 transition-all active:scale-[0.98]"
                             >
                                 Continuer gratuitement
                             </button>
                         ) : (
                             <button
                                 disabled
-                                className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm border ${
+                                className={`mt-6 w-full py-4 px-4 font-black rounded-2xl text-center text-xs uppercase tracking-widest border ${
                                     isPremiumActive
                                         ? 'border-white/5 bg-slate-900/40 text-slate-500'
-                                        : 'border-purple-500/30 text-purple-400 bg-purple-500/5'
+                                        : 'border-purple-500/30 text-purple-300 bg-purple-500/10'
                                 }`}
                             >
                                 {isPremiumActive ? 'Plan inactif' : 'Votre plan actuel'}
                             </button>
                         )}
-                        <p className="text-center text-[10px] text-slate-500 mt-2">Parfait pour commencer !</p>
+                        <p className="text-center text-[10px] text-slate-500 font-semibold mt-2.5">Parfait pour commencer !</p>
                     </div>
 
                     {/* 2. HEBDOMADAIRE */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-5 sm:p-7 transition-all hover:border-slate-700 relative overflow-hidden w-full shadow-lg shadow-black/10">
-                        <div className="absolute top-4 right-4">
-                            <span className="text-[9px] font-bold uppercase tracking-widest bg-rose-500/15 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                ⚡ Engagement flexible
+                    <div className="relative flex flex-col border border-rose-500/30 hover:border-rose-400 bg-gradient-to-b from-[#260e1c]/85 via-[#111324]/90 to-[#070b14]/95 rounded-[2.5rem] p-6 sm:p-8 transition-all duration-300 hover:shadow-[0_20px_50px_-10px_rgba(244,63,94,0.3)] hover:-translate-y-0.5 overflow-hidden w-full backdrop-blur-xl group">
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-rose-500 to-transparent" />
+                        
+                        <div className="absolute top-5 right-5">
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-rose-500/20 to-pink-500/20 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm shadow-rose-950/40">
+                                <Zap size={11} className="text-rose-400 fill-rose-400" /> Engagement flexible
                             </span>
                         </div>
                         <div className="flex-1">
-                            <div className="w-10 h-10 rounded-lg bg-rose-900/20 flex items-center justify-center text-rose-400 mb-4 border border-rose-500/20">
-                                <Zap className="w-5 h-5" />
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-900/30 border border-rose-500/30 flex items-center justify-center text-rose-300 mb-4 shadow-[0_0_20px_rgba(244,63,94,0.25)]">
+                                <Zap className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-bold text-white uppercase tracking-wider">Hebdomadaire</h3>
-                            <p className="mt-2 text-xs text-slate-400">Progresse chaque semaine avec un accès complet</p>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-wider">Hebdomadaire</h3>
+                            <p className="mt-1 text-xs text-slate-400">Progresse chaque semaine avec un accès complet</p>
                             
-                            <p className="mt-5">
-                                <span className="text-3xl sm:text-4xl font-extrabold text-white">15 000 FG</span>
-                                <span className="text-xs text-slate-400 font-semibold"> / semaine</span>
-                            </p>
+                            <div className="mt-5 pb-4 border-b border-white/5 flex items-baseline gap-2">
+                                <span className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-white via-rose-100 to-pink-200 bg-clip-text text-transparent">15 000 FG</span>
+                                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider"> / semaine</span>
+                            </div>
 
-                            <ul className="mt-4 sm:mt-6 space-y-2">
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>Accès complet à l'IA</span>
+                            <ul className="mt-6 space-y-2.5">
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                                    <span className="font-semibold text-white">Accès complet à l'IA sans restriction</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>Accès complet à l'application</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                                    <span>Quiz et Flashcards illimités</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>Quiz illimités</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                                    <span>Sauvegarde automatique sur votre compte</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>Flashcards illimitées</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                                    <span>AudioLab : Parle aux savants de ton choix</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>Sauvegarde automatique des quiz</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>Parle aux savants de ton choix (AudioLab)</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>Support client réactif</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>Idéal pour apprentissage flexible</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                                     <span>🏆 Défier ses amis sur Levelmark</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                                    <span>⚡ IA rapide et stable</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                                    <span>Support client prioritaire</span>
                                 </li>
                             </ul>
                         </div>
@@ -853,76 +843,70 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         <button
                             onClick={() => handleSelectPlan('weekly', 15000)}
                             disabled={isPremiumActive}
-                            className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
+                            className={`mt-6 w-full py-4 px-4 font-black rounded-2xl text-center text-xs uppercase tracking-widest transition-all active:scale-[0.98] ${
                                 isPremiumActive 
                                     ? (activePlanId === 'plan_weekly' 
-                                        ? 'bg-emerald-600 text-white cursor-not-allowed' 
-                                        : 'bg-slate-855 text-slate-500 cursor-not-allowed border border-white/5')
-                                    : 'bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white shadow-lg shadow-rose-950/20'
+                                        ? 'bg-emerald-600 text-white cursor-not-allowed shadow-lg' 
+                                        : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5')
+                                    : 'bg-gradient-to-r from-rose-600 via-pink-600 to-rose-600 hover:from-rose-500 hover:to-pink-500 text-white shadow-xl shadow-rose-900/40 hover:shadow-rose-600/50'
                             }`}
                         >
                             {isPremiumActive 
                                 ? (activePlanId === 'plan_weekly' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
-                                : 'Choisir Hebdomadaire'}
+                                : 'Choisir Hebdomadaire →'}
                         </button>
-                        <p className="text-center text-[10px] text-slate-500 mt-2">Engagement flexible, résultats rapides !</p>
+                        <p className="text-center text-[10px] text-slate-500 font-semibold mt-2.5">Engagement flexible, résultats rapides !</p>
                     </div>
 
                     {/* 3. MENSUEL */}
-                    <div className="flex flex-col border border-blue-500/50 bg-slate-900/40 rounded-3xl p-5 sm:p-7 transition-all hover:border-blue-400 relative overflow-hidden w-full shadow-lg shadow-blue-950/20 ring-1 ring-blue-500/20">
-                        <div className="absolute top-4 right-4">
-                            <span className="text-[9px] font-bold uppercase tracking-widest bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full flex items-center gap-1">
-                                ★ Le plus choisi
+                    <div className="relative flex flex-col border-2 border-blue-500/70 hover:border-blue-400 bg-gradient-to-b from-[#0d1e40]/90 via-[#0a1224]/95 to-[#050811] rounded-[2.5rem] p-6 sm:p-8 transition-all duration-300 shadow-[0_25px_60px_-10px_rgba(59,130,246,0.35)] ring-1 ring-blue-400/40 hover:-translate-y-1 overflow-hidden w-full backdrop-blur-xl group">
+                        <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-blue-500 via-cyan-400 to-indigo-500" />
+                        
+                        <div className="absolute top-5 right-5">
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-3.5 py-1 rounded-full flex items-center gap-1.5 shadow-md shadow-blue-500/30">
+                                <Award size={12} className="text-yellow-300 fill-yellow-300" /> Le plus populaire
                             </span>
                         </div>
                         <div className="flex-1">
-                            <div className="w-10 h-10 rounded-lg bg-blue-900/20 flex items-center justify-center text-blue-400 mb-4 border border-blue-500/20">
-                                <Award className="w-5 h-5" />
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/25 to-cyan-900/30 border border-blue-400/40 flex items-center justify-center text-blue-300 mb-4 shadow-[0_0_25px_rgba(59,130,246,0.4)]">
+                                <Award className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-bold text-white uppercase tracking-wider">Mensuel</h3>
-                            <p className="mt-2 text-xs text-slate-400">Le meilleur équilibre pour des résultats durables</p>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-wider">Mensuel</h3>
+                            <p className="mt-1 text-xs text-slate-400">Le meilleur équilibre pour des résultats durables</p>
                             
-                            <p className="mt-5">
-                                <span className="text-3xl sm:text-4xl font-extrabold text-white">45 000 FG</span>
-                                <span className="text-xs text-slate-400 font-semibold"> / mois</span>
-                            </p>
-                            <p className="text-[11px] text-blue-400 font-bold mt-1">✓ Économise 15 000 FG</p>
+                            <div className="mt-5 pb-4 border-b border-white/5">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-white via-blue-100 to-cyan-200 bg-clip-text text-transparent">45 000 FG</span>
+                                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider"> / mois</span>
+                                </div>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 mt-2 rounded-full bg-blue-500/15 border border-blue-500/30 text-xs font-black text-cyan-300">
+                                    ✓ Économise 15 000 FG
+                                </span>
+                            </div>
 
-                            <ul className="mt-4 sm:mt-6 space-y-2">
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    <span className="font-semibold text-white">Tout du plan hebdomadaire</span>
+                            <ul className="mt-6 space-y-2.5">
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                                    <span className="font-bold text-white">Tout du plan hebdomadaire inclus</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                                     <span>Sauvegarde 100% sécurisée sur le Cloud</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    <span>🤖 IA rapide et efficace</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                                    <span>🤖 IA optimisée, rapide et réactive</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    <span>Compte et données sécurisés à vie</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                                    <span>Recommandations d'études personnalisées</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    <span>Recommandations personnalisées</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                                    <span>Statistiques détaillées et suivi des progrès</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    <span>Statistiques de progression</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    <span>Accès prioritaire aux nouveautés</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    <span>Support prioritaire</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                                     <span>🏆 Défier ses amis sur Levelmark</span>
                                 </li>
                             </ul>
@@ -931,76 +915,70 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         <button
                             onClick={() => handleSelectPlan('monthly', 45000)}
                             disabled={isPremiumActive}
-                            className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
+                            className={`mt-6 w-full py-4 px-4 font-black rounded-2xl text-center text-xs uppercase tracking-widest transition-all active:scale-[0.98] ${
                                 isPremiumActive 
                                     ? (activePlanId === 'plan_monthly' 
-                                        ? 'bg-emerald-600 text-white cursor-not-allowed' 
-                                        : 'bg-slate-855 text-slate-500 cursor-not-allowed border border-white/5')
-                                    : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-950/20'
+                                        ? 'bg-emerald-600 text-white cursor-not-allowed shadow-lg' 
+                                        : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5')
+                                    : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-xl shadow-blue-900/50 hover:shadow-blue-500/60'
                             }`}
                         >
                             {isPremiumActive 
                                 ? (activePlanId === 'plan_monthly' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
-                                : 'Choisir Mensuel'}
+                                : 'Choisir Mensuel (Recommandé) →'}
                         </button>
-                        <p className="text-center text-[10px] text-slate-500 mt-2">Plus d'avantages, plus de sérénité !</p>
+                        <p className="text-center text-[10px] text-slate-500 font-semibold mt-2.5">Plus d'avantages, plus de sérénité !</p>
                     </div>
 
                     {/* 4. ANNUEL */}
-                    <div className="flex flex-col border border-slate-800 bg-slate-900/40 rounded-3xl p-5 sm:p-7 transition-all hover:border-slate-700 relative overflow-hidden w-full shadow-lg shadow-black/10">
-                        <div className="absolute top-4 right-4">
-                            <span className="text-[9px] font-bold uppercase tracking-widest bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                Le meilleur investissement
+                    <div className="relative flex flex-col border border-amber-500/35 hover:border-amber-400 bg-gradient-to-b from-[#25190c]/85 via-[#0e1220]/90 to-[#070b14]/95 rounded-[2.5rem] p-6 sm:p-8 transition-all duration-300 hover:shadow-[0_20px_50px_-10px_rgba(245,158,11,0.3)] hover:-translate-y-0.5 overflow-hidden w-full backdrop-blur-xl group">
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+                        
+                        <div className="absolute top-5 right-5">
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-amber-500/25 to-yellow-500/25 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm shadow-amber-950/40">
+                                <Crown size={12} className="text-amber-400 fill-amber-400" /> Meilleur investissement
                             </span>
                         </div>
                         <div className="flex-1">
-                            <div className="w-10 h-10 rounded-lg bg-yellow-900/20 flex items-center justify-center text-yellow-400 mb-4 border border-yellow-500/20">
-                                <Star className="w-5 h-5" />
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-900/30 border border-amber-500/30 flex items-center justify-center text-amber-300 mb-4 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+                                <Star className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-bold text-white uppercase tracking-wider">Annuel</h3>
-                            <p className="mt-2 text-xs text-slate-400">Le choix ultime pour une réussite assurée</p>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-wider">Annuel</h3>
+                            <p className="mt-1 text-xs text-slate-400">Le choix ultime pour une réussite assurée toute l'année</p>
                             
-                            <p className="mt-5">
-                                <span className="text-3xl sm:text-4xl font-extrabold text-white">385 000 FG</span>
-                                <span className="text-xs text-slate-400 font-semibold"> / an</span>
-                            </p>
-                            <p className="text-[11px] text-yellow-400 font-bold mt-1">✓ Économise 155 000 FG</p>
+                            <div className="mt-5 pb-4 border-b border-white/5">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-white via-amber-100 to-yellow-200 bg-clip-text text-transparent">385 000 FG</span>
+                                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider"> / an</span>
+                                </div>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 mt-2 rounded-full bg-amber-500/15 border border-amber-500/30 text-xs font-black text-amber-300">
+                                    ✓ Économise 155 000 FG
+                                </span>
+                            </div>
 
-                            <ul className="mt-4 sm:mt-6 space-y-2">
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <span className="font-semibold text-white">Tout du plan mensuel</span>
+                            <ul className="mt-6 space-y-2.5">
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                    <span className="font-bold text-white">Tout du plan mensuel inclus</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <span>Sauvegarde illimitée et sécurisée</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                    <span>Accès complet sans interruption 365 jours</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <span>🤖 IA plus rapide et structurée</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                    <span>Sauvegarde illimitée et sécurisée à vie</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <span>Accès complet toute l'année</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                    <span>Accompagnement VIP toute l'année</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <span>Conserve tes données l'année prochaine</span>
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                    <span>Conserve tes données et progrès d'une année sur l'autre</span>
                                 </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <span>Modification des contenus à tout moment</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <span>Aucun devoir imposé, rythme libre</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <span>Accompagnement premium toute l'année</span>
-                                </li>
-                                <li className="flex items-start gap-1.5 sm:gap-3 text-[11px] sm:text-sm text-slate-355 sm:text-slate-300">
-                                    <Check className="w-3.5 h-3.5 sm:w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
+                                    <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                                     <span>🏆 Défier ses amis sur Levelmark</span>
                                 </li>
                             </ul>
@@ -1009,19 +987,19 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                         <button
                             onClick={() => handleSelectPlan('annual', 385000)}
                             disabled={isPremiumActive}
-                            className={`mt-5 w-full py-3 px-4 font-bold rounded-xl text-center text-sm transition-all active:scale-[0.98] ${
+                            className={`mt-6 w-full py-4 px-4 font-black rounded-2xl text-center text-xs uppercase tracking-widest transition-all active:scale-[0.98] ${
                                 isPremiumActive 
                                     ? (activePlanId === 'plan_annual' 
-                                        ? 'bg-emerald-600 text-white cursor-not-allowed' 
-                                        : 'bg-slate-855 text-slate-500 cursor-not-allowed border border-white/5')
-                                    : 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white shadow-lg shadow-yellow-950/20'
+                                        ? 'bg-emerald-600 text-white cursor-not-allowed shadow-lg' 
+                                        : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5')
+                                    : 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black shadow-xl shadow-amber-900/40 hover:shadow-yellow-500/50'
                             }`}
                         >
                             {isPremiumActive 
                                 ? (activePlanId === 'plan_annual' ? 'Votre plan actuel (Actif) ✓' : 'Non disponible')
-                                : 'Choisir Annuel'}
+                                : 'Choisir Annuel (Meilleure Offre) →'}
                         </button>
-                        <p className="text-center text-[10px] text-slate-500 mt-2">Investis une fois, profite toute l'année !</p>
+                        <p className="text-center text-[10px] text-slate-500 font-semibold mt-2.5">Investis une fois, profite toute l'année !</p>
                     </div>
 
                 </div>
@@ -1030,25 +1008,34 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             {/* Phone Number Collection Modal for Djomy Real Payment Redirection */}
             <AnimatePresence>
                 {isPhoneModalOpen && selectedOptions && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative w-full max-w-md bg-[#0b1222] border border-slate-800 text-white rounded-[2rem] p-6 shadow-2xl overflow-hidden font-sans text-left"
+                            initial={{ scale: 0.95, opacity: 0, y: 12 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 12 }}
+                            className="relative w-full max-w-md bg-gradient-to-b from-[#0f172a] via-[#0b1120] to-[#070b14] border border-slate-800 text-white rounded-[2.5rem] p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden font-sans text-left"
                         >
                             {/* Glowing light effect on top border */}
-                            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-500 via-cyan-500 to-indigo-500" />
+                            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-amber-500" />
                             
-                            {/* Header */}
-                            <div className="flex justify-between items-center pb-4 border-b border-slate-800/60 mb-5">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20 flex items-center justify-center">
-                                        <Landmark className="w-5 h-5" />
+                            {/* Header with Official LEVELMAK Logo */}
+                            <div className="flex justify-between items-center pb-4 border-b border-slate-800/80 mb-5">
+                                <div className="flex items-center gap-3.5">
+                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-white/20 via-white/10 to-blue-500/15 border border-white/25 p-1 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.35)] shrink-0 backdrop-blur-md">
+                                        <img 
+                                            src="/logo.png" 
+                                            alt="LEVELMAK" 
+                                            className="w-full h-full object-contain filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)] brightness-115" 
+                                        />
                                     </div>
                                     <div>
-                                        <h3 className="font-extrabold text-base tracking-tight text-white">Numéro de Paiement</h3>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Mobile Money Guinée</p>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-black text-base sm:text-lg tracking-tight text-white">Numéro de Paiement</h3>
+                                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[8px] font-black text-emerald-400 uppercase tracking-wider">Sécurisé</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-400 font-bold tracking-wider mt-0.5">
+                                            Mobile Money Guinée
+                                        </p>
                                     </div>
                                 </div>
                                 <button
@@ -1056,45 +1043,60 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                         setIsPhoneModalOpen(false);
                                         setInitiateError(null);
                                     }}
-                                    className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+                                    className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/40 hover:bg-slate-800 transition-colors"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>
 
-                            {/* Summary of Achat */}
-                            <div className="mb-5 rounded-2xl bg-[#070b14] p-4 border border-slate-800/80 flex justify-between items-center">
-                                <div>
-                                    <p className="text-[9px] uppercase tracking-wider font-black text-slate-500">Abonnement</p>
-                                    <p className="text-sm font-black text-white capitalize">
-                                        LEVELMAK PRO {selectedOptions.duration === 'weekly' ? 'Hebdomadaire' : selectedOptions.duration === 'monthly' ? 'Mensuel' : 'Annuel'}
-                                    </p>
+                            {/* Summary of Achat (Design Premium & Parlant) */}
+                            <div className="mb-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-blue-950/30 p-4 border border-blue-500/20 shadow-inner">
+                                <div className="flex justify-between items-start mb-2.5">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <Crown size={12} className="text-amber-400" />
+                                            <span className="text-[9px] uppercase tracking-widest font-black text-amber-400">Abonnement Choisi</span>
+                                        </div>
+                                        <p className="text-sm font-black text-white">
+                                            LEVELMAK PRO <span className="text-blue-400">{selectedOptions.duration === 'weekly' ? 'Hebdomadaire (7j)' : selectedOptions.duration === 'monthly' ? 'Mensuel (30j)' : 'Annuel (365j)'}</span>
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[9px] uppercase tracking-wider font-black text-slate-400">Montant Total</p>
+                                        <p className="text-xl font-black bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                                            {selectedOptions.amount.toLocaleString()} FG
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[9px] uppercase tracking-wider font-black text-slate-500">Montant</p>
-                                    <p className="text-lg font-black text-blue-400">
-                                        {selectedOptions.amount.toLocaleString()} FG
-                                    </p>
+                                <div className="pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400">
+                                    <span className="flex items-center gap-1 text-slate-300 font-semibold">
+                                        <CheckCircle2 size={12} className="text-emerald-400 shrink-0" /> Accès complet immédiat
+                                    </span>
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-800/60 px-2 py-0.5 rounded-lg border border-slate-700/50">
+                                        Sans engagement
+                                    </span>
                                 </div>
                             </div>
 
                             {initiateError && (
-                                <div className="mb-5 flex gap-3 p-4 border border-red-500/20 bg-red-950/20 text-red-400 rounded-2xl text-xs font-bold leading-relaxed">
-                                    <AlertCircle className="w-5 h-5 shrink-0" />
+                                <div className="mb-5 flex gap-3 p-4 border border-red-500/20 bg-red-950/30 text-red-300 rounded-2xl text-xs font-bold leading-relaxed">
+                                    <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
                                     <p>{initiateError}</p>
                                 </div>
                             )}
 
                             <div className="space-y-4">
-                                <p className="text-xs text-slate-350 leading-relaxed font-medium">
-                                    Saisissez le numéro Mobile Money (Orange Money, MTN MoMo...) à débiter pour finaliser votre abonnement. Vous serez redirigé vers la passerelle sécurisée officielle.
+                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                    Saisissez votre numéro Mobile Money pour régler votre abonnement. Vous serez redirigé vers l'interface officielle sécurisée.
                                 </p>
                                 
                                 <div className="space-y-1.5">
-                                    <label className="block text-[10px] text-slate-400 uppercase tracking-widest font-black">Numéro de téléphone (Guinée)</label>
+                                    <label className="block text-[10px] text-slate-300 uppercase tracking-widest font-black">
+                                        Numéro de téléphone (Guinée)
+                                    </label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs font-bold border-r border-slate-800 pr-2">
-                                            +224
+                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-300 text-xs font-black border-r border-slate-700/80 pr-2.5">
+                                            🇬🇳 +224
                                         </div>
                                         <input
                                             type="tel"
@@ -1105,21 +1107,26 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                                 const val = e.target.value.replace(/\D/g, '');
                                                 setPaymentPayerNumber(val);
                                             }}
-                                            className="w-full bg-[#070b14] border border-slate-805 rounded-2xl pl-16 pr-4 py-3.5 text-white focus:outline-none focus:border-blue-500 font-mono font-bold text-sm tracking-widest"
+                                            className="w-full bg-[#050811] border border-slate-700/80 focus:border-blue-500 rounded-2xl pl-20 pr-10 py-3.5 text-white focus:outline-none font-mono font-bold text-sm tracking-widest transition-colors shadow-inner"
                                         />
+                                        {paymentPayerNumber.length === 9 && (
+                                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                <CheckCircle2 size={16} className="text-emerald-400" />
+                                            </div>
+                                        )}
                                     </div>
-                                    <p className="text-[10px] text-slate-500 font-medium">Format à 9 chiffres sans le code pays (ex: 620000000)</p>
+                                    <p className="text-[10px] text-slate-400 font-medium">Format à 9 chiffres sans l'indicatif pays (ex: 620000000)</p>
                                 </div>
 
                                 <button
                                     onClick={handleInitiatePayment}
-                                    disabled={isInitiatingPayment}
-                                    className="w-full mt-2 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2"
+                                    disabled={isInitiatingPayment || paymentPayerNumber.length < 8}
+                                    className="w-full mt-2 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2"
                                 >
                                     {isInitiatingPayment ? (
                                         <>
                                             <Loader2 className="w-4 h-4 animate-spin" />
-                                            <span>Redirection en cours...</span>
+                                            <span>Connexion sécurisée...</span>
                                         </>
                                     ) : (
                                         <span>Confirmer et Payer →</span>
@@ -1127,8 +1134,8 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 </button>
                                 
                                 <div className="pt-2 text-center">
-                                    <span className="text-[10px] text-slate-500 font-semibold tracking-tight inline-flex items-center gap-1.5">
-                                        🔒 Transaction cryptée SSL 256 bits via Djomy
+                                    <span className="text-[10px] text-slate-400 font-semibold tracking-tight inline-flex items-center gap-1.5">
+                                        <Lock size={12} className="text-emerald-400" /> Paiement 100% sécurisé
                                     </span>
                                 </div>
                             </div>
