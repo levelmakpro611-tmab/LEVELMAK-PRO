@@ -17,6 +17,7 @@ dev-dist
 # Mobile build folders
 android/
 ios/
+*.apk
 
 # Environment variables
 .env
