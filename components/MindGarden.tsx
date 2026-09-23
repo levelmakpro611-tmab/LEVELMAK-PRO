@@ -13,13 +13,21 @@ export const MindGarden: React.FC = () => {
   const waterCans = user?.consumables?.['water_can'] || 0;
   const fertilizers = user?.consumables?.['fertilizer'] || 0;
 
-  // Calculate dynamic health based on lastWateredAt (24h thirst, 72h withered)
+  // Dynamic health based on lastWateredAt:
+  // - 0 to 24h: Healthy (Pleine forme)
+  // - 24h to 48h: Thirsty (Avertissement soif 💧)
+  // - 48h+: Withered (Fanée 🥀 - perte de vitalité)
+  // - Note: Fully mature plants (5/5) are immortal trophies!
   const getPlantHealth = (plant: GardenPlant): 'healthy' | 'thirsty' | 'withered' | 'dead' => {
+    const isAdult = (plant.quizzesContributed || 0) >= 5 || (plant.growthStage ?? 0) >= 4;
+    if (isAdult) return 'healthy'; // Les plantes adultes 5/5 sont immortelles dans la collection
+
     if (plant.state === 'dead') return 'dead';
     if (!plant.lastWateredAt) return plant.state || 'healthy';
     const hoursSinceWater = (Date.now() - new Date(plant.lastWateredAt).getTime()) / (1000 * 60 * 60);
-    if (hoursSinceWater > 72) return 'withered';
-    if (hoursSinceWater > 24) return 'thirsty';
+    if (hoursSinceWater > 96) return 'dead';
+    if (hoursSinceWater > 48) return 'withered'; // Fanaison après 48h (2 jours sans activité)
+    if (hoursSinceWater > 24) return 'thirsty';  // Soif après 24h (1 jour sans activité)
     return 'healthy';
   };
 
@@ -40,7 +48,10 @@ export const MindGarden: React.FC = () => {
     let emoji = '🌱';
     let emojiClass = 'text-5xl';
     
-    if (quizzes === 1) {
+    if (health === 'withered') {
+      emoji = type === 'tree' ? '🍂' : '🥀';
+      emojiClass = 'text-5xl mb-0';
+    } else if (quizzes === 1) {
       emoji = '🌱';
       emojiClass = 'text-3xl mb-1';
     } else if (quizzes === 2) {
@@ -92,12 +103,12 @@ export const MindGarden: React.FC = () => {
         {/* Growth Progress Bar & Counter (5 Quizzes target) */}
         <div className="w-14 h-1.5 bg-black/30 dark:bg-white/10 rounded-full mt-2 overflow-hidden border border-white/5">
             <div 
-                className={`h-full transition-all duration-1000 ${isAdult ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : 'bg-emerald-500'}`} 
+                className={`h-full transition-all duration-1000 ${isAdult ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : health === 'withered' ? 'bg-amber-600' : 'bg-emerald-500'}`} 
                 style={{ width: `${(quizzes / 5) * 100}%` }}
             />
         </div>
         <span className="text-[9px] font-black tracking-tight text-slate-600 dark:text-slate-400 mt-1">
-          {isAdult ? '🌸 5/5 Adulte' : `🌱 ${quizzes}/5 quiz`}
+          {isAdult ? '🌸 5/5 Adulte' : health === 'withered' ? '🥀 Fanée (-1)' : `🌱 ${quizzes}/5 quiz`}
         </span>
 
         {health === 'thirsty' && (
