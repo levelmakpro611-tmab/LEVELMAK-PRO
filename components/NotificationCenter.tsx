@@ -37,8 +37,20 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
     };
 
     const getIcon = (notif: AppNotification) => {
-        if (notif.title.includes('PRO') || notif.title.includes('Levelmak') || notif.title.includes('Abonnement') || notif.title.includes('Reçu')) {
-            return <img src="/logo.png" className="w-5 h-5 object-contain" alt="Levelmak Logo" />;
+        const titleLower = (notif.title || '').toLowerCase();
+        const idLower = (notif.id || '').toLowerCase();
+        const isLevelmak =
+            idLower.startsWith('welcome') ||
+            titleLower.includes('levelmak') ||
+            titleLower.includes('bienvenue') ||
+            notif.title.includes('PRO') ||
+            titleLower.includes('abonnement') ||
+            titleLower.includes('reçu') ||
+            notif.type === 'admin' ||
+            notif.type === 'info';
+
+        if (isLevelmak) {
+            return <img src="/logo.png" className="w-full h-full object-contain p-0.5 rounded-lg drop-shadow-sm" alt="LEVELMAK" />;
         }
         switch (notif.type) {
             case 'achievement': return <Trophy className="text-amber-500" size={18} />;
@@ -46,9 +58,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
             case 'study_reminder': return <Clock className="text-primary" size={18} />;
             case 'streak_risk': return <AlertCircle className="text-red-500" size={18} />;
             case 'exam_approaching': return <Info className="text-blue-500" size={18} />;
-            case 'admin':
-            case 'info':
-                return <img src="/logo.png" className="w-5 h-5 object-contain" alt="Admin" />;
             default: return <Bell size={18} />;
         }
     };
@@ -137,9 +146,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                             : 'bg-primary/5 border-primary/20 shadow-sm'
                                             }`}
                                     >
-                                        <div className="flex gap-4">
-                                            <div className="shrink-0 mt-1">
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${notif.read ? 'bg-slate-100 dark:bg-white/5' : 'bg-white shadow-sm'
+                                        <div className="flex gap-3.5">
+                                            <div className="shrink-0 mt-0.5">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden border transition-all ${notif.read
+                                                    ? 'bg-slate-100 dark:bg-white/5 border-slate-200/50 dark:border-white/5'
+                                                    : 'bg-white dark:bg-slate-800 border-primary/20 shadow-sm'
                                                     }`}>
                                                     {getIcon(notif)}
                                                 </div>
