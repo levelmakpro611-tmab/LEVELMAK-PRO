@@ -27,7 +27,8 @@ import {
   Play,
   GraduationCap,
   Target,
-  Flame
+  Flame,
+  Crown
 } from 'lucide-react';
 import {
   LineChart,
@@ -240,13 +241,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
                 {(() => {
                   const leagueId = getLeagueFromXp(user.totalXp);
-                  const league = LEAGUES.find(l => l.id === leagueId);
-                  if (!league) return null;
+                  const league = LEAGUES.find(l => l.id === leagueId) || LEAGUES[0];
+                  
+                  let badgeStyle = "border-amber-700/50 bg-gradient-to-r from-amber-950/60 via-amber-900/40 to-amber-950/60 text-amber-300 shadow-[0_0_20px_rgba(205,127,50,0.25)]";
+                  if (league.id === 'silver') {
+                    badgeStyle = "border-slate-300/50 bg-gradient-to-r from-slate-800/80 via-slate-700/60 to-slate-800/80 text-slate-100 shadow-[0_0_20px_rgba(192,192,192,0.35)]";
+                  } else if (league.id === 'gold') {
+                    badgeStyle = "border-yellow-500/60 bg-gradient-to-r from-yellow-950/70 via-amber-800/50 to-yellow-950/70 text-yellow-300 shadow-[0_0_25px_rgba(255,215,0,0.4)]";
+                  } else if (league.id === 'diamond') {
+                    badgeStyle = "border-cyan-400/60 bg-gradient-to-r from-cyan-950/70 via-blue-900/50 to-cyan-950/70 text-cyan-200 shadow-[0_0_25px_rgba(56,189,248,0.45)]";
+                  } else if (league.id === 'master') {
+                    badgeStyle = "border-rose-500/60 bg-gradient-to-r from-rose-950/70 via-red-900/50 to-rose-950/70 text-rose-200 shadow-[0_0_25px_rgba(239,68,68,0.45)]";
+                  }
+
                   return (
                     <motion.div
+                      key={league.id}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-amber-400/20 to-amber-500/10 dark:from-amber-950/60 dark:via-amber-900/40 dark:to-amber-950/60 shadow-[0_0_20px_rgba(245,158,11,0.15)] text-amber-700 dark:text-amber-300 font-black uppercase text-xs tracking-[0.2em]"
+                      className={`inline-flex items-center gap-2 px-5 py-2 rounded-2xl border ${badgeStyle} font-black uppercase text-xs tracking-[0.2em] transition-all`}
                     >
                       <span className="text-lg">{league.icon}</span>
                       <span>{league.name}</span>
@@ -280,45 +293,30 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
-              {/* Status Pill Tags */}
-              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
+              {/* Status Pill Tags (Centered & Balanced) */}
+              <div className="flex flex-wrap items-center justify-center gap-2.5 md:gap-3.5">
                 {isPremiumActive ? (
-                  <>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-blue-500/30">
-                      <Sparkles size={12} /> {t('dashboard.profile.studentPro')}
-                    </div>
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border ${isOnline
-                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                      : 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
-                      }`}>
-                      {isOnline ? (<><Wifi size={12} /> {t('dashboard.online')}</>) : (<><WifiOff size={12} /> {t('dashboard.offline')}</>)}
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-purple-500/30">
-                      <Star size={12} className="fill-purple-700 dark:fill-purple-300" /> {t('dashboard.profile.eliteMember')}
-                    </div>
-                  </>
+                  <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 text-amber-300 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border border-amber-500/40 shadow-sm shadow-amber-950/30">
+                    <Crown size={13} className="text-amber-400 fill-amber-400" /> Étudiant Premium
+                  </div>
                 ) : (
-                  <>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
-                      {settings.language === 'fr' ? 'Étudiant Gratuit' : 'Free Student'}
-                    </div>
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border ${isOnline
-                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                      : 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
-                      }`}>
-                      {isOnline ? (<><Wifi size={12} /> {t('dashboard.online')}</>) : (<><WifiOff size={12} /> {t('dashboard.offline')}</>)}
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
-                      {settings.language === 'fr' ? 'Membre Standard' : 'Standard Member'}
-                    </div>
-                  </>
+                  <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
+                    <GraduationCap size={13} className="text-slate-400" /> Étudiant Gratuit
+                  </div>
                 )}
+
+                <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border ${isOnline
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                  : 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
+                  }`}>
+                  {isOnline ? (<><Wifi size={13} /> {t('dashboard.online')}</>) : (<><WifiOff size={13} /> {t('dashboard.offline')}</>)}
+                </div>
               </div>
 
               {/* Energy Progress Bar */}
               <div className="w-full max-w-lg space-y-2 pt-2">
                 <p className="text-xs md:text-sm text-slate-700 dark:text-slate-300 font-bold text-center leading-relaxed">
-                  Tu es à <span className="text-amber-600 dark:text-amber-400 font-black text-sm md:text-base">{Math.round(xpPercentage)}%</span> du Niveau {(user.avatar?.currentLevel || 1) + 1} !
+                  Niveau {user.avatar?.currentLevel || 1} • <span className="text-amber-600 dark:text-amber-400 font-black">{Math.round(xpPercentage)}%</span> vers le Niveau {(user.avatar?.currentLevel || 1) + 1}
                 </p>
 
                 <div className="w-full bg-slate-200/80 dark:bg-slate-950/80 rounded-full h-4 md:h-5 p-1 border border-slate-300/60 dark:border-white/10 shadow-inner relative overflow-hidden">
@@ -331,9 +329,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </div>
 
                 <div className="flex justify-between text-[9px] md:text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
-                  <span>{user.xp} XP</span>
-                  <span className="text-amber-600 dark:text-amber-400">
-                    {Math.round(getXpForNextLevel(user.avatar?.currentLevel || 1) - user.xp)} {t('dashboard.profile.remaining')}
+                  <span>{user.xp || 0} / {getXpForNextLevel(user.avatar?.currentLevel || 1)} XP</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">
+                    {Math.max(0, Math.round(getXpForNextLevel(user.avatar?.currentLevel || 1) - (user.xp || 0)))} XP restants
                   </span>
                 </div>
               </div>

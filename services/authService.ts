@@ -82,15 +82,10 @@ export const mapProfileToUser = (profile: any): User => {
         const diffMs = nowDay.getTime() - lastDay.getTime();
         const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-        if (diffDays === 1) {
+        if (diffDays >= 1) {
+            // Continuité garantie : aucune réinitialisation, la série progresse de façon cumulative
             currentStreak += 1;
             lastLoginIso = nowDate.toISOString();
-            // ✅ FIX 14: Streak DB write is now ONLY triggered at login via updateStreakIfNeeded()
-            // NOT here in mapProfileToUser, because this function is called on every Realtime event.
-        } else if (diffDays > 1) {
-            currentStreak = 1;
-            lastLoginIso = nowDate.toISOString();
-            // ✅ FIX 14: Same as above — no DB write inside a pure mapping function.
         }
     }
 
@@ -781,9 +776,11 @@ export const updateStreakIfNeeded = async (userId: string, currentStreak: any): 
         const diffDays = Math.round((nowDay.getTime() - lastDay.getTime()) / (1000 * 60 * 60 * 24));
 
         if (diffDays >= 1) {
-            const newStreak = diffDays === 1
-                ? { current: (Number(currentStreak.current) || 1) + 1, lastLogin: nowDate.toISOString() }
-                : { current: 1, lastLogin: nowDate.toISOString() };
+            // Incrémente toujours la série sans jamais la remettre à 1
+            const newStreak = { 
+                current: (Number(currentStreak.current) || 1) + 1, 
+                lastLogin: nowDate.toISOString() 
+            };
             await supabase.from('profiles').update({ streak: newStreak }).eq('id', userId);
         }
     } catch (e) {

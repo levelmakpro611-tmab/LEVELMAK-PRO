@@ -35,6 +35,24 @@ export const useGamificationStore = (
                 }
             };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
+
+            // Sync immediately with Supabase profiles table
+            if (prev.id && !prev.id.includes('anon')) {
+                supabase.from('profiles').update({
+                    total_xp: newTotalXp,
+                    xp: remainingXp,
+                    level: updatedLevel,
+                    stats: {
+                        ...(prev.stats || {}),
+                        level: updatedLevel,
+                        totalXp: newTotalXp,
+                        xp: remainingXp
+                    }
+                }).eq('id', prev.id).then(({ error }) => {
+                    if (error) console.error('[addXp Supabase Sync Error]:', error);
+                });
+            }
+
             return updatedUser;
         });
     }, [setUser]);
@@ -42,8 +60,22 @@ export const useGamificationStore = (
     const addLevelCoins = useCallback((amount: number) => {
         setUser(prev => {
             if (!prev) return null;
-            const updated = { ...prev, levelCoins: (prev.levelCoins || 0) + amount };
+            const newCoins = (prev.levelCoins || 0) + amount;
+            const updated = { ...prev, levelCoins: newCoins };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
+
+            if (prev.id && !prev.id.includes('anon')) {
+                supabase.from('profiles').update({
+                    coins: newCoins,
+                    stats: {
+                        ...(prev.stats || {}),
+                        levelCoins: newCoins
+                    }
+                }).eq('id', prev.id).then(({ error }) => {
+                    if (error) console.error('[addLevelCoins Supabase Sync Error]:', error);
+                });
+            }
+
             return updated;
         });
     }, [setUser]);

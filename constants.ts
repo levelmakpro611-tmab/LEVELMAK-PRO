@@ -25,10 +25,10 @@ export const AVATAR_LEVELS = [
 
 export const LEAGUES = [
   { id: 'bronze', name: 'Ligue Bronze', minXp: 0, color: '#CD7F32', icon: '🥉' },
-  { id: 'silver', name: 'Ligue Argent', minXp: 5000, color: '#C0C0C0', icon: '🥈' },
-  { id: 'gold', name: 'Ligue Or', minXp: 15000, color: '#FFD700', icon: '🥇' },
-  { id: 'diamond', name: 'Ligue Diamant', minXp: 50000, color: '#B9F2FF', icon: '💎' },
-  { id: 'master', name: 'Ligue Master', minXp: 100000, color: '#EF4444', icon: '🔥' },
+  { id: 'silver', name: 'Ligue Argent', minXp: 500, color: '#C0C0C0', icon: '🥈' },
+  { id: 'gold', name: 'Ligue Or', minXp: 1500, color: '#FFD700', icon: '🥇' },
+  { id: 'diamond', name: 'Ligue Diamant', minXp: 4000, color: '#38BDF8', icon: '💎' },
+  { id: 'master', name: 'Ligue Master', minXp: 10000, color: '#EF4444', icon: '🔥' },
 ];
 
 export const getLeagueFromXp = (xp: number) => {
