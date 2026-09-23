@@ -157,12 +157,12 @@ const LevelBot: React.FC = () => {
     if (!user || !isOpen) return;
 
     if (coachSessions.length === 0 && !activeSessionId) {
-      const newId = `session_${Date.now()}`;
-      createCoachSession(newId, "Nouvelle Discussion");
-      setActiveSessionId(newId);
+      const createdId = createCoachSession("Nouvelle Discussion");
+      const targetId = createdId || `session_${Date.now()}`;
+      setActiveSessionId(targetId);
       
-      saveCoachMessage(newId, {
-        id: `msg_welcome`,
+      saveCoachMessage(targetId, {
+        id: `msg_welcome_${Date.now()}`,
         role: 'bot',
         text: t.firstQuestion || "Bonjour ! C'est moi, ton **Elite Coach**. Je suis là pour t'accompagner dans tes études, résoudre tes problèmes complexes et booster ta productivité. Pose-moi n'importe quelle question pour commencer !",
         timestamp: new Date().toISOString()
@@ -170,7 +170,7 @@ const LevelBot: React.FC = () => {
     } else if (!activeSessionId && coachSessions.length > 0) {
       setActiveSessionId(coachSessions[0].id);
     }
-  }, [coachSessions.length, activeSessionId, user, isOpen, createCoachSession, saveCoachMessage, t.firstQuestion]);
+  }, [coachSessions.length, activeSessionId, user, isOpen]);
 
   const compressImage = async (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
     return new Promise((resolve) => {
@@ -351,23 +351,25 @@ const LevelBot: React.FC = () => {
     }
   }, [messages, isTyping, keyboardHeight, isOpen]);
 
-  if (!isOpen) {
-    return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed top-1/2 -translate-y-1/2 right-4 md:right-8 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-primary to-secondary text-white rounded-xl md:rounded-2xl shadow-glow flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border border-white/20"
-      >
-        <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-accent rounded-full border-2 border-slate-900 flex items-center justify-center animate-pulse">
-          <Sparkles className="text-white w-2 h-2 md:w-2.5 md:h-2.5" />
-        </div>
-        <MessageCircle size={28} className="md:w-8 md:h-8 group-hover:rotate-12 transition-transform" />
-      </button>
-    );
-  }
-
   return (
-    <div 
-      style={{
+    <>
+      {!isOpen && (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          aria-label="Ouvrir Elite Coach"
+          className="fixed top-1/2 -translate-y-1/2 right-4 md:right-8 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-primary to-secondary text-white rounded-xl md:rounded-2xl shadow-glow flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border border-white/20"
+        >
+          <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-accent rounded-full border-2 border-slate-900 flex items-center justify-center animate-pulse">
+            <Sparkles className="text-white w-2 h-2 md:w-2.5 md:h-2.5" />
+          </div>
+          <MessageCircle size={28} className="md:w-8 md:h-8 group-hover:rotate-12 transition-transform" />
+        </button>
+      )}
+
+      {isOpen && (
+        <div 
+          style={{
         bottom: `${keyboardHeight}px`,
         height: keyboardHeight > 0 
           ? `calc(100dvh - env(safe-area-inset-top) - ${keyboardHeight}px)` 
@@ -752,7 +754,9 @@ const LevelBot: React.FC = () => {
           </>
         )}
       </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 
