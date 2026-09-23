@@ -207,6 +207,7 @@ export interface GardenPlant {
   plantedAt: string;
   lastWateredAt: string;
   growthStage: number; // 0: seed, 1: sprout, 2: growing, 3: mature, 4: bloom
+  quizzesContributed?: number; // 0 to 5 quizzes
   state: 'healthy' | 'yellowing' | 'dead';
 }
 

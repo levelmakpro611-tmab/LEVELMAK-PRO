@@ -80,23 +80,64 @@ export const useGamificationStore = (
     const plantInGarden = useCallback((type: GardenPlant['type']) => {
         setUser(prev => {
             if (!prev) return null;
-            const newPlant: GardenPlant = {
-                id: `plant_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
-                type,
-                growthStage: 1, // Start as sprout
-                state: 'healthy',
-                lastWateredAt: new Date().toISOString(),
-                plantedAt: new Date().toISOString()
-            };
+
+            const existingPlants = prev.garden?.plants || [];
+            // Find if there is an active growing plant (not yet mature at stage 4)
+            const activePlantIndex = existingPlants.findIndex(p => (p.growthStage ?? 0) < 4);
+
+            let updatedPlants: GardenPlant[];
+            let isNewPlant = false;
+
+            if (activePlantIndex !== -1) {
+                // Grow the existing active plant with +1 quiz contributed
+                updatedPlants = existingPlants.map((plant, idx) => {
+                    if (idx !== activePlantIndex) return plant;
+                    const quizzes = Math.min(5, (plant.quizzesContributed || plant.growthStage || 1) + 1);
+                    // 5 quizzes progression:
+                    // 1 quiz = Stage 1 (Sprout 🌱 - 20%)
+                    // 2 quizzes = Stage 2 (Growing Stem 🌿 - 40%)
+                    // 3 quizzes = Stage 2 (Stronger Stem 🌿 - 60%)
+                    // 4 quizzes = Stage 3 (Bud / Pre-bloom 🌺/🌲 - 80%)
+                    // 5 quizzes = Stage 4 (Full Mature Bloom 🌸/🌹/🌳/🪷 - 100%)
+                    let nextStage = 1;
+                    if (quizzes >= 5) nextStage = 4;
+                    else if (quizzes >= 4) nextStage = 3;
+                    else if (quizzes >= 2) nextStage = 2;
+                    else nextStage = 1;
+
+                    return {
+                        ...plant,
+                        growthStage: nextStage,
+                        quizzesContributed: quizzes,
+                        state: 'healthy' as const,
+                        lastWateredAt: new Date().toISOString()
+                    };
+                });
+            } else {
+                // All plants are mature or garden is empty -> Plant a new seed/sprout (Quiz 1/5)
+                isNewPlant = true;
+                const newPlant: GardenPlant = {
+                    id: `plant_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+                    type,
+                    growthStage: 1, // Stage 1 (Sprout 🌱)
+                    quizzesContributed: 1, // 1 quiz completed out of 5
+                    state: 'healthy',
+                    lastWateredAt: new Date().toISOString(),
+                    plantedAt: new Date().toISOString()
+                };
+                updatedPlants = [...existingPlants, newPlant];
+            }
+
             const newGarden = {
                 ...prev.garden,
-                plants: [...(prev.garden?.plants || []), newPlant]
+                plants: updatedPlants
             };
-            // Award +1 water can upon planting so the student can water their new sprout!
+
+            // Award +1 water can when starting a new plant or continuing care
             const currentWater = prev.consumables?.['water_can'] || 0;
             const newConsumables = {
                 ...prev.consumables,
-                water_can: currentWater + 1
+                water_can: isNewPlant ? currentWater + 1 : currentWater
             };
             const newStats = {
                 ...prev.stats,
@@ -132,12 +173,21 @@ export const useGamificationStore = (
             const updatedPlants = (prev.garden?.plants || []).map(plant => {
                 if (plant.id !== plantId) return plant;
                 
-                const growthBoost = itemType === 'water_can' ? 1 : 2;
-                const nextStage = Math.min(4, (plant.growthStage || 0) + growthBoost);
+                // Water gives hydration and +0.5 quiz progress; Fertilizer gives a full +1.5 quiz progress boost
+                const boost = itemType === 'water_can' ? 0.5 : 1.5;
+                const currentQuizzes = plant.quizzesContributed || plant.growthStage || 1;
+                const newQuizzes = Math.min(5, currentQuizzes + boost);
+
+                let nextStage = plant.growthStage;
+                if (newQuizzes >= 5) nextStage = 4;
+                else if (newQuizzes >= 4) nextStage = 3;
+                else if (newQuizzes >= 2) nextStage = 2;
+                else nextStage = 1;
                 
                 return { 
                     ...plant, 
-                    growthStage: nextStage, 
+                    growthStage: nextStage,
+                    quizzesContributed: newQuizzes,
                     state: 'healthy' as const, 
                     lastWateredAt: new Date().toISOString() 
                 };

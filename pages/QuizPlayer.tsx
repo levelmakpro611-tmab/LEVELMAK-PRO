@@ -577,7 +577,14 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-6 pt-4 no-print">
+        <div className="flex flex-col sm:flex-row gap-4 md:gap-6 pt-4 no-print">
+          <button
+            onClick={onClose}
+            className="flex-1 py-5 md:py-6 bg-slate-900 dark:bg-white/10 hover:bg-slate-800 dark:hover:bg-white/20 text-white rounded-xl md:rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-[11px] border border-slate-700 dark:border-white/20 transition-all flex items-center justify-center gap-2 md:gap-3 shadow-glow hover:scale-[1.02] active:scale-95"
+          >
+            <Home size={18} /> {t('quiz.player.results.homeBtn')}
+          </button>
+
           <button
             onClick={() => {
               setCurrentIdx(0);
@@ -625,17 +632,9 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
 
           <button
             onClick={handleExportPDF}
-            className="flex-1 py-6 bg-amber-500/10 dark:bg-accent/10 hover:bg-amber-500/20 text-amber-700 dark:text-accent rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] border border-amber-500/20 dark:border-accent/20 transition-all flex items-center justify-center gap-3"
+            className="flex-1 py-5 md:py-6 bg-amber-500/10 dark:bg-accent/10 hover:bg-amber-500/20 text-amber-700 dark:text-accent rounded-xl md:rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-[11px] border border-amber-500/20 dark:border-accent/20 transition-all flex items-center justify-center gap-2 md:gap-3"
           >
             <Download size={18} /> {t('common.exportPDF')}
-          </button>
-
-
-          <button
-            onClick={onClose}
-            className="flex-1 py-6 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white text-slate-700 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-900 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] border border-slate-200 dark:border-white/10 transition-all flex items-center justify-center gap-3 shadow-sm"
-          >
-            <Home size={18} /> {t('quiz.player.results.homeBtn')}
           </button>
         </div>
       </motion.div>
