@@ -5,22 +5,24 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { AppProvider, useStore } from './hooks/useStore';
 
 
-// Lazy load heavy pages
+// Direct imports for core navigation tabs (instant zero-flicker switching)
+import Dashboard from './pages/Dashboard';
+import QuizGenerator from './pages/QuizGenerator';
+import CreativeWriting from './pages/CreativeWriting';
+import Flashcards from './pages/Flashcards';
+import AISummary from './pages/AISummary';
+
+// Lazy load secondary/heavy pages
 const Auth = lazy(() => import('./pages/Auth'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const QuizGenerator = lazy(() => import('./pages/QuizGenerator'));
 const QuizPlayer = lazy(() => import('./pages/QuizPlayer'));
-const CreativeWriting = lazy(() => import('./pages/CreativeWriting'));
 const Community = lazy(() => import('./pages/Community'));
 const Shop = lazy(() => import('./pages/Shop'));
 const StudyPlanner = lazy(() => import('./pages/StudyPlanner'));
 const Settings = lazy(() => import('./pages/Settings'));
-const Flashcards = lazy(() => import('./pages/Flashcards'));
 const FlashcardPlayer = lazy(() => import('./pages/FlashcardPlayer'));
 const FlashcardMode = lazy(() => import('./pages/FlashcardMode').then(m => ({ default: m.FlashcardMode })));
 const Ranking = lazy(() => import('./pages/Ranking'));
 const Analytics = lazy(() => import('./pages/Analytics'));
-const AISummary = lazy(() => import('./pages/AISummary'));
 const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
 const Library = lazy(() => import('./pages/Library'));
 const AtlasLibrary = lazy(() => import('./components/AtlasLibrary'));

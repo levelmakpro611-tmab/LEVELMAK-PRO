@@ -317,15 +317,19 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           }
       });
 
-    // Fetch profiles from Supabase database for metadata enrichment
+    // Fetch profiles from Supabase database for metadata enrichment and online presence
     // ✅ FIX 8: Added .limit(300) to avoid loading the entire profiles table at once
-    supabase.from('profiles').select('id, name, phone_number, avatar_config, role').limit(300).then(({data}) => {
+    supabase.from('profiles').select('id, name, phone_number, avatar_config, role, status, last_active').limit(300).then(({data}) => {
         if (data) {
           setAllProfiles(data.map(p => ({ 
             user_id: p.id, 
+            id: p.id,
             name: p.name || 'Étudiant Elite', 
             phone_number: p.phone_number,
             role: p.role,
+            status: p.status,
+            last_active: p.last_active,
+            avatar_config: p.avatar_config,
             avatar: p.avatar_config?.image 
           })));
           // ✅ FIX 15: Also cache this user's avatar_config to avoid re-fetching in heartbeat
@@ -336,9 +340,39 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         }
     });
 
+    const profileSub = supabase
+      .channel('public:profiles_map_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+        if (payload.new && (payload.new as any).id) {
+          const updated = payload.new as any;
+          setAllProfiles(prev => {
+            const idx = prev.findIndex(p => p.id === updated.id);
+            const mapped = {
+              user_id: updated.id,
+              id: updated.id,
+              name: updated.name || 'Étudiant Elite',
+              phone_number: updated.phone_number,
+              role: updated.role,
+              status: updated.status,
+              last_active: updated.last_active,
+              avatar_config: updated.avatar_config,
+              avatar: updated.avatar_config?.image
+            };
+            if (idx >= 0) {
+              const copy = [...prev];
+              copy[idx] = mapped;
+              return copy;
+            }
+            return [mapped, ...prev];
+          });
+        }
+      })
+      .subscribe();
+
     return () => { 
         console.log("📍 [Map] Removing Supabase presence channel");
         supabase.removeChannel(channel); 
+        supabase.removeChannel(profileSub);
     };
   }, [user, deviceSessionId]);
 
@@ -436,7 +470,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   const finalUsers = useMemo(() => {
       const mapUsers = new Map<string, any>();
 
-      // Strictly map ONLY users actively broadcasting in Realtime Presence (in app + location active)
+      // 1. Add users actively broadcasting in Realtime Presence
       activeUsers.forEach(u => {
         const uUserId = u.user_id || u.id;
         if (
@@ -449,6 +483,40 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         ) {
           const dbMatch = allProfiles.find(p => (p.user_id || p.id) === uUserId) || {};
           mapUsers.set(uUserId, { ...dbMatch, ...u, user_id: uUserId, is_online: true });
+        }
+      });
+
+      // 2. Add online / active profiles from Supabase so connected students always see each other
+      allProfiles.forEach(p => {
+        const pUserId = p.user_id || p.id;
+        if (
+          pUserId && 
+          pUserId !== user?.id && 
+          !isAdminUser(p) && 
+          !mapUsers.has(pUserId)
+        ) {
+          const loc = p.avatar_config?.location;
+          const isGhost = loc?.isPublic === false;
+          if (!isGhost) {
+            const isOnline = p.status === 'online' || p.status === 'active';
+            if (isOnline) {
+              const charCodeSum = pUserId.split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
+              const fallbackLat = 9.5370 + ((charCodeSum % 100) - 50) * 0.003;
+              const fallbackLng = -13.6785 + (((charCodeSum * 3) % 100) - 50) * 0.003;
+
+              const lat = typeof loc?.latitude === 'number' ? loc.latitude : fallbackLat;
+              const lng = typeof loc?.longitude === 'number' ? loc.longitude : fallbackLng;
+
+              mapUsers.set(pUserId, {
+                ...p,
+                user_id: pUserId,
+                lat,
+                lng,
+                is_online: true,
+                is_ghost: false
+              });
+            }
+          }
         }
       });
 

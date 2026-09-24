@@ -118,6 +118,22 @@ const LevelBot: React.FC = () => {
         hideSub.then(s => s.remove()).catch(() => {});
         didHideSub.then(s => s.remove()).catch(() => {});
       };
+    } else if (typeof window !== 'undefined' && window.visualViewport) {
+      const handleVisualResize = () => {
+        if (!window.visualViewport) return;
+        // Compute keyboard height as the difference between outer and visual viewport
+        const rawKh = Math.max(0, window.innerHeight - window.visualViewport.height - (window.visualViewport.offsetTop || 0));
+        // Only consider it a keyboard if > 100px (ignore small browser UI changes)
+        setKeyboardHeight(rawKh > 100 ? rawKh : 0);
+      };
+      window.visualViewport.addEventListener('resize', handleVisualResize);
+      window.visualViewport.addEventListener('scroll', handleVisualResize);
+      // Also handle orientation changes
+      window.addEventListener('orientationchange', () => setTimeout(handleVisualResize, 300));
+      return () => {
+        window.visualViewport?.removeEventListener('resize', handleVisualResize);
+        window.visualViewport?.removeEventListener('scroll', handleVisualResize);
+      };
     }
   }, []);
 
@@ -373,7 +389,8 @@ const LevelBot: React.FC = () => {
             bottom: `${keyboardHeight}px`,
             height: keyboardHeight > 0 
               ? `calc(100dvh - env(safe-area-inset-top) - ${keyboardHeight}px)` 
-              : undefined
+              : undefined,
+            transition: 'bottom 0.18s ease-out, height 0.18s ease-out'
           }}
           className={`
             fixed z-[2000]
@@ -720,8 +737,17 @@ const LevelBot: React.FC = () => {
                 <div className="relative flex-1 h-12 md:h-14">
                   <input
                     type="text"
+                    inputMode="text"
+                    autoComplete="off"
+                    autoCorrect="on"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    onFocus={(e) => {
+                      // Small delay to let keyboard animation finish before scrolling
+                      setTimeout(() => {
+                        e.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                      }, 350);
+                    }}
                     placeholder={
                       isLimitReached
                         ? (language === 'fr'
