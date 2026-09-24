@@ -127,6 +127,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
 
   React.useEffect(() => {
     const handleResetViewport = () => {
+      // Do not reset scroll or height if the chat bot is active or an input is focused
+      if (document.body.classList.contains('bot-open')) {
+        return;
+      }
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
       // Clean any inline styles that could have been injected by webview plugins
       if (document.body) {
         document.body.style.removeProperty('height');
@@ -136,8 +143,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         document.documentElement.style.removeProperty('height');
         document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
       }
-      window.scrollTo(0, 0);
-      window.dispatchEvent(new Event('resize'));
     };
 
     if (Capacitor.isNativePlatform()) {
@@ -145,11 +150,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       const didShowSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardOpen(true));
       const hideSub = Keyboard.addListener('keyboardWillHide', () => {
         setIsKeyboardOpen(false);
-        handleResetViewport();
+        if (!document.body.classList.contains('bot-open')) {
+          handleResetViewport();
+        }
       });
       const didHideSub = Keyboard.addListener('keyboardDidHide', () => {
         setIsKeyboardOpen(false);
-        handleResetViewport();
+        if (!document.body.classList.contains('bot-open')) {
+          handleResetViewport();
+        }
       });
       
       // Native App resume listener: guarantees full layout recovery when returning from notification shade
@@ -433,7 +442,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : 'pb-36 md:pb-10'} transition-all duration-300`}>
+        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : 'pb-36 md:pb-10'} transition-colors duration-200`}>
           <div className={`${(activeTab === 'social' || activeTab === 'ailab') ? 'h-full' : ''}`}>
             {children}
           </div>

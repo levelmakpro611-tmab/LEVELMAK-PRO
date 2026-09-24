@@ -370,20 +370,20 @@ const LevelBot: React.FC = () => {
       {isOpen && (
         <div 
           style={{
-        bottom: `${keyboardHeight}px`,
-        height: keyboardHeight > 0 
-          ? `calc(100dvh - env(safe-area-inset-top) - ${keyboardHeight}px)` 
-          : undefined
-      }}
-      className={`
-        fixed transition-[bottom,height,opacity,transform] duration-200 z-[2000]
-        bottom-0 right-0 md:bottom-6 md:right-6 
-        w-full md:w-[450px] md:max-w-[calc(100vw-3rem)]
-        h-[calc(100dvh-env(safe-area-inset-top))] md:h-[650px] md:max-h-[85vh]
-        rounded-t-3xl md:rounded-[2rem]
-        bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden animate-slide-up
-      `}
-    >
+            bottom: `${keyboardHeight}px`,
+            height: keyboardHeight > 0 
+              ? `calc(100dvh - env(safe-area-inset-top) - ${keyboardHeight}px)` 
+              : undefined
+          }}
+          className={`
+            fixed z-[2000]
+            bottom-0 right-0 md:bottom-6 md:right-6 
+            w-full md:w-[450px] md:max-w-[calc(100vw-3rem)]
+            h-[calc(100dvh-env(safe-area-inset-top))] md:h-[650px] md:max-h-[85vh]
+            rounded-t-3xl md:rounded-[2rem]
+            bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden
+          `}
+        >
       {/* Header */}
       <div className="bg-slate-100 dark:bg-slate-800 p-4 md:p-6 text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-white/10 shrink-0">
         <div className="flex items-center gap-3 md:gap-4">
@@ -736,6 +736,10 @@ const LevelBot: React.FC = () => {
                   />
                   <button
                     type="submit"
+                    onPointerDown={(e) => {
+                      // Prevent send button click from blurring input and collapsing keyboard
+                      e.preventDefault();
+                    }}
                     disabled={(!input.trim() && !selectedImage) || isTyping || isLimitReached}
                     className={`
                       absolute right-1.5 top-1.5 bottom-1.5 
