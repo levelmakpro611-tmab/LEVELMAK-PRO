@@ -33,28 +33,101 @@ export const biometricService = {
   },
 
   /**
-   * Active la biométrie pour l'utilisateur actuel et sauvegarde ses identifiants de manière sécurisée
+   * Active la biométrie UNIQUEMENT après vérification du mot de passe auprès de Supabase
    */
-  enable: async (identifier: string, password?: string): Promise<boolean> => {
+  verifyAndEnable: async (identifier: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      if (!password) return false;
+      if (!password || password.trim().length === 0) {
+        return { success: false, error: 'Mot de passe requis' };
+      }
 
-      // 1. Marquer comme activé dans les préférences (pour l'UI)
+      const { supabase } = await import('./supabase');
+
+      // Identifier can be email, phone number, or username
+      let emailToTest = identifier.trim();
+      if (!emailToTest.includes('@')) {
+        const cleaned = emailToTest.replace(/\D/g, '');
+        // Lookup profile auth_email from database
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email, auth_email')
+            .or(`phone_number.eq."${emailToTest}",phone_number.eq."${cleaned}"`)
+            .maybeSingle();
+
+          if (profile?.auth_email) {
+            emailToTest = profile.auth_email;
+          } else if (profile?.email) {
+            emailToTest = profile.email;
+          } else {
+            emailToTest = `${cleaned}@levelmak.app`;
+          }
+        } catch (_) {
+          emailToTest = `${cleaned}@levelmak.app`;
+        }
+      }
+
+      // Verify credentials with Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailToTest,
+        password: password
+      });
+
+      if (error || !data.user) {
+        return {
+          success: false,
+          error: 'Mot de passe incorrect. Impossible d\'activer TouchID/FaceID.'
+        };
+      }
+
+      // Mot de passe vérifié et authentifié avec succès !
       await Preferences.set({ key: 'biometric_enabled', value: 'true' });
       await Preferences.set({ key: 'biometric_user_id', value: identifier });
 
-      // 2. Sauvegarder les identifiants dans le Keystore/Keychain natif (SÉCURISÉ)
-      await NativeBiometric.setCredentials({
-        username: identifier,
-        password: password,
-        server: 'levelmak.pro',
-      });
+      try {
+        await NativeBiometric.setCredentials({
+          username: identifier,
+          password: password,
+          server: 'levelmak.pro',
+        });
+      } catch (nativeErr) {
+        console.warn('Native biometric setCredentials warning (non-fatal on web):', nativeErr);
+      }
 
-      return true;
-    } catch (e) {
+      return { success: true };
+    } catch (e: any) {
       console.error('Erreur activation biométrie:', e);
-      return false;
+      return { success: false, error: e.message || 'Erreur lors de la vérification' };
     }
+  },
+
+  /**
+   * Met à jour le mot de passe stocké pour la biométrie (lors d'un changement de mot de passe)
+   */
+  updatePassword: async (newPassword: string): Promise<void> => {
+    try {
+      const isEnabled = await biometricService.isEnabled();
+      if (!isEnabled) return;
+      const { value: identifier } = await Preferences.get({ key: 'biometric_user_id' });
+      if (identifier) {
+        await NativeBiometric.setCredentials({
+          username: identifier,
+          password: newPassword,
+          server: 'levelmak.pro',
+        });
+      }
+    } catch (e) {
+      console.warn('Could not update biometric credentials with new password:', e);
+    }
+  },
+
+  /**
+   * Active la biométrie pour l'utilisateur actuel et sauvegarde ses identifiants de manière sécurisée
+   */
+  enable: async (identifier: string, password?: string): Promise<boolean> => {
+    if (!password) return false;
+    const res = await biometricService.verifyAndEnable(identifier, password);
+    return res.success;
   },
 
   /**

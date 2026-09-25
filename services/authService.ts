@@ -799,7 +799,7 @@ export const signOutUser = async (): Promise<void> => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
                 await supabase.from('profiles').update({
-                    status: 'active', // Reset to default (not 'online')
+                    status: 'offline', // Reset to offline
                     last_active: new Date().toISOString()
                 }).eq('id', session.user.id);
             }
@@ -856,28 +856,59 @@ export const getCurrentSession = async () => {
 // ======================================================
 export const changeUserPassword = async (oldPassword: string, newPassword: string): Promise<void> => {
     try {
-        // 1. Get current user email
+        // 1. Get current user auth email
+        let authEmail = '';
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user || !user.email) throw new Error('Utilisateur non connecté.');
+        if (user && user.email) {
+            authEmail = user.email;
+        } else {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user?.email) {
+                authEmail = session.user.email;
+            }
+        }
+
+        // Fallback: discover via local user profile
+        if (!authEmail) {
+            try {
+                const localUser = localStorage.getItem('levelmak_user');
+                if (localUser) {
+                    const parsed = JSON.parse(localUser);
+                    if (parsed.email) authEmail = parsed.email;
+                    else if (parsed.phoneNumber) {
+                        const digits = parsed.phoneNumber.replace(/\D/g, '');
+                        authEmail = localStorage.getItem(`levelmak_auth_email_${digits}`) || `${digits}@levelmak.app`;
+                    }
+                }
+            } catch (_) {}
+        }
+
+        if (!authEmail) throw new Error('Utilisateur non connecté.');
 
         // 2. Re-authenticate to verify old password
-        const { error: reauthError } = await supabase.auth.signInWithPassword({
-            email: user.email,
+        const { data: reauthData, error: reauthError } = await supabase.auth.signInWithPassword({
+            email: authEmail,
             password: oldPassword
         });
 
-        if (reauthError) {
+        if (reauthError || !reauthData.user) {
             throw new Error('L\'ancien mot de passe est incorrect.');
         }
 
-        // 3. If successful, update to new password
+        // 3. Update to new password in Supabase Auth
         const { error: updateError } = await supabase.auth.updateUser({
             password: newPassword
         });
 
         if (updateError) throw updateError;
         
-        console.log('Password updated successfully');
+        console.log('Password updated successfully in Supabase Auth');
+
+        // 4. Update biometric credentials if biometric is enabled on this device
+        try {
+            const { biometricService } = await import('./biometricService');
+            await biometricService.updatePassword(newPassword);
+        } catch (_) {}
     } catch (error: any) {
         console.error('Change password error:', error);
         throw new Error(error.message);

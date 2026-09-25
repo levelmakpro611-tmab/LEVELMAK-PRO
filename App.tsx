@@ -11,20 +11,20 @@ import QuizGenerator from './pages/QuizGenerator';
 import CreativeWriting from './pages/CreativeWriting';
 import Flashcards from './pages/Flashcards';
 import AISummary from './pages/AISummary';
+import Settings from './pages/Settings';
 
 // Lazy load secondary/heavy pages
 const Auth = lazy(() => import('./pages/Auth'));
+const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
+const Library = lazy(() => import('./pages/Library'));
 const QuizPlayer = lazy(() => import('./pages/QuizPlayer'));
 const Community = lazy(() => import('./pages/Community'));
 const Shop = lazy(() => import('./pages/Shop'));
 const StudyPlanner = lazy(() => import('./pages/StudyPlanner'));
-const Settings = lazy(() => import('./pages/Settings'));
 const FlashcardPlayer = lazy(() => import('./pages/FlashcardPlayer'));
 const FlashcardMode = lazy(() => import('./pages/FlashcardMode').then(m => ({ default: m.FlashcardMode })));
 const Ranking = lazy(() => import('./pages/Ranking'));
 const Analytics = lazy(() => import('./pages/Analytics'));
-const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
-const Library = lazy(() => import('./pages/Library'));
 const AtlasLibrary = lazy(() => import('./components/AtlasLibrary'));
 import LevelBot from './components/LevelBot';
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -562,15 +562,13 @@ const AppContent: React.FC = () => {
         </Suspense>
       ) : (
         <AppShell activeTab={activeTab} setActiveTab={handleSetActiveTab}>
-          <div key={activeTab} className="h-full w-full">
-            <Suspense fallback={null}>
+          <div className="h-full w-full">
+            <Suspense fallback={<div className="min-h-[300px]" />}>
               {renderContent()}
             </Suspense>
           </div>
 
-          <Suspense fallback={null}>
-            {activeTab === 'dashboard' && <LevelBot />}
-          </Suspense>
+          <LevelBot />
         </AppShell>
       )}
       <PremiumAlertModal

@@ -94,9 +94,21 @@ const LevelBot: React.FC = () => {
   const [showExpertSuggestion, setShowExpertSuggestion] = useState(false);
   const [lastUserQuestion, setLastUserQuestion] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [visualViewportState, setVisualViewportState] = useState<{ top: number; height: number } | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Lock body scroll on mobile when chat is open to prevent layout jumps
+  useEffect(() => {
+    if (isOpen && typeof window !== 'undefined' && window.innerWidth < 768) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -119,23 +131,31 @@ const LevelBot: React.FC = () => {
         didHideSub.then(s => s.remove()).catch(() => {});
       };
     } else if (typeof window !== 'undefined' && window.visualViewport) {
-      const handleVisualResize = () => {
+      const updateViewport = () => {
         if (!window.visualViewport) return;
-        // Compute keyboard height as the difference between outer and visual viewport
-        const rawKh = Math.max(0, window.innerHeight - window.visualViewport.height - (window.visualViewport.offsetTop || 0));
-        // Only consider it a keyboard if > 100px (ignore small browser UI changes)
-        setKeyboardHeight(rawKh > 100 ? rawKh : 0);
+        const vv = window.visualViewport;
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+          setVisualViewportState({
+            top: vv.offsetTop || 0,
+            height: vv.height
+          });
+        } else {
+          setVisualViewportState(null);
+        }
       };
-      window.visualViewport.addEventListener('resize', handleVisualResize);
-      window.visualViewport.addEventListener('scroll', handleVisualResize);
-      // Also handle orientation changes
-      window.addEventListener('orientationchange', () => setTimeout(handleVisualResize, 300));
+
+      window.visualViewport.addEventListener('resize', updateViewport);
+      window.visualViewport.addEventListener('scroll', updateViewport);
+      window.addEventListener('orientationchange', () => setTimeout(updateViewport, 200));
+      updateViewport();
+
       return () => {
-        window.visualViewport?.removeEventListener('resize', handleVisualResize);
-        window.visualViewport?.removeEventListener('scroll', handleVisualResize);
+        window.visualViewport?.removeEventListener('resize', updateViewport);
+        window.visualViewport?.removeEventListener('scroll', updateViewport);
       };
     }
-  }, []);
+  }, [isOpen]);
 
   const currentSession = useMemo(() => 
     coachSessions.find(s => s.id === activeSessionId), 
@@ -385,13 +405,24 @@ const LevelBot: React.FC = () => {
 
       {isOpen && (
         <div 
-          style={{
-            bottom: `${keyboardHeight}px`,
-            height: keyboardHeight > 0 
-              ? `calc(100dvh - env(safe-area-inset-top) - ${keyboardHeight}px)` 
-              : undefined,
-            transition: 'bottom 0.18s ease-out, height 0.18s ease-out'
-          }}
+          style={
+            Capacitor.isNativePlatform()
+              ? {
+                  bottom: `${keyboardHeight}px`,
+                  height: keyboardHeight > 0 
+                    ? `calc(100% - env(safe-area-inset-top) - ${keyboardHeight}px)` 
+                    : undefined,
+                  transition: 'bottom 0.15s ease-out, height 0.15s ease-out'
+                }
+              : visualViewportState
+              ? {
+                  top: `${visualViewportState.top}px`,
+                  height: `${visualViewportState.height}px`,
+                  bottom: 'auto',
+                  transition: 'height 0.12s ease-out'
+                }
+              : undefined
+          }
           className={`
             fixed z-[2000]
             bottom-0 right-0 md:bottom-6 md:right-6 

@@ -38,7 +38,7 @@ const getLegalUrl = (anchor: string) => {
 };
 
 const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate }) => {
-    const { user, updateProfile, addActivity, settings, updateSettings, changePassword, deleteCurrentUserAccount, t } = useStore();
+    const { user, updateProfile, addActivity, settings, updateSettings, changePassword, deleteCurrentUserAccount, addNotification, t } = useStore();
     const [expandedSection, setExpandedSection] = useState<string | null>(null);
     const [name, setName] = useState(user?.name || '');
     const [phone, setPhone] = useState(user?.phoneNumber || '');
@@ -166,11 +166,14 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
         setPasswordSuccess('');
         try {
             await changePassword(oldPassword, newPassword);
-            setPasswordSuccess(t('settings.pwUpdated'));
+            setPasswordSuccess(t('settings.pwUpdated') || 'Mot de passe mis à jour avec succès.');
+            feedbackService.fullSuccess();
+            addNotification('success', 'Sécurité ✨', 'Votre mot de passe a été modifié avec succès.');
             setOldPassword('');
             setNewPassword('');
         } catch (err: any) {
-            setPasswordError(err.message);
+            setPasswordError(err.message || 'Erreur lors du changement de mot de passe.');
+            feedbackService.mediumImpact();
         } finally {
             setPasswordLoading(false);
         }
@@ -661,16 +664,21 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                 const password = window.prompt("Veuillez entrer votre mot de passe pour autoriser TouchID/FaceID:");
                                                                 if (!password) return; // Annulé par l'utilisateur
                                                                 
-                                                                const identifier = user?.phone || user?.email || user?.id || '';
-                                                                const success = await biometricService.enable(identifier, password);
-                                                                if (success) {
+                                                                const identifier = user?.phoneNumber || user?.email || user?.id || '';
+                                                                const res = await biometricService.verifyAndEnable(identifier, password);
+                                                                if (res.success) {
                                                                     setBiometricEnabled(true);
                                                                     feedbackService.fullSuccess();
+                                                                    addNotification('success', 'TouchID / FaceID activé ✨', 'Votre connexion biométrique a été configurée.');
+                                                                } else {
+                                                                    feedbackService.mediumImpact();
+                                                                    alert(res.error || "Mot de passe incorrect. Impossible d'activer la biométrie.");
                                                                 }
                                                             } else {
                                                                 await biometricService.disable();
                                                                 setBiometricEnabled(false);
                                                                 feedbackService.mediumImpact();
+                                                                addNotification('info', 'Biométrie désactivée', 'La connexion par TouchID / FaceID a été désactivée.');
                                                             }
                                                         }}
                                                         className="glass p-5 md:p-6 rounded-3xl border border-white/5 flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer"

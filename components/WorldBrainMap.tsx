@@ -469,8 +469,9 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
 
   const finalUsers = useMemo(() => {
       const mapUsers = new Map<string, any>();
+      const now = Date.now();
 
-      // 1. Add users actively broadcasting in Realtime Presence
+      // 1. Add users actively broadcasting in Realtime Presence (live WebSocket)
       activeUsers.forEach(u => {
         const uUserId = u.user_id || u.id;
         if (
@@ -482,11 +483,15 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           typeof u.lng === 'number'
         ) {
           const dbMatch = allProfiles.find(p => (p.user_id || p.id) === uUserId) || {};
-          mapUsers.set(uUserId, { ...dbMatch, ...u, user_id: uUserId, is_online: true });
+          const isDbGhost = dbMatch.avatar_config?.location?.isPublic === false;
+          if (!isDbGhost) {
+            mapUsers.set(uUserId, { ...dbMatch, ...u, user_id: uUserId, is_online: true });
+          }
         }
       });
 
-      // 2. Add online / active profiles from Supabase so connected students always see each other
+      // 2. Database fallback: ONLY users with status === 'online' AND heartbeat within last 30 seconds
+      // Strictly excludes anyone offline, disconnected, or inactive
       allProfiles.forEach(p => {
         const pUserId = p.user_id || p.id;
         if (
@@ -497,15 +502,12 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         ) {
           const loc = p.avatar_config?.location;
           const isGhost = loc?.isPublic === false;
-          if (!isGhost) {
-            const isOnline = p.status === 'online' || p.status === 'active';
-            if (isOnline) {
-              const charCodeSum = pUserId.split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
-              const fallbackLat = 9.5370 + ((charCodeSum % 100) - 50) * 0.003;
-              const fallbackLng = -13.6785 + (((charCodeSum * 3) % 100) - 50) * 0.003;
-
-              const lat = typeof loc?.latitude === 'number' ? loc.latitude : fallbackLat;
-              const lng = typeof loc?.longitude === 'number' ? loc.longitude : fallbackLng;
+          if (!isGhost && p.status === 'online' && p.last_active) {
+            const lastActiveTime = new Date(p.last_active).getTime();
+            // User MUST have sent a heartbeat in the last 30 seconds to be considered online
+            if (!isNaN(lastActiveTime) && (now - lastActiveTime) < 30000) {
+              const lat = typeof loc?.latitude === 'number' ? loc.latitude : 9.5370;
+              const lng = typeof loc?.longitude === 'number' ? loc.longitude : -13.6785;
 
               mapUsers.set(pUserId, {
                 ...p,
@@ -839,10 +841,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   <div className="relative flex justify-center text-[8px]"><span className="px-2 bg-[#0d1527] text-slate-500 font-bold uppercase tracking-widest leading-none">Élèves en Ligne</span></div>
                 </div>
 
-                {filteredUsers.filter(u => u.is_online).length === 0 ? (
+                {filteredUsers.filter(u => u.is_online && !favoriteUserIds.includes(u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id)).length === 0 ? (
                   <p className="text-center text-slate-500 text-[10px] py-3 italic">Aucun autre élève en ligne pour le moment</p>
                 ) : (
-                  filteredUsers.filter(u => u.is_online).map((u) => {
+                  filteredUsers.filter(u => u.is_online && !favoriteUserIds.includes(u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id)).map((u) => {
                     const actualId = u.user_id.includes('_') ? u.user_id.split('_')[0] : u.user_id;
                     const isFav = favoriteUserIds.includes(actualId);
                     return (
