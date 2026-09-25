@@ -22,14 +22,14 @@ export default defineConfig(({ mode }) => {
           navigateFallback: 'index.html',
         },
         manifest: {
-          name: 'LEVELMAK PRO V1.9.5',
-          short_name: 'LMAK 1.9.5',
+          name: 'LEVELMAK PRO',
+          short_name: 'LEVELMAK',
           description: 'Ton compagnon IA pour une réussite scolaire sans limites.',
           theme_color: '#0f172a',
           background_color: '#0f172a',
           display: 'standalone',
           start_url: '/',
-          id: '/v1.9.5',
+          id: '/',
           icons: [
             {
               src: 'logo.png',
