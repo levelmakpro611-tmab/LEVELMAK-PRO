@@ -14,6 +14,15 @@
                     registration.unregister();
                 }
             });
+        } else if ('serviceWorker' in navigator) {
+            // In production, when a new Service Worker activates, reload immediately to get fresh code
+            var refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
         }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>

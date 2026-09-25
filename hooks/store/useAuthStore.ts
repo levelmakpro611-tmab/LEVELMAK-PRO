@@ -418,10 +418,19 @@ export const useAuthStore = () => {
 
     // Debounce ref for notification sound — prevents playing multiple times in rapid succession
     const lastNotifSoundRef = useRef<number>(0);
+    // Persistent Set of known notification IDs so existing notifications never trigger sounds
+    const knownNotifIdsRef = useRef<Set<string>>(new Set());
 
     // Real-time listener for profile updates (admin notifications, block/suspend, or resource adjustments)
     useEffect(() => {
         if (!user || !user.id || user.id.includes('anon')) return;
+
+        // Initialize known notification IDs from current user state
+        if (user.stats?.notifications && Array.isArray(user.stats.notifications)) {
+            user.stats.notifications.forEach((n: any) => {
+                if (n?.id) knownNotifIdsRef.current.add(String(n.id));
+            });
+        }
 
         const channel = supabase
             .channel(`profile-realtime-${user.id}`)
@@ -466,8 +475,6 @@ export const useAuthStore = () => {
                             console.log('Applying remote database updates to local state');
 
                             // ✅ FIX Bug 1: Preserve locally-equipped avatar & wallpaper
-                            // The DB doesn't always have the latest equipped avatar (it's updated separately).
-                            // If the local state has a more specific avatar image, keep it to prevent resetting.
                             const preservedAvatar = (user?.avatar?.image && !dbProfile.avatar_config?.image)
                                 ? user.avatar
                                 : mappedUser.avatar;
@@ -481,15 +488,15 @@ export const useAuthStore = () => {
                                 wallpaper: preservedWallpaper,
                             };
 
-                            // Detect if there are new notifications to trigger local Capacitor notifications
-                            const currentNotifs = user.stats?.notifications || [];
+                            // Detect if there are genuinely NEW notifications (strictly once per ID)
                             const newNotifs = finalUser.stats?.notifications || [];
+                            const newlyAdded = newNotifs.filter((n: any) => n?.id && !knownNotifIdsRef.current.has(String(n.id)));
 
-                            if (newNotifs.length > currentNotifs.length) {
-                                const currentIds = new Set(currentNotifs.map((n: any) => n.id));
-                                const newlyAdded = newNotifs.filter((n: any) => !currentIds.has(n.id));
+                            if (newlyAdded.length > 0) {
+                                // Mark all newly added as known immediately so they can NEVER trigger sounds again
+                                newlyAdded.forEach((n: any) => knownNotifIdsRef.current.add(String(n.id)));
 
-                                // Schedule one local notification per new notif
+                                // Schedule one local notification per genuinely new notif
                                 newlyAdded.forEach((notif: any) => {
                                     LocalNotifications.schedule({
                                         notifications: [{
@@ -501,9 +508,9 @@ export const useAuthStore = () => {
                                     }).catch(e => console.warn('Local notification failed:', e));
                                 });
 
-                                // ✅ FIX Bug 4: Play sound ONCE per batch, with 2s debounce
+                                // Play sound ONCE with debounce protection
                                 const now = Date.now();
-                                if (now - lastNotifSoundRef.current > 2000) {
+                                if (now - lastNotifSoundRef.current > 3000) {
                                     lastNotifSoundRef.current = now;
                                     audioService.playNotification();
                                 }
