@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => {
           background_color: '#0f172a',
           display: 'standalone',
           start_url: '/',
-          id: '/',
+          id: '/v1.9.5',
           icons: [
             {
               src: 'logo.png',

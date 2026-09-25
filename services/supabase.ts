@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get environment variables with fallbacks to avoid crashes
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_URL : "") || "").trim().replace(/\r?\n/g, '');
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_URL : "") || "").trim();
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_ANON_KEY : "") || "").trim().replace(/\r?\n/g, '');
 
 // DIAGNOSTIC LOGS (Dev only — not exposed in production)
