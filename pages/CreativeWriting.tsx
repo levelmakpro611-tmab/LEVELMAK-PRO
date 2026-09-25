@@ -711,7 +711,7 @@ const CreativeWriting: React.FC = () => {
     };
 
     return (
-        <div className="max-w-7xl mx-auto py-4 md:py-8 px-4 space-y-8 md:space-y-12 animate-fade-in">
+        <div className="max-w-7xl mx-auto py-2 md:py-8 px-1 sm:px-4 space-y-4 md:space-y-12 animate-fade-in">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b border-white/5 pb-8 md:pb-10">
                 <div className="space-y-3 md:space-y-4">
@@ -756,23 +756,23 @@ const CreativeWriting: React.FC = () => {
                     >
                         {/* Main Editor Section (LHS) */}
                         <div className="lg:col-span-8 space-y-6 w-full overflow-hidden">
-                            <div className="bg-slate-100/90 dark:bg-slate-950/40 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] border border-slate-300/80 dark:border-white/10 p-6 md:p-10 shadow-premium relative overflow-hidden">
+                            <div className="bg-slate-100/90 dark:bg-slate-950/40 backdrop-blur-3xl rounded-2xl md:rounded-[3rem] border border-slate-300/80 dark:border-white/10 p-2.5 sm:p-6 md:p-10 shadow-premium relative overflow-hidden">
                                 <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-secondary/40 to-transparent"></div>
 
-                                <div className="space-y-6 md:space-y-8">
-                                    <div className="space-y-4">
+                                <div className="space-y-4 md:space-y-8">
+                                    <div className="space-y-2 sm:space-y-4">
                                         <label className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-400 px-1">{t('creativeWriting.form.titleLabel')}</label>
                                         <input
                                             type="text"
                                             value={title}
                                             onChange={(e) => setTitle(e.target.value)}
                                             placeholder={t('creativeWriting.form.titlePlaceholder')}
-                                            className="w-full bg-white dark:bg-white/5 border border-slate-300/80 dark:border-white/10 rounded-xl md:rounded-2xl px-4 md:px-8 py-3 md:py-6 text-base md:text-3xl font-display font-black text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-slate-400 focus:border-secondary/50 outline-none transition-all shadow-sm"
+                                            className="w-full bg-white dark:bg-white/5 border border-slate-300/80 dark:border-white/10 rounded-xl md:rounded-2xl px-3 md:px-8 py-2.5 md:py-6 text-base md:text-3xl font-display font-black text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-slate-400 focus:border-secondary/50 outline-none transition-all shadow-sm"
                                         />
                                     </div>
 
-                                    <div className="space-y-3 md:space-y-4">
-                                        <div className="flex items-center justify-between px-3 md:px-4">
+                                    <div className="space-y-2 sm:space-y-4">
+                                        <div className="flex items-center justify-between px-1 md:px-4">
                                             <label className="text-[8px] md:text-[10px] font-extrabold uppercase tracking-[0.3em] text-slate-800 dark:text-slate-400">{t('creativeWriting.form.contentLabel')}</label>
                                             <div className="flex items-center gap-3 md:gap-6">
                                                 <div className="flex items-center gap-1.5 md:gap-2">
@@ -789,8 +789,8 @@ const CreativeWriting: React.FC = () => {
                                         </div>
 
                                         {/* Rich Editing Toolbar & PDF Export */}
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-slate-200/90 dark:bg-slate-950/60 backdrop-blur-xl rounded-2xl border border-slate-300/80 dark:border-white/10 mx-1">
-                                            <div className="flex flex-wrap items-center gap-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 sm:p-3 bg-slate-200/90 dark:bg-slate-950/60 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-slate-300/80 dark:border-white/10 mx-0">
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                                                 {/* Modes: Edition & Apercu */}
                                                 <div className="flex bg-slate-300/80 dark:bg-black/30 p-1 rounded-xl border border-slate-300/80 dark:border-white/5 shrink-0">
                                                     <button
@@ -891,10 +891,10 @@ const CreativeWriting: React.FC = () => {
                                                 value={content}
                                                 onChange={(e) => setContent(e.target.value)}
                                                 placeholder={t('creativeWriting.form.contentPlaceholder')}
-                                                className="w-full h-[300px] md:h-[600px] bg-white dark:bg-white/5 border border-slate-300/80 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-4 md:p-12 text-sm md:text-xl leading-relaxed text-slate-900 dark:text-slate-200 placeholder:text-slate-600 dark:placeholder:text-slate-400 focus:border-secondary/50 outline-none transition-all resize-none custom-scrollbar font-medium shadow-inner"
+                                                className="w-full h-[320px] md:h-[600px] bg-white dark:bg-white/5 border border-slate-300/80 dark:border-white/10 rounded-xl md:rounded-[2.5rem] p-3 md:p-12 text-sm md:text-xl leading-relaxed text-slate-900 dark:text-slate-200 placeholder:text-slate-600 dark:placeholder:text-slate-400 focus:border-secondary/50 outline-none transition-all resize-none custom-scrollbar font-medium shadow-inner"
                                             />
                                         ) : (
-                                            <div className="w-full h-[300px] md:h-[600px] bg-white/80 dark:bg-slate-950/20 border border-slate-300/80 dark:border-white/10 rounded-[1.2rem] md:rounded-[2.5rem] p-6 md:p-12 overflow-y-auto custom-scrollbar">
+                                            <div className="w-full h-[320px] md:h-[600px] bg-white/80 dark:bg-slate-950/20 border border-slate-300/80 dark:border-white/10 rounded-xl md:rounded-[2.5rem] p-4 md:p-12 overflow-y-auto custom-scrollbar">
                                                 {renderMarkdown(content)}
                                             </div>
                                         )}
@@ -1778,19 +1778,19 @@ const CreativeWriting: React.FC = () => {
             {/* Coach IA Modal (Avis / Aide) */}
             <AnimatePresence>
                 {activeAiModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12">
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 md:p-12 overflow-y-auto">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setActiveAiModal(null)}
-                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                            className="fixed inset-0 bg-slate-950/85 backdrop-blur-md"
                         />
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            initial={{ opacity: 0, scale: 0.95, y: 15 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[2.5rem] p-6 md:p-10 flex flex-col shadow-2xl overflow-hidden max-h-[85vh] z-10"
+                            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                            className="relative w-full max-w-2xl bg-slate-900/95 backdrop-blur-2xl border border-white/15 rounded-3xl md:rounded-[2.5rem] p-4 sm:p-7 md:p-9 flex flex-col shadow-2xl overflow-hidden max-h-[86dvh] sm:max-h-[85vh] z-10 my-auto"
                         >
                             {/* Decorative background glow */}
                             <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden">
@@ -1801,12 +1801,12 @@ const CreativeWriting: React.FC = () => {
 
                             <button
                                 onClick={() => setActiveAiModal(null)}
-                                className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors z-30"
+                                className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-slate-300 hover:text-white transition-colors z-30 shadow-md"
                             >
                                 <X size={18} />
                             </button>
 
-                            <div className="relative z-10 flex items-center gap-3 border-b border-white/10 pb-4 mb-6">
+                            <div className="relative z-10 flex items-center gap-3 border-b border-white/10 pb-3 mb-3 shrink-0">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${
                                     activeAiModal === 'review' 
                                         ? 'bg-primary/20 border-primary/20 text-primary-light' 
@@ -1814,7 +1814,7 @@ const CreativeWriting: React.FC = () => {
                                 }`}>
                                     {activeAiModal === 'review' ? <Sparkles size={20} /> : <Zap size={20} />}
                                 </div>
-                                <div>
+                                <div className="pr-8">
                                     <h3 className="text-base md:text-xl font-display font-black text-white dark:text-white leading-tight">
                                         {activeAiModal === 'review' ? "Avis du Coach IA" : "Aide & Suite du Récit"}
                                     </h3>
@@ -1826,7 +1826,7 @@ const CreativeWriting: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar pr-2 mb-6 text-slate-300 dark:text-slate-300 text-sm md:text-base leading-relaxed space-y-4 font-serif">
+                            <div className="relative z-10 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 mb-3 text-slate-200 dark:text-slate-200 text-sm md:text-base leading-relaxed space-y-3 font-serif">
                                 {aiModalContent.split('\n').map((line, idx) => {
                                     let trimmed = line.trim();
                                     if (trimmed === '') return <div key={idx} className="h-2" />;
@@ -1834,10 +1834,10 @@ const CreativeWriting: React.FC = () => {
                                 })}
                             </div>
 
-                            <div className="relative z-10 flex justify-end border-t border-white/5 pt-6">
+                            <div className="relative z-10 shrink-0 flex justify-center sm:justify-end border-t border-white/10 pt-3 mt-auto">
                                 <button
                                     onClick={() => setActiveAiModal(null)}
-                                    className="px-8 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+                                    className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-primary to-secondary hover:brightness-110 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                                 >
                                     Retour à mon écriture
                                 </button>

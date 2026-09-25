@@ -186,15 +186,56 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         stateSub.then(s => s.remove()).catch(() => {});
       };
     } else {
-      const handleResize = () => {
-        if (window.innerHeight < window.screen.height * 0.75) setIsKeyboardOpen(true);
-        else {
+      const checkKeyboard = () => {
+        const isInput = document.activeElement && (
+          document.activeElement.tagName === 'INPUT' || 
+          document.activeElement.tagName === 'TEXTAREA' || 
+          (document.activeElement as HTMLElement).isContentEditable
+        );
+        const vv = window.visualViewport;
+        const viewportShrunk = vv ? (window.innerHeight - vv.height > 120) : (window.innerHeight < window.screen.height * 0.8);
+        
+        if (isInput || viewportShrunk) {
+          setIsKeyboardOpen(true);
+        } else {
           setIsKeyboardOpen(false);
           handleResetViewport();
         }
       };
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
+
+      const handleFocusIn = (e: FocusEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          setIsKeyboardOpen(true);
+        }
+      };
+
+      const handleFocusOut = () => {
+        setTimeout(() => {
+          const active = document.activeElement as HTMLElement | null;
+          const stillInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+          if (!stillInput) {
+            setIsKeyboardOpen(false);
+            handleResetViewport();
+          }
+        }, 150);
+      };
+
+      window.addEventListener('resize', checkKeyboard);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', checkKeyboard);
+      }
+      document.addEventListener('focusin', handleFocusIn);
+      document.addEventListener('focusout', handleFocusOut);
+
+      return () => {
+        window.removeEventListener('resize', checkKeyboard);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', checkKeyboard);
+        }
+        document.removeEventListener('focusin', handleFocusIn);
+        document.removeEventListener('focusout', handleFocusOut);
+      };
     }
   }, []);
 
@@ -442,14 +483,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : 'pb-36 md:pb-10'} transition-colors duration-200`}>
+        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : activeTab === 'writing' ? 'p-1 sm:p-6 md:p-10' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : isKeyboardOpen ? 'pb-4' : 'pb-36 md:pb-10'} transition-all duration-200`}>
           <div className={`${(activeTab === 'social' || activeTab === 'ailab') ? 'h-full' : ''}`}>
             {children}
           </div>
         </div>
 
         {activeTab !== 'social' && (
-          <nav className="md:hidden fixed bottom-0 left-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transition-all duration-500">
+          <nav className={`md:hidden fixed bottom-0 left-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ${isKeyboardOpen ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
               { id: 'flashcards', icon: Layers, label: 'Flash' },

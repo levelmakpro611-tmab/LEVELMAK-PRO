@@ -173,97 +173,106 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     return () => window.removeEventListener('find_opponent', handleFindOpponent);
   }, []);
 
-  // GPS Watcher & Initial Lock
+  // GPS Watcher & Initial Lock (Universal Web & Native)
   const requestGps = async () => {
     try {
       setGpsStatus('searching');
-      
-      const permission = await Geolocation.checkPermissions();
-      console.log("📍 [Map] Permission status:", permission.location);
-      
-      if (permission.location !== 'granted') {
-        const req = await Geolocation.requestPermissions();
-        if (req.location !== 'granted') {
-           console.error("📍 [Map] Permission denied by user");
-           setGpsStatus('error');
-           return null;
+
+      const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
+      if (isNative) {
+        try {
+          const permission = await Geolocation.checkPermissions();
+          if (permission.location !== 'granted') {
+            await Geolocation.requestPermissions();
+          }
+        } catch (capErr) {
+          console.warn("Capacitor checkPermissions error:", capErr);
         }
       }
 
-      // 1. Get initial quick position
+      const getBrowserPosition = (): Promise<{ latitude: number; longitude: number }> => {
+        return new Promise((resolve, reject) => {
+          if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            return reject(new Error('Geolocation non supportée'));
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+          );
+        });
+      };
+
+      // 1. Get initial position
       try {
-          console.log("📍 [Map] Fetching initial position...");
-          const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
-          if (pos) {
-              const { latitude, longitude } = pos.coords;
-              console.log(`📍 [Map] Initial Pos: ${latitude}, ${longitude}`);
-              if (isMountedRef.current) {
-                  setMyLocation({ lat: latitude, lng: longitude });
-                  setGpsStatus('locked');
-                  if (mapRef.current && !mapFocusFeatureId) {
-                      try {
-                          mapRef.current.flyTo([latitude, longitude], 13);
-                      } catch (err) {
-                          console.warn("flyTo failed:", err);
-                      }
-                  }
-              }
+        console.log("📍 [Map] Requesting browser GPS position...");
+        const coords = await getBrowserPosition();
+        if (isMountedRef.current) {
+          setMyLocation({ lat: coords.latitude, lng: coords.longitude });
+          setGpsStatus('locked');
+          if (mapRef.current && !mapFocusFeatureId) {
+            try {
+              mapRef.current.flyTo([coords.latitude, coords.longitude], 13);
+              hasCentered.current = true;
+            } catch (_) {}
           }
-      } catch (e) {
-          console.warn("📍 [Map] High accuracy initial fetch failed, trying fallback...", e);
-          try {
-              const fallbackPos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 5000 });
-              if (fallbackPos) {
-                  const { latitude, longitude } = fallbackPos.coords;
-                  if (isMountedRef.current) {
-                      setMyLocation({ lat: latitude, lng: longitude });
-                      setGpsStatus('locked');
-                  }
-              }
-          } catch (innerE) {
-              console.error("📍 [Map] All initial fetch attempts failed, setting default Conakry coords", innerE);
-              if (isMountedRef.current) {
-                  setMyLocation({ lat: 9.5370, lng: -13.6785 });
-                  setGpsStatus('locked');
-              }
+        }
+      } catch (err: any) {
+        console.warn("📍 [Map] High accuracy position fetch failed, trying low accuracy...", err);
+        try {
+          const fallbackCoords = await new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+              (e) => reject(e),
+              { enableHighAccuracy: false, timeout: 8000 }
+            );
+          });
+          if (isMountedRef.current && fallbackCoords) {
+            setMyLocation({ lat: fallbackCoords.latitude, lng: fallbackCoords.longitude });
+            setGpsStatus('locked');
           }
+        } catch (innerErr) {
+          console.warn("📍 [Map] Geolocation not granted or unavailable:", innerErr);
+          setGpsStatus('error');
+        }
       }
 
       // 2. Continuous Watch
-      console.log("📍 [Map] Starting watchPosition...");
-      return await Geolocation.watchPosition({ enableHighAccuracy: true }, (pos, err) => {
-        if (err) {
-            console.error("📍 [Map] Watch error:", err);
-            return;
-        }
-        if (pos) {
-          const { latitude, longitude } = pos.coords;
-          console.log(`📍 [Map] Watch Update: ${latitude}, ${longitude}`);
-          if (!isMountedRef.current) return;
-          setMyLocation({ lat: latitude, lng: longitude });
-          setGpsStatus('locked');
-          
-          if (!hasCentered.current && mapRef.current) {
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        const watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            if (!isMountedRef.current) return;
+            const { latitude, longitude } = pos.coords;
+            setMyLocation({ lat: latitude, lng: longitude });
+            setGpsStatus('locked');
+            if (!hasCentered.current && mapRef.current) {
               try {
-                  mapRef.current.flyTo([latitude, longitude], 13);
-                  hasCentered.current = true;
-              } catch (err) {
-                  console.warn("flyTo failed in watch:", err);
-              }
-          }
-        }
-      });
+                mapRef.current.flyTo([latitude, longitude], 13);
+                hasCentered.current = true;
+              } catch (_) {}
+            }
+          },
+          (err) => console.warn("📍 [Map] Watcher error:", err),
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+        return `${watchId}`;
+      }
+      return null;
     } catch (e) {
-        console.error("📍 [Map] Critical error in requestGps:", e);
-        setGpsStatus('error');
-        return null;
+      console.error("📍 [Map] Critical error in requestGps:", e);
+      setGpsStatus('error');
+      return null;
     }
   };
 
   useEffect(() => {
     let watchId: string | null = null;
     requestGps().then(id => { if (id && isMountedRef.current) watchId = id; });
-    return () => { if (watchId) Geolocation.clearWatch({ id: watchId }); };
+    return () => {
+      if (watchId && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(parseInt(watchId, 10));
+      }
+    };
   }, []);
 
   // Presence & Database Fallback
@@ -281,7 +290,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         for (const key in state) {
             // Allow same user on different sessions (e.g. computer and phone testing)
             const p = state[key] as any;
-            if (p[0] && typeof p[0].lat === 'number') {
+            if (p[0] && typeof p[0].lat === 'number' && p[0].lat !== 0 && typeof p[0].lng === 'number' && p[0].lng !== 0) {
                 users.push({ ...p[0], session_id: key });
             }
         }
@@ -388,45 +397,49 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     const currentCoords = myLocation || { lat: 9.5370, lng: -13.6785 }; // Fallback to Conakry coordinates
 
     const track = async () => {
+        const hasRealCoords = !!(myLocation && typeof myLocation.lat === 'number' && typeof myLocation.lng === 'number' && myLocation.lat !== 0 && myLocation.lng !== 0);
+
         // 1. Broadcast in Realtime Channel
         channelRef.current.track({ 
             user_id: user.id, 
+            session_id: deviceSessionId,
             name: user.name, 
             avatar: user.avatar?.image, 
-            lat: currentCoords.lat, 
-            lng: currentCoords.lng,
+            lat: hasRealCoords ? myLocation.lat : null, 
+            lng: hasRealCoords ? myLocation.lng : null,
+            has_location: hasRealCoords,
             is_ghost: false,
             last_seen: Date.now()
         });
 
-        // 2. ✅ FIX 15: Use cached avatar_config instead of SELECT+UPDATE every 10s
-        // Only one UPDATE per heartbeat (no more double request)
-        try {
-            const config = cachedAvatarConfigRef.current || user.avatar || {};
-            const updatedConfig = {
-                ...config,
-                location: {
-                    latitude: currentCoords.lat,
-                    longitude: currentCoords.lng,
-                    isPublic: !isGhostMode
-                }
-            };
-            // Update local cache
-            cachedAvatarConfigRef.current = updatedConfig;
-            await supabase.from('profiles').update({
-                status: 'online',
-                last_active: new Date().toISOString(),
-                avatar_config: updatedConfig
-            }).eq('id', user.id);
-        } catch (e) {
-            console.warn("📍 [Map] Could not write location to Supabase profiles fallback:", e);
+        // 2. Only write to profiles in DB if real coordinates exist
+        if (hasRealCoords) {
+          try {
+              const config = cachedAvatarConfigRef.current || user.avatar || {};
+              const updatedConfig = {
+                  ...config,
+                  location: {
+                      latitude: myLocation.lat,
+                      longitude: myLocation.lng,
+                      isPublic: !isGhostMode
+                  }
+              };
+              cachedAvatarConfigRef.current = updatedConfig;
+              await supabase.from('profiles').update({
+                  status: 'online',
+                  last_active: new Date().toISOString(),
+                  avatar_config: updatedConfig
+              }).eq('id', user.id);
+          } catch (e) {
+              console.warn("📍 [Map] Could not write location to Supabase profiles fallback:", e);
+          }
         }
     };
     
     track(); // Initial track
     const interval = setInterval(track, 10000); // Heartbeat every 10s
     return () => clearInterval(interval);
-  }, [isSubscribed, myLocation, user, isGhostMode]);
+  }, [isSubscribed, myLocation, user, isGhostMode, deviceSessionId]);
 
   // Atlas Focus Logic
   useEffect(() => {
@@ -474,24 +487,35 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       // 1. Add users actively broadcasting in Realtime Presence (live WebSocket)
       activeUsers.forEach(u => {
         const uUserId = u.user_id || u.id;
+        const isCurrentSession = u.session_id ? u.session_id === deviceSessionId : (uUserId === user?.id && !u.session_id);
+
         if (
-          uUserId && 
-          uUserId !== user?.id && 
+          !isCurrentSession && 
           !u.is_ghost && 
           !isAdminUser(u) &&
           typeof u.lat === 'number' && 
-          typeof u.lng === 'number'
+          typeof u.lng === 'number' &&
+          u.lat !== 0 &&
+          u.lng !== 0
         ) {
+          const isSelfOtherDevice = uUserId === user?.id;
           const dbMatch = allProfiles.find(p => (p.user_id || p.id) === uUserId) || {};
           const isDbGhost = dbMatch.avatar_config?.location?.isPublic === false;
           if (!isDbGhost) {
-            mapUsers.set(uUserId, { ...dbMatch, ...u, user_id: uUserId, is_online: true });
+            const key = u.session_id || uUserId;
+            mapUsers.set(key, { 
+              ...dbMatch, 
+              ...u, 
+              user_id: key, 
+              original_user_id: uUserId,
+              name: isSelfOtherDevice ? `${u.name || user?.name || 'Moi'} (Mon autre appareil)` : (u.name || dbMatch.name || 'Élève'),
+              is_online: true 
+            });
           }
         }
       });
 
-      // 2. Database fallback: ONLY users with status === 'online' AND heartbeat within last 30 seconds
-      // Strictly excludes anyone offline, disconnected, or inactive
+      // 2. Database fallback: ONLY users with status === 'online', heartbeat within last 45s, AND real explicit GPS coordinates
       allProfiles.forEach(p => {
         const pUserId = p.user_id || p.id;
         if (
@@ -501,19 +525,18 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           !mapUsers.has(pUserId)
         ) {
           const loc = p.avatar_config?.location;
+          const hasGps = loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number' && loc.latitude !== 0 && loc.longitude !== 0;
           const isGhost = loc?.isPublic === false;
-          if (!isGhost && p.status === 'online' && p.last_active) {
-            const lastActiveTime = new Date(p.last_active).getTime();
-            // User MUST have sent a heartbeat in the last 30 seconds to be considered online
-            if (!isNaN(lastActiveTime) && (now - lastActiveTime) < 30000) {
-              const lat = typeof loc?.latitude === 'number' ? loc.latitude : 9.5370;
-              const lng = typeof loc?.longitude === 'number' ? loc.longitude : -13.6785;
 
+          if (!isGhost && hasGps && p.status === 'online' && p.last_active) {
+            const lastActiveTime = new Date(p.last_active).getTime();
+            if (!isNaN(lastActiveTime) && (now - lastActiveTime) < 45000) {
               mapUsers.set(pUserId, {
                 ...p,
                 user_id: pUserId,
-                lat,
-                lng,
+                original_user_id: pUserId,
+                lat: loc.latitude,
+                lng: loc.longitude,
                 is_online: true,
                 is_ghost: false
               });
@@ -523,7 +546,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       });
 
       return Array.from(mapUsers.values());
-  }, [activeUsers, allProfiles, user?.id]);
+  }, [activeUsers, allProfiles, user?.id, deviceSessionId]);
 
   const otherOnlineUsersCount = useMemo(() => {
       return finalUsers.length;
@@ -573,6 +596,20 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       </div>
 
       <div className="relative w-full h-[450px] rounded-[2rem] overflow-hidden border border-slate-200/80 dark:border-white/5 shadow-2xl z-0">
+        {!myLocation && !isGhostMode && (
+          <div className="absolute top-4 left-4 z-[500]">
+            <button 
+              onClick={() => {
+                HapticFeedback.selection();
+                requestGps();
+              }}
+              className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:brightness-110 text-white text-[10px] font-black uppercase tracking-wider rounded-xl backdrop-blur-md shadow-xl flex items-center gap-1.5 transition-all border border-white/20 active:scale-95 animate-pulse"
+            >
+              📍 Activer ma position
+            </button>
+          </div>
+        )}
+
         {/* Atlas Controls moved inside the map container */}
         <div className="absolute top-4 right-4 z-[500] flex flex-col gap-2">
           <button 
@@ -703,7 +740,21 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 </Marker>
             ))}
 
-            {/* Self marker is hidden per user preference */}
+            {/* Self marker - Snap Map style */}
+            {myLocation && !isGhostMode && (
+              <Marker 
+                position={[myLocation.lat, myLocation.lng]} 
+                icon={SelfIcon}
+                zIndexOffset={1000}
+              >
+                <Popup className="premium-popup">
+                  <div className="p-2 text-center min-w-[110px]">
+                    <p className="font-black text-slate-900 text-xs">Moi ({user?.name || 'Ma position'}) 📍</p>
+                    <p className="text-[9px] text-emerald-600 font-bold mt-0.5">En direct sur la carte</p>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
         </MapContainer>
 
         {/* Floating Users List Overlay */}
