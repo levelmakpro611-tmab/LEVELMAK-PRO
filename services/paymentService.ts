@@ -58,12 +58,19 @@ class WebPaymentService implements PaymentService {
                 }
             }
 
+            // Guarantee a valid public HTTPS URL for Djomy redirect (prevents redirecting to dead levelmak.app domain)
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+            const safeReturnUrl = (!origin || isLocal || origin.includes('levelmak.app') || !origin.startsWith('https://'))
+                ? 'https://levelmak-pro.vercel.app/pricing?success=true'
+                : `${origin}/pricing?success=true`;
+
             const { data, error } = await supabase.functions.invoke('djomy-payment', {
                 body: {
                     planId: options.planId,
                     amount: options.amount,
                     payerNumber: payerNumber || '',
-                    returnUrl: window.location.origin + '/pricing?success=true',
+                    returnUrl: safeReturnUrl,
                     duration: options.duration,
                     simulate: simulateSuccess
                 }

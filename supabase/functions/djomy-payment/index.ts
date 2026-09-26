@@ -646,10 +646,10 @@ serve(async (req) => {
       formattedPayerNumber = "00" + formattedPayerNumber;
     }
 
-    // Ensure returnUrl is valid (use client returnUrl, fallback to levelmak.com)
+    // Ensure returnUrl is valid (use client returnUrl, fallback to levelmak-pro.vercel.app)
     let safeReturnUrl = returnUrl ? String(returnUrl).trim() : "";
-    if (!safeReturnUrl) {
-      safeReturnUrl = "https://levelmak.com/pricing?success=true";
+    if (!safeReturnUrl || safeReturnUrl.includes("levelmak.app") || safeReturnUrl.includes("localhost") || !safeReturnUrl.startsWith("https://")) {
+      safeReturnUrl = "https://levelmak-pro.vercel.app/pricing?success=true";
     }
 
     let safeCancelUrl = safeReturnUrl.includes("success=true")
