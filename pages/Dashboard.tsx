@@ -296,9 +296,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               {/* Status Pill Tags (Centered & Balanced) */}
               <div className="flex flex-wrap items-center justify-center gap-2.5 md:gap-3.5">
                 {isPremiumActive ? (
-                  <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 text-amber-300 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border border-amber-500/40 shadow-sm shadow-amber-950/30">
-                    <Crown size={13} className="text-amber-400 fill-amber-400" /> Étudiant Premium
-                  </div>
+                  (() => {
+                    const tier = user.subscription_tier || user.subscriptionTier;
+                    const tierLabel = tier === 'annuel' ? 'Annuel'
+                      : tier === 'mensuel' ? 'Mensuel'
+                      : tier === 'hebdo' ? 'Hebdo'
+                      : 'Premium';
+                    const expiryStr = user.premium_until
+                      ? new Date(user.premium_until).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+                      : null;
+                    return (
+                      <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 text-amber-300 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border border-amber-500/40 shadow-sm shadow-amber-950/30">
+                        <Crown size={13} className="text-amber-400 fill-amber-400" />
+                        {tierLabel}
+                        {expiryStr && <span className="text-amber-500/70 font-medium normal-case tracking-normal ml-1 hidden sm:inline">• exp. {expiryStr}</span>}
+                      </div>
+                    );
+                  })()
                 ) : (
                   <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-white/10">
                     <GraduationCap size={13} className="text-slate-400" /> Étudiant Gratuit

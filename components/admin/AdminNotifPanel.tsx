@@ -17,6 +17,7 @@ const NotifIcon: React.FC<{ type: AdminNotification['type'] }> = ({ type }) => {
         case 'new_teacher': return <GraduationCap size={18} className="text-purple-400" />;
         case 'new_user': return <Users size={18} className="text-green-400" />;
         case 'new_rating': return <Star size={18} className="text-yellow-400" />;
+        case 'support_ticket': return <AlertCircle size={18} className="text-rose-400" />;
         default: return <AlertCircle size={18} className="text-slate-400" />;
     }
 };
@@ -26,6 +27,7 @@ const bgForType: Record<AdminNotification['type'], string> = {
     new_teacher: 'bg-purple-500/10 border-purple-500/20',
     new_user: 'bg-green-500/10 border-green-500/20',
     new_rating: 'bg-yellow-500/10 border-yellow-500/20',
+    support_ticket: 'bg-rose-500/10 border-rose-500/20',
     system: 'bg-slate-500/10 border-slate-500/20',
 };
 
@@ -65,23 +67,24 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[400] flex items-start justify-end">
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                    />
-
+                <motion.div
+                    key="admin-notif-backdrop"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    onClick={onClose}
+                    className="fixed inset-0 z-[400] flex items-start justify-end bg-black/40 backdrop-blur-sm"
+                >
                     {/* Panel */}
                     <motion.div
+                        key="admin-notif-panel"
                         initial={{ opacity: 0, x: 40, scale: 0.97 }}
                         animate={{ opacity: 1, x: 0, scale: 1 }}
                         exit={{ opacity: 0, x: 40, scale: 0.97 }}
-                        transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-                        className="relative w-full max-w-sm h-full md:h-auto md:mt-20 md:mr-6 bg-background dark:bg-[#0D1526] border border-black/10 dark:border-white/10 md:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden"
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="relative w-full max-w-sm h-full md:h-auto md:mt-20 md:mr-6 bg-slate-900 border border-white/10 md:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden"
                         style={{ maxHeight: '85vh' }}
                     >
                         {/* Header */}
@@ -198,7 +201,7 @@ const AdminNotifPanel: React.FC<Props> = ({ isOpen, onClose, onNavigate }) => {
                             )}
                         </div>
                     </motion.div>
-                </div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

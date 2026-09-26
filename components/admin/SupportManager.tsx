@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { LifeBuoy, AlertTriangle, CheckCircle, Trash2, Reply, Send, Printer, ShieldAlert, User, Search, MessageSquare, Clock, Copy, Check } from 'lucide-react';
+import { LifeBuoy, AlertTriangle, CheckCircle, Trash2, Reply, Send, Printer, ShieldAlert, User, Search, MessageSquare, Clock, Copy, Check, CheckSquare, Square, X } from 'lucide-react';
 import { UserComment } from '../../types';
-import { updateCommentStatus, deleteComment } from '../../services/adminService';
+import { updateCommentStatus, deleteComment, deleteComments, deleteAllCrashes } from '../../services/adminService';
 
 interface SupportManagerProps {
     comments: UserComment[];
@@ -17,6 +17,37 @@ const getHumanReadableCrashTitle = (content: string): string => {
     return 'Anomalie Système Détectée';
 };
 
+const formatTicketDate = (timestamp: string): string => {
+    if (!timestamp) return 'Date inconnue';
+    
+    // Check if timestamp already matches French format "DD/MM/YYYY" (e.g. 12/08/2026 or 26/09/2026)
+    // If so, do NOT pass to new Date("12/08/2026") which reverses Day and Month into Month 12 (December)
+    const frRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/;
+    const frMatch = timestamp.trim().match(frRegex);
+    if (frMatch) {
+        const day = frMatch[1].padStart(2, '0');
+        const month = frMatch[2].padStart(2, '0');
+        const year = frMatch[3];
+        const timePart = frMatch[4] ? frMatch[4].trim() : '';
+        return `${day}/${month}/${year}${timePart ? ` ${timePart}` : ''}`;
+    }
+
+    try {
+        const d = new Date(timestamp);
+        if (isNaN(d.getTime())) return timestamp;
+        return d.toLocaleString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch {
+        return timestamp;
+    }
+};
+
 const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) => {
     const [filterType, setFilterType] = useState<'all' | 'crashes' | 'user_support' | 'pending' | 'resolved'>('all');
     const [searchTerm, setSearchTerm] = useState('');
@@ -24,9 +55,11 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
     const [responseText, setResponseText] = useState('');
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
+    const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
     const handleCopyTicket = (item: UserComment, displayTitle: string, cleanContent: string) => {
-        const fullText = `[${displayTitle.toUpperCase()}]\nDate: ${new Date(item.timestamp).toLocaleString('fr-FR')}\n${item.userPhone ? `Utilisateur: ${item.userPhone}\n` : ''}\n--- DÉTAILS ---\n${cleanContent}${item.adminResponse ? `\n\n--- PRISE EN CHARGE ADMIN ---\n${item.adminResponse}` : ''}`;
+        const fullText = `[${displayTitle.toUpperCase()}]\nDate: ${formatTicketDate(item.timestamp)}\n${item.userPhone ? `Utilisateur: ${item.userPhone}\n` : ''}\n--- DÉTAILS ---\n${cleanContent}${item.adminResponse ? `\n\n--- PRISE EN CHARGE ADMIN ---\n${item.adminResponse}` : ''}`;
         navigator.clipboard.writeText(fullText).then(() => {
             setCopiedId(item.id);
             setTimeout(() => setCopiedId(null), 2000);
@@ -74,10 +107,66 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
         try {
             await deleteComment(commentId);
             setDeleteConfirm(null);
+            setSelectedTicketIds(prev => prev.filter(id => id !== commentId));
             onRefresh();
         } catch (error) {
             console.error('Error deleting support item:', error);
             alert('Erreur lors de la suppression');
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedTicketIds.length === 0) return;
+        if (!confirm(`Confirmez-vous la suppression définitive de ${selectedTicketIds.length} ticket(s) ?`)) return;
+
+        setIsDeletingBulk(true);
+        try {
+            await deleteComments(selectedTicketIds);
+            setSelectedTicketIds([]);
+            onRefresh();
+        } catch (error) {
+            console.error('Error deleting bulk tickets:', error);
+            alert('Erreur lors de la suppression groupée');
+        } finally {
+            setIsDeletingBulk(false);
+        }
+    };
+
+    const handleBulkResolve = async () => {
+        if (selectedTicketIds.length === 0) return;
+        setIsDeletingBulk(true);
+        try {
+            for (const id of selectedTicketIds) {
+                await updateCommentStatus(id, 'approved', 'Résolu en masse par l\'administrateur');
+            }
+            setSelectedTicketIds([]);
+            onRefresh();
+        } catch (error) {
+            console.error('Error bulk resolving:', error);
+            alert('Erreur lors de la validation groupée');
+        } finally {
+            setIsDeletingBulk(false);
+        }
+    };
+
+    const handleDeleteAllCrashes = async () => {
+        const crashCount = supportComments.filter(c => c.content.startsWith('[CRASH') || c.userPhone === 'crash-reporter').length;
+        if (crashCount === 0) {
+            alert('Aucun rapport de crash à supprimer.');
+            return;
+        }
+        if (!confirm(`Voulez-vous vraiment supprimer TOUS les ${crashCount} rapports de crash système de la base de données ?`)) return;
+
+        setIsDeletingBulk(true);
+        try {
+            await deleteAllCrashes();
+            setSelectedTicketIds([]);
+            onRefresh();
+        } catch (error) {
+            console.error('Error deleting all crashes:', error);
+            alert('Erreur lors de la purge complète des crashs');
+        } finally {
+            setIsDeletingBulk(false);
         }
     };
 
@@ -93,6 +182,24 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
             console.error('Error marking all as resolved:', error);
             alert('Erreur lors de la validation globale des tickets');
         }
+    };
+
+    const isAllFilteredSelected = filteredSupport.length > 0 && filteredSupport.every(item => selectedTicketIds.includes(item.id));
+
+    const toggleSelectAll = () => {
+        if (isAllFilteredSelected) {
+            const filteredIds = new Set(filteredSupport.map(item => item.id));
+            setSelectedTicketIds(prev => prev.filter(id => !filteredIds.has(id)));
+        } else {
+            const newSelected = Array.from(new Set([...selectedTicketIds, ...filteredSupport.map(item => item.id)]));
+            setSelectedTicketIds(newSelected);
+        }
+    };
+
+    const toggleTicketSelect = (id: string) => {
+        setSelectedTicketIds(prev => 
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
     };
 
     return (
@@ -116,13 +223,24 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
                     </div>
                 </div>
 
-                <button
-                    onClick={handleMarkAllAsResolved}
-                    className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-emerald-900/40 flex items-center gap-2 shrink-0 active:scale-95 cursor-pointer"
-                >
-                    <CheckCircle size={16} />
-                    Tout marquer comme lu / résolu
-                </button>
+                <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                    <button
+                        onClick={handleMarkAllAsResolved}
+                        className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-emerald-900/40 flex items-center gap-2 shrink-0 active:scale-95 cursor-pointer"
+                    >
+                        <CheckCircle size={16} />
+                        Tout marquer comme lu / résolu
+                    </button>
+                    <button
+                        onClick={handleDeleteAllCrashes}
+                        disabled={isDeletingBulk}
+                        className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-rose-900/40 flex items-center gap-2 shrink-0 active:scale-95 cursor-pointer disabled:opacity-50"
+                        title="Supprime tous les tickets de crash de la base de données"
+                    >
+                        <Trash2 size={16} />
+                        Purger tous les crashs
+                    </button>
+                </div>
             </div>
 
             {/* Filter & Search Bar */}
@@ -165,6 +283,56 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
                 </div>
             </div>
 
+            {/* Bulk Selection Bar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-900/60 p-3.5 rounded-2xl border border-white/10">
+                <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={isAllFilteredSelected}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-rose-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span className="text-xs font-bold text-white">
+                            Sélectionner tout ({filteredSupport.length})
+                        </span>
+                    </label>
+                    {selectedTicketIds.length > 0 && (
+                        <span className="text-xs font-black text-rose-400 bg-rose-500/20 border border-rose-500/30 px-2.5 py-0.5 rounded-full">
+                            {selectedTicketIds.length} sélectionné(s)
+                        </span>
+                    )}
+                </div>
+
+                {selectedTicketIds.length > 0 && (
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <button
+                            onClick={handleBulkDelete}
+                            disabled={isDeletingBulk}
+                            className="flex-1 sm:flex-none px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md shadow-red-950/40 disabled:opacity-50 cursor-pointer"
+                        >
+                            <Trash2 size={14} />
+                            Supprimer ({selectedTicketIds.length})
+                        </button>
+                        <button
+                            onClick={handleBulkResolve}
+                            disabled={isDeletingBulk}
+                            className="flex-1 sm:flex-none px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-950/40 disabled:opacity-50 cursor-pointer"
+                        >
+                            <CheckCircle size={14} />
+                            Marquer résolus
+                        </button>
+                        <button
+                            onClick={() => setSelectedTicketIds([])}
+                            className="p-2 bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white rounded-xl text-xs transition-all cursor-pointer"
+                            title="Désélectionner tout"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+            </div>
+
             {/* Support List */}
             <div className="space-y-4">
                 {filteredSupport.map(item => {
@@ -172,18 +340,27 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
                     const displayTitle = isCrash ? getHumanReadableCrashTitle(item.content) : item.userName;
                     const cleanContent = item.content.replace(/^\[SUPPORT TICKET\]\s*/i, '');
                     const isTeacher = (item as any).userRole === 'teacher' || (item as any).role === 'teacher';
+                    const isChecked = selectedTicketIds.includes(item.id);
 
                     return (
                         <div
                             key={item.id}
                             className={`p-5 rounded-2xl border transition-all ${
-                                isCrash 
+                                isChecked
+                                    ? 'bg-rose-950/40 border-rose-500/70 ring-1 ring-rose-500/50'
+                                    : isCrash 
                                     ? 'bg-rose-950/20 border-rose-500/30 hover:border-rose-500/50' 
                                     : 'bg-slate-900/40 border-white/10 hover:border-white/20'
                             }`}
                         >
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
                                 <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => toggleTicketSelect(item.id)}
+                                        className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-rose-500 focus:ring-0 cursor-pointer shrink-0"
+                                    />
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
                                         isCrash ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                                     }`}>
@@ -206,7 +383,7 @@ const SupportManager: React.FC<SupportManagerProps> = ({ comments, onRefresh }) 
                                         </div>
                                         <p className="text-[11px] text-slate-500 mt-0.5">
                                             {!isCrash && item.userPhone && `Tél: ${item.userPhone} • `}
-                                            Date: {new Date(item.timestamp).toLocaleString('fr-FR')}
+                                            Date: {formatTicketDate(item.timestamp)}
                                         </p>
                                     </div>
                                 </div>

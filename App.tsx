@@ -138,7 +138,7 @@ const PageLoader = ({ message = "Synchronisation...", fullScreen = true }: { mes
 );
 
 const AppContent: React.FC = () => {
-  const { user, loading, settings, t, updateProfile } = useStore();
+  const { user, loading, settings, t, updateProfile, addNotification } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
   const shouldReduceMotion = useReducedMotion();
   
@@ -293,13 +293,32 @@ const AppContent: React.FC = () => {
             setActiveTab('pricing');
           }
         });
+      } else {
+        // Daily expiration notifications from J-5 to J-1
+        const diffMs = expiryTime - currentTime;
+        const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (daysLeft >= 1 && daysLeft <= 5) {
+          const alertKey = `levelmak_expiry_alert_j${daysLeft}_${user.id}_${new Date().toDateString()}`;
+          if (!localStorage.getItem(alertKey)) {
+            localStorage.setItem(alertKey, 'sent');
+            const dayText = daysLeft === 1 ? 'demain (J-1)' : `dans ${daysLeft} jours (J-${daysLeft})`;
+            if (addNotification) {
+              addNotification({
+                type: 'streak_risk',
+                title: `⏳ Votre abonnement expire ${dayText}`,
+                message: `Rappel : Votre abonnement Premium prend fin ${dayText}. Renouvelez dès maintenant pour continuer à profiter de toutes vos fonctionnalités exclusives (Coach IA, Quiz, Flashcards illimités).`,
+                actionUrl: '#pricing'
+              });
+            }
+          }
+        }
       }
     };
 
     checkExpiry();
     const interval = setInterval(checkExpiry, 15000);
     return () => clearInterval(interval);
-  }, [user?.is_premium, user?.premium_until, updateProfile, user?.name, user?.phoneNumber]);
+  }, [user?.is_premium, user?.premium_until, updateProfile, user?.name, user?.phoneNumber, user?.id, addNotification]);
 
   // Apply theme, font size, and language to body/document
   useEffect(() => {

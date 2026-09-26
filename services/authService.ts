@@ -39,6 +39,9 @@ export const mapProfileToUser = (profile: any): User => {
     const localExpiry = (localDemoPremium && localDemoPremiumUntil) ? new Date(localDemoPremiumUntil).getTime() : 0;
     const bestExpiry = Math.max(isNaN(dbExpiry) ? 0 : dbExpiry, isNaN(localExpiry) ? 0 : localExpiry);
 
+    let isPremium = false;
+    let premiumUntil: string | null = null;
+
     if (bestExpiry > now) {
         isPremium = true;
         premiumUntil = new Date(bestExpiry).toISOString();
@@ -381,7 +384,7 @@ export const signUpWithEmail = async (
         if (error) {
             const errStr = error.message || '';
             if (errStr.includes('User already registered') || errStr.includes('already registered')) {
-                throw new Error("Cet email est déjà utilisé par un autre compte. Connecte-toi ou choisis un autre email.");
+                throw new Error("Cette adresse email est déjà utilisée. Veuillez utiliser un nouvel email.");
             }
             if (errStr.includes('over_email_send_rate_limit') || errStr.includes('rate limit') || errStr.includes('once every')) {
                 throw new Error("Sécurité : Plusieurs tentatives d'inscription détectées. Veuillez patienter une minute avant de réessayer.");
@@ -397,7 +400,7 @@ export const signUpWithEmail = async (
 
         // Supabase with email confirmation returns user with empty identities when email already exists
         if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-            throw new Error("Cet email est déjà utilisé par un autre compte. Connecte-toi ou choisis un autre email.");
+            throw new Error("Cette adresse email est déjà utilisée. Veuillez utiliser un nouvel email.");
         }
 
         if (!data.user) {
@@ -426,7 +429,7 @@ export const handleSuperAdminAuth = async (identifier: string, password: string)
     if (!isSuperAdminId) return null;
 
     if (password !== ADMIN_PASSWORD && password !== 'TMAB611') {
-        throw new Error('Mot de passe administrateur incorrect.');
+        throw new Error('Cette adresse email ou ce mot de passe est incorrect.');
     }
 
     // 1. Try standard Supabase auth login first
@@ -518,7 +521,7 @@ export const signInWithEmail = async (email: string, password: string): Promise<
         if (error) {
             // User-friendly error message
             if (error.message.includes('Invalid login credentials')) {
-                throw new Error('Email ou mot de passe incorrect. Vérifie tes informations et réessaie.');
+                throw new Error('Cette adresse email ou ce mot de passe est incorrect.');
             }
             if (error.message.includes('Email not confirmed')) {
                 throw new Error('Ton email n\'est pas encore confirmé. Consulte ta boîte mail.');
@@ -742,16 +745,16 @@ export const signInWithPhone = async (phone: string, password: string): Promise<
         console.error('Phone sign in error:', error);
         
         // Flatten error for UI
-        let message = 'La connexion a échoué. Vérifie tes identifiants.';
+        let message = 'Cette adresse email ou ce mot de passe est incorrect.';
         if (error.message?.includes('bloqu')) {
             message = error.message;
         } else if (error.errors) {
             const invalidCreds = error.errors.some((e: any) => e.message?.includes('Invalid login credentials'));
-            if (invalidCreds) message = 'Numéro ou mot de passe incorrect.';
+            if (invalidCreds) message = 'Cette adresse email ou ce mot de passe est incorrect.';
             const blockedErr = error.errors.find((e: any) => e.message?.includes('bloqu'));
             if (blockedErr) message = blockedErr.message;
         } else if (error.message?.includes('Invalid login credentials')) {
-            message = 'Numéro ou mot de passe incorrect.';
+            message = 'Cette adresse email ou ce mot de passe est incorrect.';
         }
         
         throw new Error(message);

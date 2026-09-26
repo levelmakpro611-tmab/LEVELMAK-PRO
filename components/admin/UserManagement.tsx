@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, MoreVertical, Shield, Ban, Trash2, CheckCircle, XCircle, Filter, ChevronDown, User, UserX, Lock, Unlock, Mail, Phone, Calendar, GraduationCap, Award, Zap, Printer, Bell } from 'lucide-react';
 import { AdminUserAnalytics, UserAnalytics } from '../../types';
-import { deleteUser, suspendUser, blockUser, unblockUser, sanctionUser, deleteUserContentAndResetPoints, sendUserNotification, sendBulkNotification } from '../../services/adminService';
+import { deleteUser, deleteUsers, suspendUser, blockUser, unblockUser, sanctionUser, deleteUserContentAndResetPoints, sendUserNotification, sendBulkNotification } from '../../services/adminService';
 import { Gavel, AlertTriangle } from 'lucide-react';
 
 const NOTIFICATION_TEMPLATES = [
@@ -68,6 +68,29 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
     const [bulkMessage, setBulkMessage] = useState('');
     const [bulkSending, setBulkSending] = useState(false);
 
+    const [isDeletingBulkUsers, setIsDeletingBulkUsers] = useState(false);
+
+    const handleBulkDeleteUsers = async () => {
+        if (selectedUserIds.length === 0) return;
+        const count = selectedUserIds.length;
+        if (!confirm(`⚠️ ATTENTION : Êtes-vous sûr de vouloir supprimer définitivement ${count} utilisateur(s) sélectionné(s) de la base de données ?\n\nToutes leurs données (profil, activités, scores) seront effacées de manière irréversible.`)) {
+            return;
+        }
+
+        setIsDeletingBulkUsers(true);
+        try {
+            const res = await deleteUsers(selectedUserIds);
+            alert(`✅ ${res.deletedCount} utilisateur(s) supprimé(s) définitivement de la base de données avec succès !`);
+            setSelectedUserIds([]);
+            onRefresh();
+        } catch (err: any) {
+            console.error("Bulk delete error:", err);
+            alert(err.message || "Erreur lors de la suppression groupée");
+        } finally {
+            setIsDeletingBulkUsers(false);
+        }
+    };
+
     const handleSendBulkNotif = async () => {
         if (selectedUserIds.length === 0 || !bulkTitle || !bulkMessage) return;
         setBulkSending(true);
@@ -115,8 +138,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                (user as any).role === 'admin';
     };
 
-    const filteredUsers = users.filter(user => {
-        if (isSuperAdminUser(user)) return false; // Hide super admin account from regular user list
+    const nonAdminUsers = React.useMemo(() => users.filter(u => !isSuperAdminUser(u)), [users]);
+
+    const filteredUsers = nonAdminUsers.filter(user => {
 
         const uName = user.userName || '';
         const uEmail = user.email || '';
@@ -227,11 +251,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Stats Overview */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 print:hidden">
-                <StatCard label="Élèves" value={users.filter(u => (u as any).role !== 'teacher').length} color="blue" />
-                <StatCard label="Enseignants" value={users.filter(u => (u as any).role === 'teacher').length} color="purple" />
-                <StatCard label="Actifs" value={users.filter(u => u.status !== 'blocked' && u.status !== 'suspended' && !(u as any).isBlocked && !(u as any).isSuspended).length} color="green" />
-                <StatCard label="Suspendus" value={users.filter(u => u.status === 'suspended' || (u as any).isSuspended === true).length} color="orange" />
-                <StatCard label="Bloqués" value={users.filter(u => u.status === 'blocked' || (u as any).isBlocked === true).length} color="red" />
+                <StatCard label="Élèves" value={nonAdminUsers.filter(u => (u as any).role !== 'teacher').length} color="blue" />
+                <StatCard label="Enseignants" value={nonAdminUsers.filter(u => (u as any).role === 'teacher').length} color="purple" />
+                <StatCard label="Actifs" value={nonAdminUsers.filter(u => u.status !== 'blocked' && u.status !== 'suspended' && !(u as any).isBlocked && !(u as any).isSuspended).length} color="green" />
+                <StatCard label="Suspendus" value={nonAdminUsers.filter(u => u.status === 'suspended' || (u as any).isSuspended === true).length} color="orange" />
+                <StatCard label="Bloqués" value={nonAdminUsers.filter(u => u.status === 'blocked' || (u as any).isBlocked === true).length} color="red" />
             </div>
 
             {/* Controls */}
@@ -294,6 +318,46 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                 </div>
             </div>
 
+            {/* Bulk Action Bar for Selected Users */}
+            {selectedUserIds.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-red-950/80 via-purple-950/80 to-blue-950/80 border border-red-500/30 shadow-xl animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-3">
+                        <span className="w-8 h-8 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center font-black text-xs">
+                            {selectedUserIds.length}
+                        </span>
+                        <p className="text-xs font-bold text-white">
+                            <span className="font-black text-red-300">{selectedUserIds.length}</span> utilisateur(s) sélectionné(s)
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                        {isAdmin && (
+                            <button
+                                onClick={handleBulkDeleteUsers}
+                                disabled={isDeletingBulkUsers}
+                                className="flex-1 sm:flex-none px-4 py-2.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-950/40 disabled:opacity-50 cursor-pointer"
+                            >
+                                <Trash2 size={15} />
+                                Supprimer ({selectedUserIds.length})
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setBulkNotifOpen(true)}
+                            className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-950/40 cursor-pointer"
+                        >
+                            <Bell size={15} />
+                            Notifier ({selectedUserIds.length})
+                        </button>
+                        <button
+                            onClick={() => setSelectedUserIds([])}
+                            className="p-2.5 bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white rounded-xl text-xs transition-all cursor-pointer"
+                            title="Annuler la sélection"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Table */}
             <div className="bg-white dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
@@ -318,6 +382,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Rôle</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Niveau & XP</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Statut</th>
+                                <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Abonnement</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Activité</th>
                                 <th className="px-6 py-4 text-xs font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider text-right">Actions</th>
                             </tr>
@@ -380,6 +445,28 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
                                             }`}>
                                             {user.status === 'suspended' || (user as any).isSuspended ? 'Suspendu' : user.status === 'blocked' || (user as any).isBlocked ? 'Bloqué' : 'Actif'}
                                         </span>
+                                    </td>
+                                    {/* Abonnement column */}
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border whitespace-nowrap inline-flex items-center gap-1 ${
+                                            user.subscriptionTier === 'annuel'
+                                                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                                : user.subscriptionTier === 'mensuel'
+                                                ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                                                : user.subscriptionTier === 'hebdo'
+                                                ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                                                : 'bg-white/5 text-slate-500 border-white/10'
+                                        }`}>
+                                            {user.subscriptionTier === 'annuel' ? 'ANNUEL'
+                                            : user.subscriptionTier === 'mensuel' ? 'MENSUEL'
+                                            : user.subscriptionTier === 'hebdo' ? 'HEBDO'
+                                            : 'GRATUIT'}
+                                        </span>
+                                        {user.premiumUntil && user.isPremium && (
+                                            <p className="text-[9px] text-slate-500 mt-1 font-mono">
+                                                exp. {new Date(user.premiumUntil).toLocaleDateString('fr-FR')}
+                                            </p>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4">
                                         <p className="text-xs text-slate-900 dark:text-white font-medium">{new Date(user.lastActive).toLocaleDateString('fr-FR')}</p>

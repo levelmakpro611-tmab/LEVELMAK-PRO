@@ -1,7 +1,8 @@
 import { supabase } from './supabase';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { getAllComments } from './adminService';
 
-export type AdminNotifType = 'new_comment' | 'new_teacher' | 'new_user' | 'new_rating' | 'system';
+export type AdminNotifType = 'new_comment' | 'new_teacher' | 'new_user' | 'new_rating' | 'system' | 'support_ticket';
 
 export interface AdminNotification {
     id: string;
@@ -280,8 +281,8 @@ class AdminNotificationService {
             // Load last 30 days of notifications to ensure the panel is populated
             const historyRange = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-            const [commentsRes, teachersRes, usersRes, ratingsRes] = await Promise.allSettled([
-                supabase.from('user_comments').select('id, user_name, content, timestamp, category').gte('timestamp', historyRange).order('timestamp', { ascending: false }).limit(15),
+            const [commentsList, teachersRes, usersRes, ratingsRes] = await Promise.allSettled([
+                getAllComments(50),
                 supabase.from('teachers').select('id, name, type, created_at').eq('status', 'pending').order('created_at', { ascending: false }).limit(10),
                 supabase.from('profiles').select('id, name, created_at').gte('created_at', historyRange).order('created_at', { ascending: false }).limit(15),
                 supabase.from('user_ratings').select('id, user_name, overall, timestamp').gte('timestamp', historyRange).order('timestamp', { ascending: false }).limit(10),
@@ -289,27 +290,54 @@ class AdminNotificationService {
 
             const generated: AdminNotification[] = [];
 
-            if (commentsRes.status === 'fulfilled' && commentsRes.value.data) {
-                commentsRes.value.data.forEach(row => {
-                    if (row.category === 'password_reset') {
+            if (commentsList.status === 'fulfilled' && Array.isArray(commentsList.value)) {
+                commentsList.value.forEach((row: any) => {
+                    const isCrash = (row.userPhone === 'crash-reporter') || (row.content || '').includes('[CRASH') || (row.category === 'support' && (row.content || '').toLowerCase().includes('crash'));
+                    if (isCrash) {
+                        generated.push({
+                            ...createNotif(
+                                'support_ticket',
+                                '🚨 Rapport de plantage détecté',
+                                `${row.userName || 'Système'} : ${(row.content || '').replace(/\[CRASH\]/g, '').substring(0, 75).trim()}...`,
+                                'support',
+                                { ticketId: row.id },
+                                `crash_${row.id}`
+                            ),
+                            timestamp: row.timestamp,
+                            read: false
+                        });
+                    } else if (row.category === 'support') {
+                        generated.push({
+                            ...createNotif(
+                                'support_ticket',
+                                '🎫 Ticket de support',
+                                `${row.userName || 'Élève'} : "${(row.content || '').substring(0, 70)}"`,
+                                'support',
+                                { ticketId: row.id },
+                                `support_${row.id}`
+                            ),
+                            timestamp: row.timestamp,
+                            read: false
+                        });
+                    } else if (row.category === 'password_reset') {
                         generated.push({
                             ...createNotif(
                                 'system',
-                                '🔑 Récupération de compte',
-                                `Demande d'aide : ${row.content}`,
-                                'comments',
-                                { commentId: row.id },
-                                `comment_${row.id}`
+                                '🔑 Demande de récupération',
+                                `Demande d'aide : ${(row.content || '').substring(0, 70)}`,
+                                'support',
+                                { ticketId: row.id },
+                                `reset_${row.id}`
                             ),
                             timestamp: row.timestamp,
-                            read: true // mark historical as read
+                            read: false
                         });
                     } else {
                         generated.push({
                             ...createNotif(
                                 'new_comment',
                                 '💬 Commentaire reçu',
-                                `${row.user_name || 'Utilisateur'} : "${(row.content || '').substring(0, 60)}${(row.content?.length || 0) > 60 ? '...' : ''}"`,
+                                `${row.userName || 'Utilisateur'} : "${(row.content || '').substring(0, 60)}${(row.content?.length || 0) > 60 ? '...' : ''}"`,
                                 'comments',
                                 { commentId: row.id },
                                 `comment_${row.id}`
@@ -340,6 +368,9 @@ class AdminNotificationService {
 
             if (usersRes.status === 'fulfilled' && usersRes.value.data) {
                 usersRes.value.data.forEach(row => {
+                    const cleanName = (row.name || '').toLowerCase();
+                    const cleanId = (row.id || '').toLowerCase();
+                    if (cleanName.includes('611') || cleanId.includes('611')) return;
                     generated.push({
                         ...createNotif(
                             'new_user',

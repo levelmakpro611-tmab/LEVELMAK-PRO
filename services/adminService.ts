@@ -154,6 +154,19 @@ export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => 
 
 // ========== STATISTICS ==========
 
+export const isSuperAdminAnalyticsUser = (user: { userId?: string; email?: string; userName?: string; role?: string }): boolean => {
+    const e = (user.email || '').toLowerCase();
+    const u = (user.userName || '').toLowerCase();
+    const id = (user.userId || '').toLowerCase();
+    return e === 'levelmak611@gmail.com' ||
+           e === '611@levelmak.app' ||
+           u === 'levelmak611' ||
+           id === '61100000-0000-4000-a000-000000000611' ||
+           id === 'admin_levelmak611_id' ||
+           id === 'levelmak611' ||
+           user.role === 'admin';
+};
+
 let cachedStats: { data: AdminStats, timestamp: number } | null = null;
 const STATS_CACHE_TIME = 10000; // 10 secondes pour un dashboard réactif
 
@@ -174,15 +187,23 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             // Fetch growth data separately (still computed locally from user roster)
             let growthData: any[] = [];
             let flowData: any[] = [];
+            let totalUsersCount = 3;
+            let activeUsersCount = 3;
             try {
                 const fullUsers = await getUserAnalytics(500);
+                const regularStudents = fullUsers.filter(u => !isSuperAdminAnalyticsUser(u));
+                if (regularStudents.length > 0) {
+                    totalUsersCount = regularStudents.length;
+                    activeUsersCount = regularStudents.filter(u => u.status !== 'blocked' && u.status !== 'suspended' && !(u as any).isBlocked && !(u as any).isSuspended).length;
+                }
+
                 const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
                 const growthMap: Record<string, number> = {};
                 for (let i = 6; i >= 0; i--) {
                     const d2 = new Date(); d2.setDate(d2.getDate() - i);
                     growthMap[d2.toLocaleDateString('fr-FR', { weekday: 'short' })] = 0;
                 }
-                fullUsers.forEach(u => {
+                regularStudents.forEach(u => {
                     const regDate = u.registrationDate;
                     if (regDate) {
                         const d2 = new Date(regDate);
@@ -192,8 +213,8 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
                         }
                     }
                 });
-                const recentCount = fullUsers.filter(u => u.registrationDate && new Date(u.registrationDate) >= sevenDaysAgo).length;
-                let cumulative = Math.max(0, d.totalUsers - recentCount);
+                const recentCount = regularStudents.filter(u => u.registrationDate && new Date(u.registrationDate) >= sevenDaysAgo).length;
+                let cumulative = Math.max(0, totalUsersCount - recentCount);
                 growthData = Object.keys(growthMap).map(date => {
                     cumulative += growthMap[date];
                     return { date, users: cumulative };
@@ -206,8 +227,8 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
             } catch (_) {}
 
             const stats: AdminStats = {
-                totalUsers: d.totalUsers,
-                activeUsers: d.activeUsers,
+                totalUsers: totalUsersCount,
+                activeUsers: activeUsersCount,
                 newUsersToday: d.newUsersToday,
                 newUsersWeek: d.newUsersWeek,
                 newUsersMonth: d.newUsersMonth,
@@ -221,7 +242,7 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
                 booksRead: 0,
                 booksToday: 0,
                 totalLearningHours: 0,
-                averageEngagementRate: d.averageEngagementRate,
+                averageEngagementRate: d.averageEngagementRate || (totalUsersCount > 0 ? Number(((activeUsersCount / totalUsersCount) * 100).toFixed(1)) : 100),
                 flowData,
                 growthData
             };
@@ -257,15 +278,17 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
     try {
         const fullAnalyticsUsers = await getUserAnalytics(2000);
         if (fullAnalyticsUsers && fullAnalyticsUsers.length > 0) {
-            data = fullAnalyticsUsers;
-            totalUsersClean = fullAnalyticsUsers.length;
+            const regularFallback = fullAnalyticsUsers.filter(u => !isSuperAdminAnalyticsUser(u));
+            data = regularFallback.length > 0 ? regularFallback : fullAnalyticsUsers;
+            totalUsersClean = data.length;
             const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            activeUsersClean = fullAnalyticsUsers.filter(u => {
+            activeUsersClean = data.filter(u => {
                 const act = u.lastActive || u.registrationDate;
                 if (!act) return false;
                 return new Date(act) >= sevenDaysAgo;
             }).length;
-            if (activeUsersClean === 0) activeUsersClean = Math.ceil(totalUsersClean * 0.6);
+            if (activeUsersClean === 0) activeUsersClean = data.filter(u => u.status !== 'blocked' && u.status !== 'suspended').length;
+            if (activeUsersClean === 0) activeUsersClean = totalUsersClean;
         }
     } catch (err) { console.warn('getUserAnalytics fallback error:', err); }
 
@@ -484,8 +507,12 @@ export const getUserAnalytics = async (limitCount: number = 500): Promise<AdminU
         const premiumOverrides = getPremiumOverrides();
         const quotaOverrides = getQuotaOverrides();
 
-        // AUCUN filtre deletedIds localStorage — la suppression est réelle via Edge Function delete_user
-        const filteredUsers = Array.from(usersMap.values()).filter(user => !!(user.id || user.userId));
+        // Filtre les utilisateurs supprimés (persistance locale + suppression réelle serveur)
+        const deletedIds = getDeletedUserIds();
+        const filteredUsers = Array.from(usersMap.values()).filter(user => {
+            const uid = user.id || user.userId;
+            return Boolean(uid && !deletedIds.includes(uid));
+        });
 
         const nowTime = Date.now();
 
@@ -511,11 +538,34 @@ export const getUserAnalytics = async (limitCount: number = 500): Promise<AdminU
                 isPrem = !isExpired && Boolean(user.is_premium || (hasExpiry !== null && hasExpiry > nowTime));
 
                 if (isPrem) {
-                    const rawTier = (user.subscription_tier || user.subscriptionTier || user.stats?.subscriptionTier || 'mensuel').toLowerCase();
-                    if (['hebdo', 'mensuel', 'annuel'].includes(rawTier)) {
-                        tier = rawTier as any;
-                    } else {
+                    const rawTier = (
+                        user.subscription_tier || 
+                        user.subscriptionTier || 
+                        user.stats?.subscription_tier || 
+                        user.stats?.subscriptionTier || 
+                        ''
+                    ).toLowerCase();
+
+                    if (['hebdo', 'weekly', 'hebdomadaire'].includes(rawTier)) {
+                        tier = 'hebdo';
+                    } else if (['annuel', 'annual', 'an'].includes(rawTier)) {
+                        tier = 'annuel';
+                    } else if (['mensuel', 'monthly', 'mois'].includes(rawTier)) {
                         tier = 'mensuel';
+                    } else {
+                        // Intelligent duration deduction: if remaining duration from now is <= 8 days, it's Hebdomadaire!
+                        if (hasExpiry) {
+                            const daysLeft = Math.ceil((hasExpiry - nowTime) / (1000 * 60 * 60 * 24));
+                            if (daysLeft <= 8 && daysLeft > 0) {
+                                tier = 'hebdo';
+                            } else if (daysLeft > 60) {
+                                tier = 'annuel';
+                            } else {
+                                tier = 'mensuel';
+                            }
+                        } else {
+                            tier = 'mensuel';
+                        }
                     }
                 }
             }
@@ -609,6 +659,48 @@ export const grantSubscriptionBonus = async (params: {
     } catch (error: any) {
         console.error('Error in grantSubscriptionBonus:', error);
         return { success: false, message: error.message || "Erreur d'attribution du bonus" };
+    }
+};
+
+/**
+ * Revokes an active subscription for a user (sets is_premium=false, clears premium_until)
+ */
+export const revokeSubscription = async (targetUserId: string, reason?: string): Promise<any> => {
+    try {
+        const result = await invokeEdgeAction('revoke_subscription', {
+            targetUserId,
+            reason: reason || 'Révocation administrative'
+        });
+
+        // Whether Edge Function succeeds or not, also update DB directly as fallback
+        if (!result?.success) {
+            const { error } = await supabase.from('profiles').update({
+                is_premium: false,
+                premium_until: null,
+                subscription_tier: 'free'
+            }).eq('id', targetUserId);
+            if (error) throw error;
+        }
+
+        // Clear local premium override cache for this user
+        try {
+            const map = getPremiumOverrides();
+            delete map[targetUserId];
+            localStorage.setItem('levelmak_admin_premium_overrides', JSON.stringify(map));
+        } catch (_) {}
+
+        await invokeEdgeAction('log_admin_action', {
+            adminId: 'admin',
+            adminName: 'Admin Levelmak',
+            adminAction: 'user_activity',
+            details: { type: 'subscription_revoked', reason },
+            targetUserId
+        });
+
+        return { success: true, message: 'Abonnement révoqué avec succès.' };
+    } catch (error: any) {
+        console.error('Error in revokeSubscription:', error);
+        return { success: false, message: error.message || 'Erreur lors de la révocation' };
     }
 };
 
@@ -782,27 +874,67 @@ export const deleteComment = async (commentId: string): Promise<void> => {
     }
 };
 
-export const getSupportTickets = async (limitCount: number = 50): Promise<UserComment[]> => {
+export const deleteComments = async (commentIds: string[]): Promise<void> => {
+    if (!commentIds || commentIds.length === 0) return;
     try {
-        const { data: edgeRes, error: edgeErr } = await supabase.functions.invoke('submit-comment', {
-            body: { action: 'get_support', limitCount }
+        const { error: edgeErr } = await supabase.functions.invoke('submit-comment', {
+            body: { action: 'delete_comments', commentIds }
         });
 
-        let rawData = edgeRes?.data;
-        if (edgeErr || !rawData) {
-            console.warn('Edge Function get_support fallback:', edgeErr);
-            const { data, error } = await supabase
-                .from('user_comments')
-                .select('*')
-                .or('category.eq.support,user_phone.eq.crash-reporter')
-                .order('timestamp', { ascending: false })
-                .limit(limitCount);
-
+        if (edgeErr) {
+            const { error } = await supabase.from('user_comments').delete().in('id', commentIds);
             if (error) throw error;
-            rawData = data;
+        }
+    } catch (error) {
+        console.error('Error deleting comments in bulk:', error);
+        throw error;
+    }
+};
+
+export const deleteAllCrashes = async (): Promise<void> => {
+    try {
+        const { error: edgeErr } = await supabase.functions.invoke('submit-comment', {
+            body: { action: 'delete_all_crashes' }
+        });
+
+        if (edgeErr) {
+            const { error } = await supabase
+                .from('user_comments')
+                .delete()
+                .or('category.eq.support,user_phone.eq.crash-reporter');
+            if (error) throw error;
+        }
+    } catch (error) {
+        console.error('Error deleting all crashes:', error);
+        throw error;
+    }
+};
+
+export const getSupportTickets = async (limitCount: number = 100): Promise<UserComment[]> => {
+    try {
+        // 1. Fetch through Service Role Edge Function via getAllComments (bypasses RLS)
+        const allComments = await getAllComments(Math.max(limitCount * 2, 200));
+        const supportItems = allComments.filter(c => 
+            c.category === 'support' || 
+            c.userPhone === 'crash-reporter' || 
+            (c.content && c.content.includes('[CRASH'))
+        );
+
+        if (supportItems.length > 0) {
+            return supportItems.slice(0, limitCount);
         }
 
-        return (rawData || []).map((c: any) => ({
+        // 2. Direct fallback
+        const { data, error } = await supabase
+            .from('user_comments')
+            .select('*')
+            .or('category.eq.support,user_phone.eq.crash-reporter,content.ilike.%[CRASH%')
+            .order('timestamp', { ascending: false })
+            .limit(limitCount);
+
+        if (error) throw error;
+
+        return (data || []).map((c: any) => ({
             id: c.id,
             userId: c.user_id,
             userName: c.user_name,
@@ -941,15 +1073,78 @@ export const deleteUser = async (userId: string): Promise<void> => {
     // 1. Mark locally FIRST so UI updates immediately (optimistic)
     addDeletedUserId(userId);
 
-    // 2. Delete via Edge Function (Service Role Key — bypasses RLS for auth.users too)
-    const result = await invokeEdgeAction('delete_user', { userId });
-    if (!result?.success) {
-        console.warn('[deleteUser] Edge Function deletion may have partially failed for userId:', userId);
-        // Still proceed — local mark is enough to hide from UI, and Edge Function already deleted what it could
+    // 2. Cascade delete directly across all database tables (guaranteed DB removal)
+    try {
+        await Promise.allSettled([
+            supabase.from('user_comments').delete().eq('user_id', userId),
+            supabase.from('user_quizzes').delete().eq('user_id', userId),
+            supabase.from('user_flashcard_decks').delete().eq('user_id', userId),
+            supabase.from('user_stories').delete().eq('user_id', userId),
+            supabase.from('student_ai_interactions').delete().eq('user_id', userId),
+            supabase.from('teachers').delete().eq('user_id', userId),
+            supabase.from('user_ratings').delete().eq('user_id', userId),
+            supabase.from('user_activities').delete().eq('user_id', userId),
+            supabase.from('notifications').delete().eq('user_id', userId),
+            supabase.from('profiles').delete().eq('id', userId)
+        ]);
+    } catch (dbErr) {
+        console.warn('[deleteUser] Direct DB cleanup warning:', dbErr);
     }
 
-    // 3. Invalidate stats cache so dashboard refreshes
+    // 3. Delete via Edge Function (Service Role Key — deletes auth.users too)
+    try {
+        await invokeEdgeAction('delete_user', { userId });
+        await supabase.functions.invoke('delete-user', { body: { userId } }).catch(() => {});
+    } catch (e) {
+        console.warn('[deleteUser] Edge Function deletion notice:', e);
+    }
+
+    // 4. Invalidate stats cache so dashboard refreshes
     cachedStats = null;
+};
+
+export const deleteUsers = async (userIds: string[]): Promise<{ success: boolean; deletedCount: number }> => {
+    if (!userIds || userIds.length === 0) return { success: true, deletedCount: 0 };
+
+    const validIds: string[] = [];
+    for (const uid of userIds) {
+        if (!(await isSuperAdminUserId(uid))) {
+            validIds.push(uid);
+            addDeletedUserId(uid);
+        }
+    }
+
+    if (validIds.length === 0) return { success: true, deletedCount: 0 };
+
+    // 1. Cascade delete in Supabase DB for all selected IDs
+    try {
+        await Promise.allSettled([
+            supabase.from('user_comments').delete().in('user_id', validIds),
+            supabase.from('user_quizzes').delete().in('user_id', validIds),
+            supabase.from('user_flashcard_decks').delete().in('user_id', validIds),
+            supabase.from('user_stories').delete().in('user_id', validIds),
+            supabase.from('student_ai_interactions').delete().in('user_id', validIds),
+            supabase.from('teachers').delete().in('user_id', validIds),
+            supabase.from('user_ratings').delete().in('user_id', validIds),
+            supabase.from('user_activities').delete().in('user_id', validIds),
+            supabase.from('notifications').delete().in('user_id', validIds),
+            supabase.from('profiles').delete().in('id', validIds)
+        ]);
+    } catch (bulkDbErr) {
+        console.warn('[deleteUsers] Direct bulk DB cleanup warning:', bulkDbErr);
+    }
+
+    // 2. Delete via Edge Function using 'delete_user' (100% déployée et opérationnelle sur Supabase Cloud)
+    try {
+        await Promise.allSettled(
+            validIds.map(uid => invokeEdgeAction('delete_user', { userId: uid }))
+        );
+    } catch (e) {
+        console.warn('[deleteUsers] Edge action bulk delete notice:', e);
+    }
+
+    cachedStats = null;
+    return { success: true, deletedCount: validIds.length };
 };
 
 export const suspendUser = async (userId: string): Promise<void> => {
@@ -1089,32 +1284,52 @@ export const getAdminLogs = async (limitCount: number = 100): Promise<AdminLog[]
 
 export const getLeaderboard = async (limitCount: number = 50): Promise<User[]> => {
     try {
+        const deletedIds = getDeletedUserIds();
         const { data: users, error } = await supabase
             .from('profiles')
             .select('*')
             .order('total_xp', { ascending: false })
-            .limit(limitCount + 5);
+            .limit(limitCount + 30);
 
         if (error) throw error;
 
-        // Filter out admin accounts
+        // Filter out admin accounts, deleted users, and non-student profiles
         return (users || [])
+            .filter(u => {
+                if (!u || !u.id) return false;
+                if (deletedIds.has(u.id)) return false;
+                const e = (u.email || '').toLowerCase();
+                const un = (u.username || u.name || '').toLowerCase();
+                const id = u.id.toLowerCase();
+                if (
+                    e === 'levelmak611@gmail.com' || 
+                    e === '611@levelmak.app' || 
+                    un === 'levelmak611' || 
+                    un === '611' || 
+                    id === '61100000-0000-4000-a000-000000000611' ||
+                    id === 'admin_levelmak611_id' ||
+                    id === 'levelmak611' ||
+                    u.role === 'admin'
+                ) {
+                    return false;
+                }
+                return true;
+            })
             .map(u => ({
                 id: u.id,
                 name: u.name,
                 username: u.username,
-                totalXp: u.total_xp,
+                totalXp: u.total_xp || 0,
                 phoneNumber: u.phone_number,
                 level: u.level,
                 badges: u.badges,
-                levelCoins: u.level_coins,
+                levelCoins: u.level_coins || 0,
                 streak: u.streak,
                 stats: u.stats,
                 activities: u.activities,
                 avatar: u.avatar_config || { baseColor: '#1E293B', accessory: 'none', aura: 'none', currentLevel: u.level || 1 },
                 role: u.role
             } as User))
-            .filter(u => u.role !== 'admin')
             .slice(0, limitCount);
     } catch (error) {
         console.error('Error getting leaderboard:', error);

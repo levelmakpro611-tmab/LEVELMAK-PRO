@@ -19,17 +19,24 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AdminUserAnalytics } from '../../types';
-import { grantSubscriptionBonus, grantQuotaBoost, updateUserStatusAdmin } from '../../services/adminService';
+import { grantSubscriptionBonus, grantQuotaBoost, updateUserStatusAdmin, revokeSubscription } from '../../services/adminService';
 
 interface SubscriptionManagerProps {
   users: AdminUserAnalytics[];
   onRefresh: () => void;
+  initialFilter?: 'all' | 'free' | 'hebdo' | 'mensuel' | 'annuel' | 'premium_only';
 }
 
-export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users, onRefresh }) => {
+export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users, onRefresh, initialFilter }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTierFilter, setSelectedTierFilter] = useState<'all' | 'free' | 'hebdo' | 'mensuel' | 'annuel'>('all');
+  const [selectedTierFilter, setSelectedTierFilter] = useState<'all' | 'free' | 'hebdo' | 'mensuel' | 'annuel' | 'premium_only'>(initialFilter || 'all');
   const [selectedUser, setSelectedUser] = useState<AdminUserAnalytics | null>(null);
+
+  React.useEffect(() => {
+    if (initialFilter) {
+      setSelectedTierFilter(initialFilter);
+    }
+  }, [initialFilter]);
   
   // Action Modal State
   const [bonusDays, setBonusDays] = useState<number>(7);
@@ -39,15 +46,23 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
   const [actionErrorMsg, setActionErrorMsg] = useState<string | null>(null);
 
+  // Exclude super admin accounts from student subscription management
+  const regularStudents = React.useMemo(() => users.filter(u => {
+    const e = (u.email || '').toLowerCase();
+    const un = (u.userName || '').toLowerCase();
+    const id = (u.userId || '').toLowerCase();
+    return e !== 'levelmak611@gmail.com' && e !== '611@levelmak.app' && un !== 'levelmak611' && id !== '61100000-0000-4000-a000-000000000611' && id !== 'admin_levelmak611_id' && (u as any).role !== 'admin';
+  }), [users]);
+
   // Computed Stats
-  const totalUsersCount = users.length;
-  const activeSubscribedCount = users.filter(u => u.isPremium || u.subscriptionTier !== 'free').length;
-  const hebdoCount = users.filter(u => u.subscriptionTier === 'hebdo').length;
-  const mensuelCount = users.filter(u => u.subscriptionTier === 'mensuel').length;
-  const annuelCount = users.filter(u => u.subscriptionTier === 'annuel').length;
+  const totalUsersCount = regularStudents.length;
+  const activeSubscribedCount = regularStudents.filter(u => u.isPremium || u.subscriptionTier !== 'free').length;
+  const hebdoCount = regularStudents.filter(u => u.subscriptionTier === 'hebdo').length;
+  const mensuelCount = regularStudents.filter(u => u.subscriptionTier === 'mensuel').length;
+  const annuelCount = regularStudents.filter(u => u.subscriptionTier === 'annuel').length;
 
   // Filtered User list
-  const filteredUsers = users.filter(u => {
+  const filteredUsers = regularStudents.filter(u => {
     const matchesSearch = (u.userName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (u.phoneNumber || '').includes(searchTerm) ||
                           (u.email || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -55,6 +70,7 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
     if (!matchesSearch) return false;
 
     if (selectedTierFilter === 'all') return true;
+    if (selectedTierFilter === 'premium_only') return Boolean(u.isPremium || (u.subscriptionTier && u.subscriptionTier !== 'free'));
     if (selectedTierFilter === 'free') return u.subscriptionTier === 'free' || !u.subscriptionTier;
     return u.subscriptionTier === selectedTierFilter;
   });
@@ -129,6 +145,35 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
     }
   };
 
+  const handleRevokeSubscription = async () => {
+    if (!selectedUser) return;
+    if (!window.confirm(`⚠️ Révoquer l'abonnement de ${selectedUser.userName} ?\n\nCet élève passera immédiatement en formule GRATUITE.`)) return;
+    setLoadingAction(true);
+    setActionSuccessMsg(null);
+    setActionErrorMsg(null);
+
+    try {
+      const res = await revokeSubscription(selectedUser.userId, 'Révocation administrative');
+      if (res?.success) {
+        setActionSuccessMsg(`✅ Abonnement de ${selectedUser.userName} révoqué. Retour en GRATUIT.`);
+        setSelectedUser(prev => prev ? {
+          ...prev,
+          isPremium: false,
+          premiumUntil: null,
+          subscriptionTier: 'free'
+        } : null);
+        onRefresh();
+        setTimeout(() => onRefresh(), 2000);
+      } else {
+        setActionErrorMsg(res?.message || 'Erreur lors de la révocation');
+      }
+    } catch (err: any) {
+      setActionErrorMsg(err.message || 'Erreur lors de la révocation');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   const handleToggleStatus = async (newStatus: 'active' | 'suspended' | 'blocked') => {
     if (!selectedUser) return;
     setLoadingAction(true);
@@ -155,10 +200,10 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
       {/* Header & KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <button
-          onClick={() => setSelectedTierFilter('all')}
+          onClick={() => setSelectedTierFilter(selectedTierFilter === 'premium_only' ? 'all' : 'premium_only')}
           className={`glass p-6 rounded-[2rem] border text-left transition-all duration-300 relative overflow-hidden group hover:scale-[1.02] active:scale-95 cursor-pointer ${
-            selectedTierFilter === 'all'
-              ? 'border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10'
+            selectedTierFilter === 'premium_only'
+              ? 'border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40'
               : 'border-white/10 hover:border-amber-500/40'
           }`}
         >
@@ -323,11 +368,17 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
                           : user.subscriptionTier === 'mensuel'
                           ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                           : user.subscriptionTier === 'hebdo'
-                          ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                           : 'bg-white/5 text-slate-400 border border-white/10'
                       }`}>
                         <Crown size={12} />
-                        {user.subscriptionTier ? user.subscriptionTier.toUpperCase() : 'GRATUIT'}
+                        {user.subscriptionTier === 'hebdo'
+                          ? 'HEBDO'
+                          : user.subscriptionTier === 'mensuel'
+                          ? 'MENSUEL'
+                          : user.subscriptionTier === 'annuel'
+                          ? 'ANNUEL'
+                          : (user.isPremium ? 'ACTIF' : 'GRATUIT')}
                       </span>
                     </td>
 
@@ -549,6 +600,27 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ users,
                   </button>
                 </div>
               </div>
+
+              {/* Action 4: Revoke Subscription */}
+              {selectedUser.isPremium && (
+                <div className="space-y-3 bg-rose-500/5 p-5 rounded-2xl border border-rose-500/20">
+                  <h4 className="text-xs font-black text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                    <X size={16} />
+                    4. Révoquer l'Abonnement Actuel
+                  </h4>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    Annule immédiatement l'abonnement {selectedUser.subscriptionTier?.toUpperCase()} de cet élève. Il passera en formule <strong className="text-rose-300">GRATUITE</strong> dès maintenant.
+                  </p>
+                  <button
+                    onClick={handleRevokeSubscription}
+                    disabled={loadingAction}
+                    className="w-full py-3.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  >
+                    {loadingAction && <RefreshCw className="animate-spin" size={16} />}
+                    RÉVOQUER L'ABONNEMENT
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

@@ -163,17 +163,37 @@ serve(async (req) => {
       );
     }
 
-    // 7. DELETE COMMENT
-    if (action === 'delete_comment') {
+    // 7. DELETE COMMENT(S)
+    if (action === 'delete_comment' || action === 'delete_comments') {
+      const { commentId, commentIds } = body;
+      const idsToDelete: string[] = commentIds || (commentId ? [commentId] : []);
+      
+      if (idsToDelete.length > 0) {
+        const { error } = await supabaseAdmin
+          .from('user_comments')
+          .delete()
+          .in('id', idsToDelete);
+
+        if (error) throw error;
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, count: idsToDelete.length }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 7b. DELETE ALL CRASHES
+    if (action === 'delete_all_crashes') {
       const { error } = await supabaseAdmin
         .from('user_comments')
         .delete()
-        .eq('id', commentId);
+        .or('category.eq.support,user_phone.eq.crash-reporter');
 
       if (error) throw error;
 
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ success: true, message: 'Tous les tickets de crash ont été supprimés.' }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -413,26 +433,27 @@ serve(async (req) => {
         const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - 7);
         const startOfMonth = new Date(now); startOfMonth.setDate(now.getDate() - 30);
 
-        // TOTAL USERS — auth.users (même source que get_users pour cohérence)
+        // TOTAL USERS — profiles réels (source directe, exclut super admin)
         let totalUsers = 0;
         let newToday = 0, newWeek = 0, newMonth = 0;
         try {
-          const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          if (authData?.users) {
-            const users = authData.users;
-            totalUsers = users.length;
+          const { data: profs } = await supabaseAdmin
+            .from('profiles')
+            .select('id, created_at, email');
+          if (profs) {
+            const realProfs = profs.filter((p: any) => {
+              const e = (p.email || '').toLowerCase();
+              return e !== 'levelmak611@gmail.com' && e !== '611@levelmak.app';
+            });
+            totalUsers = realProfs.length;
             const todayISO = startOfToday.toISOString();
             const weekISO = startOfWeek.toISOString();
             const monthISO = startOfMonth.toISOString();
-            newToday = users.filter((u: any) => u.created_at >= todayISO).length;
-            newWeek = users.filter((u: any) => u.created_at >= weekISO).length;
-            newMonth = users.filter((u: any) => u.created_at >= monthISO).length;
+            newToday = realProfs.filter((u: any) => u.created_at >= todayISO).length;
+            newWeek = realProfs.filter((u: any) => u.created_at >= weekISO).length;
+            newMonth = realProfs.filter((u: any) => u.created_at >= monthISO).length;
           }
-        } catch (_) {
-          // Fallback: profiles count
-          const { count } = await supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true });
-          totalUsers = count || 0;
-        }
+        } catch (_) {}
 
         // Parallelized count queries for performance
         const [
@@ -479,15 +500,14 @@ serve(async (req) => {
       }
     }
 
-    // 13. DELETE USER ADMIN (RLS Bypass via Service Role Key)
-
-    if (action === 'delete_user') {
-      const { userId } = body;
-      if (!userId) {
-        return new Response(JSON.stringify({ error: 'userId requis' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // 13. DELETE USER ADMIN (RLS Bypass via Service Role Key - Single or Bulk)
+    if (action === 'delete_user' || action === 'delete_users') {
+      const { userId, userIds } = body;
+      const targetUserIds: string[] = userIds || (userId ? [userId] : []);
+      if (targetUserIds.length === 0) {
+        return new Response(JSON.stringify({ error: 'userId ou userIds requis' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const errors: string[] = [];
-      // 1. Supprimer toutes les données utilisateur (ordre important : FK d'abord)
       const tables = [
         { table: 'user_comments', field: 'user_id' },
         { table: 'user_quizzes', field: 'user_id' },
@@ -497,21 +517,26 @@ serve(async (req) => {
         { table: 'teachers', field: 'user_id' },
         { table: 'profiles', field: 'id' },
       ];
-      for (const { table, field } of tables) {
+
+      for (const targetId of targetUserIds) {
+        // 1. Supprimer toutes les données utilisateur (ordre important : FK d'abord)
+        for (const { table, field } of tables) {
+          try {
+            await supabaseAdmin.from(table).delete().eq(field, targetId);
+          } catch (e: any) {
+            errors.push(`${table} (${targetId}): ${e.message}`);
+          }
+        }
+        // 2. Supprimer de auth.users (étape finale — irréversible)
         try {
-          await supabaseAdmin.from(table).delete().eq(field, userId);
-        } catch (e: any) {
-          errors.push(`${table}: ${e.message}`);
+          await supabaseAdmin.auth.admin.deleteUser(targetId);
+        } catch (authErr: any) {
+          errors.push(`auth.users (${targetId}): ${authErr.message}`);
         }
       }
-      // 2. Supprimer de auth.users (étape finale — irréversible)
-      try {
-        await supabaseAdmin.auth.admin.deleteUser(userId);
-      } catch (authErr: any) {
-        errors.push(`auth.users: ${authErr.message}`);
-      }
+
       return new Response(
-        JSON.stringify({ success: true, errors: errors.length > 0 ? errors : undefined }),
+        JSON.stringify({ success: true, count: targetUserIds.length, errors: errors.length > 0 ? errors : undefined }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -628,6 +653,51 @@ serve(async (req) => {
           success: true,
           newExpiry: newExpiryIso,
           message: 'Bonus attribué avec succès.'
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 18. REVOKE SUBSCRIPTION (server-side update, clears premium flags & tier)
+    if (action === 'revoke_subscription') {
+      const { targetUserId } = body;
+      if (!targetUserId) {
+        return new Response(
+          JSON.stringify({ error: 'targetUserId requis' }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('stats')
+        .eq('id', targetUserId)
+        .maybeSingle();
+
+      const updatedStats = profile?.stats || {};
+      updatedStats.subscriptionTier = 'free';
+      updatedStats.subscription_tier = 'free';
+
+      const { error: updateErr } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          is_premium: false,
+          premium_until: null,
+          stats: updatedStats
+        })
+        .eq('id', targetUserId);
+
+      if (updateErr) {
+        return new Response(
+          JSON.stringify({ error: updateErr.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Abonnement révoqué avec succès.'
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

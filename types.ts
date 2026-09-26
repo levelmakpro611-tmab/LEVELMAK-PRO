@@ -173,6 +173,8 @@ export interface User {
   onboardingCompleted?: boolean;
   is_premium?: boolean;
   premium_until?: string;
+  subscription_tier?: 'hebdo' | 'mensuel' | 'annuel' | 'free';
+  subscriptionTier?: 'hebdo' | 'mensuel' | 'annuel' | 'free';
   streak: {
     current: number;
     lastLogin?: string;

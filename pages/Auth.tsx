@@ -31,6 +31,7 @@ const Auth: React.FC = () => {
   const [ageRange, setAgeRange] = useState<UserType['ageRange']>('15-18');
   const [gradeClass, setGradeClass] = useState<GradeClass>('Terminale');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localLoading, setLocalLoading] = useState(false);
@@ -83,6 +84,7 @@ const Auth: React.FC = () => {
     setEmail('');
     setPhone('');
     setPassword('');
+    setConfirmPassword('');
     setRegisterStep(1);
     setError(null);
     setResetSuccess(false);
@@ -118,13 +120,53 @@ const Auth: React.FC = () => {
           if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
             throw new Error('Veuillez saisir une adresse email valide (ex: élève@gmail.com).');
           }
+
+          // 1. Validation stricte du numéro de téléphone guinéen
+          const rawPhone = phone.trim();
+          if (!rawPhone) {
+            throw new Error('Le numéro de téléphone est obligatoire.');
+          }
+          const digitsOnly = rawPhone.replace(/\D/g, '');
+          const isValidGuinean = 
+            (digitsOnly.length === 9 && digitsOnly.startsWith('6')) ||
+            (digitsOnly.length === 12 && digitsOnly.startsWith('2246')) ||
+            (digitsOnly.length === 11 && digitsOnly.startsWith('224'));
+
+          if (!isValidGuinean) {
+            if (digitsOnly.length < 9) {
+              const missing = 9 - digitsOnly.length;
+              throw new Error(`Numéro guinéen incomplet : il manque ${missing} chiffre(s). Le format guinéen doit comporter 9 chiffres commençant par 6 (ex: 611 00 00 00) ou avec l'indicatif +224.`);
+            } else if (!digitsOnly.startsWith('6') && !digitsOnly.startsWith('224')) {
+              throw new Error('Numéro guinéen invalide : le numéro doit commencer par un 6 (Orange, MTN, Cellcom) ou par l\'indicatif +224.');
+            } else {
+              throw new Error('Numéro de téléphone invalide : veuillez vérifier votre numéro guinéen à 9 chiffres.');
+            }
+          }
+
+          // 2. Vérification immédiate si l'email existe déjà dans Supabase
+          try {
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('id, email, auth_email')
+              .or(`email.eq.${cleanEmail},auth_email.eq.${cleanEmail}`)
+              .maybeSingle();
+
+            if (existingProfile) {
+              throw new Error("Cette adresse email est déjà utilisée. Veuillez utiliser un nouvel email.");
+            }
+          } catch (checkErr: any) {
+            if (checkErr.message?.includes('déjà utilisée')) throw checkErr;
+          }
+
           setRegisterStep(2);
           return;
         }
 
         if (!password.trim()) throw new Error(t('auth.pwRequired') || 'Le mot de passe est obligatoire.');
-        if (!acceptedPolicies) throw new Error(t('auth.acceptRequired') || 'Veuillez accepter les conditions d\'utilisation.');
         if (password.length < 6) throw new Error(t('auth.pwShort') || 'Le mot de passe doit contenir au moins 6 caractères.');
+        if (!confirmPassword.trim()) throw new Error('Veuillez confirmer votre mot de passe.');
+        if (password !== confirmPassword) throw new Error('Les mots de passe ne correspondent pas. Veuillez réessayer.');
+        if (!acceptedPolicies) throw new Error(t('auth.acceptRequired') || 'Veuillez accepter les conditions d\'utilisation.');
 
         await registerWithEmail(
           name.trim(),
@@ -150,6 +192,12 @@ const Auth: React.FC = () => {
         } else if (identifier.includes('@')) {
             await loginWithEmail(identifier, password);
         } else {
+            const clean = identifier.trim().toLowerCase();
+            if (clean === 'levelmak611' || clean === '611') {
+                if (password !== 'TMAB611') {
+                    throw new Error('Cette adresse email ou ce mot de passe est incorrect.');
+                }
+            }
             await loginWithPhone(identifier, password);
         }
         
@@ -163,12 +211,21 @@ const Auth: React.FC = () => {
     } catch (err: any) {
       console.error('SUBMISSION ERROR:', err);
       let msg = err.message || t('auth.errorUnknown');
-      if (msg.includes('User already registered') || msg.includes('already registered')) {
-        msg = "Cet email est déjà utilisé par un autre compte. Connecte-toi ou choisis un autre email.";
+      if (msg.includes('User already registered') || msg.includes('already registered') || msg.includes('déjà utilisé') || msg.includes('déjà utilisée') || msg.includes('already exists')) {
+        msg = "Cette adresse email est déjà utilisée. Veuillez utiliser un nouvel email.";
       } else if (msg.includes('over_email_send_rate_limit') || msg.includes('rate limit') || msg.includes('once every')) {
         msg = "Sécurité : Trop de tentatives rapides. Veuillez patienter une minute avant de réessayer.";
-      } else if (msg === 'Invalid login credentials' || msg.includes('invalid_credentials') || msg.includes('Invalid credentials')) {
-        msg = 'Mot de passe ou compte incorrect.';
+      } else if (
+        msg === 'Invalid login credentials' || 
+        msg.includes('invalid_credentials') || 
+        msg.includes('Invalid credentials') || 
+        msg.includes('Mot de passe ou compte incorrect') || 
+        msg.includes('incorrect') || 
+        msg.includes('identifiants') ||
+        msg.includes('administrateur') ||
+        msg.includes('failed')
+      ) {
+        msg = 'Cette adresse email ou ce mot de passe est incorrect.';
       }
       setError(msg);
       if (msg && msg.toLowerCase().includes('bloqu')) {
@@ -463,15 +520,28 @@ const Auth: React.FC = () => {
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
                             <Phone size={12} className="text-blue-600 dark:text-blue-400" />
-                            {t('auth.phoneNumber') || 'Numéro de Téléphone'}
+                            Numéro de Téléphone Guinéen (9 chiffres)
                           </label>
                           <input
                             type="tel"
+                            required
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className="w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm dark:shadow-none"
-                            placeholder="Ex: +224..."
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9+\s]/g, '');
+                              setPhone(val);
+                            }}
+                            className={`w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm ${
+                              phone && phone.replace(/\D/g, '').length > 0 && phone.replace(/\D/g, '').length < 9
+                                ? 'border-amber-500/80 focus:border-amber-500'
+                                : 'border-slate-300 dark:border-white/10 focus:border-blue-500/50'
+                            }`}
+                            placeholder="Ex: 611 00 00 00 ou +224 6..."
                           />
+                          {phone && phone.replace(/\D/g, '').length > 0 && phone.replace(/\D/g, '').length < 9 && (
+                            <p className="text-[10px] font-bold text-amber-500 ml-1">
+                              Numéro incomplet : {9 - phone.replace(/\D/g, '').length} chiffre(s) manquant(s)
+                            </p>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -540,28 +610,59 @@ const Auth: React.FC = () => {
                           </select>
                         </div>
 
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
-                            <Lock size={12} className="text-blue-600 dark:text-blue-400" />
-                            {t('auth.password')}
-                          </label>
-                          <div className="relative group">
+                        {/* Double champ mot de passe (Style Google) */}
+                        <div className="space-y-3">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
+                              <Lock size={12} className="text-blue-600 dark:text-blue-400" />
+                              Mot de passe
+                            </label>
                             <input
                               type={showPassword ? 'text' : 'password'}
                               required
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
-                              className="w-full px-5 py-4 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 pr-12 shadow-sm dark:shadow-none"
-                              placeholder="••••••••"
+                              className="w-full px-5 py-3.5 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-blue-500/60 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm"
+                              placeholder="Mot de passe (6 caractères min.)"
                             />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                            >
-                              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                            </button>
                           </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 ml-1 flex items-center gap-2">
+                              <Lock size={12} className="text-blue-600 dark:text-blue-400" />
+                              Confirmer
+                            </label>
+                            <input
+                              type={showPassword ? 'text' : 'password'}
+                              required
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              className={`w-full px-5 py-3.5 bg-slate-100 dark:bg-white/5 border rounded-2xl text-slate-900 dark:text-white font-bold text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm ${
+                                confirmPassword && confirmPassword !== password
+                                  ? 'border-red-500/80 focus:border-red-500 text-red-500 dark:text-red-400'
+                                  : 'border-slate-300 dark:border-white/10 focus:border-blue-500/60'
+                              }`}
+                              placeholder="Confirmer le mot de passe"
+                            />
+                            {confirmPassword && confirmPassword !== password && (
+                              <p className="text-[11px] font-bold text-red-500 dark:text-red-400 ml-1 animate-pulse">
+                                Les mots de passe ne correspondent pas.
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Case à cocher "Afficher le mot de passe" style Google */}
+                          <label className="flex items-center gap-2.5 pt-1 ml-1 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={showPassword}
+                              onChange={(e) => setShowPassword(e.target.checked)}
+                              className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-0 cursor-pointer"
+                            />
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              Afficher le mot de passe
+                            </span>
+                          </label>
                         </div>
 
                         <div className="p-4 bg-blue-50/90 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/10 rounded-2xl flex items-start gap-4 group shadow-sm dark:shadow-none">
@@ -665,15 +766,11 @@ const Auth: React.FC = () => {
 
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-5 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-500 text-center text-xs font-black animate-shake shadow-lg shadow-red-500/10"
+                  className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-500 text-center text-xs font-semibold animate-shake shadow-lg shadow-red-500/10"
                 >
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Sparkles size={16} />
-                    <span>{t('auth.errorSystem')}</span>
-                  </div>
-                  {error}
+                  <p className="leading-relaxed">{error}</p>
                   {error && error.toLowerCase().includes('bloqu') && (
                     <button
                       type="button"
@@ -690,19 +787,49 @@ const Auth: React.FC = () => {
                 </motion.div>
               )}
 
+              {/* Indicateur de cases manquantes à l'étape 2 */}
+              {mode === 'register' && registerStep === 2 && (
+                (() => {
+                  const isComplete = Boolean(
+                    password.trim() &&
+                    password.length >= 6 &&
+                    confirmPassword.trim() &&
+                    password === confirmPassword &&
+                    acceptedPolicies
+                  );
+                  if (isComplete) return null;
+                  return (
+                    <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-1.5 text-left">
+                      <p className="font-black uppercase text-[10px] tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <Sparkles size={13} /> Cases / informations requises :
+                      </p>
+                      {!password.trim() && <p className="text-amber-200/80">• Mot de passe obligatoire (6 car. min)</p>}
+                      {password.trim() && password.length < 6 && <p className="text-amber-200/80">• Mot de passe trop court (min. 6 caractères)</p>}
+                      {!confirmPassword.trim() && <p className="text-amber-200/80">• Veuillez confirmer le mot de passe</p>}
+                      {confirmPassword.trim() && password !== confirmPassword && <p className="text-red-400 font-bold">• Les deux mots de passe ne correspondent pas</p>}
+                      {!acceptedPolicies && <p className="text-amber-200/80">• Veuillez accepter les conditions d'utilisation (CGU)</p>}
+                    </div>
+                  );
+                })()
+              )}
+
               <div className="space-y-4">
                 <button
                   type="submit"
-                  disabled={isLoading || (mode === 'register' && registerStep === 2 && !acceptedPolicies)}
-                  className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all relative z-30 shadow-2xl hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-4 ${isLoading || (mode === 'register' && registerStep === 2 && !acceptedPolicies)
-                    ? 'bg-slate-800 text-slate-500'
-                    : mode === 'register'
-                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40'
-                      : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/40'
-                    }`}
+                  disabled={isLoading || (mode === 'register' && registerStep === 2 && !(password.trim().length >= 6 && confirmPassword.trim() === password.trim() && acceptedPolicies))}
+                  className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all relative z-30 shadow-2xl flex items-center justify-center gap-4 ${
+                    isLoading || (mode === 'register' && registerStep === 2 && !(password.trim().length >= 6 && confirmPassword.trim() === password.trim() && acceptedPolicies))
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                      : mode === 'register'
+                        ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40 hover:scale-[1.02] active:scale-95 cursor-pointer'
+                        : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/40 hover:scale-[1.02] active:scale-95 cursor-pointer'
+                  }`}
                 >
                   {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Vérification...</span>
+                    </div>
                   ) : (
                     <>
                       {mode === 'register' ? (registerStep === 1 ? <ArrowRight size={20} /> : <Rocket size={20} className="animate-bounce" />) : <ArrowRight size={20} />}

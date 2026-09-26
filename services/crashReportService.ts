@@ -194,7 +194,7 @@ async function handleError(
     userAgent: navigator.userAgent,
     userId,
     userName,
-    timestamp: new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Conakry' }),
+    timestamp: new Date().toISOString(),
     appVersion: '0.1.9.4',
     context,
   };

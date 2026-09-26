@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Coins, Zap, Search, User as UserIcon, Plus, Minus, LayoutGrid, List } from 'lucide-react';
+import { Trophy, Medal, Coins, Zap, Search, User as UserIcon, Plus, Minus, LayoutGrid, List, Trash2 } from 'lucide-react';
 import { User } from '../../types';
 import { BADGES } from '../../constants';
-import { getLeaderboard, grantUserBadge, adjustUserResources } from '../../services/adminService';
+import { getLeaderboard, grantUserBadge, adjustUserResources, deleteUser } from '../../services/adminService';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const GamificationPanel: React.FC = () => {
@@ -132,6 +132,23 @@ const GamificationPanel: React.FC = () => {
                                                 <p className="text-yellow-600 dark:text-yellow-400 font-black text-sm">{user.levelCoins} 🪙</p>
                                                 <p className="text-xs text-slate-500">Coins</p>
                                             </div>
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`Supprimer définitivement "${user.name}" de l'application et du classement ?`)) {
+                                                        try {
+                                                            await deleteUser(user.id);
+                                                            await loadLeaderboard();
+                                                        } catch (err: any) {
+                                                            alert(err.message || 'Erreur lors de la suppression');
+                                                        }
+                                                    }
+                                                }}
+                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer ml-1"
+                                                title={`Supprimer définitivement ${user.name}`}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}

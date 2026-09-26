@@ -196,71 +196,53 @@ export const useAuthStore = () => {
     }, []);
 
     const loginWithPhone = useCallback(async (phone: string, password: string) => {
-        try {
-            setLoading(true);
-            const loggedUser = await signInWithPhone(phone, password);
-            if (loggedUser) {
-                if (loggedUser.status === 'blocked' || loggedUser.status === 'suspended') {
-                    await signOutUser();
-                    throw new Error(loggedUser.status === 'blocked'
-                        ? 'Ton compte a été bloqué définitivement.'
-                        : 'Ton compte est suspendu.');
-                }
-                setUser(loggedUser);
-                safeLocalStorageSet('levelmak_user', JSON.stringify(loggedUser));
-                triggerSync(loggedUser.id);
-            }
-        } finally {
-            setTimeout(() => setLoading(false), 1000);
+        const loggedUser = await signInWithPhone(phone, password);
+        if (!loggedUser) {
+            throw new Error('Cette adresse email ou ce mot de passe est incorrect.');
         }
+        if (loggedUser.status === 'blocked' || loggedUser.status === 'suspended') {
+            await signOutUser();
+            throw new Error(loggedUser.status === 'blocked'
+                ? 'Ton compte a été bloqué définitivement.'
+                : 'Ton compte est suspendu.');
+        }
+        setUser(loggedUser);
+        safeLocalStorageSet('levelmak_user', JSON.stringify(loggedUser));
+        triggerSync(loggedUser.id);
     }, [triggerSync]);
 
     const registerWithPhone = useCallback(async (params: any) => {
-        try {
-            setLoading(true);
-            const newUser = await signUpWithPhone(params);
-            if (newUser) {
-                setUser(newUser);
-                safeLocalStorageSet('levelmak_user', JSON.stringify(newUser));
-                triggerSync(newUser.id);
-            }
-        } finally {
-            setTimeout(() => setLoading(false), 1000);
+        const newUser = await signUpWithPhone(params);
+        if (newUser) {
+            setUser(newUser);
+            safeLocalStorageSet('levelmak_user', JSON.stringify(newUser));
+            triggerSync(newUser.id);
         }
     }, [triggerSync]);
 
     const registerWithEmail = useCallback(async (name: string, email: string, password: string, gender: any, ageRange: any, extra?: any) => {
-        try {
-            setLoading(true);
-            const newUser = await signUpWithEmail(email, password, name, gender, ageRange, extra?.phoneNumber, extra?.gradeClass);
-            if (newUser) {
-                setUser(newUser);
-                safeLocalStorageSet('levelmak_user', JSON.stringify(newUser));
-                triggerSync(newUser.id);
-            }
-        } finally {
-            setTimeout(() => setLoading(false), 1000);
+        const newUser = await signUpWithEmail(email, password, name, gender, ageRange, extra?.phoneNumber, extra?.gradeClass);
+        if (newUser) {
+            setUser(newUser);
+            safeLocalStorageSet('levelmak_user', JSON.stringify(newUser));
+            triggerSync(newUser.id);
         }
     }, [triggerSync]);
 
     const loginWithEmail = useCallback(async (email: string, password: string) => {
-        try {
-            setLoading(true);
-            const loggedUser = await signInWithEmail(email, password);
-            if (loggedUser) {
-                if (loggedUser.status === 'blocked' || loggedUser.status === 'suspended') {
-                    await signOutUser();
-                    throw new Error(loggedUser.status === 'blocked'
-                        ? 'Ton compte a été bloqué définitivement.'
-                        : 'Ton compte est suspendu.');
-                }
-                setUser(loggedUser);
-                safeLocalStorageSet('levelmak_user', JSON.stringify(loggedUser));
-                triggerSync(loggedUser.id);
-            }
-        } finally {
-            setTimeout(() => setLoading(false), 1000);
+        const loggedUser = await signInWithEmail(email, password);
+        if (!loggedUser) {
+            throw new Error('Cette adresse email ou ce mot de passe est incorrect.');
         }
+        if (loggedUser.status === 'blocked' || loggedUser.status === 'suspended') {
+            await signOutUser();
+            throw new Error(loggedUser.status === 'blocked'
+                ? 'Ton compte a été bloqué définitivement.'
+                : 'Ton compte est suspendu.');
+        }
+        setUser(loggedUser);
+        safeLocalStorageSet('levelmak_user', JSON.stringify(loggedUser));
+        triggerSync(loggedUser.id);
     }, [triggerSync]);
 
     const loginWithGoogle = useCallback(async () => {
