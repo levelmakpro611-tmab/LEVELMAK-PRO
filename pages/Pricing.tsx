@@ -721,6 +721,47 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     </motion.div>
                 )}
 
+                {/* Active Subscription Banner with View Receipt Button */}
+                {isPremiumActive && (
+                    <div className="mb-8 p-5 rounded-3xl bg-gradient-to-r from-blue-950/80 via-indigo-950/80 to-blue-900/70 border-2 border-blue-500/40 shadow-xl shadow-blue-950/40 flex flex-col sm:flex-row items-center justify-between gap-4 max-w-xl mx-auto w-full">
+                        <div className="flex items-center gap-3.5 text-left w-full sm:w-auto">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20 shrink-0">
+                                <Crown className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-white font-black text-sm sm:text-base">Abonnement PRO Actif</h3>
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-black uppercase tracking-wider">Actif</span>
+                                </div>
+                                <p className="text-xs text-slate-300 mt-0.5">
+                                    Valable jusqu'au <span className="text-blue-300 font-bold">{user?.premium_until ? formatDateFrench(new Date(user.premium_until)) : 'En cours'}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const now = new Date();
+                                const expDate = user?.premium_until ? new Date(user.premium_until) : new Date(Date.now() + 30 * 86400000);
+                                const tier = (user?.stats as any)?.subscription_tier || 'MENSUEL';
+                                const planName = tier === 'hebdo' ? 'Hebdomadaire' : tier === 'annuel' ? 'Annuel' : 'Mensuel';
+                                const amount = tier === 'hebdo' ? 15000 : tier === 'annuel' ? 385000 : 45000;
+                                setReceiptData({
+                                    transactionId: `tx_${user?.id?.replace(/-/g, '').slice(0, 12).toUpperCase() || 'PRO'}`,
+                                    planName,
+                                    amount,
+                                    purchasedAt: formatDateFrench(now),
+                                    startsAt: formatDateFrench(now),
+                                    expiresAt: formatDateFrench(expDate)
+                                });
+                            }}
+                            className="w-full sm:w-auto px-4 py-3 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-blue-900/40 flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                        >
+                            📄 Voir mon reçu
+                        </button>
+                    </div>
+                )}
+
                 {/* Grid - Vertical stack block by block */}
                 <div className="flex flex-col gap-7 max-w-xl mx-auto w-full">
                     
