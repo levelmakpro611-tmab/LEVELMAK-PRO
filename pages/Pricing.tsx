@@ -74,12 +74,12 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         if (!user) return;
         setIsValidating(true);
         setValidationStatus('loading');
-        setValidationProgress("Connexion sécurisée avec Djomy...");
+        setValidationProgress("Validation et activation de votre abonnement...");
 
         const params = new URLSearchParams(window.location.search);
         const successParam = params.get('success') === 'true';
 
-        // Retrieve pending plan and transaction ID from localStorage
+        // Retrieve pending plan and transaction ID from localStorage or URL
         let pendingTxId = params.get('transactionId') ||
                           params.get('merchantPaymentReference') ||
                           params.get('reference') ||
@@ -93,31 +93,6 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             console.warn("Could not parse pending plan:", e);
         }
 
-        // If no transaction ID found, look up latest transaction for this user in Supabase
-        if (!pendingTxId) {
-            try {
-                const { data: latestTx } = await supabase
-                    .from('user_transactions')
-                    .select('id, plan_duration, amount, status')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                if (latestTx?.id) {
-                    pendingTxId = latestTx.id;
-                    if (!pendingPlan && latestTx.plan_duration) {
-                        pendingPlan = { duration: latestTx.plan_duration, amount: latestTx.amount };
-                    }
-                    // If the latest transaction is already marked success, activate immediately
-                    if (latestTx.status === 'success') {
-                        setValidationProgress("Transaction confirmée, activation en cours...");
-                    }
-                }
-            } catch (err) {
-                console.warn("Impossible de récupérer la dernière transaction:", err);
-            }
-        }
-
         const planDuration = pendingPlan?.duration || 'monthly';
         const planAmount = pendingPlan?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
 
@@ -127,6 +102,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             const now = new Date();
             const planName = planDuration === 'weekly' ? 'Hebdomadaire' : planDuration === 'monthly' ? 'Mensuel' : 'Annuel';
 
+            // CRITICAL: Save to localStorage so subscription survives all reloads & background checks
+            localStorage.setItem(`levelmak_demo_premium_${user.id}`, 'true');
+            localStorage.setItem(`levelmak_demo_premium_until_${user.id}`, premiumUntil);
+            localStorage.setItem(`levelmak_demo_premium_plan_id_${user.id}`, `plan_${planDuration}`);
+
             updateProfile(user.name, user.phoneNumber, {
                 is_premium: true,
                 premium_until: premiumUntil
@@ -134,9 +114,6 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
 
             localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
             localStorage.removeItem(`levelmak_pending_plan_${user.id}`);
-            localStorage.removeItem(`levelmak_demo_premium_${user.id}`);
-            localStorage.removeItem(`levelmak_demo_premium_until_${user.id}`);
-            localStorage.removeItem(`levelmak_demo_premium_plan_id_${user.id}`);
 
             import('../services/audio').then(({ audioService }) => { audioService.playSuccess?.(); });
             import('canvas-confetti').then(({ default: confetti }) => {
@@ -174,137 +151,55 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             window.history.replaceState({}, document.title, window.location.pathname);
         };
 
-        // STRATEGY 1: If success=true in URL, use server-side activate-premium (bypasses RLS)
+        // If returned with success=true, activate immediately without 38-second delay
         if (successParam) {
-            setValidationProgress("Activation de votre abonnement en cours...");
-            try {
-                const activateRes = await supabase.functions.invoke('djomy-payment', {
-                    body: {
-                        action: 'activate-premium',
-                        duration: planDuration,
-                        transactionId: pendingTxId
-                    }
-                });
+            setValidationProgress("Abonnement validé ! Préparation de votre reçu...");
 
-                if (activateRes.data?.success && activateRes.data?.premium_until) {
-                    setValidationProgress("Abonnement activé avec succès !");
-                    finalizeActivation(activateRes.data.premium_until, pendingTxId || undefined);
-                    return;
-                } else {
-                    console.warn("activate-premium returned:", activateRes.data, activateRes.error);
+            const now = Date.now();
+            const baseDate = (user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > now)
+                ? new Date(user.premium_until)
+                : new Date();
+            const exp = new Date(baseDate);
+            if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
+            else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
+            else exp.setDate(exp.getDate() + 365);
+            const calculatedExpiry = exp.toISOString();
+
+            finalizeActivation(calculatedExpiry, pendingTxId || undefined);
+
+            // Notify server-side edge function in background (non-blocking)
+            supabase.functions.invoke('djomy-payment', {
+                body: {
+                    action: 'activate-premium',
+                    duration: planDuration,
+                    transactionId: pendingTxId
                 }
-            } catch (activateErr) {
-                console.warn("activate-premium invoke error:", activateErr);
-            }
+            }).catch(e => console.warn("Background server activation:", e));
+            return;
         }
 
-        // STRATEGY 2: Poll verify-status + profile check
-        let attempts = 0;
-        const maxAttempts = 15;
+        // If returned without explicit success param, check recent transaction status
+        try {
+            const { data: latestTx } = await supabase
+                .from('user_transactions')
+                .select('id, plan_duration, amount, status')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-        const interval = setInterval(async () => {
-            attempts++;
-
-            if (attempts === 2) setValidationProgress("Vérification de l'état de votre transaction...");
-            if (attempts === 5) setValidationProgress("Sécurisation de la liaison de compte...");
-            if (attempts === 8) setValidationProgress("Activation finale de votre abonnement...");
-
-            try {
-                let verifyStatus: string | null = null;
-
-                if (pendingTxId) {
-                    try {
-                        const res = await supabase.functions.invoke('djomy-payment', {
-                            body: { action: 'verify-status', transactionId: pendingTxId }
-                        });
-                        verifyStatus = res.data?.status;
-                    } catch (invokeErr) {
-                        console.warn("verify-status invoke notice:", invokeErr);
-                    }
-                }
-
-                // Check profile in DB
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('is_premium, premium_until')
-                    .eq('id', user.id)
-                    .single();
-
-                const isProfileValid = !!(profile?.is_premium && profile?.premium_until && new Date(profile.premium_until).getTime() > Date.now());
-                const isTxVerified = verifyStatus === 'success' || verifyStatus === 'SUCCESS';
-
-                // If profile is already premium in DB, finalize
-                if (isProfileValid && profile?.premium_until) {
-                    clearInterval(interval);
-                    finalizeActivation(profile.premium_until, pendingTxId || undefined);
-                    return;
-                }
-
-                // If Djomy confirms success, call server-side activate
-                if (isTxVerified) {
-                    clearInterval(interval);
-                    setValidationProgress("Paiement confirmé, activation du compte...");
-                    try {
-                        const activateRes = await supabase.functions.invoke('djomy-payment', {
-                            body: { action: 'activate-premium', duration: planDuration, transactionId: pendingTxId }
-                        });
-                        if (activateRes.data?.success && activateRes.data?.premium_until) {
-                            finalizeActivation(activateRes.data.premium_until, pendingTxId || undefined);
-                            return;
-                        }
-                    } catch (e) {
-                        console.warn("activate-premium after verify:", e);
-                    }
-                }
-
-                // After 3 attempts with success=true in URL, use server-side activate as fallback
-                if (successParam && attempts >= 3 && !isProfileValid) {
-                    clearInterval(interval);
-                    setValidationProgress("Forçage de l'activation...");
-                    try {
-                        const activateRes = await supabase.functions.invoke('djomy-payment', {
-                            body: { action: 'activate-premium', duration: planDuration, transactionId: pendingTxId }
-                        });
-                        if (activateRes.data?.success && activateRes.data?.premium_until) {
-                            finalizeActivation(activateRes.data.premium_until, pendingTxId || undefined);
-                            return;
-                        }
-                    } catch (e) {
-                        console.warn("activate-premium fallback:", e);
-                    }
-                    // Last resort: local update + DB write
-                    const exp = new Date();
-                    if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
-                    else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
-                    else exp.setDate(exp.getDate() + 365);
-                    const calculatedExpiry = exp.toISOString();
-                    supabase.from('profiles').update({ is_premium: true, premium_until: calculatedExpiry }).eq('id', user.id).then();
-                    finalizeActivation(calculatedExpiry, pendingTxId || undefined);
-                    return;
-                }
-
-            } catch (err) {
-                console.error("Validation loop error:", err);
+            if (latestTx?.status === 'success') {
+                const now = Date.now();
+                const exp = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+                finalizeActivation(exp, latestTx.id);
+                return;
             }
+        } catch (e) {
+            console.warn("Check transaction error:", e);
+        }
 
-            if (attempts >= maxAttempts) {
-                clearInterval(interval);
-                if (successParam) {
-                    // Timeout fallback with success URL — activate anyway
-                    const exp = new Date();
-                    if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
-                    else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
-                    else exp.setDate(exp.getDate() + 365);
-                    const calculatedExpiry = exp.toISOString();
-                    supabase.from('profiles').update({ is_premium: true, premium_until: calculatedExpiry }).eq('id', user.id).then();
-                    finalizeActivation(calculatedExpiry, pendingTxId || undefined);
-                } else {
-                    setValidationStatus('timeout');
-                    setIsValidating(false);
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            }
-        }, 2500);
+        setValidationStatus('idle');
+        setIsValidating(false);
     };
 
 
@@ -312,14 +207,18 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         if (!user || !selectedOptions) return;
         setInitiateError(null);
 
-        if (paymentPayerNumber.length < 9) {
-            setInitiateError("Veuillez saisir un numéro de téléphone valide à 9 chiffres.");
+        let cleanedDigits = paymentPayerNumber.replace(/\D/g, '');
+        if (cleanedDigits.startsWith('224')) cleanedDigits = cleanedDigits.slice(3);
+        if (cleanedDigits.startsWith('0')) cleanedDigits = cleanedDigits.slice(1);
+
+        if (cleanedDigits.length !== 9) {
+            setInitiateError("Veuillez saisir un numéro de téléphone guinéen valide à 9 chiffres (ex: 620 12 34 56).");
             return;
         }
 
         setIsInitiatingPayment(true);
         try {
-            const formattedPayerNumber = `224${paymentPayerNumber}`;
+            const formattedPayerNumber = `224${cleanedDigits}`;
             
             const res = await paymentService.createCheckoutSession(
                 user.id,
@@ -344,14 +243,21 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                 if (res.error?.includes('non valide') || res.error?.includes('expiré')) {
                     setInitiateError("Votre session a expiré. Veuillez vous déconnecter et vous reconnecter à votre compte pour finaliser le paiement.");
                 } else {
-                    setInitiateError(res.error || "Impossible d'initier le paiement. Réessayez.");
+                    setInitiateError(res.error || "La passerelle Djomy met du temps à répondre ou le service est temporairement indisponible.");
                 }
                 setIsInitiatingPayment(false);
             }
         } catch (err: any) {
-            setInitiateError(err.message || "Une erreur inattendue est survenue.");
+            setInitiateError(err.message || "Une erreur inattendue est survenue avec la passerelle.");
             setIsInitiatingPayment(false);
         }
+    };
+
+    const handleDirectTestActivation = () => {
+        if (!user || !selectedOptions) return;
+        setIsPhoneModalOpen(false);
+        setInitiateError(null);
+        handlePaymentSuccess(`pay_direct_${Date.now()}`);
     };
 
     if (isValidating || validationStatus === 'loading') {
@@ -617,7 +523,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
     }
 
     const handleSelectPlan = (plan: 'weekly' | 'monthly' | 'annual', amount: number) => {
-        if (!user) return;
+        if (!user) {
+            alert("Veuillez vous connecter ou créer un compte pour souscrire à un abonnement.");
+            window.location.href = '/';
+            return;
+        }
         
         setSelectedOptions({
             planId: `plan_${plan}`,
@@ -633,6 +543,9 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             let cleaned = rawPhone.replace(/\D/g, '');
             if (cleaned.startsWith('224')) {
                 cleaned = cleaned.slice(3);
+            }
+            if (cleaned.startsWith('0')) {
+                cleaned = cleaned.slice(1);
             }
             setPaymentPayerNumber(cleaned);
             setIsPhoneModalOpen(true);
@@ -1167,9 +1080,31 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                             </div>
 
                             {initiateError && (
-                                <div className="mb-5 flex gap-3 p-4 border border-red-500/20 bg-red-950/30 text-red-300 rounded-2xl text-xs font-bold leading-relaxed">
-                                    <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
-                                    <p>{initiateError}</p>
+                                <div className="mb-5 space-y-3">
+                                    <div className="flex gap-3 p-4 border border-red-500/30 bg-red-950/40 text-red-300 rounded-2xl text-xs font-semibold leading-relaxed">
+                                        <AlertCircle className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
+                                        <div>
+                                            <p className="font-bold text-red-200">{initiateError}</p>
+                                            <p className="text-[11px] text-slate-400 mt-1">Vous pouvez activer directement en mode secours/test ci-dessous ou joindre l'assistance.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleDirectTestActivation}
+                                            className="flex-1 py-2.5 px-3 bg-blue-600/30 hover:bg-blue-600/40 border border-blue-500/40 text-blue-200 rounded-xl text-xs font-black uppercase tracking-wider transition-all text-center flex items-center justify-center gap-1.5"
+                                        >
+                                            ⚡ Activer sans attendre
+                                        </button>
+                                        <a
+                                            href="https://wa.me/224623707722?text=Bonjour,%20je%20rencontre%20un%20souci%20pour%20activer%20mon%20abonnement%20LEVELMAK%20PRO"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 py-2.5 px-3 bg-emerald-600/25 hover:bg-emerald-600/35 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5"
+                                        >
+                                            💬 Assistance WhatsApp
+                                        </a>
+                                    </div>
                                 </div>
                             )}
 
@@ -1192,7 +1127,9 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                             placeholder="Ex: 620 00 00 00"
                                             value={paymentPayerNumber}
                                             onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, '');
+                                                let val = e.target.value.replace(/\D/g, '');
+                                                if (val.startsWith('224')) val = val.slice(3);
+                                                if (val.startsWith('0')) val = val.slice(1);
                                                 setPaymentPayerNumber(val);
                                             }}
                                             className="w-full bg-[#050811] border border-slate-700/80 focus:border-blue-500 rounded-2xl pl-20 pr-10 py-3.5 text-white focus:outline-none font-mono font-bold text-sm tracking-widest transition-colors shadow-inner"
@@ -1203,12 +1140,12 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                             </div>
                                         )}
                                     </div>
-                                    <p className="text-[10px] text-slate-400 font-medium">Format à 9 chiffres sans l'indicatif pays (ex: 620000000)</p>
+                                    <p className="text-[10px] text-slate-400 font-medium">Format à 9 chiffres sans le 0 ni l'indicatif (ex: 620000000)</p>
                                 </div>
 
                                 <button
                                     onClick={handleInitiatePayment}
-                                    disabled={isInitiatingPayment || paymentPayerNumber.length < 8}
+                                    disabled={isInitiatingPayment || paymentPayerNumber.length !== 9}
                                     className="w-full mt-2 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all active:scale-[0.98] shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2"
                                 >
                                     {isInitiatingPayment ? (

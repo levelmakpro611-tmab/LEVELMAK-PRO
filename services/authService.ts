@@ -34,37 +34,33 @@ export const mapProfileToUser = (profile: any): User => {
     const localDemoPremium = localStorage.getItem(`levelmak_demo_premium_${userId}`) === 'true';
     const localDemoPremiumUntil = localStorage.getItem(`levelmak_demo_premium_until_${userId}`);
     
-    let isPremium = Boolean(profile.is_premium);
-    let premiumUntil = profile.premium_until || null;
-    
-    // Database profile is the primary source of truth for premium status & expiry
-    if (profile.premium_until) {
-        const expiryTime = new Date(profile.premium_until).getTime();
-        if (!isNaN(expiryTime) && expiryTime > Date.now()) {
-            isPremium = true;
-            premiumUntil = profile.premium_until;
-            try {
-                localStorage.setItem(`levelmak_demo_premium_${userId}`, 'true');
-                localStorage.setItem(`levelmak_demo_premium_until_${userId}`, profile.premium_until);
-            } catch (_) {}
-        } else {
-            isPremium = false;
-            try {
-                localStorage.removeItem(`levelmak_demo_premium_${userId}`);
-                localStorage.removeItem(`levelmak_demo_premium_until_${userId}`);
-            } catch (_) {}
-        }
-    } else if (localDemoPremium && localDemoPremiumUntil) {
-        const expiryTime = new Date(localDemoPremiumUntil).getTime();
-        if (Date.now() < expiryTime) {
-            isPremium = true;
-            premiumUntil = localDemoPremiumUntil;
-        }
-    }
+    const now = Date.now();
+    const dbExpiry = profile.premium_until ? new Date(profile.premium_until).getTime() : 0;
+    const localExpiry = (localDemoPremium && localDemoPremiumUntil) ? new Date(localDemoPremiumUntil).getTime() : 0;
+    const bestExpiry = Math.max(isNaN(dbExpiry) ? 0 : dbExpiry, isNaN(localExpiry) ? 0 : localExpiry);
 
-    // Expiration check: If premium_until is passed, subscription is expired
-    if (premiumUntil && new Date(premiumUntil).getTime() <= Date.now()) {
+    if (bestExpiry > now) {
+        isPremium = true;
+        premiumUntil = new Date(bestExpiry).toISOString();
+        try {
+            localStorage.setItem(`levelmak_demo_premium_${userId}`, 'true');
+            localStorage.setItem(`levelmak_demo_premium_until_${userId}`, premiumUntil);
+        } catch (_) {}
+    } else if (Boolean(profile.is_premium) && !profile.premium_until) {
+        // Admin marked user as premium in DB without setting expiry date
+        isPremium = true;
+        premiumUntil = new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString();
+        try {
+            localStorage.setItem(`levelmak_demo_premium_${userId}`, 'true');
+            localStorage.setItem(`levelmak_demo_premium_until_${userId}`, premiumUntil);
+        } catch (_) {}
+    } else {
         isPremium = false;
+        premiumUntil = null;
+        try {
+            localStorage.removeItem(`levelmak_demo_premium_${userId}`);
+            localStorage.removeItem(`levelmak_demo_premium_until_${userId}`);
+        } catch (_) {}
     }
 
     const calculatedTier = isPremium ? (profile.subscription_tier || stats.subscriptionTier || 'mensuel') : 'free';

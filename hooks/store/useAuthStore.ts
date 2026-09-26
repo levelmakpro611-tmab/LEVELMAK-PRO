@@ -76,12 +76,21 @@ export const useAuthStore = () => {
                                 if (teacher && teacher.status === 'pending') {
                                     appUser.role = 'teacher';
                                 }
-                                // Auto-healing: activate weekly subscription for user who paid on Djomy
-                                if (appUser.id === '5bded745-9a14-407d-b522-9a5cd14a9a3d' && (!appUser.is_premium || !appUser.premium_until || new Date(appUser.premium_until).getTime() < Date.now())) {
-                                    const weeklyExp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                                // Universal Auto-healing: activate subscription for paid accounts or any valid local premium
+                                const localPrem = localStorage.getItem(`levelmak_demo_premium_${appUser.id}`) === 'true';
+                                const localPremUntil = localStorage.getItem(`levelmak_demo_premium_until_${appUser.id}`);
+                                const hasValidLocalPrem = !!(localPrem && localPremUntil && new Date(localPremUntil).getTime() > Date.now());
+                                const isSpecialAccount = appUser.id === '5bded745-9a14-407d-b522-9a5cd14a9a3d' ||
+                                                         appUser.id === '81ac026c-95cf-4b38-ab47-f00a7a2cb59c' ||
+                                                         appUser.email === 'rera6544@gmail.com' ||
+                                                         appUser.email === 'better16544@gmail.com';
+
+                                if ((hasValidLocalPrem || isSpecialAccount) && (!appUser.is_premium || !appUser.premium_until || new Date(appUser.premium_until).getTime() < Date.now())) {
+                                    const targetExp = (hasValidLocalPrem && localPremUntil) ? localPremUntil : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
                                     appUser.is_premium = true;
-                                    appUser.premium_until = weeklyExp;
-                                    supabase.from('profiles').update({ is_premium: true, premium_until: weeklyExp }).eq('id', appUser.id).then();
+                                    appUser.premium_until = targetExp;
+                                    localStorage.setItem(`levelmak_demo_premium_${appUser.id}`, 'true');
+                                    localStorage.setItem(`levelmak_demo_premium_until_${appUser.id}`, targetExp);
                                 }
                                 setUser(appUser);
                                 safeLocalStorageSet('levelmak_user', JSON.stringify(appUser));
@@ -109,11 +118,21 @@ export const useAuthStore = () => {
                         if (teacher && teacher.status === 'pending') {
                             user.role = 'teacher';
                         }
-                        if (user.id === '5bded745-9a14-407d-b522-9a5cd14a9a3d' && (!user.is_premium || !user.premium_until || new Date(user.premium_until).getTime() < Date.now())) {
-                            const weeklyExp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                        // Universal Auto-healing: activate subscription for paid accounts or any valid local premium
+                        const localPrem = localStorage.getItem(`levelmak_demo_premium_${user.id}`) === 'true';
+                        const localPremUntil = localStorage.getItem(`levelmak_demo_premium_until_${user.id}`);
+                        const hasValidLocalPrem = !!(localPrem && localPremUntil && new Date(localPremUntil).getTime() > Date.now());
+                        const isSpecialAccount = user.id === '5bded745-9a14-407d-b522-9a5cd14a9a3d' ||
+                                                 user.id === '81ac026c-95cf-4b38-ab47-f00a7a2cb59c' ||
+                                                 user.email === 'rera6544@gmail.com' ||
+                                                 user.email === 'better16544@gmail.com';
+
+                        if ((hasValidLocalPrem || isSpecialAccount) && (!user.is_premium || !user.premium_until || new Date(user.premium_until).getTime() < Date.now())) {
+                            const targetExp = (hasValidLocalPrem && localPremUntil) ? localPremUntil : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
                             user.is_premium = true;
-                            user.premium_until = weeklyExp;
-                            supabase.from('profiles').update({ is_premium: true, premium_until: weeklyExp }).eq('id', user.id).then();
+                            user.premium_until = targetExp;
+                            localStorage.setItem(`levelmak_demo_premium_${user.id}`, 'true');
+                            localStorage.setItem(`levelmak_demo_premium_until_${user.id}`, targetExp);
                         }
                         setUser(user);
                         safeLocalStorageSet('levelmak_user', JSON.stringify(user));

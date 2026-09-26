@@ -154,7 +154,12 @@ const AppContent: React.FC = () => {
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
   const [currentDeck, setCurrentDeck] = useState<{ deck: FlashcardDeck, cards: Flashcard[] } | null>(null);
   const [currentBook, setCurrentBook] = useState<BookType | null>(null);
-  const [sessionChosenPlan, setSessionChosenPlan] = useState(false);
+  const [sessionChosenPlan, setSessionChosenPlan] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') return true;
+    return sessionStorage.getItem('levelmak_session_chosen_plan') === 'true';
+  });
   const [globalReceiptData, setGlobalReceiptData] = useState<{
     transactionId: string;
     planName: string;
@@ -554,8 +559,14 @@ const AppContent: React.FC = () => {
       ) : user && !isPremiumActive && !sessionChosenPlan && !isNativePlatform() ? (
         <Suspense fallback={<PageLoader message="Chargement des forfaits..." fullScreen={true} />}>
           <Pricing 
-            onChooseFree={() => setSessionChosenPlan(true)} 
-            onChoosePremium={() => setSessionChosenPlan(true)}
+            onChooseFree={() => {
+              sessionStorage.setItem('levelmak_session_chosen_plan', 'true');
+              setSessionChosenPlan(true);
+            }} 
+            onChoosePremium={() => {
+              sessionStorage.setItem('levelmak_session_chosen_plan', 'true');
+              setSessionChosenPlan(true);
+            }}
             onPaymentSuccess={(data: any) => setGlobalReceiptData({ ...data, userName: user?.name, userPhone: user?.phoneNumber })}
             isFullScreen={true}
           />
