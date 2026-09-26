@@ -96,6 +96,17 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         const planDuration = pendingPlan?.duration || 'monthly';
         const planAmount = pendingPlan?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
 
+        // Anti-fraud security check: ensure user actually initiated a payment session
+        const hasValidSessionProof = !!(pendingPlanRaw || pendingTxId || params.get('transactionId') || params.get('merchantPaymentReference'));
+        if (successParam && !hasValidSessionProof) {
+            console.warn("Tentative d'activation non autorisée détectée sans session de paiement.");
+            setValidationStatus('idle');
+            setIsValidating(false);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            alert("Accès non autorisé : Aucune session de paiement n'a été initiée pour ce compte.");
+            return;
+        }
+
         // Helper to finalize activation in local state after confirmed
         const finalizeActivation = (premiumUntil: string, txId?: string) => {
             const expDate = new Date(premiumUntil);
