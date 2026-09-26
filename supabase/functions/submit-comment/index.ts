@@ -612,7 +612,6 @@ serve(async (req) => {
         .update({
           is_premium: true,
           premium_until: newExpiryIso,
-          subscription_tier: targetTier,
           stats: updatedStats
         })
         .eq('id', targetUserId);
