@@ -583,6 +583,9 @@ export const grantSubscriptionBonus = async (params: {
         const newExpiry = result.newExpiry;
         const formattedDateStr = new Date(newExpiry).toLocaleDateString('fr-FR');
 
+        // Immediately update admin override cache for zero-latency local consistency
+        setPremiumOverride(params.targetUserId, daysToAdd, targetTier);
+
         // Log admin action via Edge Function (bypasses RLS on admin_logs)
         await invokeEdgeAction('log_admin_action', {
             adminId: 'admin',

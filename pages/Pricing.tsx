@@ -123,6 +123,28 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                 premium_until: premiumUntil
             });
 
+            // Authoritative server-side update directly into Supabase database (bypasses RLS)
+            const bonusDays = planDuration === 'weekly' ? 7 : planDuration === 'annual' ? 365 : 30;
+            const targetTier = planDuration === 'weekly' ? 'hebdo' : planDuration === 'annual' ? 'annuel' : 'mensuel';
+            supabase.functions.invoke('submit-comment', {
+                body: {
+                    action: 'grant_subscription_bonus',
+                    targetUserId: user.id,
+                    bonusDays,
+                    tier: targetTier,
+                    reason: `Souscription Plan ${planName} via Djomy (Réf: ${txId || pendingTxId || 'direct'})`
+                }
+            }).catch(e => console.warn("Authoritative DB subscription sync error:", e));
+
+            // Also call djomy-payment for transaction audit log
+            supabase.functions.invoke('djomy-payment', {
+                body: {
+                    action: 'activate-premium',
+                    duration: planDuration,
+                    transactionId: txId || pendingTxId
+                }
+            }).catch(e => console.warn("djomy-payment audit activation error:", e));
+
             localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
             localStorage.removeItem(`levelmak_pending_plan_${user.id}`);
 
@@ -177,15 +199,6 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             const calculatedExpiry = exp.toISOString();
 
             finalizeActivation(calculatedExpiry, pendingTxId || undefined);
-
-            // Notify server-side edge function in background (non-blocking)
-            supabase.functions.invoke('djomy-payment', {
-                body: {
-                    action: 'activate-premium',
-                    duration: planDuration,
-                    transactionId: pendingTxId
-                }
-            }).catch(e => console.warn("Background server activation:", e));
             return;
         }
 

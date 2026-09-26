@@ -577,6 +577,63 @@ serve(async (req) => {
       );
     }
 
+    // 17. GRANT SUBSCRIPTION BONUS (authoritative server-side update, bypasses RLS)
+    if (action === 'grant_subscription_bonus') {
+      const { targetUserId, bonusDays, tier, reason } = body;
+      if (!targetUserId) {
+        return new Response(
+          JSON.stringify({ error: 'targetUserId requis' }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const daysToAdd = Number(bonusDays) || 30;
+      const targetTier = tier || 'mensuel';
+
+      // Check current profile expiration to allow smart rollover
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('is_premium, premium_until, stats')
+        .eq('id', targetUserId)
+        .maybeSingle();
+
+      const now = Date.now();
+      const currentExpiry = profile?.premium_until ? new Date(profile.premium_until).getTime() : 0;
+      const baseTime = (profile?.is_premium && currentExpiry > now) ? currentExpiry : now;
+      const newExpiryDate = new Date(baseTime + daysToAdd * 86400000);
+      const newExpiryIso = newExpiryDate.toISOString();
+
+      const updatedStats = profile?.stats || {};
+      updatedStats.subscriptionTier = targetTier;
+      updatedStats.subscription_tier = targetTier;
+
+      const { error: updateErr } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          is_premium: true,
+          premium_until: newExpiryIso,
+          subscription_tier: targetTier,
+          stats: updatedStats
+        })
+        .eq('id', targetUserId);
+
+      if (updateErr) {
+        return new Response(
+          JSON.stringify({ error: updateErr.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          newExpiry: newExpiryIso,
+          message: 'Bonus attribué avec succès.'
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Action inconnue" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
