@@ -75,14 +75,14 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         setIsValidating(true);
         setValidationStatus('loading');
         setValidationProgress("Connexion sécurisée avec Djomy...");
-        
-        let attempts = 0;
-        const maxAttempts = 15; // 37.5 seconds total
-        
+
         const params = new URLSearchParams(window.location.search);
-        let pendingTxId = params.get('transactionId') || 
-                          params.get('merchantPaymentReference') || 
-                          params.get('reference') || 
+        const successParam = params.get('success') === 'true';
+
+        // Retrieve pending plan and transaction ID from localStorage
+        let pendingTxId = params.get('transactionId') ||
+                          params.get('merchantPaymentReference') ||
+                          params.get('reference') ||
                           localStorage.getItem(`levelmak_pending_tx_id_${user.id}`);
 
         const pendingPlanRaw = localStorage.getItem(`levelmak_pending_plan_${user.id}`);
@@ -93,12 +93,12 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             console.warn("Could not parse pending plan:", e);
         }
 
-        // If no transaction ID found yet, look up latest transaction for this user in Supabase
+        // If no transaction ID found, look up latest transaction for this user in Supabase
         if (!pendingTxId) {
             try {
                 const { data: latestTx } = await supabase
                     .from('user_transactions')
-                    .select('id, plan_duration, amount')
+                    .select('id, plan_duration, amount, status')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false })
                     .limit(1)
@@ -106,192 +106,207 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                 if (latestTx?.id) {
                     pendingTxId = latestTx.id;
                     if (!pendingPlan && latestTx.plan_duration) {
-                        pendingPlan = {
-                            duration: latestTx.plan_duration,
-                            amount: latestTx.amount
-                        };
+                        pendingPlan = { duration: latestTx.plan_duration, amount: latestTx.amount };
+                    }
+                    // If the latest transaction is already marked success, activate immediately
+                    if (latestTx.status === 'success') {
+                        setValidationProgress("Transaction confirmée, activation en cours...");
                     }
                 }
             } catch (err) {
                 console.warn("Impossible de récupérer la dernière transaction:", err);
             }
         }
-        
+
+        const planDuration = pendingPlan?.duration || 'monthly';
+        const planAmount = pendingPlan?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
+
+        // Helper to finalize activation in local state after confirmed
+        const finalizeActivation = (premiumUntil: string, txId?: string) => {
+            const expDate = new Date(premiumUntil);
+            const now = new Date();
+            const planName = planDuration === 'weekly' ? 'Hebdomadaire' : planDuration === 'monthly' ? 'Mensuel' : 'Annuel';
+
+            updateProfile(user.name, user.phoneNumber, {
+                is_premium: true,
+                premium_until: premiumUntil
+            });
+
+            localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
+            localStorage.removeItem(`levelmak_pending_plan_${user.id}`);
+            localStorage.removeItem(`levelmak_demo_premium_${user.id}`);
+            localStorage.removeItem(`levelmak_demo_premium_until_${user.id}`);
+            localStorage.removeItem(`levelmak_demo_premium_plan_id_${user.id}`);
+
+            import('../services/audio').then(({ audioService }) => { audioService.playSuccess?.(); });
+            import('canvas-confetti').then(({ default: confetti }) => {
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'] });
+            });
+
+            const receiptPayload = {
+                transactionId: txId || pendingTxId || `tx_${Date.now()}`,
+                planName,
+                amount: planAmount,
+                purchasedAt: formatDateFrench(now),
+                startsAt: formatDateFrench(now),
+                expiresAt: formatDateFrench(expDate)
+            };
+
+            addNotification({
+                type: 'admin',
+                title: `Reçu d'Abonnement PRO`,
+                message: `Reçu officiel LEVELMAK PRO :\n• Forfait : PRO ${planName}\n• Montant : ${planAmount.toLocaleString()} FG\n• Réf : ${receiptPayload.transactionId}\n• Période : du ${receiptPayload.startsAt} au ${receiptPayload.expiresAt}\nMerci pour votre confiance.`,
+                read: false,
+                timestamp: new Date().toISOString()
+            });
+
+            addNotification({
+                type: 'achievement',
+                title: `Bienvenue dans l'Élite PRO`,
+                message: `Votre accès illimité a été activé. Explorez l'AI Lab, résumez vos cours et révisez sans limites.`,
+                read: false,
+                timestamp: new Date().toISOString()
+            });
+
+            setReceiptData(receiptPayload);
+            setValidationStatus('success');
+            setIsValidating(false);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        };
+
+        // STRATEGY 1: If success=true in URL, use server-side activate-premium (bypasses RLS)
+        if (successParam) {
+            setValidationProgress("Activation de votre abonnement en cours...");
+            try {
+                const activateRes = await supabase.functions.invoke('djomy-payment', {
+                    body: {
+                        action: 'activate-premium',
+                        duration: planDuration,
+                        transactionId: pendingTxId
+                    }
+                });
+
+                if (activateRes.data?.success && activateRes.data?.premium_until) {
+                    setValidationProgress("Abonnement activé avec succès !");
+                    finalizeActivation(activateRes.data.premium_until, pendingTxId || undefined);
+                    return;
+                } else {
+                    console.warn("activate-premium returned:", activateRes.data, activateRes.error);
+                }
+            } catch (activateErr) {
+                console.warn("activate-premium invoke error:", activateErr);
+            }
+        }
+
+        // STRATEGY 2: Poll verify-status + profile check
+        let attempts = 0;
+        const maxAttempts = 15;
+
         const interval = setInterval(async () => {
             attempts++;
-            
+
             if (attempts === 2) setValidationProgress("Vérification de l'état de votre transaction...");
-            if (attempts === 4) setValidationProgress("Sécurisation de la liaison de compte...");
-            if (attempts === 6) setValidationProgress("Activation finale de votre abonnement...");
-            if (attempts === 8) setValidationProgress("Finalisation de l'espace Premium...");
-            
+            if (attempts === 5) setValidationProgress("Sécurisation de la liaison de compte...");
+            if (attempts === 8) setValidationProgress("Activation finale de votre abonnement...");
+
             try {
-                let verifyResult: any = null;
+                let verifyStatus: string | null = null;
+
                 if (pendingTxId) {
-                    // Call our Edge function to verify status directly from Djomy API
                     try {
                         const res = await supabase.functions.invoke('djomy-payment', {
-                            body: {
-                                action: 'verify-status',
-                                transactionId: pendingTxId
-                            }
+                            body: { action: 'verify-status', transactionId: pendingTxId }
                         });
-                        verifyResult = res.data;
+                        verifyStatus = res.data?.status;
                     } catch (invokeErr) {
                         console.warn("verify-status invoke notice:", invokeErr);
                     }
                 }
 
-                // Check profile premium state
+                // Check profile in DB
                 const { data: profile } = await supabase
                     .from('profiles')
                     .select('is_premium, premium_until')
                     .eq('id', user.id)
                     .single();
 
-                // Check transaction state in user_transactions
-                const { data: tx } = await supabase
-                    .from('user_transactions')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                const isProfileValid = !!(profile?.is_premium && profile?.premium_until && new Date(profile.premium_until).getTime() > Date.now());
+                const isTxVerified = verifyStatus === 'success' || verifyStatus === 'SUCCESS';
 
-                let isProfileValid = !!(profile && profile.is_premium && profile.premium_until && new Date(profile.premium_until).getTime() > Date.now());
-
-                const isTxSuccess = tx && tx.status === 'success';
-                const isVerifySuccess = verifyResult?.success && (verifyResult.status === 'success' || verifyResult.status === 'SUCCESS');
-                const isDjomyRedirectConfirmed = params.get('success') === 'true' && (attempts >= 3 || isTxSuccess || isVerifySuccess);
-
-                // Activate subscription when confirmed
-                if (!isProfileValid && (isTxSuccess || isVerifySuccess || isDjomyRedirectConfirmed)) {
-                    const planDuration = tx?.plan_duration || pendingPlan?.duration || 'weekly';
-                    const now = Date.now();
-                    const baseDate = (profile?.premium_until && new Date(profile.premium_until).getTime() > now)
-                        ? new Date(profile.premium_until)
-                        : new Date();
-
-                    const exp = new Date(baseDate);
-                    if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
-                    else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
-                    else if (planDuration === 'annual') exp.setDate(exp.getDate() + 365);
-                    const calculatedExpiry = exp.toISOString();
-
-                    await supabase
-                        .from('profiles')
-                        .update({
-                            is_premium: true,
-                            premium_until: calculatedExpiry
-                        })
-                        .eq('id', user.id);
-
-                    if (tx && tx.status !== 'success') {
-                        await supabase
-                            .from('user_transactions')
-                            .update({ status: 'success' })
-                            .eq('id', tx.id);
-                    }
-
-                    if (profile) {
-                        profile.is_premium = true;
-                        profile.premium_until = calculatedExpiry;
-                    }
-                    isProfileValid = true;
-                }
-                
+                // If profile is already premium in DB, finalize
                 if (isProfileValid && profile?.premium_until) {
                     clearInterval(interval);
-                    
-                    updateProfile(user.name, user.phoneNumber, {
-                        is_premium: true,
-                        premium_until: profile.premium_until
-                    });
-                    
-                    localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
-                    localStorage.removeItem(`levelmak_pending_plan_${user.id}`);
-                    localStorage.removeItem(`levelmak_demo_premium_${user.id}`);
-                    localStorage.removeItem(`levelmak_demo_premium_until_${user.id}`);
-                    localStorage.removeItem(`levelmak_demo_premium_plan_id_${user.id}`);
-                    
-                    import('../services/audio').then(({ audioService }) => {
-                        audioService.playSuccess?.();
-                    });
-                    
-                    import('canvas-confetti').then(({ default: confetti }) => {
-                        confetti({
-                            particleCount: 150,
-                            spread: 80,
-                            origin: { y: 0.6 },
-                            colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
-                        });
-                    });
-                    
-                    const purchaseDate = new Date();
-                    const expirationDate = new Date(profile.premium_until);
-                    const planDuration = tx?.plan_duration || pendingPlan?.duration || 'weekly';
-                    const planName = planDuration === 'weekly' ? 'Hebdomadaire' : planDuration === 'monthly' ? 'Mensuel' : 'Annuel';
-                    const amount = tx?.amount || pendingPlan?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
-                    
-                    const receiptPayload = {
-                        transactionId: tx?.id || pendingTxId || `tx_${Date.now()}`,
-                        planName,
-                        amount,
-                        purchasedAt: formatDateFrench(purchaseDate),
-                        startsAt: formatDateFrench(purchaseDate),
-                        expiresAt: formatDateFrench(expirationDate)
-                    };
-                    
-                    addNotification({
-                        type: 'admin',
-                        title: `Reçu d'Abonnement PRO`,
-                        message: `Reçu officiel LEVELMAK PRO :\n• Forfait : PRO ${planName}\n• Montant : ${amount.toLocaleString()} FG\n• Réf : ${receiptPayload.transactionId}\n• Période : du ${receiptPayload.startsAt} au ${receiptPayload.expiresAt}\nMerci pour votre confiance.`,
-                        read: false,
-                        timestamp: new Date().toISOString()
-                    });
-            
-                    addNotification({
-                        type: 'achievement',
-                        title: `Bienvenue dans l'Élite PRO`,
-                        message: `Votre accès illimité a été activé. Explorez l'AI Lab, résumez vos cours et révisez sans limites.`,
-                        read: false,
-                        timestamp: new Date().toISOString()
-                    });
-                    
-                    setReceiptData(receiptPayload);
-                    setValidationStatus('success');
-                    setIsValidating(false);
-                    
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    finalizeActivation(profile.premium_until, pendingTxId || undefined);
+                    return;
                 }
-            } catch (err) {
-                console.error("Validation loop error:", err);
-            }
-            
-            if (attempts >= maxAttempts) {
-                clearInterval(interval);
-                if (params.get('success') === 'true') {
-                    // Fallback auto-activation so paying user is never stranded
-                    const planDuration = pendingPlan?.duration || 'weekly';
+
+                // If Djomy confirms success, call server-side activate
+                if (isTxVerified) {
+                    clearInterval(interval);
+                    setValidationProgress("Paiement confirmé, activation du compte...");
+                    try {
+                        const activateRes = await supabase.functions.invoke('djomy-payment', {
+                            body: { action: 'activate-premium', duration: planDuration, transactionId: pendingTxId }
+                        });
+                        if (activateRes.data?.success && activateRes.data?.premium_until) {
+                            finalizeActivation(activateRes.data.premium_until, pendingTxId || undefined);
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn("activate-premium after verify:", e);
+                    }
+                }
+
+                // After 3 attempts with success=true in URL, use server-side activate as fallback
+                if (successParam && attempts >= 3 && !isProfileValid) {
+                    clearInterval(interval);
+                    setValidationProgress("Forçage de l'activation...");
+                    try {
+                        const activateRes = await supabase.functions.invoke('djomy-payment', {
+                            body: { action: 'activate-premium', duration: planDuration, transactionId: pendingTxId }
+                        });
+                        if (activateRes.data?.success && activateRes.data?.premium_until) {
+                            finalizeActivation(activateRes.data.premium_until, pendingTxId || undefined);
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn("activate-premium fallback:", e);
+                    }
+                    // Last resort: local update + DB write
                     const exp = new Date();
                     if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
                     else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
-                    else if (planDuration === 'annual') exp.setDate(exp.getDate() + 365);
+                    else exp.setDate(exp.getDate() + 365);
                     const calculatedExpiry = exp.toISOString();
-
                     supabase.from('profiles').update({ is_premium: true, premium_until: calculatedExpiry }).eq('id', user.id).then();
-                    updateProfile(user.name, user.phoneNumber, { is_premium: true, premium_until: calculatedExpiry });
-                    localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
-                    localStorage.removeItem(`levelmak_pending_plan_${user.id}`);
-                    setValidationStatus('success');
+                    finalizeActivation(calculatedExpiry, pendingTxId || undefined);
+                    return;
+                }
+
+            } catch (err) {
+                console.error("Validation loop error:", err);
+            }
+
+            if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                if (successParam) {
+                    // Timeout fallback with success URL — activate anyway
+                    const exp = new Date();
+                    if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
+                    else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
+                    else exp.setDate(exp.getDate() + 365);
+                    const calculatedExpiry = exp.toISOString();
+                    supabase.from('profiles').update({ is_premium: true, premium_until: calculatedExpiry }).eq('id', user.id).then();
+                    finalizeActivation(calculatedExpiry, pendingTxId || undefined);
                 } else {
                     setValidationStatus('timeout');
+                    setIsValidating(false);
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 }
-                setIsValidating(false);
-                window.history.replaceState({}, document.title, window.location.pathname);
             }
         }, 2500);
     };
+
 
     const handleInitiatePayment = async () => {
         if (!user || !selectedOptions) return;

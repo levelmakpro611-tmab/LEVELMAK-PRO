@@ -307,6 +307,78 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // ACTION: ACTIVATE PREMIUM (server-side, bypasses RLS)
+    if (action === "activate-premium") {
+      const { duration: planDuration, transactionId: txId } = requestBody;
+
+      if (!planDuration) {
+        return new Response(JSON.stringify({ error: "Durée du plan manquante" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Fetch existing profile to allow cumulative rollover
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("is_premium, premium_until")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const now = Date.now();
+      const baseDate = (existingProfile?.is_premium && existingProfile?.premium_until && new Date(existingProfile.premium_until).getTime() > now)
+        ? new Date(existingProfile.premium_until)
+        : new Date();
+
+      const expirationDate = new Date(baseDate);
+      if (planDuration === "weekly") expirationDate.setDate(expirationDate.getDate() + 7);
+      else if (planDuration === "monthly") expirationDate.setDate(expirationDate.getDate() + 30);
+      else if (planDuration === "annual") expirationDate.setDate(expirationDate.getDate() + 365);
+      else expirationDate.setDate(expirationDate.getDate() + 30); // fallback monthly
+
+      const expiryIso = expirationDate.toISOString();
+
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .update({ is_premium: true, premium_until: expiryIso })
+        .eq("id", user.id);
+
+      if (profileError) {
+        console.error("activate-premium: profile update error:", profileError);
+        return new Response(JSON.stringify({ error: "Échec de l'activation du profil: " + profileError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // If a transactionId is provided, also mark transaction as success
+      if (txId) {
+        await supabaseAdmin
+          .from("user_transactions")
+          .update({ status: "success" })
+          .eq("id", txId)
+          .eq("user_id", user.id);
+      }
+
+      await supabaseAdmin.from("admin_logs").insert({
+        admin_id: "payment-system",
+        admin_name: "Levelmak Auto Activation",
+        action: "activate_premium_server_side",
+        details: {
+          userId: user.id,
+          duration: planDuration,
+          transactionId: txId || null,
+          expiresAt: expiryIso
+        }
+      });
+
+      console.log(`activate-premium: Premium activated for user ${user.id} until ${expiryIso}`);
+      return new Response(JSON.stringify({ success: true, premium_until: expiryIso, is_premium: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ACTION: VERIFY STATUS
     if (action === "verify-status") {
       if (!transactionId) {
