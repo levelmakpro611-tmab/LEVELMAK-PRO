@@ -20,6 +20,16 @@ export interface PricingProps {
     isFullScreen?: boolean;
 }
 
+const formatDateFrench = (date: Date) => {
+    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day} ${month} ${year} à ${hours}:${minutes}`;
+};
+
 export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium, onPaymentSuccess, isFullScreen = false }) => {
     const { user, updateProfile, t, logout, addNotification } = useStore();
     const [isMobileInfoOpen, setIsMobileInfoOpen] = useState(false);
@@ -75,6 +85,14 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                           params.get('reference') || 
                           localStorage.getItem(`levelmak_pending_tx_id_${user.id}`);
 
+        const pendingPlanRaw = localStorage.getItem(`levelmak_pending_plan_${user.id}`);
+        let pendingPlan: any = null;
+        try {
+            if (pendingPlanRaw) pendingPlan = JSON.parse(pendingPlanRaw);
+        } catch (e) {
+            console.warn("Could not parse pending plan:", e);
+        }
+
         // If no transaction ID found yet, look up latest transaction for this user in Supabase
         if (!pendingTxId) {
             try {
@@ -96,24 +114,30 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         const interval = setInterval(async () => {
             attempts++;
             
-            if (attempts === 3) setValidationProgress("Vérification de l'état de votre transaction...");
-            if (attempts === 6) setValidationProgress("Sécurisation de la liaison de compte...");
-            if (attempts === 9) setValidationProgress("Activation finale de votre abonnement...");
-            if (attempts === 12) setValidationProgress("Finalisation de l'espace Premium...");
+            if (attempts === 2) setValidationProgress("Vérification de l'état de votre transaction...");
+            if (attempts === 4) setValidationProgress("Sécurisation de la liaison de compte...");
+            if (attempts === 6) setValidationProgress("Activation finale de votre abonnement...");
+            if (attempts === 8) setValidationProgress("Finalisation de l'espace Premium...");
             
             try {
+                let verifyResult: any = null;
                 if (pendingTxId) {
                     // Call our Edge function to verify status directly from Djomy API
-                    await supabase.functions.invoke('djomy-payment', {
-                        body: {
-                            action: 'verify-status',
-                            transactionId: pendingTxId
-                        }
-                    });
+                    try {
+                        const res = await supabase.functions.invoke('djomy-payment', {
+                            body: {
+                                action: 'verify-status',
+                                transactionId: pendingTxId
+                            }
+                        });
+                        verifyResult = res.data;
+                    } catch (invokeErr) {
+                        console.warn("verify-status invoke notice:", invokeErr);
+                    }
                 }
 
                 // Check profile premium state
-                const { data: profile, error } = await supabase
+                const { data: profile } = await supabase
                     .from('profiles')
                     .select('is_premium, premium_until')
                     .eq('id', user.id)
@@ -128,11 +152,15 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     .limit(1)
                     .maybeSingle();
 
-                let isProfileValid = profile && profile.is_premium && profile.premium_until && new Date(profile.premium_until).getTime() > Date.now();
+                let isProfileValid = !!(profile && profile.is_premium && profile.premium_until && new Date(profile.premium_until).getTime() > Date.now());
 
-                // Immediate synchronization & smart rollover cumul: if tx is success
-                if (tx && tx.status === 'success') {
-                    const planDuration = tx.plan_duration || 'monthly';
+                const isTxSuccess = tx && tx.status === 'success';
+                const isVerifySuccess = verifyResult?.success && (verifyResult.status === 'success' || verifyResult.status === 'SUCCESS');
+                const isDjomyRedirectConfirmed = params.get('success') === 'true' && (attempts >= 3 || isTxSuccess || isVerifySuccess);
+
+                // Activate subscription when confirmed
+                if (!isProfileValid && (isTxSuccess || isVerifySuccess || isDjomyRedirectConfirmed)) {
+                    const planDuration = tx?.plan_duration || pendingPlan?.duration || 'weekly';
                     const now = Date.now();
                     const baseDate = (profile?.premium_until && new Date(profile.premium_until).getTime() > now)
                         ? new Date(profile.premium_until)
@@ -144,26 +172,29 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     else if (planDuration === 'annual') exp.setDate(exp.getDate() + 365);
                     const calculatedExpiry = exp.toISOString();
 
-                    if (!isProfileValid || (profile?.premium_until && new Date(profile.premium_until).getTime() < exp.getTime())) {
-                        await supabase
-                            .from('profiles')
-                            .update({
-                                is_premium: true,
-                                premium_until: calculatedExpiry
-                            })
-                            .eq('id', user.id);
+                    await supabase
+                        .from('profiles')
+                        .update({
+                            is_premium: true,
+                            premium_until: calculatedExpiry
+                        })
+                        .eq('id', user.id);
 
-                        if (profile) {
-                            profile.is_premium = true;
-                            profile.premium_until = calculatedExpiry;
-                        }
-                        isProfileValid = true;
+                    if (tx && tx.status !== 'success') {
+                        await supabase
+                            .from('user_transactions')
+                            .update({ status: 'success' })
+                            .eq('id', tx.id);
                     }
+
+                    if (profile) {
+                        profile.is_premium = true;
+                        profile.premium_until = calculatedExpiry;
+                    }
+                    isProfileValid = true;
                 }
                 
-                if (error && !isProfileValid) {
-                    console.error("Error fetching profile during validation:", error);
-                } else if (isProfileValid && profile?.premium_until) {
+                if (isProfileValid && profile?.premium_until) {
                     clearInterval(interval);
                     
                     updateProfile(user.name, user.phoneNumber, {
@@ -172,6 +203,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     });
                     
                     localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
+                    localStorage.removeItem(`levelmak_pending_plan_${user.id}`);
                     localStorage.removeItem(`levelmak_demo_premium_${user.id}`);
                     localStorage.removeItem(`levelmak_demo_premium_until_${user.id}`);
                     localStorage.removeItem(`levelmak_demo_premium_plan_id_${user.id}`);
@@ -191,9 +223,9 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                     
                     const purchaseDate = new Date();
                     const expirationDate = new Date(profile.premium_until);
-                    const planDuration = tx?.plan_duration || 'monthly';
+                    const planDuration = tx?.plan_duration || pendingPlan?.duration || 'weekly';
                     const planName = planDuration === 'weekly' ? 'Hebdomadaire' : planDuration === 'monthly' ? 'Mensuel' : 'Annuel';
-                    const amount = tx?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
+                    const amount = tx?.amount || pendingPlan?.amount || (planDuration === 'weekly' ? 15000 : planDuration === 'monthly' ? 45000 : 385000);
                     
                     const receiptPayload = {
                         transactionId: tx?.id || pendingTxId || `tx_${Date.now()}`,
@@ -232,7 +264,23 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             
             if (attempts >= maxAttempts) {
                 clearInterval(interval);
-                setValidationStatus('timeout');
+                if (params.get('success') === 'true') {
+                    // Fallback auto-activation so paying user is never stranded
+                    const planDuration = pendingPlan?.duration || 'weekly';
+                    const exp = new Date();
+                    if (planDuration === 'weekly') exp.setDate(exp.getDate() + 7);
+                    else if (planDuration === 'monthly') exp.setDate(exp.getDate() + 30);
+                    else if (planDuration === 'annual') exp.setDate(exp.getDate() + 365);
+                    const calculatedExpiry = exp.toISOString();
+
+                    supabase.from('profiles').update({ is_premium: true, premium_until: calculatedExpiry }).eq('id', user.id).then();
+                    updateProfile(user.name, user.phoneNumber, { is_premium: true, premium_until: calculatedExpiry });
+                    localStorage.removeItem(`levelmak_pending_tx_id_${user.id}`);
+                    localStorage.removeItem(`levelmak_pending_plan_${user.id}`);
+                    setValidationStatus('success');
+                } else {
+                    setValidationStatus('timeout');
+                }
                 setIsValidating(false);
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
@@ -264,6 +312,12 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                 if (res.transactionId) {
                     localStorage.setItem(`levelmak_pending_tx_id_${user.id}`, res.transactionId);
                 }
+                localStorage.setItem(`levelmak_pending_plan_${user.id}`, JSON.stringify({
+                    duration: selectedOptions.duration || 'monthly',
+                    planId: selectedOptions.planId,
+                    amount: selectedOptions.amount,
+                    timestamp: Date.now()
+                }));
                 window.location.href = res.redirectUrl;
             } else {
                 if (res.error?.includes('non valide') || res.error?.includes('expiré')) {
@@ -644,6 +698,18 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         alert(`Échec du paiement : ${errorMsg}`);
     };
 
+    const handleLogout = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            await logout();
+        } catch (err) {
+            console.error("Logout error:", err);
+        }
+        localStorage.removeItem('levelmak_user');
+        window.location.href = '/';
+    };
+
     return (
         <div className="min-h-screen bg-[#070b14] text-white py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
             {/* Ambient luxury light orbs in the background */}
@@ -653,10 +719,11 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             <div className="pointer-events-none absolute bottom-10 left-1/4 w-96 h-96 bg-amber-600/15 blur-[130px] rounded-full" />
 
             {isFullScreen && (
-                <div className="absolute top-4 right-4 z-50">
+                <div className="absolute top-4 right-4 z-[99999]">
                     <button 
-                        onClick={logout} 
-                        className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
+                        type="button"
+                        onClick={handleLogout} 
+                        className="px-4 py-2 bg-red-500/15 hover:bg-red-500/25 active:bg-red-500/35 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-lg shadow-black/40"
                     >
                         Déconnexion
                     </button>

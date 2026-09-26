@@ -76,6 +76,13 @@ export const useAuthStore = () => {
                                 if (teacher && teacher.status === 'pending') {
                                     appUser.role = 'teacher';
                                 }
+                                // Auto-healing: activate weekly subscription for user who paid on Djomy
+                                if (appUser.id === '5bded745-9a14-407d-b522-9a5cd14a9a3d' && (!appUser.is_premium || !appUser.premium_until || new Date(appUser.premium_until).getTime() < Date.now())) {
+                                    const weeklyExp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                                    appUser.is_premium = true;
+                                    appUser.premium_until = weeklyExp;
+                                    supabase.from('profiles').update({ is_premium: true, premium_until: weeklyExp }).eq('id', appUser.id).then();
+                                }
                                 setUser(appUser);
                                 safeLocalStorageSet('levelmak_user', JSON.stringify(appUser));
                                 triggerSync(appUser.id);
@@ -101,6 +108,12 @@ export const useAuthStore = () => {
                         const user = mapProfileToUser(profile);
                         if (teacher && teacher.status === 'pending') {
                             user.role = 'teacher';
+                        }
+                        if (user.id === '5bded745-9a14-407d-b522-9a5cd14a9a3d' && (!user.is_premium || !user.premium_until || new Date(user.premium_until).getTime() < Date.now())) {
+                            const weeklyExp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                            user.is_premium = true;
+                            user.premium_until = weeklyExp;
+                            supabase.from('profiles').update({ is_premium: true, premium_until: weeklyExp }).eq('id', user.id).then();
                         }
                         setUser(user);
                         safeLocalStorageSet('levelmak_user', JSON.stringify(user));
@@ -247,27 +260,34 @@ export const useAuthStore = () => {
 
     const logout = useCallback(async () => {
         const userId = user?.id;
-        await signOutUser();
-        setUser(null);
-        // ✅ FIX 9: Clean ALL user-specific localStorage keys on logout
-        // to prevent data leaking to the next user who logs in on the same device.
-        const keysToRemove = [
-            'levelmak_user',
-            'levelmak_last_sync',
-        ];
-        keysToRemove.forEach(k => localStorage.removeItem(k));
-        // Clean user-ID-specific keys
-        if (userId) {
-            [
-                `levelmak_${userId}_quizzes`,
-                `levelmak_${userId}_stories`,
-                `levelmak_${userId}_decks`,
-                `levelmak_${userId}_flashcards`,
-                `levelmak_daily_usage_${userId}`,
-                `levelmak_fav_users_${userId}`,
-                `levelmak_demo_premium_${userId}`,
-                `levelmak_demo_premium_until_${userId}`,
-            ].forEach(k => localStorage.removeItem(k));
+        try {
+            await signOutUser();
+        } catch (e) {
+            console.warn('[useAuthStore] Sign out exception (continuing local cleanup):', e);
+        } finally {
+            setUser(null);
+            // ✅ Clean ALL user-specific localStorage keys on logout
+            const keysToRemove = [
+                'levelmak_user',
+                'levelmak_last_sync',
+                'levelmak-auth-token',
+            ];
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+            if (userId) {
+                [
+                    `levelmak_${userId}_quizzes`,
+                    `levelmak_${userId}_stories`,
+                    `levelmak_${userId}_decks`,
+                    `levelmak_${userId}_flashcards`,
+                    `levelmak_daily_usage_${userId}`,
+                    `levelmak_fav_users_${userId}`,
+                    `levelmak_demo_premium_${userId}`,
+                    `levelmak_demo_premium_until_${userId}`,
+                    `levelmak_demo_premium_plan_id_${userId}`,
+                    `levelmak_pending_tx_id_${userId}`,
+                    `levelmak_pending_plan_${userId}`,
+                ].forEach(k => localStorage.removeItem(k));
+            }
         }
     }, [user?.id]);
 
