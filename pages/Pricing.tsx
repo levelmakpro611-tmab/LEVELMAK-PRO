@@ -98,13 +98,19 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
             try {
                 const { data: latestTx } = await supabase
                     .from('user_transactions')
-                    .select('id')
+                    .select('id, plan_duration, amount')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
                 if (latestTx?.id) {
                     pendingTxId = latestTx.id;
+                    if (!pendingPlan && latestTx.plan_duration) {
+                        pendingPlan = {
+                            duration: latestTx.plan_duration,
+                            amount: latestTx.amount
+                        };
+                    }
                 }
             } catch (err) {
                 console.warn("Impossible de récupérer la dernière transaction:", err);
