@@ -1284,23 +1284,53 @@ export const getAdminLogs = async (limitCount: number = 100): Promise<AdminLog[]
 
 export const getLeaderboard = async (limitCount: number = 50): Promise<User[]> => {
     try {
-        const deletedIds = getDeletedUserIds();
-        const { data: users, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .order('total_xp', { ascending: false })
-            .limit(limitCount + 30);
+        const deletedIds = new Set(getDeletedUserIds());
+        let profileList: any[] = [];
 
-        if (error) throw error;
+        // 1. Try direct Supabase query
+        try {
+            const { data: users, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('total_xp', { ascending: false })
+                .limit(limitCount + 30);
+
+            if (!error && users && users.length > 0) {
+                profileList = users;
+            }
+        } catch (_) {}
+
+        // 2. Fallback via Edge Function / getUserAnalytics if direct query returns empty or fails (bypasses RLS)
+        if (profileList.length === 0) {
+            try {
+                const analytics = await getUserAnalytics(limitCount + 30);
+                if (analytics && analytics.length > 0) {
+                    profileList = analytics.map(a => ({
+                        id: a.userId,
+                        name: a.userName,
+                        username: a.userName,
+                        email: a.email,
+                        total_xp: a.totalXp,
+                        phone_number: a.phoneNumber,
+                        level: a.level,
+                        badges: a.badges,
+                        level_coins: a.levelCoins,
+                        streak: { current: a.streakCount || 0, lastLogin: a.lastActive || new Date().toISOString() },
+                        stats: { quizzesCompleted: a.quizzesCompleted || 0, flashcardsStudied: a.flashcardsStudied || 0 },
+                        role: a.role || 'student'
+                    }));
+                }
+            } catch (_) {}
+        }
 
         // Filter out admin accounts, deleted users, and non-student profiles
-        return (users || [])
+        return profileList
             .filter(u => {
                 if (!u || !u.id) return false;
                 if (deletedIds.has(u.id)) return false;
                 const e = (u.email || '').toLowerCase();
                 const un = (u.username || u.name || '').toLowerCase();
-                const id = u.id.toLowerCase();
+                const id = String(u.id).toLowerCase();
                 if (
                     e === 'levelmak611@gmail.com' || 
                     e === '611@levelmak.app' || 
@@ -1315,20 +1345,21 @@ export const getLeaderboard = async (limitCount: number = 50): Promise<User[]> =
                 }
                 return true;
             })
+            .sort((a, b) => (Number(b.total_xp || 0) - Number(a.total_xp || 0)))
             .map(u => ({
                 id: u.id,
-                name: u.name,
-                username: u.username,
-                totalXp: u.total_xp || 0,
+                name: u.name || u.username || 'Élève',
+                username: u.username || u.name || 'Élève',
+                totalXp: Number(u.total_xp || 0),
                 phoneNumber: u.phone_number,
-                level: u.level,
-                badges: u.badges,
-                levelCoins: u.level_coins || 0,
-                streak: u.streak,
-                stats: u.stats,
-                activities: u.activities,
+                level: u.level || 1,
+                badges: u.badges || [],
+                levelCoins: Number(u.level_coins || 0),
+                streak: u.streak || { current: 0, lastLogin: new Date().toISOString() },
+                stats: u.stats || {},
+                activities: u.activities || [],
                 avatar: u.avatar_config || { baseColor: '#1E293B', accessory: 'none', aura: 'none', currentLevel: u.level || 1 },
-                role: u.role
+                role: u.role || 'student'
             } as User))
             .slice(0, limitCount);
     } catch (error) {
