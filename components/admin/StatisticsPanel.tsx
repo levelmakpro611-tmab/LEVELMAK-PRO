@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { TrendingUp, Users, BookOpen, Zap, Award, Clock, Activity, Sparkles, Download, Loader, Printer, RefreshCw } from 'lucide-react';
 import { AdminStats } from '../../types';
+import { resetActivitiesCounters, getIsActivitiesReset } from '../../services/adminService';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { jsPDF } from 'jspdf';
@@ -11,6 +12,7 @@ interface StatisticsPanelProps {
     stats: AdminStats;
     period: 'day' | 'week' | 'month' | 'year';
     onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => void;
+    onRefresh?: () => void;
 }
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
@@ -215,6 +217,21 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, period, onPeri
                         ))}
                     </div>
                     <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
+                        <button
+                            onClick={() => {
+                                const current = getIsActivitiesReset();
+                                if (window.confirm(current ? "Réactiver les compteurs réels d'activité ?" : "Voulez-vous réinitialiser tous les compteurs d'activités (Quiz, Flashcards, Heures) à zéro pour le lancement officiel ?")) {
+                                    resetActivitiesCounters(!current);
+                                    if (onRefresh) onRefresh();
+                                    else window.location.reload();
+                                }
+                            }}
+                            className="flex-1 md:flex-none flex justify-center items-center gap-1.5 px-3 py-1.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-600 dark:text-purple-400 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-purple-500/20 shadow-sm"
+                            title="Réinitialiser les compteurs d'activité"
+                        >
+                            <RefreshCw size={14} />
+                            {getIsActivitiesReset() ? 'Compteurs à 0 (Lancement)' : 'Remettre à 0'}
+                        </button>
                         <button
                             onClick={handlePrint}
                             disabled={isExportingPDF}

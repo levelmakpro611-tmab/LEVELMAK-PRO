@@ -159,32 +159,36 @@ const CommentManagement: React.FC<CommentManagementProps> = ({ comments, onRefre
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2 w-full md:w-auto">
-                    <span className="text-xs text-slate-400 font-bold uppercase flex items-center gap-2">
-                        <Filter size={14} className="text-purple-400" /> Catégorie
-                    </span>
-                    <div className="flex gap-1 bg-black/20 p-1 rounded-xl overflow-x-auto">
-                        {(['all', 'quiz', 'flashcards', 'library', 'coach', 'general'] as const).map((category) => (
-                            <button
-                                key={category}
-                                onClick={() => setFilterCategory(category)}
-                                className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${filterCategory === category
-                                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
-                                {category}
-                            </button>
-                        ))}
-                        <button
-                            onClick={handlePrint}
-                            disabled={exporting}
-                            className="whitespace-nowrap px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center disabled:opacity-50"
-                            title="Imprimer"
-                        >
-                            <Printer size={16} />
-                        </button>
+                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 w-full md:w-auto">
+                    <div className="flex flex-col gap-2 w-full sm:w-auto">
+                        <span className="text-xs text-slate-400 font-bold uppercase flex items-center gap-2">
+                            <Filter size={14} className="text-purple-400" /> Catégorie
+                        </span>
+                        <div className="flex flex-wrap gap-1 bg-black/20 p-1 rounded-xl">
+                            {(['all', 'quiz', 'flashcards', 'library', 'coach', 'general'] as const).map((category) => (
+                                <button
+                                    key={category}
+                                    onClick={() => setFilterCategory(category)}
+                                    className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${filterCategory === category
+                                            ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                        }`}
+                                >
+                                    {category}
+                                </button>
+                            ))}
+                        </div>
                     </div>
+
+                    <button
+                        onClick={handlePrint}
+                        disabled={exporting}
+                        className="p-2.5 h-[42px] px-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 hover:border-white/20 flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-sm shrink-0 self-end"
+                        title="Imprimer les commentaires"
+                    >
+                        <Printer size={16} />
+                        <span className="hidden sm:inline">Imprimer</span>
+                    </button>
                 </div>
             </div>
 

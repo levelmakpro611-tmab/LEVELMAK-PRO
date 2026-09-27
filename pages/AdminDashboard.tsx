@@ -915,7 +915,7 @@ const AdminDashboard: React.FC = () => {
                                 {activeTab === 'notifications' && <NotificationsManager onNavigate={handleNotificationClick} />}
                                 {activeTab === 'stats' && (
                                     <div className="space-y-6">
-                                        <StatisticsPanel stats={stats} period={period} onPeriodChange={setPeriod} />
+                                        <StatisticsPanel stats={stats} period={period} onPeriodChange={setPeriod} onRefresh={() => loadTab('stats', true)} />
                                         <DemographicTable stats={demographicStats} />
                                     </div>
                                 )}

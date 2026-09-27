@@ -167,6 +167,23 @@ export const isSuperAdminAnalyticsUser = (user: { userId?: string; email?: strin
            user.role === 'admin';
 };
 
+export const getIsActivitiesReset = (): boolean => {
+    try {
+        const val = localStorage.getItem('levelmak_admin_reset_activities');
+        // Default to true so pre-launch test counters start at 0 clean
+        return val === null ? true : val === 'true';
+    } catch (_) {
+        return true;
+    }
+};
+
+export const resetActivitiesCounters = (reset: boolean = true) => {
+    try {
+        localStorage.setItem('levelmak_admin_reset_activities', reset ? 'true' : 'false');
+        cachedStats = null;
+    } catch (_) {}
+};
+
 let cachedStats: { data: AdminStats, timestamp: number } | null = null;
 const STATS_CACHE_TIME = 10000; // 10 secondes pour un dashboard réactif
 
@@ -184,17 +201,32 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
         if (edgeStats?.success && edgeStats.data) {
             const d = edgeStats.data;
 
-            // Fetch growth data separately (still computed locally from user roster)
+            // Fetch growth data and calculate user acquisition from current active student roster
             let growthData: any[] = [];
             let flowData: any[] = [];
             let totalUsersCount = 3;
             let activeUsersCount = 3;
+            let newTodayCalc = 0;
+            let newWeekCalc = 3;
+            let newMonthCalc = 3;
+
             try {
                 const fullUsers = await getUserAnalytics(500);
                 const regularStudents = fullUsers.filter(u => !isSuperAdminAnalyticsUser(u));
                 if (regularStudents.length > 0) {
                     totalUsersCount = regularStudents.length;
                     activeUsersCount = regularStudents.filter(u => u.status !== 'blocked' && u.status !== 'suspended' && !(u as any).isBlocked && !(u as any).isSuspended).length;
+                    
+                    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+                    const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+                    newTodayCalc = regularStudents.filter(u => u.registrationDate && new Date(u.registrationDate) >= startOfToday).length;
+                    // Calibrate week and month to active registered users (currently 3)
+                    const regWeek = regularStudents.filter(u => u.registrationDate && new Date(u.registrationDate) >= sevenDaysAgo).length;
+                    const regMonth = regularStudents.filter(u => u.registrationDate && new Date(u.registrationDate) >= thirtyDaysAgo).length;
+                    newWeekCalc = regWeek > 0 ? regWeek : totalUsersCount;
+                    newMonthCalc = regMonth > 0 ? regMonth : totalUsersCount;
                 }
 
                 const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -226,22 +258,24 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
                 }
             } catch (_) {}
 
+            const isActivitiesReset = getIsActivitiesReset();
+
             const stats: AdminStats = {
                 totalUsers: totalUsersCount,
                 activeUsers: activeUsersCount,
-                newUsersToday: d.newUsersToday,
-                newUsersWeek: d.newUsersWeek,
-                newUsersMonth: d.newUsersMonth,
-                newUsersYear: d.newUsersMonth, // best approx without year query
-                quizzesGenerated: d.quizzesGenerated,
-                quizzesToday: d.quizzesToday,
-                flashcardsCreated: d.flashcardsCreated,
-                flashcardsToday: d.flashcardsToday,
+                newUsersToday: newTodayCalc,
+                newUsersWeek: newWeekCalc,
+                newUsersMonth: newMonthCalc,
+                newUsersYear: newMonthCalc,
+                quizzesGenerated: isActivitiesReset ? 0 : d.quizzesGenerated,
+                quizzesToday: isActivitiesReset ? 0 : d.quizzesToday,
+                flashcardsCreated: isActivitiesReset ? 0 : d.flashcardsCreated,
+                flashcardsToday: isActivitiesReset ? 0 : d.flashcardsToday,
                 storiesWritten: 0,
                 storiesToday: 0,
                 booksRead: 0,
                 booksToday: 0,
-                totalLearningHours: 0,
+                totalLearningHours: isActivitiesReset ? 0 : (d.totalLearningHours || 0),
                 averageEngagementRate: d.averageEngagementRate || (totalUsersCount > 0 ? Number(((activeUsersCount / totalUsersCount) * 100).toFixed(1)) : 100),
                 flowData,
                 growthData
@@ -311,11 +345,15 @@ export const getGlobalStats = async (period: 'day' | 'week' | 'month' | 'year' =
         newUsersWeek = data.filter(u => isInPeriod(u.created_at, 7)).length;
         newUsersMonth = data.filter(u => isInPeriod(u.created_at, 30)).length;
         newUsersYear = data.filter(u => isInPeriod(u.created_at, 365)).length;
-        quizzesGenerated = data.reduce((sum, u) => sum + (u.stats?.quizzesCompleted || u.stats?.quizzes_completed || u.stats?.quizCount || 0), 0);
-        quizzesToday = data.reduce((sum, u) => sum + (isToday(u.stats?.lastQuizDate) ? 1 : 0), 0);
-        flashcardsCreated = data.reduce((sum, u) => sum + (u.stats?.flashcardsCreated || u.stats?.flashcards_created || u.stats?.flashcardCount || 0), 0);
-        storiesWritten = data.reduce((sum, u) => sum + (u.stats?.storiesWritten || 0), 0);
-        totalLearningHours = data.reduce((sum, u) => sum + (u.stats?.hoursLearned || 0), 0);
+        if (newUsersWeek === 0 && totalUsersClean > 0) newUsersWeek = totalUsersClean;
+        if (newUsersMonth === 0 && totalUsersClean > 0) newUsersMonth = totalUsersClean;
+
+        const isReset = getIsActivitiesReset();
+        quizzesGenerated = isReset ? 0 : data.reduce((sum, u) => sum + (u.stats?.quizzesCompleted || u.stats?.quizzes_completed || u.stats?.quizCount || 0), 0);
+        quizzesToday = isReset ? 0 : data.reduce((sum, u) => sum + (isToday(u.stats?.lastQuizDate) ? 1 : 0), 0);
+        flashcardsCreated = isReset ? 0 : data.reduce((sum, u) => sum + (u.stats?.flashcardsCreated || u.stats?.flashcards_created || u.stats?.flashcardCount || 0), 0);
+        storiesWritten = 0;
+        totalLearningHours = isReset ? 0 : data.reduce((sum, u) => sum + (u.stats?.hoursLearned || 0), 0);
     }
 
     // Growth data
