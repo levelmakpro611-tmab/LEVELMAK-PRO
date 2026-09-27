@@ -187,6 +187,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       };
     } else {
       const checkKeyboard = () => {
+        // If Coach Bot is open, ignore main page keyboard shifts to prevent navigation bar jumps
+        if (document.body.classList.contains('bot-open')) {
+          setIsKeyboardOpen(false);
+          return;
+        }
+
         const isInput = document.activeElement && (
           document.activeElement.tagName === 'INPUT' || 
           document.activeElement.tagName === 'TEXTAREA' || 
@@ -204,6 +210,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       };
 
       const handleFocusIn = (e: FocusEvent) => {
+        if (document.body.classList.contains('bot-open')) return;
         const target = e.target as HTMLElement | null;
         if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
           setIsKeyboardOpen(true);
@@ -347,10 +354,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <button onClick={() => { 
             HapticFeedback.selection(); 
             setIsNotifOpen(true); 
-            // Automatically mark notifications as read when opening notification center
-            notifications.forEach(n => {
-              if (!n.read) markNotificationAsRead(n.id);
-            });
+            // Mark notifications as read asynchronously after smooth open animation
+            setTimeout(() => {
+              notifications.forEach(n => {
+                if (!n.read) markNotificationAsRead(n.id);
+              });
+            }, 300);
           }} className="p-3 text-slate-600 dark:text-slate-300 relative active:scale-95 transition-all bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
             <Bell size={22} fill={(hasUnread && !isNotifOpen) ? "currentColor" : "none"} className={(hasUnread && !isNotifOpen) ? "animate-pulse" : ""} />
             {hasUnread && (
@@ -490,7 +499,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         </div>
 
         {activeTab !== 'social' && (
-          <nav className={`md:hidden fixed bottom-0 left-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ${isKeyboardOpen ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
+          <nav className={`md:hidden fixed bottom-0 left-0 right-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transform-gpu transition-transform duration-200 ease-out ${isKeyboardOpen ? 'translate-y-full pointer-events-none' : 'translate-y-0'}`}>
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
               { id: 'flashcards', icon: Layers, label: 'Flash' },

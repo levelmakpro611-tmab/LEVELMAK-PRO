@@ -73,8 +73,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
                         onClick={onClose}
-                        className="fixed inset-0 z-[600] bg-slate-950/40 backdrop-blur-[2px]"
+                        className="fixed inset-0 z-[600] bg-slate-950/50 backdrop-blur-sm"
                     />
 
                     {/* Panel */}
@@ -82,7 +83,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                         initial={{ x: '100%' }}
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
+                        style={{ willChange: 'transform' }}
                         className="fixed top-0 right-0 bottom-0 z-[700] w-full max-w-sm md:max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/5 shadow-2xl flex flex-col"
                     >
                         {/* Header */}

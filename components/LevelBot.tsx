@@ -97,6 +97,7 @@ const LevelBot: React.FC = () => {
   const [visualViewportState, setVisualViewportState] = useState<{ top: number; height: number } | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Lock body scroll on mobile when chat is open to prevent layout jumps
@@ -250,18 +251,26 @@ const LevelBot: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const scrollToBottom = () => {
-    if (scrollRef.current && view === 'chat') {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    if (view === 'chat') {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+      } else if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     }
   };
 
+  // Immediate positioning to bottom upon open or messages change
   useEffect(() => {
-    scrollToBottom();
-    const t1 = setTimeout(scrollToBottom, 50);
-    const t2 = setTimeout(scrollToBottom, 200);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [messages, isTyping, view, isOpen]);
+    if (isOpen && view === 'chat') {
+      scrollToBottom('auto');
+      const t1 = setTimeout(() => scrollToBottom('auto'), 50);
+      const t2 = setTimeout(() => scrollToBottom('auto'), 150);
+      const t3 = setTimeout(() => scrollToBottom('smooth'), 300);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    }
+  }, [messages.length, isTyping, view, isOpen, keyboardHeight]);
 
   useEffect(() => {
     if (isOpen) {
@@ -430,6 +439,7 @@ const LevelBot: React.FC = () => {
             h-[calc(100dvh-env(safe-area-inset-top))] md:h-[650px] md:max-h-[85vh]
             rounded-t-3xl md:rounded-[2rem]
             bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden
+            transform-gpu will-change-transform
           `}
         >
       {/* Header */}
@@ -557,6 +567,9 @@ const LevelBot: React.FC = () => {
                     </button>
                   </div>
                 )}
+
+                {/* Anchor ref for guaranteed scroll to bottom */}
+                <div ref={messagesEndRef} className="h-px w-full" />
               </div>
             </div>
 
