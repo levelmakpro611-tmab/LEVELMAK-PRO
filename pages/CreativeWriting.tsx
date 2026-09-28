@@ -93,6 +93,18 @@ const CreativeWriting: React.FC = () => {
     const [showScrollSpeedMenu, setShowScrollSpeedMenu] = useState<boolean>(false);
     const readerScrollRef = React.useRef<HTMLDivElement>(null);
 
+    // Toggle modal-open class on document.body for AI coach modals or reading modal
+    useEffect(() => {
+        if (activeAiModal || viewingStory) {
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.classList.remove('modal-open');
+        }
+        return () => {
+            document.body.classList.remove('modal-open');
+        };
+    }, [activeAiModal, viewingStory]);
+
     // Load reactions and saved stories per user
     useEffect(() => {
         const likedKey = user?.id ? `levelmak_${user.id}_liked_stories` : 'levelmak_liked_stories';
@@ -1778,7 +1790,7 @@ const CreativeWriting: React.FC = () => {
             {/* Coach IA Modal (Avis / Aide) */}
             <AnimatePresence>
                 {activeAiModal && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 md:p-12 overflow-y-auto">
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-3 sm:p-6 md:p-12 overflow-y-auto">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -1790,7 +1802,7 @@ const CreativeWriting: React.FC = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 15 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                            className="relative w-full max-w-2xl bg-slate-900/95 backdrop-blur-2xl border border-white/15 rounded-3xl md:rounded-[2.5rem] p-4 sm:p-7 md:p-9 flex flex-col shadow-2xl overflow-hidden max-h-[86dvh] sm:max-h-[85vh] z-10 my-auto"
+                            className="relative w-full max-w-2xl bg-slate-900/95 backdrop-blur-2xl border border-white/15 rounded-3xl md:rounded-[2.5rem] p-4 sm:p-7 md:p-9 flex flex-col shadow-2xl overflow-hidden max-h-[82dvh] sm:max-h-[85vh] z-10 my-auto pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:pb-7"
                         >
                             {/* Decorative background glow */}
                             <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden">
@@ -1801,9 +1813,10 @@ const CreativeWriting: React.FC = () => {
 
                             <button
                                 onClick={() => setActiveAiModal(null)}
-                                className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-slate-300 hover:text-white transition-colors z-30 shadow-md"
+                                className="absolute top-4 right-4 p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-full text-slate-300 hover:text-white transition-all z-30 shadow-md"
+                                aria-label="Fermer"
                             >
-                                <X size={18} />
+                                <X size={20} />
                             </button>
 
                             <div className="relative z-10 flex items-center gap-3 border-b border-white/10 pb-3 mb-3 shrink-0">
@@ -1837,9 +1850,9 @@ const CreativeWriting: React.FC = () => {
                             <div className="relative z-10 shrink-0 flex justify-center sm:justify-end border-t border-white/10 pt-3 mt-auto">
                                 <button
                                     onClick={() => setActiveAiModal(null)}
-                                    className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-primary to-secondary hover:brightness-110 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                                    className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-primary to-secondary hover:brightness-110 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                                 >
-                                    Retour à mon écriture
+                                    Retour à l'écriture
                                 </button>
                             </div>
                         </motion.div>

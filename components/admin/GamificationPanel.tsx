@@ -61,15 +61,31 @@ const GamificationPanel: React.FC = () => {
     const handleAdjustResources = async (type: 'xp' | 'coins', amount: number) => {
         if (!selectedUser) return;
         setActionLoading(true);
+        // Optimistic update
+        const updatedSelected = {
+            ...selectedUser,
+            totalXp: type === 'xp' ? Math.max(0, (selectedUser.totalXp || 0) + amount) : selectedUser.totalXp,
+            levelCoins: type === 'coins' ? Math.max(0, (selectedUser.levelCoins || 0) + amount) : selectedUser.levelCoins,
+        };
+        setSelectedUser(updatedSelected);
+        setLeaderboard(prev => prev.map(u => u.id === selectedUser.id ? {
+            ...u,
+            totalXp: type === 'xp' ? Math.max(0, (u.totalXp || 0) + amount) : u.totalXp,
+            levelCoins: type === 'coins' ? Math.max(0, (u.levelCoins || 0) + amount) : u.levelCoins,
+        } : u));
+
         try {
             await adjustUserResources(selectedUser.id, type, amount);
-            alert(`${Math.abs(amount)} ${type} ${amount > 0 ? 'ajoutés' : 'retirés'} !`);
-            // Refresh
+            // Refresh from DB in background to ensure sync
             const updatedUsers = await getLeaderboard(50);
             setLeaderboard(updatedUsers);
-            setSelectedUser(updatedUsers.find(u => u.id === selectedUser.id) || null);
-        } catch (e) {
-            alert('Erreur');
+            const fresh = updatedUsers.find(u => u.id === selectedUser.id);
+            if (fresh) setSelectedUser(fresh);
+        } catch (e: any) {
+            console.error('Error adjusting resources:', e);
+            alert(`Erreur lors de la mise à jour: ${e.message || 'Échec de la synchronisation'}`);
+            // Revert by re-fetching
+            loadLeaderboard();
         } finally {
             setActionLoading(false);
         }
@@ -112,13 +128,24 @@ const GamificationPanel: React.FC = () => {
                         ) : (
                             <div className="grid gap-3">
                                 {leaderboard.map((user, index) => (
-                                    <div key={user.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 rounded-xl border border-slate-200 dark:border-white/5 hover:border-blue-500/30 transition-all group">
+                                    <div 
+                                        key={user.id} 
+                                        onClick={() => {
+                                            setSelectedUser(user);
+                                            setActiveTab('actions');
+                                        }}
+                                        className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 rounded-xl border border-slate-200 dark:border-white/5 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group cursor-pointer"
+                                        title="Cliquer pour gérer ce profil"
+                                    >
                                         <div className="flex items-center gap-4">
                                             <div className={`w-8 h-8 flex items-center justify-center font-black rounded-lg ${index < 3 ? 'bg-yellow-500 text-black shadow-md' : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-400'}`}>
                                                 {index + 1}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{user.name}</p>
+                                                <p className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-2">
+                                                    {user.name}
+                                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 group-hover:inline-block hidden">Gérer</span>
+                                                </p>
                                                 <p className="text-xs text-slate-500">{user.level}</p>
                                             </div>
                                         </div>
@@ -225,32 +252,46 @@ const GamificationPanel: React.FC = () => {
                         {/* Actions */}
                         <div className={`space-y-6 transition-opacity ${selectedUser ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
                             {/* Coins/XP Adjustment */}
-                            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 space-y-4">
-                                <h3 className="font-bold text-white flex items-center gap-2">
-                                    <Zap size={18} /> Récompenses Rapides
+                            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-slate-200 dark:border-white/10 space-y-4 shadow-sm">
+                                <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <Zap size={18} className="text-amber-500" /> Récompenses & Ajustements
                                 </h3>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-3">
                                     <button
                                         onClick={() => handleAdjustResources('xp', 100)}
                                         disabled={actionLoading}
-                                        className="p-4 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-xl text-purple-400 font-bold text-sm transition-all"
+                                        className="p-3 bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/30 rounded-xl text-purple-600 dark:text-purple-400 font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         +100 XP
                                     </button>
                                     <button
                                         onClick={() => handleAdjustResources('coins', 50)}
                                         disabled={actionLoading}
-                                        className="p-4 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-yellow-400 font-bold text-sm transition-all"
+                                        className="p-3 bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border border-yellow-500/30 rounded-xl text-yellow-600 dark:text-yellow-400 font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        +50 Coins
+                                        +50 Coins 🪙
+                                    </button>
+                                    <button
+                                        onClick={() => handleAdjustResources('xp', -100)}
+                                        disabled={actionLoading}
+                                        className="p-2.5 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 active:scale-95 border border-slate-200 dark:border-white/10 hover:border-red-500/30 rounded-xl text-slate-600 dark:text-slate-400 hover:text-red-500 font-bold text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1"
+                                    >
+                                        -100 XP
+                                    </button>
+                                    <button
+                                        onClick={() => handleAdjustResources('coins', -50)}
+                                        disabled={actionLoading}
+                                        className="p-2.5 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 active:scale-95 border border-slate-200 dark:border-white/10 hover:border-red-500/30 rounded-xl text-slate-600 dark:text-slate-400 hover:text-red-500 font-bold text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1"
+                                    >
+                                        -50 Coins
                                     </button>
                                 </div>
                             </div>
 
                             {/* Badge Granting */}
-                            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 space-y-4">
-                                <h3 className="font-bold text-white flex items-center gap-2">
-                                    <Medal size={18} /> Donner un Badge
+                            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-slate-200 dark:border-white/10 space-y-4 shadow-sm">
+                                <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <Medal size={18} className="text-amber-500" /> Donner un Badge
                                 </h3>
                                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
                                     {BADGES.map(badge => (
@@ -259,8 +300,8 @@ const GamificationPanel: React.FC = () => {
                                             onClick={() => handleGiveBadge(badge.id)}
                                             disabled={selectedUser?.badges?.includes(badge.id) || actionLoading}
                                             className={`p-2 rounded-lg border text-left text-xs flex items-center gap-2 transition-all ${selectedUser?.badges?.includes(badge.id)
-                                                    ? 'bg-green-500/10 border-green-500/30 text-green-500 opacity-50 cursor-not-allowed'
-                                                    : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300'
+                                                    ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-500 opacity-60 cursor-not-allowed'
+                                                    : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-blue-500/10 hover:border-blue-500/30 text-slate-700 dark:text-slate-300'
                                                 }`}
                                         >
                                             <span>{badge.icon}</span>

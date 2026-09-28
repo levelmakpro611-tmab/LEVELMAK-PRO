@@ -224,7 +224,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                 {sections.map((section) => {
                     const isExpanded = expandedSection === section.id;
                     return (
-                        <div key={section.id} className="bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl overflow-hidden shadow-xl transition-all">
+                        <div key={section.id} className="bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/10 rounded-3xl overflow-hidden shadow-xl transition-all transform-gpu">
                             {/* Accordion Header */}
                             <button
                                 onClick={() => setExpandedSection(isExpanded ? null : section.id)}
@@ -241,19 +241,13 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                         </p>
                                     </div>
                                 </div>
-                                <ChevronRight size={18} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                                <ChevronRight size={18} className={`text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
                             </button>
 
                             {/* Accordion Content */}
-                            <AnimatePresence initial={false}>
-                                {isExpanded && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                                    >
-                                        <div className="p-6 md:p-8 border-t border-black/5 dark:border-white/10 bg-slate-50 dark:bg-slate-950/20 space-y-6">
+                            {isExpanded && (
+                                <div className="animate-in fade-in duration-200">
+                                    <div className="p-6 md:p-8 border-t border-black/5 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/40 space-y-6">
                                             {section.id === 'profile' && (
                                                 <div className="space-y-6">
                                                     <div className="flex items-center gap-6">
@@ -738,15 +732,14 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                 </div>
                                             )}
                                         </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
 
                 {/* Supprimer mon compte Collapsible Panel */}
-                <div className="bg-red-500/10 dark:bg-red-500/5 border border-red-500/30 dark:border-red-500/20 rounded-3xl overflow-hidden shadow-xl transition-all">
+                <div className="bg-red-500/10 dark:bg-red-500/5 border border-red-500/30 dark:border-red-500/20 rounded-3xl overflow-hidden shadow-xl transition-all transform-gpu">
                     {/* Header */}
                     <button
                         onClick={() => setExpandedSection(expandedSection === 'delete_account' ? null : 'delete_account')}
@@ -763,22 +756,16 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                 </p>
                             </div>
                         </div>
-                        <ChevronRight size={18} className={`text-red-500 dark:text-red-400 transition-transform ${expandedSection === 'delete_account' ? 'rotate-90' : ''}`} />
+                        <ChevronRight size={18} className={`text-red-500 dark:text-red-400 transition-transform duration-200 ${expandedSection === 'delete_account' ? 'rotate-90' : ''}`} />
                     </button>
 
                     {/* Content */}
-                    <AnimatePresence initial={false}>
-                        {expandedSection === 'delete_account' && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                            >
-                                <div className="p-6 md:p-8 border-t border-red-500/20 bg-red-500/10 dark:bg-red-950/10 space-y-4">
-                                    <p className="text-xs text-red-800 dark:text-red-400 font-bold leading-relaxed">
-                                        Cette action supprimera définitivement votre compte, vos points, LevelCoins, badges, écrits, et toutes les données de Levelmak. Cette action est irréversible.
-                                    </p>
+                    {expandedSection === 'delete_account' && (
+                        <div className="animate-in fade-in duration-200">
+                            <div className="p-6 md:p-8 border-t border-red-500/20 bg-red-500/10 dark:bg-red-950/10 space-y-4">
+                                <p className="text-xs text-red-800 dark:text-red-400 font-bold leading-relaxed">
+                                    Cette action supprimera définitivement votre compte, vos points, LevelCoins, badges, écrits, et toutes les données de Levelmak. Cette action est irréversible.
+                                </p>
                                     
                                     <div className="space-y-4">
                                         <div className="space-y-1">
@@ -818,9 +805,8 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                         </button>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         )}
-                    </AnimatePresence>
                 </div>
             </div>
 

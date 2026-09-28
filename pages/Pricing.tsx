@@ -796,7 +796,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
                                 </li>
                                 <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200 font-medium">
                                     <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                                    <span>10 réponses à l'IA par jour</span>
+                                    <span>10 messages d'essai à l'IA</span>
                                 </li>
                                 <li className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-500 font-medium opacity-60">
                                     <X className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />

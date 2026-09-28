@@ -100,15 +100,38 @@ const LevelBot: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Lock body scroll on mobile when chat is open to prevent layout jumps
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Monitor document.body modal-open class to hide floating bubble
   useEffect(() => {
+    const checkModal = () => {
+      setIsModalOpen(document.body.classList.contains('modal-open'));
+    };
+    checkModal();
+    const observer = new MutationObserver(checkModal);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  // Lock body scroll on mobile and set bot-open flag when chat is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('bot-open');
+    } else {
+      document.body.classList.remove('bot-open');
+    }
+
     if (isOpen && typeof window !== 'undefined' && window.innerWidth < 768) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = originalOverflow;
+        document.body.classList.remove('bot-open');
       };
     }
+    return () => {
+      document.body.classList.remove('bot-open');
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -398,7 +421,7 @@ const LevelBot: React.FC = () => {
 
   return (
     <>
-      {!isOpen && (
+      {!isOpen && !isModalOpen && (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
@@ -785,12 +808,14 @@ const LevelBot: React.FC = () => {
                     autoComplete="off"
                     autoCorrect="on"
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onTouchStart={(e) => {
+                      // Ensure immediate focus and keyboard trigger on iOS Safari
+                      e.currentTarget.focus();
+                    }}
                     onFocus={(e) => {
-                      // Small delay to let keyboard animation finish before scrolling
                       setTimeout(() => {
-                        e.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                      }, 350);
+                        e.target.scrollIntoView({ block: 'end', behavior: 'smooth' });
+                      }, 250);
                     }}
                     placeholder={
                       isLimitReached

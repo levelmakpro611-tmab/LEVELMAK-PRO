@@ -38,6 +38,17 @@ const Analytics: React.FC = () => {
     const [newSubjectText, setNewSubjectText] = useState('');
     const [loadingSubject, setLoadingSubject] = useState<string | null>(null);
 
+    useEffect(() => {
+        if (showGoalsModal || showSubjectsModal) {
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.classList.remove('modal-open');
+        }
+        return () => {
+            document.body.classList.remove('modal-open');
+        };
+    }, [showGoalsModal, showSubjectsModal]);
+
     const parseMinutesFromText = (text: string): number => {
         const lower = text.toLowerCase();
         const hourRegex = /(\d+(?:\.\d+)?)\s*(?:heure|h)(?:s)?\b/;
@@ -161,11 +172,12 @@ const Analytics: React.FC = () => {
             completed: false
         };
         const updatedGoals = [...(currentAnalytics.customGoals || []), newGoal];
+        const updatedAnalytics = {
+            ...currentAnalytics,
+            customGoals: updatedGoals
+        };
         updateProfile(user.name, user.phoneNumber, {
-            analytics: {
-                ...currentAnalytics,
-                customGoals: updatedGoals
-            }
+            analytics: updatedAnalytics
         });
         setNewGoalText('');
     };

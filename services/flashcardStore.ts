@@ -23,12 +23,19 @@ interface FlashcardStore {
   reviewCard: (id: string, performanceRating: 0 | 1 | 2 | 3 | 4 | 5) => void;
   getCardsToReview: () => LocalFlashcard[];
   deleteCard: (id: string) => void;
+  deleteTopic: (topic: string) => void;
 }
 
 export const useFlashcardStore = create<FlashcardStore>()(
   persist(
     (set, get) => ({
       cards: [],
+
+      deleteTopic: (topic: string) => {
+        set((state) => ({
+          cards: state.cards.filter(c => (c.sourceQuizTitle || 'Général') !== topic)
+        }));
+      },
 
       addFromErrors: (questions, quizTitle, subject) => {
         set((state) => {

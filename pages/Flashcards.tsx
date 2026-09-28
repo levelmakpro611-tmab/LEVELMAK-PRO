@@ -34,7 +34,7 @@ interface FlashcardsProps {
 
 const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
     const { user, decks, flashcards, saveFlashcardDeck, deleteFlashcardDeck, addActivity, downloadCourse, offlinePacks, t, settings } = useStore();
-    const { cards: srsCards, getCardsToReview } = useFlashcardStore();
+    const { cards: srsCards, getCardsToReview, deleteTopic } = useFlashcardStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatorInput, setGeneratorInput] = useState('');
@@ -316,6 +316,18 @@ const Flashcards: React.FC<FlashcardsProps> = ({ onStartSession }) => {
                                                             {topicReviewCount} À RÉVISER
                                                         </div>
                                                     )}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm(`Supprimer ce deck d'erreurs "${topic}" ?`)) {
+                                                                deleteTopic(topic);
+                                                            }
+                                                        }}
+                                                        className="w-7 h-7 rounded-lg bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 flex items-center justify-center transition-colors"
+                                                        title="Supprimer ce deck de révision"
+                                                    >
+                                                        <Trash2 size={13} />
+                                                    </button>
                                                 </div>
                                             </div>
 
