@@ -1408,6 +1408,17 @@ export const getLeaderboard = async (limitCount: number = 50): Promise<User[]> =
 
 export const grantUserBadge = async (userId: string, badgeId: string): Promise<void> => {
     try {
+        // 1. Try Edge Function (Admin Service Role bypasses RLS)
+        try {
+            const { data: edgeRes, error: edgeErr } = await supabase.functions.invoke('submit-comment', {
+                body: { action: 'grant_user_badge', userId, badgeId }
+            });
+            if (!edgeErr && edgeRes?.success) {
+                return;
+            }
+        } catch (_) {}
+
+        // 2. Direct Supabase Fallback
         const { data: userData, error: fetchError } = await supabase
             .from('profiles')
             .select('badges')
@@ -1424,17 +1435,31 @@ export const grantUserBadge = async (userId: string, badgeId: string): Promise<v
                 .eq('id', userId);
 
             if (updateError) throw updateError;
-
-            await logAdminAction('system', 'System', 'user_activity', { type: 'badge_grant', badgeId }, userId);
         }
+        await logAdminAction('system', 'System', 'user_activity', { type: 'badge_grant', badgeId }, userId);
     } catch (error) {
         console.error('Error granting badge:', error);
         throw error;
     }
 };
 
-export const adjustUserResources = async (userId: string, type: 'xp' | 'coins', amount: number): Promise<void> => {
+export const adjustUserResources = async (userId: string, type: 'xp' | 'coins', amount: number): Promise<{ totalXp?: number; levelCoins?: number }> => {
     try {
+        // 1. Try Edge Function (Admin Service Role bypasses RLS)
+        try {
+            const { data: edgeRes, error: edgeErr } = await supabase.functions.invoke('submit-comment', {
+                body: { action: 'adjust_user_resources', userId, type, amount }
+            });
+            if (!edgeErr && edgeRes?.success) {
+                await logAdminAction('system', 'System', 'user_activity', { type: 'resource_adjust', resource: type, amount }, userId);
+                return {
+                    totalXp: edgeRes.data?.total_xp,
+                    levelCoins: edgeRes.data?.level_coins
+                };
+            }
+        } catch (_) {}
+
+        // 2. Direct Supabase Fallback
         const { data: userData, error: fetchError } = await supabase
             .from('profiles')
             .select('xp, total_xp, level_coins')
@@ -1443,15 +1468,24 @@ export const adjustUserResources = async (userId: string, type: 'xp' | 'coins', 
 
         if (fetchError) throw fetchError;
 
+        let resTotalXp = userData.total_xp;
+        let resLevelCoins = userData.level_coins;
+
         if (type === 'xp') {
-            const newXp = (userData.xp || 0) + amount;
-            const newTotalXp = (userData.total_xp || 0) + amount;
-            await supabase.from('profiles').update({ xp: newXp, total_xp: newTotalXp }).eq('id', userId);
+            const newXp = Math.max(0, (userData.xp || 0) + amount);
+            resTotalXp = Math.max(0, (userData.total_xp || 0) + amount);
+            const { error: upErr } = await supabase.from('profiles').update({ xp: newXp, total_xp: resTotalXp }).eq('id', userId);
+            if (upErr) throw upErr;
         } else {
-            const newCoins = (userData.level_coins || 0) + amount;
-            await supabase.from('profiles').update({ level_coins: newCoins }).eq('id', userId);
+            resLevelCoins = Math.max(0, (userData.level_coins || 0) + amount);
+            const { error: upErr } = await supabase.from('profiles').update({ level_coins: resLevelCoins }).eq('id', userId);
+            if (upErr) throw upErr;
         }
         await logAdminAction('system', 'System', 'user_activity', { type: 'resource_adjust', resource: type, amount }, userId);
+        return {
+            totalXp: resTotalXp,
+            levelCoins: resLevelCoins
+        };
     } catch (error) {
         console.error('Error adjusting user resources:', error);
         throw error;

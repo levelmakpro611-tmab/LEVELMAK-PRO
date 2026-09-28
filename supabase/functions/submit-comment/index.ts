@@ -570,6 +570,63 @@ serve(async (req) => {
       );
     }
 
+    // 13-B. ADJUST USER RESOURCES (XP, Total XP, Level Coins - Admin direct update)
+    if (action === 'adjust_user_resources') {
+      const { userId, type, amount } = body;
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'userId requis' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: profile, error: pErr } = await supabaseAdmin.from('profiles').select('xp, total_xp, level_coins, stats').eq('id', userId).maybeSingle();
+      if (pErr) {
+        return new Response(JSON.stringify({ error: pErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      
+      const numAmount = Number(amount) || 0;
+      let updates: any = {};
+      if (type === 'xp') {
+        const curXp = Number(profile?.xp || 0);
+        const curTotalXp = Number(profile?.total_xp || 0);
+        updates.xp = Math.max(0, curXp + numAmount);
+        updates.total_xp = Math.max(0, curTotalXp + numAmount);
+      } else {
+        const curCoins = Number(profile?.level_coins || 0);
+        updates.level_coins = Math.max(0, curCoins + numAmount);
+      }
+
+      const { data: updatedProfile, error: uErr } = await supabaseAdmin
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (uErr) {
+        return new Response(JSON.stringify({ error: uErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, profile: updatedProfile }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 13-C. GRANT USER BADGE (Admin direct update)
+    if (action === 'grant_user_badge') {
+      const { userId, badgeId } = body;
+      if (!userId || !badgeId) {
+        return new Response(JSON.stringify({ error: 'userId et badgeId requis' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: profile } = await supabaseAdmin.from('profiles').select('badges').eq('id', userId).maybeSingle();
+      const currentBadges = Array.isArray(profile?.badges) ? profile.badges : [];
+      if (!currentBadges.includes(badgeId)) {
+        await supabaseAdmin.from('profiles').update({ badges: [...currentBadges, badgeId] }).eq('id', userId);
+      }
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 14. RESET USER CONTENT & POINTS
     if (action === 'reset_user_content') {
       const { userId } = body;
@@ -699,6 +756,111 @@ serve(async (req) => {
           success: true,
           message: 'Abonnement révoqué avec succès.'
         }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 25. ADJUST USER RESOURCES (COINS / XP) - ADMIN
+    if (action === 'adjust_user_resources') {
+      const { userId, type, amount } = body;
+      if (!userId || !type || typeof amount !== 'number') {
+        return new Response(
+          JSON.stringify({ error: 'userId, type (coins|xp) et amount requis' }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: userProfile, error: fetchErr } = await supabaseAdmin
+        .from('profiles')
+        .select('xp, total_xp, level_coins')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+      if (!userProfile) {
+        return new Response(
+          JSON.stringify({ error: 'Utilisateur introuvable' }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let updatePayload: Record<string, any> = {};
+      if (type === 'xp') {
+        const newXp = Math.max(0, (userProfile.xp || 0) + amount);
+        const newTotalXp = Math.max(0, (userProfile.total_xp || 0) + amount);
+        updatePayload = { xp: newXp, total_xp: newTotalXp };
+      } else {
+        const newCoins = Math.max(0, (userProfile.level_coins || 0) + amount);
+        updatePayload = { level_coins: newCoins };
+      }
+
+      const { data: updatedData, error: updateErr } = await supabaseAdmin
+        .from('profiles')
+        .update(updatePayload)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (updateErr) throw updateErr;
+
+      return new Response(
+        JSON.stringify({ success: true, data: updatedData }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 26. GRANT USER BADGE - ADMIN
+    if (action === 'grant_user_badge') {
+      const { userId, badgeId } = body;
+      if (!userId || !badgeId) {
+        return new Response(
+          JSON.stringify({ error: 'userId et badgeId requis' }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: userProfile, error: fetchErr } = await supabaseAdmin
+        .from('profiles')
+        .select('badges')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+      const currentBadges = Array.isArray(userProfile?.badges) ? userProfile.badges : [];
+      if (!currentBadges.includes(badgeId)) {
+        const { error: updateErr } = await supabaseAdmin
+          .from('profiles')
+          .update({ badges: [...currentBadges, badgeId] })
+          .eq('id', userId);
+
+        if (updateErr) throw updateErr;
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Badge accordé avec succès' }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 27. SEARCH USERS FOR ADMIN
+    if (action === 'search_users') {
+      const { query, limit = 15 } = body;
+      let queryBuilder = supabaseAdmin
+        .from('profiles')
+        .select('id, name, username, email, phone_number, level, total_xp, level_coins, badges, avatar_config, role')
+        .order('total_xp', { ascending: false })
+        .limit(limit);
+
+      if (query && typeof query === 'string' && query.trim().length > 0) {
+        const q = query.trim();
+        queryBuilder = queryBuilder.or(`name.ilike.%${q}%,phone_number.ilike.%${q}%,email.ilike.%${q}%,username.ilike.%${q}%`);
+      }
+
+      const { data: users, error: searchErr } = await queryBuilder;
+      if (searchErr) throw searchErr;
+
+      return new Response(
+        JSON.stringify({ success: true, users: users || [] }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
