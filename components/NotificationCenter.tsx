@@ -98,7 +98,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                             <div className="flex items-center gap-2">
                                 {notifications.length > 0 && (
                                     <button
-                                        onClick={markAllAsRead}
+                                        onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}
                                         className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold"
                                         title="Tout marquer comme lu"
                                     >
@@ -107,7 +107,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                 )}
                                 {notifications.length > 0 && (
                                     <button
-                                        onClick={clearNotifications}
+                                        onClick={(e) => { e.stopPropagation(); clearNotifications(); }}
                                         className="p-2 hover:bg-red-500/10 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
                                         title={t('notifications.clearAll')}
                                     >
@@ -139,11 +139,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                             {notifications.length > 0 ? (
                                 notifications.map((notif) => (
-                                    <motion.div
+                                    <div
                                         key={notif.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className={`group p-4 rounded-2xl border transition-all ${notif.read
+                                        className={`group p-4 rounded-2xl border transition-colors ${notif.read
                                             ? 'bg-transparent border-slate-100 dark:border-white/5'
                                             : 'bg-primary/5 border-primary/20 shadow-sm'
                                             }`}
@@ -165,7 +163,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                                     </h4>
                                                     <div className="flex items-center gap-1 shrink-0">
                                                         <button
-                                                            onClick={() => toggleNotificationRead ? toggleNotificationRead(notif.id) : markNotificationAsRead(notif.id)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (toggleNotificationRead) toggleNotificationRead(notif.id);
+                                                                else markNotificationAsRead(notif.id);
+                                                            }}
                                                             className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-colors"
                                                             title={notif.read ? "Marquer comme non lu" : "Marquer comme lu"}
                                                         >
@@ -176,7 +178,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                                             )}
                                                         </button>
                                                         <button
-                                                            onClick={() => deleteNotification && deleteNotification(notif.id)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (deleteNotification) deleteNotification(String(notif.id));
+                                                            }}
                                                             className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
                                                             title="Supprimer cette notification"
                                                         >
@@ -192,7 +197,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                                 </p>
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 ))
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">

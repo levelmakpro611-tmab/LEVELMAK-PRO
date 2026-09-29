@@ -1383,13 +1383,17 @@ const CreativeWriting: React.FC = () => {
                                     <div className="relative z-10 flex flex-col justify-between h-full space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-black/30 rounded-xl overflow-hidden border border-white/10 shrink-0">
-                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
+                                                <div className="w-10 h-10 bg-black/30 rounded-xl overflow-hidden border border-white/10 shrink-0 flex items-center justify-center p-0.5">
+                                                    {(story.authorName?.toLowerCase().includes('admin') || (story as any).isVerified) ? (
+                                                        <img src="/logo.png" alt="LEVELMAK Admin" className="w-full h-full object-contain" />
+                                                    ) : (
+                                                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-1">
                                                         <p className="text-white font-bold text-xs tracking-tight">{story.authorName}</p>
-                                                        {(story as any).isVerified && (
+                                                        {((story as any).isVerified || story.authorName?.toLowerCase().includes('admin')) && (
                                                             <BadgeCheck size={12} className="text-secondary fill-secondary/20" />
                                                         )}
                                                     </div>
@@ -1481,13 +1485,17 @@ const CreativeWriting: React.FC = () => {
                                     <div className="relative z-10 flex flex-col justify-between h-full space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-black/30 rounded-xl overflow-hidden border border-white/10 shrink-0">
-                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
+                                                <div className="w-10 h-10 bg-black/30 rounded-xl overflow-hidden border border-white/10 shrink-0 flex items-center justify-center p-0.5">
+                                                    {(story.authorName?.toLowerCase().includes('admin') || (story as any).isVerified) ? (
+                                                        <img src="/logo.png" alt="LEVELMAK Admin" className="w-full h-full object-contain" />
+                                                    ) : (
+                                                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${story.authorName}`} alt="avatar" />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-1">
                                                         <p className="text-white font-bold text-xs tracking-tight">{story.authorName}</p>
-                                                        {(story as any).isVerified && (
+                                                        {((story as any).isVerified || story.authorName?.toLowerCase().includes('admin')) && (
                                                             <BadgeCheck size={12} className="text-secondary fill-secondary/20" />
                                                         )}
                                                     </div>
@@ -1544,19 +1552,19 @@ const CreativeWriting: React.FC = () => {
             {/* View Story Modal */}
             <AnimatePresence>
                 {viewingStory && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-12">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-1.5 sm:p-4 md:p-8">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => { setViewingStory(null); setAutoScrollSpeed(0); setShowScrollSpeedMenu(false); }}
-                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                            className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm"
                         />
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            initial={{ opacity: 0, scale: 0.95, y: 15 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-4xl bg-slate-900/95 border border-white/10 rounded-[3rem] h-[80vh] flex flex-col shadow-2xl overflow-hidden"
+                            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                            className="relative w-full max-w-5xl bg-slate-900/95 border border-white/10 rounded-[1.6rem] md:rounded-[3rem] h-[92vh] md:h-[84vh] flex flex-col shadow-2xl overflow-hidden"
                         >
                             {/* Cover Image Background */}
                             <div className="absolute inset-0 z-0 pointer-events-none select-none">
@@ -1570,18 +1578,23 @@ const CreativeWriting: React.FC = () => {
 
                             <button
                                 onClick={() => { setViewingStory(null); setAutoScrollSpeed(0); setShowScrollSpeedMenu(false); }}
-                                className="absolute top-8 right-8 p-3 bg-white/10 backdrop-blur-md rounded-full text-slate-400 hover:text-white transition-colors z-30"
+                                className="absolute top-4 right-4 md:top-8 md:right-8 p-2.5 md:p-3 bg-white/10 backdrop-blur-md rounded-full text-slate-300 hover:text-white transition-colors z-30"
                             >
-                                <X size={20} />
+                                <X size={18} />
                             </button>
                             
-                            <div ref={readerScrollRef} className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12 space-y-8">
+                            <div ref={readerScrollRef} className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-3.5 sm:p-6 md:p-12 space-y-6 md:space-y-8">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                     <div className="space-y-4 flex-1">
                                         <span className="px-4 py-1.5 bg-secondary/20 text-secondary-light text-[10px] font-black uppercase tracking-widest rounded-full border border-secondary/20">{t(`creativeWriting.categories.${viewingStory.category as any}`)}</span>
-                                        <h2 className="text-3xl md:text-5xl font-display font-black text-white dark:text-white leading-none transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{viewingStory.title}</h2>
-                                        <div className="flex items-center gap-4 text-slate-200 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                                            <span>{t('creativeWriting.list.by')} {viewingStory.authorName}</span>
+                                        <h2 className="text-2xl sm:text-3xl md:text-5xl font-display font-black text-white dark:text-white leading-tight transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{viewingStory.title}</h2>
+                                        <div className="flex items-center gap-3 text-slate-200 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                                            <div className="flex items-center gap-1.5">
+                                                {(viewingStory.authorName?.toLowerCase().includes('admin') || (viewingStory as any).isVerified) && (
+                                                    <img src="/logo.png" alt="LEVELMAK" className="w-4 h-4 object-contain" />
+                                                )}
+                                                <span>{t('creativeWriting.list.by')} {viewingStory.authorName}</span>
+                                            </div>
                                             <span>•</span>
                                             <span>{new Date(viewingStory.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                                         </div>
@@ -1613,7 +1626,7 @@ const CreativeWriting: React.FC = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="w-full bg-slate-950/70 backdrop-blur-md border border-white/15 rounded-[1.2rem] md:rounded-[2.5rem] p-6 md:p-12 shadow-2xl text-slate-100 dark:text-slate-100 [&_h1]:!text-white [&_h1]:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] [&_h2]:!text-white [&_h2]:drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] [&_p]:!text-slate-100 [&_p]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] [&_li]:!text-slate-200 [&_blockquote]:!text-slate-200 [&_strong]:!text-white">
+                                <div className="w-full bg-slate-950/70 backdrop-blur-md border border-white/15 rounded-[1.2rem] md:rounded-[2.5rem] p-4 sm:p-8 md:p-12 shadow-2xl text-slate-100 dark:text-slate-100 text-sm sm:text-base leading-relaxed [&_h1]:!text-white [&_h1]:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] [&_h2]:!text-white [&_h2]:drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)] [&_p]:!text-slate-100 [&_p]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] [&_li]:!text-slate-200 [&_blockquote]:!text-slate-200 [&_strong]:!text-white">
                                     {renderMarkdown(viewingStory.authorId === user?.id ? viewingStory.content : (viewingStory.publishedContent || viewingStory.content))}
                                     
                                     {/* Comments Section */}

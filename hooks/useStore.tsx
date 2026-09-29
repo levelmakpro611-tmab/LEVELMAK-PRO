@@ -118,17 +118,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [auth.user, auth.setUser]);
 
-  // Auto-seed official welcome notification for any user with 0 notifications
+  // Auto-seed official welcome notification for new accounts ONCE only
   // and auto-migrate legacy long welcome notifications with emojis to the new concise text
   useEffect(() => {
     if (auth.user) {
       const currentStats = auth.user.stats || {};
       const currentNotifications = currentStats.notifications || [];
+      const welcomeKey = `levelmak_welcome_delivered_${auth.user.id}`;
+      const isWelcomeDelivered = currentStats.welcomeNotifDelivered || localStorage.getItem(welcomeKey) === 'true';
+
       const firstName = (auth.user.name || 'Apprenant').split(' ')[0];
       const welcomeTitle = `Bienvenue sur LEVELMAK, ${firstName}`;
       const welcomeMessage = `Ton espace d'apprentissage est prêt. Révise tes cours, progresse avec le Coach IA et réussis tes examens à ton rythme. L'équipe LEVELMAK est à tes côtés.`;
 
-      if (currentNotifications.length === 0) {
+      if (!isWelcomeDelivered && currentNotifications.length === 0) {
+        localStorage.setItem(welcomeKey, 'true');
         const welcomeNotif: AppNotification = {
           id: `welcome_${auth.user.id}`,
           type: 'info',
@@ -140,6 +144,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         const updatedStats = {
           ...currentStats,
+          welcomeNotifDelivered: true,
           notifications: [welcomeNotif]
         };
 
@@ -158,7 +163,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             if (error) console.error('[Welcome Notif Sync Error]:', error);
           });
         }
-      } else {
+      } else if (currentNotifications.length > 0) {
         // Auto-migrate legacy welcome notification: remove emojis and shorten text
         let hasLegacyWelcome = false;
         const updatedNotifications = currentNotifications.map((notif: any) => {
@@ -204,7 +209,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       }
     }
-  }, [auth.user, auth.setUser]);
+  }, [auth.user?.id]);
 
   const addNotification = useCallback((notificationOrType: any, title?: string, message?: string) => {
     let newNotif: AppNotification;
@@ -325,12 +330,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const currentNotifications = currentStats.notifications || [];
       const updatedStats = {
         ...currentStats,
-        notifications: currentNotifications.filter((n: any) => n.id !== id)
+        welcomeNotifDelivered: true,
+        notifications: currentNotifications.filter((n: any) => String(n.id) !== String(id))
       };
       const updatedUser = {
         ...prev,
         stats: updatedStats
       };
+      if (prev.id) {
+        localStorage.setItem(`levelmak_welcome_delivered_${prev.id}`, 'true');
+      }
       safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
@@ -347,12 +356,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const currentStats = prev.stats || {};
       const updatedStats = {
         ...currentStats,
+        welcomeNotifDelivered: true,
         notifications: []
       };
       const updatedUser = {
         ...prev,
         stats: updatedStats
       };
+      if (prev.id) {
+        localStorage.setItem(`levelmak_welcome_delivered_${prev.id}`, 'true');
+      }
       safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {

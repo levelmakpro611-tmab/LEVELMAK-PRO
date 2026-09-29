@@ -358,12 +358,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           <button onClick={() => { 
             HapticFeedback.selection(); 
             setIsNotifOpen(true); 
-            // Mark notifications as read asynchronously after smooth open animation
-            setTimeout(() => {
-              notifications.forEach(n => {
-                if (!n.read) markNotificationAsRead(n.id);
-              });
-            }, 300);
           }} className="p-3 text-slate-600 dark:text-slate-300 relative active:scale-95 transition-all bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
             <Bell size={22} fill={(hasUnread && !isNotifOpen) ? "currentColor" : "none"} className={(hasUnread && !isNotifOpen) ? "animate-pulse" : ""} />
             {hasUnread && (
@@ -469,9 +463,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             <button onClick={() => { 
               HapticFeedback.selection(); 
               setIsNotifOpen(true); 
-              notifications.forEach(n => {
-                if (!n.read) markNotificationAsRead(n.id);
-              });
             }} className="relative p-3 text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-all group border border-slate-200/80 dark:border-white/10">
               <Bell size={28} fill={(hasUnread && !isNotifOpen) ? "currentColor" : "none"} className={`group-hover:rotate-12 transition-transform ${(hasUnread && !isNotifOpen) ? "animate-pulse" : ""}`} />
               {hasUnread && (
