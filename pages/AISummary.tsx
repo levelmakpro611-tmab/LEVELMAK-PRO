@@ -173,7 +173,7 @@ const AISummary: React.FC<{
     };
 
     return (
-        <div className="max-w-6xl mx-auto py-4 md:py-8 space-y-8 md:space-y-12 px-4 md:px-0 pt-20 md:pt-8">
+        <div className="max-w-6xl mx-auto py-2 md:py-8 space-y-6 md:space-y-12 px-2 sm:px-4 md:px-0 pt-2 md:pt-8">
             {/* Header Section */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}

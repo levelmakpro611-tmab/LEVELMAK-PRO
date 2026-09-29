@@ -492,14 +492,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : activeTab === 'writing' ? 'p-1 sm:p-6 md:p-10' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : isKeyboardOpen ? 'pb-4' : 'pb-36 md:pb-10'} transition-all duration-200`}>
+        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : activeTab === 'writing' ? 'p-1 sm:p-6 md:p-10' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : isKeyboardOpen ? 'pb-4' : 'pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] md:pb-10'} transition-all duration-200`}>
           <div className={`${(activeTab === 'social' || activeTab === 'ailab') ? 'h-full' : ''}`}>
             {children}
           </div>
         </div>
 
         {activeTab !== 'social' && (
-          <nav className={`md:hidden fixed bottom-0 left-0 right-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transform-gpu transition-transform duration-200 ease-out ${isKeyboardOpen ? 'translate-y-full pointer-events-none' : 'translate-y-0'}`}>
+          <nav className={`md:hidden fixed bottom-0 left-0 right-0 w-full z-40 h-[calc(74px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] bg-white/95 dark:bg-[#050b18]/90 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 flex items-center justify-around px-2 m-0 rounded-t-[2.2rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transform-gpu transition-transform duration-200 ease-out ${isKeyboardOpen ? 'translate-y-full pointer-events-none' : 'translate-y-0'}`}>
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
               { id: 'flashcards', icon: Layers, label: 'Flash' },
@@ -514,10 +514,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               return (
                 <div key={item.id} className="relative flex flex-col items-center flex-1 h-full justify-center">
                   <button onClick={() => { HapticFeedback.selection(); setActiveTab(item.id); }} className="relative flex flex-col items-center justify-center z-10 w-full h-full">
-                    <motion.div initial={false} animate={{ y: shouldPop ? -32 : 0, scale: shouldPop ? 1.25 : (isActive ? 1.1 : 1) }} transition={{ type: "spring", stiffness: 400, damping: 25 }} className={`flex items-center justify-center rounded-full transition-colors duration-300 ${shouldPop ? 'w-14 h-14 shadow-lg shadow-blue-500/30 dark:shadow-[0_8px_25px_rgba(59,130,246,0.5)] border-4 border-white dark:border-[#050b18] bg-gradient-to-br from-blue-500 to-purple-600 text-white' : 'w-10 h-10 bg-transparent'} ${isActive && !isDashboard ? 'text-blue-600 dark:text-blue-400' : (isActive ? '' : 'text-slate-800 dark:text-slate-400')}`}>
-                      <Icon size={isActive && !isDashboard ? 26 : 24} fill={isActive && (item.id === 'dashboard' || item.id === 'summary') ? 'currentColor' : 'none'} strokeWidth={isActive ? 2.5 : 2} className="transition-colors duration-300" />
+                    <motion.div initial={false} animate={{ y: shouldPop ? -28 : 0, scale: shouldPop ? 1.2 : (isActive ? 1.1 : 1) }} transition={{ type: "spring", stiffness: 400, damping: 25 }} className={`flex items-center justify-center rounded-full transition-colors duration-300 ${shouldPop ? 'w-13 h-13 shadow-lg shadow-blue-500/30 dark:shadow-[0_8px_25px_rgba(59,130,246,0.5)] border-4 border-white dark:border-[#050b18] bg-gradient-to-br from-blue-500 to-purple-600 text-white' : 'w-10 h-10 bg-transparent'} ${isActive && !isDashboard ? 'text-blue-600 dark:text-blue-400' : (isActive ? '' : 'text-slate-800 dark:text-slate-400')}`}>
+                      <Icon size={isActive && !isDashboard ? 24 : 22} fill={isActive && (item.id === 'dashboard' || item.id === 'summary') ? 'currentColor' : 'none'} strokeWidth={isActive ? 2.5 : 2} className="transition-colors duration-300" />
                     </motion.div>
-                    <motion.span initial={false} animate={{ y: shouldPop ? 16 : 22, opacity: isActive || shouldPop ? 1 : 0.85 }} className={`absolute font-black text-[10px] uppercase tracking-tighter whitespace-nowrap ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-400'}`}>{item.label}</motion.span>
+                    <motion.span initial={false} animate={{ y: shouldPop ? 14 : 20, opacity: isActive || shouldPop ? 1 : 0.85 }} className={`absolute font-black text-[10px] uppercase tracking-tighter whitespace-nowrap ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-400'}`}>{item.label}</motion.span>
                   </button>
                   {shouldPop && <motion.div layoutId="nav-glow" animate={{ opacity: isActive ? 1 : 0.5 }} className="absolute top-0 w-16 h-16 rounded-full blur-xl bg-blue-500/20 dark:bg-blue-500/30 -z-10 pointer-events-none -translate-y-4" />}
                 </div>

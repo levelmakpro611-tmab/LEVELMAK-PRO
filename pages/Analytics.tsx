@@ -428,7 +428,7 @@ const Analytics: React.FC = () => {
     }, [analytics.quizPerformance, user?.activeSubjects]);
 
     return (
-        <div className="min-h-screen bg-transparent pt-20 pb-24 md:pt-24 md:pb-12 px-4 md:px-8 max-w-7xl mx-auto">
+        <div className="min-h-screen bg-transparent pt-2 pb-16 md:pt-12 md:pb-12 px-2 sm:px-4 md:px-8 max-w-7xl mx-auto">
             {/* Header */}
             <header className="mb-8 relative">
                 <motion.div

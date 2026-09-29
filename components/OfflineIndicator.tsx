@@ -34,7 +34,7 @@ const OfflineIndicator: React.FC = () => {
                     initial={{ y: -50, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: -50, opacity: 0 }}
-                    className="fixed top-0 left-0 right-0 z-[2000] bg-red-500/90 backdrop-blur-md text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg"
+                    className="fixed top-0 left-0 right-0 z-[2000] bg-red-500/90 backdrop-blur-md text-white px-4 pt-[max(0.5rem,env(safe-area-inset-top,0.5rem))] pb-2 flex items-center justify-center gap-2 shadow-lg"
                 >
                     <WifiOff size={16} />
                     <span className="text-xs font-bold uppercase tracking-wider">Mode Hors Ligne</span>
@@ -46,7 +46,7 @@ const OfflineIndicator: React.FC = () => {
                     initial={{ y: -50, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: -50, opacity: 0 }}
-                    className="fixed top-0 left-0 right-0 z-[2000] bg-green-500/90 backdrop-blur-md text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg"
+                    className="fixed top-0 left-0 right-0 z-[2000] bg-green-500/90 backdrop-blur-md text-white px-4 pt-[max(0.5rem,env(safe-area-inset-top,0.5rem))] pb-2 flex items-center justify-center gap-2 shadow-lg"
                 >
                     <Wifi size={16} />
                     <span className="text-xs font-bold uppercase tracking-wider">Connexion Rétablie</span>

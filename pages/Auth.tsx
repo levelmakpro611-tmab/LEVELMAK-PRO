@@ -327,7 +327,7 @@ const Auth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-[#060915] overflow-y-auto overflow-x-hidden selection:bg-primary/30 flex items-start md:items-center justify-center p-4 md:p-8 relative">
+    <div className="min-h-screen min-h-[100dvh] bg-slate-100 dark:bg-[#060915] overflow-y-auto overflow-x-hidden selection:bg-primary/30 flex items-start md:items-center justify-center p-3 sm:p-6 md:p-8 pt-[env(safe-area-inset-top,0.75rem)] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] relative">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-purple-600/5"></div>
       <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-600/5 rounded-full blur-[60px] animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/5 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: '1s' }}></div>
