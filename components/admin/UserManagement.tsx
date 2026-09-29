@@ -126,13 +126,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefresh }) => 
     };
 
     const isSuperAdminUser = (user: AdminUserAnalytics) => {
-        const e = (user.email || '').toLowerCase();
-        const u = (user.userName || '').toLowerCase();
-        const id = (user.userId || '').toLowerCase();
+        const e = (user.email || '').toLowerCase().trim();
+        const u = (user.userName || '').toLowerCase().trim();
+        const id = (user.userId || '').toLowerCase().trim();
         return e === 'levelmak611@gmail.com' ||
                e === '611@levelmak.app' ||
+               e.includes('611@levelmak') ||
                u === 'levelmak611' ||
+               u === '611' ||
                id === '61100000-0000-4000-a000-000000000611' ||
+               id === '15755af8-311f-41b8-8287-c31406657ea1' ||
                id === 'admin_levelmak611_id' ||
                id === 'levelmak611' ||
                (user as any).role === 'admin';

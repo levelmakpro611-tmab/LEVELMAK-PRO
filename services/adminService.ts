@@ -155,13 +155,16 @@ export const getUserRole = async (userId: string): Promise<'admin' | 'user'> => 
 // ========== STATISTICS ==========
 
 export const isSuperAdminAnalyticsUser = (user: { userId?: string; email?: string; userName?: string; role?: string }): boolean => {
-    const e = (user.email || '').toLowerCase();
-    const u = (user.userName || '').toLowerCase();
-    const id = (user.userId || '').toLowerCase();
+    const e = (user.email || '').toLowerCase().trim();
+    const u = (user.userName || '').toLowerCase().trim();
+    const id = (user.userId || '').toLowerCase().trim();
     return e === 'levelmak611@gmail.com' ||
            e === '611@levelmak.app' ||
+           e.includes('611@levelmak') ||
            u === 'levelmak611' ||
+           u === '611' ||
            id === '61100000-0000-4000-a000-000000000611' ||
+           id === '15755af8-311f-41b8-8287-c31406657ea1' ||
            id === 'admin_levelmak611_id' ||
            id === 'levelmak611' ||
            user.role === 'admin';
@@ -1372,9 +1375,11 @@ export const getLeaderboard = async (limitCount: number = 50): Promise<User[]> =
                 if (
                     e === 'levelmak611@gmail.com' || 
                     e === '611@levelmak.app' || 
+                    e.includes('611@levelmak') ||
                     un === 'levelmak611' || 
                     un === '611' || 
                     id === '61100000-0000-4000-a000-000000000611' ||
+                    id === '15755af8-311f-41b8-8287-c31406657ea1' ||
                     id === 'admin_levelmak611_id' ||
                     id === 'levelmak611' ||
                     u.role === 'admin'

@@ -439,11 +439,20 @@ serve(async (req) => {
         try {
           const { data: profs } = await supabaseAdmin
             .from('profiles')
-            .select('id, created_at, email');
+            .select('id, created_at, email, name, role');
           if (profs) {
             const realProfs = profs.filter((p: any) => {
-              const e = (p.email || '').toLowerCase();
-              return e !== 'levelmak611@gmail.com' && e !== '611@levelmak.app';
+              const e = (p.email || '').toLowerCase().trim();
+              const n = (p.name || '').toLowerCase().trim();
+              const id = (p.id || '').toLowerCase().trim();
+              const isSuper = e === 'levelmak611@gmail.com' ||
+                              e === '611@levelmak.app' ||
+                              e.includes('611@levelmak') ||
+                              n === '611' ||
+                              n === 'levelmak611' ||
+                              id === '15755af8-311f-41b8-8287-c31406657ea1' ||
+                              p.role === 'admin';
+              return !isSuper;
             });
             totalUsers = realProfs.length;
             const todayISO = startOfToday.toISOString();

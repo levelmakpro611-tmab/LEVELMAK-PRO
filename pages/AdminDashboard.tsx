@@ -185,10 +185,6 @@ const AdminDashboard: React.FC = () => {
             try {
                 const { stats: cStats, comments, ratings, teacherApps, totalTeachers: cachedTotalTeachers, averageRatings } = JSON.parse(cachedOverview);
                 if (cStats) {
-                    if (cStats.totalUsers > 10) {
-                        cStats.totalUsers = 3;
-                        cStats.activeUsers = 3;
-                    }
                     setStats(cStats);
                 }
                 if (comments) setComments(comments);
