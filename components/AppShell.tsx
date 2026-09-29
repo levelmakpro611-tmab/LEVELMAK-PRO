@@ -725,11 +725,49 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           {isInstallGuideOpen && (
             <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsInstallGuideOpen(false)} className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" />
-              <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-sm bg-slate-900 border border-white/10 rounded-[2rem] p-8 shadow-2xl text-center space-y-6">
-                <div className="w-20 h-20 bg-blue-500/20 rounded-3xl flex items-center justify-center mx-auto mb-2 text-blue-400"><Download size={40} /></div>
-                <h3 className="text-2xl font-black text-white">Installer sur iPhone</h3>
-                <p className="text-slate-400 text-sm">Ajoute LEVELMAK à ton écran d'accueil.</p>
-                <button onClick={() => setIsInstallGuideOpen(false)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest">OK</button>
+              <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-2xl text-left space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-glow shrink-0">
+                    <Download size={28} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-display font-black text-slate-900 dark:text-white">Installer sur iPhone</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Application PWA plein écran sans navigateur</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5 bg-slate-50 dark:bg-black/20 p-4 rounded-2xl border border-slate-200/80 dark:border-white/5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-black shrink-0 mt-0.5 border border-blue-500/20">
+                      1
+                    </div>
+                    <div className="text-xs text-slate-700 dark:text-slate-300 leading-snug">
+                      Sur <span className="font-bold text-slate-900 dark:text-white">Safari</span>, appuyez sur le bouton <span className="font-bold text-blue-600 dark:text-blue-400 inline-flex items-center gap-1">Partager <Share2 size={13} className="inline" /></span> (icône avec la flèche vers le haut en bas de votre écran).
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-black shrink-0 mt-0.5 border border-blue-500/20">
+                      2
+                    </div>
+                    <div className="text-xs text-slate-700 dark:text-slate-300 leading-snug">
+                      Faites défiler le menu vers le bas et touchez <span className="font-bold text-slate-900 dark:text-white inline-flex items-center gap-1">« Sur l'écran d'accueil » <Plus size={13} className="inline text-blue-500" /></span>.
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-black shrink-0 mt-0.5 border border-blue-500/20">
+                      3
+                    </div>
+                    <div className="text-xs text-slate-700 dark:text-slate-300 leading-snug">
+                      Touchez <span className="font-bold text-blue-600 dark:text-blue-400">« Ajouter »</span> en haut à droite. LEVELMAK s'installe directement comme une vraie application sur votre iPhone !
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={() => setIsInstallGuideOpen(false)} className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-glow active:scale-95">
+                  J'ai compris
+                </button>
               </motion.div>
             </div>
           )}
