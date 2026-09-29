@@ -1111,7 +1111,14 @@ export const deleteUser = async (userId: string): Promise<void> => {
     // 1. Mark locally FIRST so UI updates immediately (optimistic)
     addDeletedUserId(userId);
 
-    // 2. Cascade delete directly across all database tables (guaranteed DB removal)
+    // 1. Authoritative Cascade Delete via Edge Function (Service Role Key — bypasses RLS and cascades across auth.users)
+    try {
+        await invokeEdgeAction('delete_user', { userId });
+    } catch (e) {
+        console.warn('[deleteUser] Edge Function deletion notice:', e);
+    }
+
+    // 2. Direct DB cleanup fallback across all database tables
     try {
         await Promise.allSettled([
             supabase.from('user_comments').delete().eq('user_id', userId),
@@ -1129,15 +1136,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
         console.warn('[deleteUser] Direct DB cleanup warning:', dbErr);
     }
 
-    // 3. Delete via Edge Function (Service Role Key — deletes auth.users too)
-    try {
-        await invokeEdgeAction('delete_user', { userId });
-        await supabase.functions.invoke('delete-user', { body: { userId } }).catch(() => {});
-    } catch (e) {
-        console.warn('[deleteUser] Edge Function deletion notice:', e);
-    }
-
-    // 4. Invalidate stats cache so dashboard refreshes
+    // 3. Invalidate stats cache so dashboard refreshes
     cachedStats = null;
 };
 
@@ -1154,7 +1153,17 @@ export const deleteUsers = async (userIds: string[]): Promise<{ success: boolean
 
     if (validIds.length === 0) return { success: true, deletedCount: 0 };
 
-    // 1. Cascade delete in Supabase DB for all selected IDs
+    // 1. Authoritative Bulk Delete via Edge Function (Service Role Key)
+    try {
+        await invokeEdgeAction('delete_users', { userIds: validIds });
+        await Promise.allSettled(
+            validIds.map(uid => invokeEdgeAction('delete_user', { userId: uid }))
+        );
+    } catch (e) {
+        console.warn('[deleteUsers] Edge action bulk delete notice:', e);
+    }
+
+    // 2. Direct bulk DB cleanup fallback
     try {
         await Promise.allSettled([
             supabase.from('user_comments').delete().in('user_id', validIds),
@@ -1170,15 +1179,6 @@ export const deleteUsers = async (userIds: string[]): Promise<{ success: boolean
         ]);
     } catch (bulkDbErr) {
         console.warn('[deleteUsers] Direct bulk DB cleanup warning:', bulkDbErr);
-    }
-
-    // 2. Delete via Edge Function using 'delete_user' (100% déployée et opérationnelle sur Supabase Cloud)
-    try {
-        await Promise.allSettled(
-            validIds.map(uid => invokeEdgeAction('delete_user', { userId: uid }))
-        );
-    } catch (e) {
-        console.warn('[deleteUsers] Edge action bulk delete notice:', e);
     }
 
     cachedStats = null;
