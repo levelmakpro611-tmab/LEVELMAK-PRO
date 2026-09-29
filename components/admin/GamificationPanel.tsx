@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Coins, Zap, Search, User as UserIcon, Plus, Minus, LayoutGrid, List, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Trophy, Medal, Coins, Zap, Search, User as UserIcon, Plus, Minus, LayoutGrid, List, Trash2, CheckCircle2, AlertCircle, Send } from 'lucide-react';
 import { User } from '../../types';
 import { BADGES } from '../../constants';
 import { getLeaderboard, grantUserBadge, adjustUserResources, deleteUser } from '../../services/adminService';
@@ -16,6 +16,8 @@ const GamificationPanel: React.FC = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [statusToast, setStatusToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [customCoins, setCustomCoins] = useState<string>('');
+    const [customXp, setCustomXp] = useState<string>('');
 
     useEffect(() => {
         loadLeaderboard();
@@ -407,7 +409,7 @@ const GamificationPanel: React.FC = () => {
                         {/* Actions */}
                         <div className={`space-y-4 md:space-y-6 transition-opacity ${selectedUser ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                             {/* Coins/XP Adjustment */}
-                            <div className="bg-white dark:bg-white/5 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-white/10 space-y-4 shadow-sm">
+                            <div className="bg-white dark:bg-white/5 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-white/10 space-y-5 shadow-sm">
                                 <div className="flex items-center justify-between">
                                     <h3 className="font-bold text-sm md:text-base text-slate-900 dark:text-white flex items-center gap-2">
                                         <Zap size={18} className="text-amber-500" /> Récompenses & Ajustements
@@ -419,39 +421,151 @@ const GamificationPanel: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-2.5 md:gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAdjustResources('coins', 50)}
-                                        disabled={actionLoading}
-                                        className="p-3 md:p-3.5 bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border border-yellow-500/30 rounded-xl text-yellow-600 dark:text-yellow-400 font-black text-xs md:text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
-                                    >
-                                        +50 Coins 🪙
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAdjustResources('xp', 100)}
-                                        disabled={actionLoading}
-                                        className="p-3 md:p-3.5 bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/30 rounded-xl text-purple-600 dark:text-purple-400 font-black text-xs md:text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
-                                    >
-                                        +100 XP ⚡
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAdjustResources('coins', -50)}
-                                        disabled={actionLoading}
-                                        className="p-2.5 md:p-3 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 active:scale-95 border border-slate-200 dark:border-white/10 hover:border-red-500/30 rounded-xl text-slate-600 dark:text-slate-400 hover:text-red-500 font-bold text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1"
-                                    >
-                                        -50 Coins
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAdjustResources('xp', -100)}
-                                        disabled={actionLoading}
-                                        className="p-2.5 md:p-3 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 active:scale-95 border border-slate-200 dark:border-white/10 hover:border-red-500/30 rounded-xl text-slate-600 dark:text-slate-400 hover:text-red-500 font-bold text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1"
-                                    >
-                                        -100 XP
-                                    </button>
+
+                                {/* Custom Coins Input (Saisie libre du nombre de pièces) */}
+                                <div className="p-3.5 bg-yellow-500/5 dark:bg-yellow-500/10 border border-yellow-500/20 rounded-2xl space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-black text-yellow-700 dark:text-yellow-400 flex items-center gap-1.5 uppercase tracking-wider">
+                                            <Coins size={15} /> Pièces (Level Coins 🪙)
+                                        </label>
+                                        <span className="text-[11px] font-bold text-slate-500">Actuel : {selectedUser?.levelCoins ?? 0}</span>
+                                    </div>
+                                    
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="number"
+                                                value={customCoins}
+                                                onChange={(e) => setCustomCoins(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        const val = parseInt(customCoins, 10);
+                                                        if (!isNaN(val) && val !== 0) {
+                                                            handleAdjustResources('coins', val);
+                                                            setCustomCoins('');
+                                                        }
+                                                    }
+                                                }}
+                                                placeholder="Ex: 50, 100, 250, -50..."
+                                                className="w-full bg-white dark:bg-black/30 border border-yellow-500/30 rounded-xl px-3 py-2 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:border-yellow-500 outline-none placeholder:text-slate-400"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={actionLoading || !customCoins || isNaN(parseInt(customCoins, 10)) || parseInt(customCoins, 10) === 0}
+                                            onClick={() => {
+                                                const val = parseInt(customCoins, 10);
+                                                if (!isNaN(val) && val !== 0) {
+                                                    handleAdjustResources('coins', val);
+                                                    setCustomCoins('');
+                                                }
+                                            }}
+                                            className="px-3.5 py-2 bg-yellow-500 hover:bg-yellow-600 active:scale-95 text-slate-900 font-black text-xs rounded-xl shadow-md transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0"
+                                        >
+                                            <Send size={14} />
+                                            <span>Envoyer</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Quick shortcut pills for coins */}
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                                        <span className="text-[10px] font-bold text-slate-400 mr-1">Raccourcis :</span>
+                                        {[
+                                            { label: '+50', val: 50 },
+                                            { label: '+100', val: 100 },
+                                            { label: '+250', val: 250 },
+                                            { label: '+500', val: 500 },
+                                            { label: '-50', val: -50, isNegative: true },
+                                        ].map(item => (
+                                            <button
+                                                key={item.label}
+                                                type="button"
+                                                disabled={actionLoading}
+                                                onClick={() => handleAdjustResources('coins', item.val)}
+                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all active:scale-95 ${
+                                                    item.isNegative 
+                                                        ? 'bg-slate-200 dark:bg-white/10 hover:bg-red-500/10 hover:text-red-500 text-slate-600 dark:text-slate-400' 
+                                                        : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-700 dark:text-yellow-400'
+                                                }`}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Custom XP Input (Saisie libre du montant d'XP) */}
+                                <div className="p-3.5 bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/20 rounded-2xl space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-black text-purple-700 dark:text-purple-400 flex items-center gap-1.5 uppercase tracking-wider">
+                                            <Zap size={15} /> Points d'Expérience (XP ⚡)
+                                        </label>
+                                        <span className="text-[11px] font-bold text-slate-500">Actuel : {selectedUser?.totalXp ?? 0}</span>
+                                    </div>
+                                    
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="number"
+                                                value={customXp}
+                                                onChange={(e) => setCustomXp(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        const val = parseInt(customXp, 10);
+                                                        if (!isNaN(val) && val !== 0) {
+                                                            handleAdjustResources('xp', val);
+                                                            setCustomXp('');
+                                                        }
+                                                    }
+                                                }}
+                                                placeholder="Ex: 100, 200, 500, -100..."
+                                                className="w-full bg-white dark:bg-black/30 border border-purple-500/30 rounded-xl px-3 py-2 text-xs md:text-sm font-bold text-slate-900 dark:text-white focus:border-purple-500 outline-none placeholder:text-slate-400"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={actionLoading || !customXp || isNaN(parseInt(customXp, 10)) || parseInt(customXp, 10) === 0}
+                                            onClick={() => {
+                                                const val = parseInt(customXp, 10);
+                                                if (!isNaN(val) && val !== 0) {
+                                                    handleAdjustResources('xp', val);
+                                                    setCustomXp('');
+                                                }
+                                            }}
+                                            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-md transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0"
+                                        >
+                                            <Send size={14} />
+                                            <span>Envoyer</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Quick shortcut pills for XP */}
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                                        <span className="text-[10px] font-bold text-slate-400 mr-1">Raccourcis :</span>
+                                        {[
+                                            { label: '+100', val: 100 },
+                                            { label: '+250', val: 250 },
+                                            { label: '+500', val: 500 },
+                                            { label: '+1000', val: 1000 },
+                                            { label: '-100', val: -100, isNegative: true },
+                                        ].map(item => (
+                                            <button
+                                                key={item.label}
+                                                type="button"
+                                                disabled={actionLoading}
+                                                onClick={() => handleAdjustResources('xp', item.val)}
+                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all active:scale-95 ${
+                                                    item.isNegative 
+                                                        ? 'bg-slate-200 dark:bg-white/10 hover:bg-red-500/10 hover:text-red-500 text-slate-600 dark:text-slate-400' 
+                                                        : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-700 dark:text-purple-400'
+                                                }`}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
