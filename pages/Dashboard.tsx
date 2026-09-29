@@ -45,7 +45,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
 import { useFlashcardStore } from '../services/flashcardStore';
 import { aiService } from '../services/aiService';
-import { getXpForNextLevel, AVATAR_LEVELS, LEAGUES, getLeagueFromXp } from '../constants';
+import { getXpForNextLevel, AVATAR_LEVELS, LEAGUES, getLeagueFromXp, DEFAULT_CUSTOM_GOALS } from '../constants';
 import { feedbackService } from '../services/feedbackService';
 
 // Lazy load heavy components
@@ -138,6 +138,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   const handleToggleGoal = React.useCallback((goalId: string) => {
     if (!user) return;
+    feedbackService.selection();
     const currentAnalytics = user.analytics || {
       studyTimeBySubject: {},
       studyTimeByDay: [],
@@ -145,9 +146,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       weeklyGoals: { target: 120, achieved: 0 },
       examPredictions: []
     };
-    const updatedGoals = (currentAnalytics.customGoals || []).map(g =>
+    const existingGoals = (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0)
+      ? currentAnalytics.customGoals
+      : DEFAULT_CUSTOM_GOALS;
+
+    const hasGoal = existingGoals.some(g => g.id === goalId);
+    const sourceGoals = hasGoal ? existingGoals : [...DEFAULT_CUSTOM_GOALS, ...existingGoals];
+
+    const updatedGoals = sourceGoals.map(g =>
       g.id === goalId ? { ...g, completed: !g.completed } : g
     );
+
     updateProfile(user.name, user.phoneNumber, {
       analytics: {
         ...currentAnalytics,
@@ -656,15 +665,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               {(() => {
                 const analytics = user.analytics || {
                   weeklyGoals: { target: 120, achieved: 0 },
-                  customGoals: []
+                  customGoals: DEFAULT_CUSTOM_GOALS
                 };
                 const goalsList = (analytics.customGoals && analytics.customGoals.length > 0)
                   ? analytics.customGoals
-                  : [
-                      { id: 'default_1', text: 'Faire 3 quiz cette semaine', completed: false },
-                      { id: 'default_2', text: 'Étudier 2 heures au total', completed: false },
-                      { id: 'default_3', text: 'Lire un livre de la bibliothèque', completed: false }
-                    ];
+                  : DEFAULT_CUSTOM_GOALS;
                 const totalGoals = goalsList.length;
                 const completedGoals = goalsList.filter(g => g.completed).length;
                 const goalsPct = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;

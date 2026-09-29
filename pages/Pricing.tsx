@@ -402,7 +402,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
         ];
 
         return (
-            <div className="min-h-screen min-h-[100dvh] bg-[#060a13] text-white py-6 md:py-8 px-3 sm:px-4 md:px-8 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] no-scrollbar overflow-y-auto relative selection:bg-blue-500/30">
+            <div className="min-h-screen bg-[#060a13] text-white py-8 px-4 md:px-8 pb-32 no-scrollbar overflow-y-auto relative selection:bg-blue-500/30">
                 {/* Subtle Ambient Light Effects */}
                 <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[40%] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
                 <div className="absolute bottom-[20%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
@@ -669,7 +669,7 @@ export const Pricing: React.FC<PricingProps> = ({ onChooseFree, onChoosePremium,
     };
 
     return (
-        <div className="min-h-screen min-h-[100dvh] bg-[#070b14] text-white py-6 md:py-12 px-3 sm:px-6 lg:px-8 pb-28 md:pb-12 relative overflow-hidden">
+        <div className="min-h-screen bg-[#070b14] text-white py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
             {/* Ambient luxury light orbs in the background */}
             <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] sm:w-[1000px] h-[550px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-purple-600/20 blur-[130px] rounded-full" />
             <div className="pointer-events-none absolute top-1/4 -left-40 w-96 h-96 bg-purple-600/15 blur-[130px] rounded-full" />

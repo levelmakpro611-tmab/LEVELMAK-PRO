@@ -135,11 +135,12 @@ const GamificationPanel: React.FC = () => {
         try {
             await grantUserBadge(selectedUser.id, badgeId);
             showToast(`Badge ${badgeId} accordé avec succès à ${selectedUser.name} !`, 'success');
-            // Refresh in background
-            const updatedUsers = await getLeaderboard(50);
-            setLeaderboard(updatedUsers);
-            const fresh = updatedUsers.find(u => u.id === selectedUser.id);
-            if (fresh) setSelectedUser(fresh);
+            // Refresh in background without overwriting selectedUser with null
+            getLeaderboard(50).then(updatedUsers => {
+                setLeaderboard(updatedUsers);
+                const fresh = updatedUsers.find(u => u.id === selectedUser.id);
+                if (fresh) setSelectedUser(fresh);
+            }).catch(console.error);
         } catch (e: any) {
             console.error('Error granting badge:', e);
             showToast(`Erreur lors de l'attribution du badge: ${e.message || 'Échec'}`, 'error');
@@ -178,18 +179,20 @@ const GamificationPanel: React.FC = () => {
             showToast(`${label} appliqué avec succès à ${selectedUser.name} !`, 'success');
 
             // Apply authoritative returned numbers if available
-            if (res && (res.totalXp !== undefined || res.levelCoins !== undefined)) {
-                const authoritativeXp = res.totalXp !== undefined ? Number(res.totalXp) : newXp;
-                const authoritativeCoins = res.levelCoins !== undefined ? Number(res.levelCoins) : newCoins;
-                setSelectedUser(curr => curr ? { ...curr, totalXp: authoritativeXp, levelCoins: authoritativeCoins } : null);
-                setLeaderboard(prev => prev.map(u => u.id === selectedUser.id ? { ...u, totalXp: authoritativeXp, levelCoins: authoritativeCoins } : u));
-            }
+            const finalXp = (res && res.totalXp !== undefined) ? Number(res.totalXp) : newXp;
+            const finalCoins = (res && res.levelCoins !== undefined) ? Number(res.levelCoins) : newCoins;
 
-            // Sync full leaderboard in background
-            const updatedUsers = await getLeaderboard(50);
-            setLeaderboard(updatedUsers);
-            const fresh = updatedUsers.find(u => u.id === selectedUser.id);
-            if (fresh) setSelectedUser(fresh);
+            setSelectedUser(curr => curr ? { ...curr, totalXp: finalXp, levelCoins: finalCoins } : null);
+            setLeaderboard(prev => prev.map(u => u.id === selectedUser.id ? { ...u, totalXp: finalXp, levelCoins: finalCoins } : u));
+
+            // Sync full leaderboard in background (preserve selectedUser even if outside top 50)
+            getLeaderboard(50).then(updatedUsers => {
+                setLeaderboard(updatedUsers);
+                const fresh = updatedUsers.find(u => u.id === selectedUser.id);
+                if (fresh) {
+                    setSelectedUser(fresh);
+                }
+            }).catch(console.error);
         } catch (e: any) {
             console.error('Error adjusting resources:', e);
             showToast(`Erreur lors de la mise à jour : ${e.message || 'Échec de synchronisation'}`, 'error');

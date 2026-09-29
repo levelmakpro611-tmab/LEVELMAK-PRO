@@ -426,7 +426,7 @@ const LevelBot: React.FC = () => {
           type="button"
           onClick={() => setIsOpen(true)}
           aria-label="Ouvrir Elite Coach"
-          className="fixed top-1/2 -translate-y-1/2 right-4 md:right-8 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-primary to-secondary text-white rounded-xl md:rounded-2xl shadow-glow flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border border-white/20"
+          className="fixed bottom-[calc(86px+env(safe-area-inset-bottom,0px))] right-4 md:bottom-8 md:right-8 w-13 h-13 md:w-16 md:h-16 bg-gradient-to-br from-primary to-secondary text-white rounded-xl md:rounded-2xl shadow-glow flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border border-white/20"
         >
           <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-accent rounded-full border-2 border-slate-900 flex items-center justify-center animate-pulse">
             <Sparkles className="text-white w-2 h-2 md:w-2.5 md:h-2.5" />

@@ -17,7 +17,7 @@ import {
     Loader2
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
-import { SUBJECTS as DEFAULT_SUBJECTS } from '../constants';
+import { SUBJECTS as DEFAULT_SUBJECTS, DEFAULT_CUSTOM_GOALS } from '../constants';
 import { aiService } from '../services/aiService';
 
 const Analytics: React.FC = () => {
@@ -100,8 +100,14 @@ const Analytics: React.FC = () => {
             examPredictions: []
         };
         
+        const existingGoals = (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0)
+            ? currentAnalytics.customGoals
+            : DEFAULT_CUSTOM_GOALS;
+        const hasGoal = existingGoals.some(g => g.id === goalId);
+        const sourceGoals = hasGoal ? existingGoals : [...DEFAULT_CUSTOM_GOALS, ...existingGoals];
+        
         let targetAnalytics = { ...currentAnalytics };
-        const goalToToggle = (currentAnalytics.customGoals || []).find(g => g.id === goalId);
+        const goalToToggle = sourceGoals.find(g => g.id === goalId);
         
         // Si on coche l'objectif (changement vers complété)
         if (goalToToggle && !goalToToggle.completed) {
@@ -145,7 +151,7 @@ const Analytics: React.FC = () => {
             }
         }
         
-        const updatedGoals = (currentAnalytics.customGoals || []).map(g =>
+        const updatedGoals = sourceGoals.map(g =>
             g.id === goalId ? { ...g, completed: !g.completed } : g
         );
         
@@ -166,12 +172,15 @@ const Analytics: React.FC = () => {
             weeklyGoals: { target: 120, achieved: 0 },
             examPredictions: []
         };
+        const existingGoals = (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0)
+            ? currentAnalytics.customGoals
+            : DEFAULT_CUSTOM_GOALS;
         const newGoal = {
             id: `goal_${Date.now()}`,
             text: newGoalText.trim(),
             completed: false
         };
-        const updatedGoals = [...(currentAnalytics.customGoals || []), newGoal];
+        const updatedGoals = [...existingGoals, newGoal];
         const updatedAnalytics = {
             ...currentAnalytics,
             customGoals: updatedGoals
@@ -191,7 +200,10 @@ const Analytics: React.FC = () => {
             weeklyGoals: { target: 120, achieved: 0 },
             examPredictions: []
         };
-        const updatedGoals = (currentAnalytics.customGoals || []).filter(g => g.id !== goalId);
+        const existingGoals = (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0)
+            ? currentAnalytics.customGoals
+            : DEFAULT_CUSTOM_GOALS;
+        const updatedGoals = existingGoals.filter(g => g.id !== goalId);
         updateProfile(user.name, user.phoneNumber, {
             analytics: {
                 ...currentAnalytics,
@@ -428,7 +440,7 @@ const Analytics: React.FC = () => {
     }, [analytics.quizPerformance, user?.activeSubjects]);
 
     return (
-        <div className="min-h-screen bg-transparent pt-2 pb-16 md:pt-12 md:pb-12 px-2 sm:px-4 md:px-8 max-w-7xl mx-auto">
+        <div className="min-h-screen bg-transparent pt-20 pb-24 md:pt-24 md:pb-12 px-4 md:px-8 max-w-7xl mx-auto">
             {/* Header */}
             <header className="mb-8 relative">
                 <motion.div
@@ -539,8 +551,11 @@ const Analytics: React.FC = () => {
                         <div className="space-y-3">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block px-1">Objectifs Individuels</label>
                             <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
-                                {(analytics.customGoals && analytics.customGoals.length > 0) ? (
-                                    analytics.customGoals.map((goal) => (
+                                {(() => {
+                                    const goalsToDisplay = (analytics.customGoals && analytics.customGoals.length > 0)
+                                        ? analytics.customGoals
+                                        : DEFAULT_CUSTOM_GOALS;
+                                    return goalsToDisplay.map((goal) => (
                                         <button
                                             key={goal.id}
                                             onClick={() => handleToggleGoal(goal.id)}
@@ -559,12 +574,8 @@ const Analytics: React.FC = () => {
                                             </div>
                                             <span className="text-xs font-bold text-left leading-snug">{goal.text}</span>
                                         </button>
-                                    ))
-                                ) : (
-                                    <p className="text-center py-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                                        Aucun objectif personnalisé
-                                    </p>
-                                )}
+                                    ));
+                                })()}
                             </div>
                         </div>
                     </div>
@@ -850,8 +861,11 @@ const Analytics: React.FC = () => {
                             <div className="space-y-3 flex-1 flex flex-col min-h-0">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">Objectifs actuels</label>
                                 <div className="space-y-2 overflow-y-auto max-h-[200px] pr-1 custom-scrollbar">
-                                    {(analytics.customGoals && analytics.customGoals.length > 0) ? (
-                                        analytics.customGoals.map((goal) => (
+                                    {(() => {
+                                        const modalGoals = (analytics.customGoals && analytics.customGoals.length > 0)
+                                            ? analytics.customGoals
+                                            : DEFAULT_CUSTOM_GOALS;
+                                        return modalGoals.map((goal) => (
                                             <div key={goal.id} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between gap-3 group">
                                                 <span className={`text-xs font-bold text-slate-300 leading-snug ${goal.completed ? 'line-through text-slate-500' : ''}`}>{goal.text}</span>
                                                 <button
@@ -861,10 +875,8 @@ const Analytics: React.FC = () => {
                                                     <Trash2 size={14} />
                                                 </button>
                                             </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-center py-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Aucun objectif défini</p>
-                                    )}
+                                        ));
+                                    })()}
                                 </div>
                             </div>
 

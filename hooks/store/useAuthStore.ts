@@ -485,7 +485,7 @@ export const useAuthStore = () => {
                         }
 
                         // ✅ FIX Bug 1: Include avatar & wallpaper in comparison to avoid false-positive changes
-                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'badges', 'is_premium', 'premium_until', 'inventory', 'consumables'];
+                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'analytics', 'badges', 'is_premium', 'premium_until', 'inventory', 'consumables'];
                         const hasChanges = keysToCompare.some(key => {
                             const val1 = JSON.stringify((user as any)[key]);
                             const val2 = JSON.stringify((mappedUser as any)[key]);

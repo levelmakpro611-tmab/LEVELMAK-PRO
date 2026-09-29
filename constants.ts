@@ -646,3 +646,8 @@ export const HARDCODED_SHOP_ITEMS = [
         }
 ];
 
+export const DEFAULT_CUSTOM_GOALS = [
+  { id: 'default_1', text: 'Faire 3 quiz cette semaine', completed: false },
+  { id: 'default_2', text: 'Étudier 2 heures au total', completed: false },
+  { id: 'default_3', text: 'Lire un livre de la bibliothèque', completed: false }
+];

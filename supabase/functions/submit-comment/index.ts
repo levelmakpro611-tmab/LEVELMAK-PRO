@@ -865,6 +865,67 @@ serve(async (req) => {
       );
     }
 
+    // 28. ADJUST USER RESOURCES (XP / LEVEL COINS) - ADMIN
+    if (action === 'adjust_user_resources') {
+      const { userId, type, amount } = body;
+      if (!userId || !type || typeof amount !== 'number') {
+        return new Response(
+          JSON.stringify({ error: 'userId, type (xp|coins) et amount requis' }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: userProfile, error: fetchErr } = await supabaseAdmin
+        .from('profiles')
+        .select('xp, total_xp, level_coins')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+      if (!userProfile) {
+        return new Response(
+          JSON.stringify({ error: 'Utilisateur introuvable' }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let updatedData: any = {};
+      if (type === 'xp') {
+        const newXp = Math.max(0, (userProfile.xp || 0) + amount);
+        const newTotalXp = Math.max(0, (userProfile.total_xp || 0) + amount);
+        const { data: updated, error: updateErr } = await supabaseAdmin
+          .from('profiles')
+          .update({ xp: newXp, total_xp: newTotalXp })
+          .eq('id', userId)
+          .select('id, xp, total_xp, level_coins')
+          .single();
+
+        if (updateErr) throw updateErr;
+        updatedData = updated;
+      } else if (type === 'coins') {
+        const newCoins = Math.max(0, (userProfile.level_coins || 0) + amount);
+        const { data: updated, error: updateErr } = await supabaseAdmin
+          .from('profiles')
+          .update({ level_coins: newCoins })
+          .eq('id', userId)
+          .select('id, xp, total_xp, level_coins')
+          .single();
+
+        if (updateErr) throw updateErr;
+        updatedData = updated;
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'Type invalide: doit être xp ou coins' }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data: updatedData }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Action inconnue" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
