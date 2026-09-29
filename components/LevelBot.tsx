@@ -808,10 +808,7 @@ const LevelBot: React.FC = () => {
                     autoComplete="off"
                     autoCorrect="on"
                     value={input}
-                    onTouchStart={(e) => {
-                      // Ensure immediate focus and keyboard trigger on iOS Safari
-                      e.currentTarget.focus();
-                    }}
+                    onChange={(e) => setInput(e.target.value)}
                     onFocus={(e) => {
                       setTimeout(() => {
                         e.target.scrollIntoView({ block: 'end', behavior: 'smooth' });

@@ -6,7 +6,7 @@ import { POTIONS } from '../constants';
 import { GardenPlant } from '../types';
 
 export const MindGarden: React.FC = () => {
-  const { user, waterGarden, addNotification } = useStore();
+  const { user, waterGarden, addNotification, plantInGarden } = useStore();
   const garden = user?.garden;
   const [selectedPlant, setSelectedPlant] = useState<string | null>(null);
 
@@ -227,14 +227,32 @@ export const MindGarden: React.FC = () => {
               <p className="text-emerald-700 dark:text-emerald-300 font-black uppercase tracking-wider text-xs">Terre fertile prête à semer</p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Complète un quiz pour faire pousser ta première plante !</p>
             </div>
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'quiz' } }))}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
-            >
-              <Sprout size={14} />
-              <span>🌱 Lancer un Quiz pour planter</span>
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  HapticFeedback.success();
+                  plantInGarden('tree');
+                  addNotification('success', 'Graine semée ! 🌱', 'Ta première pousse est apparue ! Fais des quiz pour l\'arroser et la faire fleurir.');
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
+              >
+                <Sprout size={14} />
+                <span>🌱 Semer ma graine</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!garden || garden.plants.length === 0) {
+                    plantInGarden('tree');
+                  }
+                  window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'quiz' } }));
+                }}
+                className="px-3.5 py-2 bg-slate-900/10 dark:bg-white/10 hover:bg-slate-900/20 dark:hover:bg-white/20 text-slate-800 dark:text-white font-black text-xs rounded-xl border border-slate-300/80 dark:border-white/10 transition-all active:scale-95 flex items-center gap-1.5"
+              >
+                <span>🚀 Lancer un Quiz</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-wrap gap-4 items-end min-h-[160px] bg-gradient-to-t from-emerald-950/40 to-transparent p-6 rounded-3xl border-b-[8px] border-emerald-900/40">

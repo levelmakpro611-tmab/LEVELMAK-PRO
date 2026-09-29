@@ -107,6 +107,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [isBotOpen, setIsBotOpen] = useState(false);
+
+  React.useEffect(() => {
+    const checkBot = () => {
+      setIsBotOpen(document.body.classList.contains('bot-open'));
+    };
+    checkBot();
+    const observer = new MutationObserver(checkBot);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
   
   // Support state hooks
   const [supportSubject, setSupportSubject] = useState('');
@@ -187,19 +198,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       };
     } else {
       const checkKeyboard = () => {
-        // If Coach Bot is open, ignore main page keyboard shifts to prevent navigation bar jumps
-        if (document.body.classList.contains('bot-open')) {
-          setIsKeyboardOpen(false);
-          return;
-        }
-
         const isInput = document.activeElement && (
           document.activeElement.tagName === 'INPUT' || 
           document.activeElement.tagName === 'TEXTAREA' || 
           (document.activeElement as HTMLElement).isContentEditable
         );
         const vv = window.visualViewport;
-        const viewportShrunk = vv ? (window.innerHeight - vv.height > 120) : (window.innerHeight < window.screen.height * 0.8);
+        const viewportShrunk = vv ? (window.innerHeight - vv.height > 100) : (window.innerHeight < window.screen.height * 0.8);
         
         if (isInput || viewportShrunk) {
           setIsKeyboardOpen(true);
@@ -210,7 +215,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       };
 
       const handleFocusIn = (e: FocusEvent) => {
-        if (document.body.classList.contains('bot-open')) return;
         const target = e.target as HTMLElement | null;
         if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
           setIsKeyboardOpen(true);
@@ -492,14 +496,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : activeTab === 'writing' ? 'p-1 sm:p-6 md:p-10' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : isKeyboardOpen ? 'pb-4' : 'pb-36 md:pb-10'} transition-all duration-200`}>
+        <div className={`flex-1 overflow-y-auto ${(activeTab === 'social' || activeTab === 'ailab') ? 'p-0' : activeTab === 'writing' ? 'p-1 sm:p-6 md:p-10' : 'p-2.5 sm:p-6 md:p-10'} ${(activeTab === 'social' || activeTab === 'ailab') ? 'pb-0' : (isKeyboardOpen || isBotOpen) ? 'pb-4' : 'pb-36 md:pb-10'} transition-all duration-200`}>
           <div className={`${(activeTab === 'social' || activeTab === 'ailab') ? 'h-full' : ''}`}>
             {children}
           </div>
         </div>
 
         {activeTab !== 'social' && (
-          <nav className={`md:hidden fixed bottom-0 left-0 right-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 flex items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transform-gpu transition-transform duration-200 ease-out ${isKeyboardOpen ? 'translate-y-full pointer-events-none' : 'translate-y-0'}`}>
+          <nav className={`md:hidden fixed bottom-0 left-0 right-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transform-gpu transition-all duration-200 ease-out ${(isKeyboardOpen || isBotOpen) ? 'hidden pointer-events-none opacity-0 translate-y-48' : 'flex translate-y-0 opacity-100'}`}>
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
               { id: 'flashcards', icon: Layers, label: 'Flash' },

@@ -173,6 +173,7 @@ export const useGamificationStore = (
             };
             const newStats = {
                 ...prev.stats,
+                quizzesCompleted: (prev.stats?.quizzesCompleted || 0) + 1,
                 garden: newGarden,
                 consumables: newConsumables
             };

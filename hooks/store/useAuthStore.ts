@@ -308,8 +308,16 @@ export const useAuthStore = () => {
             if (updates?.analytics !== undefined) updatedStats.analytics = updates.analytics;
             if (updates?.stats !== undefined) updatedStats = { ...updatedStats, ...updates.stats };
 
+            // Strictly preserve garden and consumables so they are never lost across profile syncs
+            const currentGarden = updates?.garden || prev.garden || prev.stats?.garden || { plants: [] };
+            const currentConsumables = updates?.consumables || prev.consumables || prev.stats?.consumables || { water_can: 1 };
+            updatedStats.garden = currentGarden;
+            updatedStats.consumables = currentConsumables;
+
             const updated = { 
                 ...prev, 
+                garden: currentGarden,
+                consumables: currentConsumables,
                 name: name !== undefined ? name : prev.name, 
                 phoneNumber: phoneNumber !== undefined ? phoneNumber : prev.phoneNumber, 
                 ...updates,
@@ -330,7 +338,11 @@ export const useAuthStore = () => {
                     xp: u.xp,
                     total_xp: u.totalXp,
                     level_coins: u.levelCoins,
-                    stats: u.stats,
+                    stats: {
+                        ...u.stats,
+                        garden: u.garden || u.stats?.garden || { plants: [] },
+                        consumables: u.consumables || u.stats?.consumables || { water_can: 1 }
+                    },
                     badges: u.badges,
                     streak: u.streak,
                     inventory: u.inventory,
@@ -385,6 +397,8 @@ export const useAuthStore = () => {
                     level_coins: user.levelCoins,
                     stats: {
                         ...user.stats,
+                        garden: user.garden || user.stats?.garden || { plants: [] },
+                        consumables: user.consumables || user.stats?.consumables || { water_can: 1 },
                         education: user.education
                     },
                     badges: user.badges,
@@ -485,7 +499,7 @@ export const useAuthStore = () => {
                         }
 
                         // ✅ FIX Bug 1: Include avatar & wallpaper in comparison to avoid false-positive changes
-                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'analytics', 'badges', 'is_premium', 'premium_until', 'inventory', 'consumables'];
+                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'analytics', 'badges', 'is_premium', 'premium_until', 'inventory', 'consumables', 'garden'];
                         const hasChanges = keysToCompare.some(key => {
                             const val1 = JSON.stringify((user as any)[key]);
                             const val2 = JSON.stringify((mappedUser as any)[key]);
@@ -502,11 +516,15 @@ export const useAuthStore = () => {
                             const preservedWallpaper = (user?.wallpaper && !dbProfile.wallpaper)
                                 ? user.wallpaper
                                 : mappedUser.wallpaper;
+                            const preservedGarden = (user?.garden?.plants?.length && (!mappedUser.garden || mappedUser.garden.plants.length === 0))
+                                ? user.garden
+                                : mappedUser.garden;
 
                             const finalUser = {
                                 ...mappedUser,
                                 avatar: preservedAvatar,
                                 wallpaper: preservedWallpaper,
+                                garden: preservedGarden
                             };
 
                             // Detect if there are genuinely NEW notifications (strictly once per ID)
