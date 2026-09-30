@@ -233,12 +233,12 @@ export const MindGarden: React.FC = () => {
                 onClick={() => {
                   HapticFeedback.success();
                   plantInGarden('tree');
-                  addNotification('success', 'Graine semée ! 🌱', 'Ta première pousse est apparue ! Fais des quiz pour l\'arroser et la faire fleurir.');
+                  addNotification('success', 'Graine semée !', 'Ta première pousse est apparue ! Fais des quiz pour l\'arroser et la faire fleurir.');
                 }}
                 className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
               >
                 <Sprout size={14} />
-                <span>🌱 Semer ma graine</span>
+                <span>Semer ma graine</span>
               </button>
               <button
                 type="button"
@@ -250,7 +250,8 @@ export const MindGarden: React.FC = () => {
                 }}
                 className="px-3.5 py-2 bg-slate-900/10 dark:bg-white/10 hover:bg-slate-900/20 dark:hover:bg-white/20 text-slate-800 dark:text-white font-black text-xs rounded-xl border border-slate-300/80 dark:border-white/10 transition-all active:scale-95 flex items-center gap-1.5"
               >
-                <span>🚀 Lancer un Quiz</span>
+                <Sparkles size={14} className="text-amber-500" />
+                <span>Lancer un Quiz</span>
               </button>
             </div>
           </div>

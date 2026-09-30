@@ -300,13 +300,13 @@ export const useAuthStore = () => {
             
             // Replicate custom fields into user.stats so they sync to Supabase JSONB
             let updatedStats = { ...prev.stats };
+            if (updates?.stats !== undefined) updatedStats = { ...updatedStats, ...updates.stats };
             if (updates?.customSubjects !== undefined) updatedStats.customSubjects = updates.customSubjects;
             if ((updates as any)?.activeSubjects !== undefined) updatedStats.activeSubjects = (updates as any).activeSubjects;
             if ((updates as any)?.subjectTargets !== undefined) updatedStats.subjectTargets = (updates as any).subjectTargets;
             if ((updates as any)?.education !== undefined) (updatedStats as any).education = (updates as any).education;
             if (updates?.gradeClass !== undefined) (updatedStats as any).gradeClass = updates.gradeClass;
             if (updates?.analytics !== undefined) updatedStats.analytics = updates.analytics;
-            if (updates?.stats !== undefined) updatedStats = { ...updatedStats, ...updates.stats };
 
             // Strictly preserve garden and consumables so they are never lost across profile syncs
             const currentGarden = updates?.garden || prev.garden || prev.stats?.garden || { plants: [] };
@@ -340,6 +340,7 @@ export const useAuthStore = () => {
                     level_coins: u.levelCoins,
                     stats: {
                         ...u.stats,
+                        analytics: u.analytics || u.stats?.analytics,
                         garden: u.garden || u.stats?.garden || { plants: [] },
                         consumables: u.consumables || u.stats?.consumables || { water_can: 1 }
                     },
@@ -397,6 +398,7 @@ export const useAuthStore = () => {
                     level_coins: user.levelCoins,
                     stats: {
                         ...user.stats,
+                        analytics: user.analytics || user.stats?.analytics,
                         garden: user.garden || user.stats?.garden || { plants: [] },
                         consumables: user.consumables || user.stats?.consumables || { water_can: 1 },
                         education: user.education
@@ -520,11 +522,34 @@ export const useAuthStore = () => {
                                 ? user.garden
                                 : mappedUser.garden;
 
+                            // ✅ Preserve customGoals and analytics so local goal toggles are never wiped by remote updates
+                            const localGoals = user?.analytics?.customGoals;
+                            const remoteGoals = mappedUser.analytics?.customGoals;
+                            let preservedCustomGoals = remoteGoals || localGoals;
+                            if (localGoals && localGoals.length > 0 && (!remoteGoals || remoteGoals.length === 0)) {
+                                preservedCustomGoals = localGoals;
+                            } else if (localGoals && localGoals.length > 0 && remoteGoals && remoteGoals.length > 0) {
+                                preservedCustomGoals = remoteGoals.map(rg => {
+                                    const lm = localGoals.find(l => l.id === rg.id || l.text === rg.text);
+                                    return lm ? { ...rg, completed: lm.completed } : rg;
+                                });
+                            }
+
+                            const preservedAnalytics = (user?.analytics || mappedUser.analytics) ? {
+                                ...(mappedUser.analytics || {}),
+                                ...(user?.analytics || {}),
+                                customGoals: preservedCustomGoals || user?.analytics?.customGoals
+                            } : undefined;
+
                             const finalUser = {
                                 ...mappedUser,
                                 avatar: preservedAvatar,
                                 wallpaper: preservedWallpaper,
-                                garden: preservedGarden
+                                garden: preservedGarden,
+                                analytics: preservedAnalytics,
+                                customSubjects: user?.customSubjects || mappedUser.customSubjects,
+                                activeSubjects: user?.activeSubjects || mappedUser.activeSubjects,
+                                subjectTargets: user?.subjectTargets || mappedUser.subjectTargets
                             };
 
                             // Detect if there are genuinely NEW notifications (strictly once per ID)

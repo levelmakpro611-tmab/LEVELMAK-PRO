@@ -146,9 +146,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       weeklyGoals: { target: 120, achieved: 0 },
       examPredictions: []
     };
+    const savedGoalsStr = user.id ? localStorage.getItem(`levelmak_custom_goals_${user.id}`) : null;
+    let fallbackGoals = DEFAULT_CUSTOM_GOALS;
+    if (savedGoalsStr) {
+      try { fallbackGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+    }
     const existingGoals = (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0)
       ? currentAnalytics.customGoals
-      : DEFAULT_CUSTOM_GOALS;
+      : fallbackGoals;
 
     const hasGoal = existingGoals.some(g => g.id === goalId);
     const sourceGoals = hasGoal ? existingGoals : [...DEFAULT_CUSTOM_GOALS, ...existingGoals];
@@ -156,6 +161,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const updatedGoals = sourceGoals.map(g =>
       g.id === goalId ? { ...g, completed: !g.completed } : g
     );
+
+    try {
+      localStorage.setItem(`levelmak_custom_goals_${user.id}`, JSON.stringify(updatedGoals));
+    } catch (_) {}
 
     updateProfile(user.name, user.phoneNumber, {
       analytics: {
@@ -663,13 +672,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             
             <div className="space-y-4">
               {(() => {
+                const savedGoalsStr = user?.id ? localStorage.getItem(`levelmak_custom_goals_${user.id}`) : null;
+                let cachedGoals = null;
+                if (savedGoalsStr) {
+                  try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+                }
                 const analytics = user.analytics || {
                   weeklyGoals: { target: 120, achieved: 0 },
-                  customGoals: DEFAULT_CUSTOM_GOALS
+                  customGoals: cachedGoals || DEFAULT_CUSTOM_GOALS
                 };
                 const goalsList = (analytics.customGoals && analytics.customGoals.length > 0)
                   ? analytics.customGoals
-                  : DEFAULT_CUSTOM_GOALS;
+                  : (cachedGoals || DEFAULT_CUSTOM_GOALS);
                 const totalGoals = goalsList.length;
                 const completedGoals = goalsList.filter(g => g.completed).length;
                 const goalsPct = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;

@@ -14,6 +14,7 @@ import { supabase } from '../services/supabase';
 // (Normally this should be in types.ts, but let's keep it here for compatibility if it was)
 import { User, Quiz, Story, Mission, Book, Flashcard, FlashcardDeck, Activity, StudyPlan, CoachMessage, CoachSession, AILabSession } from '../types';
 import { AppNotification } from '../services/notificationService';
+import { DEFAULT_CUSTOM_GOALS } from '../constants';
 
 export interface FullAppState {
   user: User | null;
@@ -93,17 +94,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Initialize study history/analytics to clean starting values if empty
   useEffect(() => {
     if (auth.user && (!auth.user.analytics || !auth.user.analytics.weeklyGoals)) {
+      const savedGoalsStr = auth.user.id ? localStorage.getItem(`levelmak_custom_goals_${auth.user.id}`) : null;
+      let cachedGoals = null;
+      if (savedGoalsStr) {
+        try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+      }
+
       const seededAnalytics = {
         studyTimeBySubject: {},
         studyTimeByDay: [],
         quizPerformance: [],
         weeklyGoals: { target: 120, achieved: 0 },
         examPredictions: [],
-        customGoals: auth.user.analytics?.customGoals || [
-          { id: "g1", text: "Faire 3 quiz cette semaine", completed: false },
-          { id: "g2", text: "Étudier 2 heures au total", completed: false },
-          { id: "g3", text: "Lire un livre de la bibliothèque", completed: false }
-        ]
+        customGoals: cachedGoals || auth.user.analytics?.customGoals || DEFAULT_CUSTOM_GOALS
       };
       
       auth.setUser(prev => {
@@ -116,7 +119,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return updated;
       });
     }
-  }, [auth.user, auth.setUser]);
+  }, [auth.user?.id]);
 
   // Auto-seed official welcome notification for new accounts ONCE only
   // and auto-migrate legacy long welcome notifications with emojis to the new concise text

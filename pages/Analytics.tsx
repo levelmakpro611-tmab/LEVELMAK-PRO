@@ -100,9 +100,14 @@ const Analytics: React.FC = () => {
             examPredictions: []
         };
         
+        const savedGoalsStr = user.id ? localStorage.getItem(`levelmak_custom_goals_${user.id}`) : null;
+        let fallbackGoals = DEFAULT_CUSTOM_GOALS;
+        if (savedGoalsStr) {
+            try { fallbackGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+        }
         const existingGoals = (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0)
             ? currentAnalytics.customGoals
-            : DEFAULT_CUSTOM_GOALS;
+            : fallbackGoals;
         const hasGoal = existingGoals.some(g => g.id === goalId);
         const sourceGoals = hasGoal ? existingGoals : [...DEFAULT_CUSTOM_GOALS, ...existingGoals];
         
@@ -155,6 +160,10 @@ const Analytics: React.FC = () => {
             g.id === goalId ? { ...g, completed: !g.completed } : g
         );
         
+        try {
+            localStorage.setItem(`levelmak_custom_goals_${user.id}`, JSON.stringify(updatedGoals));
+        } catch (_) {}
+
         updateProfile(user.name, user.phoneNumber, {
             analytics: {
                 ...targetAnalytics,
@@ -181,6 +190,9 @@ const Analytics: React.FC = () => {
             completed: false
         };
         const updatedGoals = [...existingGoals, newGoal];
+        try {
+            localStorage.setItem(`levelmak_custom_goals_${user.id}`, JSON.stringify(updatedGoals));
+        } catch (_) {}
         const updatedAnalytics = {
             ...currentAnalytics,
             customGoals: updatedGoals
@@ -204,6 +216,9 @@ const Analytics: React.FC = () => {
             ? currentAnalytics.customGoals
             : DEFAULT_CUSTOM_GOALS;
         const updatedGoals = existingGoals.filter(g => g.id !== goalId);
+        try {
+            localStorage.setItem(`levelmak_custom_goals_${user.id}`, JSON.stringify(updatedGoals));
+        } catch (_) {}
         updateProfile(user.name, user.phoneNumber, {
             analytics: {
                 ...currentAnalytics,
@@ -552,9 +567,14 @@ const Analytics: React.FC = () => {
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block px-1">Objectifs Individuels</label>
                             <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
                                 {(() => {
+                                    const savedGoalsStr = user?.id ? localStorage.getItem(`levelmak_custom_goals_${user.id}`) : null;
+                                    let cachedGoals = null;
+                                    if (savedGoalsStr) {
+                                        try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+                                    }
                                     const goalsToDisplay = (analytics.customGoals && analytics.customGoals.length > 0)
                                         ? analytics.customGoals
-                                        : DEFAULT_CUSTOM_GOALS;
+                                        : (cachedGoals || DEFAULT_CUSTOM_GOALS);
                                     return goalsToDisplay.map((goal) => (
                                         <button
                                             key={goal.id}
@@ -862,9 +882,14 @@ const Analytics: React.FC = () => {
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">Objectifs actuels</label>
                                 <div className="space-y-2 overflow-y-auto max-h-[200px] pr-1 custom-scrollbar">
                                     {(() => {
+                                        const savedGoalsStr = user?.id ? localStorage.getItem(`levelmak_custom_goals_${user.id}`) : null;
+                                        let cachedGoals = null;
+                                        if (savedGoalsStr) {
+                                            try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+                                        }
                                         const modalGoals = (analytics.customGoals && analytics.customGoals.length > 0)
                                             ? analytics.customGoals
-                                            : DEFAULT_CUSTOM_GOALS;
+                                            : (cachedGoals || DEFAULT_CUSTOM_GOALS);
                                         return modalGoals.map((goal) => (
                                             <div key={goal.id} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between gap-3 group">
                                                 <span className={`text-xs font-bold text-slate-300 leading-snug ${goal.completed ? 'line-through text-slate-500' : ''}`}>{goal.text}</span>
