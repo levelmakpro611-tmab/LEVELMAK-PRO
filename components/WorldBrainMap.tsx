@@ -173,9 +173,38 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     return () => window.removeEventListener('find_opponent', handleFindOpponent);
   }, []);
 
-  // GPS Watcher & Initial Lock (Universal Web & Native)
-  const requestGps = async () => {
+  // GPS Location Calculation (Throttled strictly to 30 minutes)
+  const GPS_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+
+  const requestGps = async (force: boolean = false) => {
     try {
+      const now = Date.now();
+      const lastCalcStr = localStorage.getItem('levelmak_last_gps_calc');
+      const cachedCoordsStr = localStorage.getItem('levelmak_cached_gps_coords');
+
+      // Check if we calculated location in the last 30 minutes
+      if (!force && lastCalcStr && cachedCoordsStr) {
+        const lastCalc = parseInt(lastCalcStr, 10);
+        if (now - lastCalc < GPS_INTERVAL_MS) {
+          try {
+            const parsed = JSON.parse(cachedCoordsStr);
+            if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+              if (isMountedRef.current) {
+                setMyLocation({ lat: parsed.lat, lng: parsed.lng });
+                setGpsStatus('locked');
+                if (mapRef.current && !hasCentered.current && !mapFocusFeatureId) {
+                  try {
+                    mapRef.current.flyTo([parsed.lat, parsed.lng], 13);
+                    hasCentered.current = true;
+                  } catch (_) {}
+                }
+              }
+              return null;
+            }
+          } catch (_) {}
+        }
+      }
+
       setGpsStatus('searching');
 
       const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
@@ -198,19 +227,21 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           navigator.geolocation.getCurrentPosition(
             (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
             (err) => reject(err),
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: GPS_INTERVAL_MS }
           );
         });
       };
 
-      // 1. Get initial position
       try {
-        console.log("📍 [Map] Requesting browser GPS position...");
+        console.log("📍 [Map] Calculating GPS position (interval 30 min)...");
         const coords = await getBrowserPosition();
         if (isMountedRef.current) {
-          setMyLocation({ lat: coords.latitude, lng: coords.longitude });
+          const newLoc = { lat: coords.latitude, lng: coords.longitude };
+          setMyLocation(newLoc);
           setGpsStatus('locked');
-          if (mapRef.current && !mapFocusFeatureId) {
+          localStorage.setItem('levelmak_cached_gps_coords', JSON.stringify(newLoc));
+          localStorage.setItem('levelmak_last_gps_calc', String(Date.now()));
+          if (mapRef.current && !mapFocusFeatureId && !hasCentered.current) {
             try {
               mapRef.current.flyTo([coords.latitude, coords.longitude], 13);
               hasCentered.current = true;
@@ -218,61 +249,25 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           }
         }
       } catch (err: any) {
-        console.warn("📍 [Map] High accuracy position fetch failed, trying low accuracy...", err);
-        try {
-          const fallbackCoords = await new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-              (e) => reject(e),
-              { enableHighAccuracy: false, timeout: 8000 }
-            );
-          });
-          if (isMountedRef.current && fallbackCoords) {
-            setMyLocation({ lat: fallbackCoords.latitude, lng: fallbackCoords.longitude });
-            setGpsStatus('locked');
-          }
-        } catch (innerErr) {
-          console.warn("📍 [Map] Geolocation not granted or unavailable:", innerErr);
-          setGpsStatus('error');
-        }
+        console.warn("📍 [Map] Position fetch fallback:", err);
+        setGpsStatus('error');
       }
 
-      // 2. Continuous Watch
-      if (typeof navigator !== 'undefined' && navigator.geolocation) {
-        const watchId = navigator.geolocation.watchPosition(
-          (pos) => {
-            if (!isMountedRef.current) return;
-            const { latitude, longitude } = pos.coords;
-            setMyLocation({ lat: latitude, lng: longitude });
-            setGpsStatus('locked');
-            if (!hasCentered.current && mapRef.current) {
-              try {
-                mapRef.current.flyTo([latitude, longitude], 13);
-                hasCentered.current = true;
-              } catch (_) {}
-            }
-          },
-          (err) => console.warn("📍 [Map] Watcher error:", err),
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-        );
-        return `${watchId}`;
-      }
       return null;
     } catch (e) {
-      console.error("📍 [Map] Critical error in requestGps:", e);
+      console.error("📍 [Map] Error in requestGps:", e);
       setGpsStatus('error');
       return null;
     }
   };
 
   useEffect(() => {
-    let watchId: string | null = null;
-    requestGps().then(id => { if (id && isMountedRef.current) watchId = id; });
-    return () => {
-      if (watchId && typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.clearWatch(parseInt(watchId, 10));
-      }
-    };
+    requestGps();
+    // Re-calculate GPS position strictly every 30 minutes
+    const interval = setInterval(() => {
+      requestGps(true);
+    }, GPS_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, []);
 
   // Presence & Database Fallback
@@ -383,9 +378,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         supabase.removeChannel(channel); 
         supabase.removeChannel(profileSub);
     };
-  }, [user, deviceSessionId]);
+  }, [user?.id, deviceSessionId]);
 
   // Heartbeat tracking (Throttled & Guaranteed)
+  const lastDbLocationWriteRef = useRef<number>(0);
   useEffect(() => {
     if (!channelRef.current || !isSubscribed || !user) return;
 
@@ -393,8 +389,6 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       channelRef.current.untrack();
       return;
     }
-
-    const currentCoords = myLocation || { lat: 9.5370, lng: -13.6785 }; // Fallback to Conakry coordinates
 
     const track = async () => {
         const hasRealCoords = !!(myLocation && typeof myLocation.lat === 'number' && typeof myLocation.lng === 'number' && myLocation.lat !== 0 && myLocation.lng !== 0);
@@ -412,8 +406,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
             last_seen: Date.now()
         });
 
-        // 2. Only write to profiles in DB if real coordinates exist
-        if (hasRealCoords) {
+        // 2. Only write location to profiles in DB at most once every 30 minutes
+        const now = Date.now();
+        if (hasRealCoords && (now - lastDbLocationWriteRef.current > 30 * 60 * 1000)) {
+          lastDbLocationWriteRef.current = now;
           try {
               const config = cachedAvatarConfigRef.current || user.avatar || {};
               const updatedConfig = {
@@ -437,9 +433,9 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     };
     
     track(); // Initial track
-    const interval = setInterval(track, 10000); // Heartbeat every 10s
+    const interval = setInterval(track, 60000); // Heartbeat presence broadcast every 60s
     return () => clearInterval(interval);
-  }, [isSubscribed, myLocation, user, isGhostMode, deviceSessionId]);
+  }, [isSubscribed, myLocation?.lat, myLocation?.lng, user?.id, isGhostMode, deviceSessionId]);
 
   // Atlas Focus Logic
   useEffect(() => {

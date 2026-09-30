@@ -147,18 +147,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       examPredictions: []
     };
     const savedGoalsStr = user.id ? localStorage.getItem(`levelmak_custom_goals_${user.id}`) : null;
-    let fallbackGoals = DEFAULT_CUSTOM_GOALS;
+    let cachedGoals: any[] | null = null;
     if (savedGoalsStr) {
-      try { fallbackGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+      try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
     }
-    const existingGoals = (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0)
-      ? currentAnalytics.customGoals
-      : fallbackGoals;
+    // Always start from the cumulative true state (preferring cachedGoals which contains all checks)
+    const baseGoals = (cachedGoals && cachedGoals.length > 0)
+      ? cachedGoals
+      : (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0
+          ? currentAnalytics.customGoals
+          : DEFAULT_CUSTOM_GOALS);
 
-    const hasGoal = existingGoals.some(g => g.id === goalId);
-    const sourceGoals = hasGoal ? existingGoals : [...DEFAULT_CUSTOM_GOALS, ...existingGoals];
+    const hasGoal = baseGoals.some((g: any) => g.id === goalId);
+    const sourceGoals = hasGoal ? baseGoals : [...DEFAULT_CUSTOM_GOALS, ...baseGoals];
 
-    const updatedGoals = sourceGoals.map(g =>
+    const updatedGoals = sourceGoals.map((g: any) =>
       g.id === goalId ? { ...g, completed: !g.completed } : g
     );
 

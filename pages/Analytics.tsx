@@ -101,15 +101,17 @@ const Analytics: React.FC = () => {
         };
         
         const savedGoalsStr = user.id ? localStorage.getItem(`levelmak_custom_goals_${user.id}`) : null;
-        let fallbackGoals = DEFAULT_CUSTOM_GOALS;
+        let cachedGoals: any[] | null = null;
         if (savedGoalsStr) {
-            try { fallbackGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+            try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
         }
-        const existingGoals = (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0)
-            ? currentAnalytics.customGoals
-            : fallbackGoals;
-        const hasGoal = existingGoals.some(g => g.id === goalId);
-        const sourceGoals = hasGoal ? existingGoals : [...DEFAULT_CUSTOM_GOALS, ...existingGoals];
+        const baseGoals = (cachedGoals && cachedGoals.length > 0)
+            ? cachedGoals
+            : (currentAnalytics.customGoals && currentAnalytics.customGoals.length > 0
+                ? currentAnalytics.customGoals
+                : DEFAULT_CUSTOM_GOALS);
+        const hasGoal = baseGoals.some((g: any) => g.id === goalId);
+        const sourceGoals = hasGoal ? baseGoals : [...DEFAULT_CUSTOM_GOALS, ...baseGoals];
         
         let targetAnalytics = { ...currentAnalytics };
         const goalToToggle = sourceGoals.find(g => g.id === goalId);
