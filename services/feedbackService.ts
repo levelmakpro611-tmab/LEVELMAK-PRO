@@ -19,6 +19,19 @@ export const feedbackService = {
   },
 
   /**
+   * Retour haptique de sélection
+   */
+  selection: async () => {
+    try {
+      await Haptics.selectionStart();
+      await Haptics.selectionChanged();
+      await Haptics.selectionEnd();
+    } catch (e) {
+      // Ignoré sur desktop
+    }
+  },
+
+  /**
    * Retour haptique moyen (utilisé pour les validations d'étapes)
    */
   mediumImpact: async () => {
