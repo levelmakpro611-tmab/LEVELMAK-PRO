@@ -7,6 +7,8 @@ import { ocrService } from '../services/ocrService';
 import { useStore } from '../hooks/useStore';
 import { translations } from '../utils/translations';
 import { checkMessageQuota, incrementMessageUsage, isUserPremiumActive } from '../services/aiQuotaService';
+import { DraggableCoachBubble } from './DraggableCoachBubble';
+import { academicMemoryService } from '../services/academicMemoryService';
 
 const MessageFormatter: React.FC<{ text: string }> = ({ text }) => {
   // Split text into lines but filter out separators like --- or ===
@@ -221,10 +223,13 @@ const LevelBot: React.FC = () => {
       const targetId = createdId || `session_${Date.now()}`;
       setActiveSessionId(targetId);
       
+      const welcomeGreeting = user?.name ? `Bonjour ${user.name} !` : "Bonjour !";
+      const welcomeText = `${welcomeGreeting} C'est moi, ton **Elite Coach**. Je suis connecté en temps réel à toutes tes activités (Quiz, Flashcards, Atelier d'écriture, Résumés et Objectifs). Pose-moi n'importe quelle question, ou demande-moi d'évaluer ton niveau et tes points faibles pour progresser !`;
+
       saveCoachMessage(targetId, {
         id: `msg_welcome_${Date.now()}`,
         role: 'bot',
-        text: t.firstQuestion || "Bonjour ! C'est moi, ton **Elite Coach**. Je suis là pour t'accompagner dans tes études, résoudre tes problèmes complexes et booster ta productivité. Pose-moi n'importe quelle question pour commencer !",
+        text: welcomeText,
         timestamp: new Date().toISOString()
       });
     } else if (!activeSessionId && coachSessions.length > 0) {
@@ -349,7 +354,10 @@ const LevelBot: React.FC = () => {
         let imageToSubmit = currentImage;
 
         const studentClass = user?.education || user?.gradeClass || user?.level || 'Collège/Lycée';
-        const profileContext = user ? `Élève: ${user.name || 'Élève'}, Classe/Niveau scolaire: ${studentClass}, XP: ${user.xp || 0}, Rang: #${user.rank || 1}, Heures apprises: ${user.stats?.hoursLearned?.toFixed(1) || 0}h. CONSIGNE STRICTE: L'élève est en "${studentClass}". Adapte STRICTEMENT ton vocabulaire, ton niveau d'explication, ta rigueur et tes exemples pour correspondre exactement au programme et aux exigences du niveau "${studentClass}".` : "";
+        // Injection de la mémoire académique 360° (quiz, flashcards, écrits, objectifs, série)
+        const profileContext = user 
+          ? academicMemoryService.buildPromptContext(user)
+          : `Élève: Élève, Classe: ${studentClass}`;
         response = await aiService.coachChat(finalUserMsg, messages, profileContext, imageToSubmit || undefined, language, isExpertMode);
       }
 
@@ -421,19 +429,11 @@ const LevelBot: React.FC = () => {
 
   return (
     <>
-      {!isOpen && !isModalOpen && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          aria-label="Ouvrir Elite Coach"
-          className="fixed bottom-[calc(86px+env(safe-area-inset-bottom,0px))] right-4 md:bottom-8 md:right-8 w-13 h-13 md:w-16 md:h-16 bg-gradient-to-br from-primary to-secondary text-white rounded-xl md:rounded-2xl shadow-glow flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border border-white/20"
-        >
-          <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-accent rounded-full border-2 border-slate-900 flex items-center justify-center animate-pulse">
-            <Sparkles className="text-white w-2 h-2 md:w-2.5 md:h-2.5" />
-          </div>
-          <MessageCircle size={28} className="md:w-8 md:h-8 group-hover:rotate-12 transition-transform" />
-        </button>
-      )}
+      <DraggableCoachBubble 
+        onClick={() => setIsOpen(true)} 
+        isOpen={isOpen} 
+        isModalOpen={isModalOpen} 
+      />
 
       {isOpen && (
         <div 
@@ -587,6 +587,36 @@ const LevelBot: React.FC = () => {
                     >
                       <RefreshCw size={13} />
                       Réessayer la dernière réponse
+                    </button>
+                  </div>
+                )}
+
+                {/* Quick Academic Memory Prompt Chips */}
+                {messages.length <= 2 && !isTyping && !isLimitReached && (
+                  <div className="pt-2 pb-1 flex flex-wrap gap-2 animate-fade-in">
+                    <button
+                      type="button"
+                      onClick={(e) => handleSend(e as any, { text: "Fais mon bilan : évalue mon niveau actuel d'après mes activités dans l'application.", image: null, isExpert: false })}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-bold transition-all active:scale-95 shadow-sm"
+                    >
+                      <span>📊</span>
+                      <span>Évalue mon niveau</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleSend(e as any, { text: "Quels sont mes points faibles et notions à consolider en priorité d'après mes quiz et exercices récents ?", image: null, isExpert: false })}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/25 text-xs font-bold transition-all active:scale-95 shadow-sm"
+                    >
+                      <span>🎯</span>
+                      <span>Mes points à travailler</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleSend(e as any, { text: "Donne-moi un plan et un conseil personnalisé pour réviser aujourd'hui.", image: null, isExpert: false })}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-bold transition-all active:scale-95 shadow-sm"
+                    >
+                      <span>⚡</span>
+                      <span>Conseil du jour</span>
                     </button>
                   </div>
                 )}
