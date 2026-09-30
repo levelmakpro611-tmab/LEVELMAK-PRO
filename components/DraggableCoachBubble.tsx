@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { MessageCircle, Sparkles } from 'lucide-react';
 import { HapticFeedback } from '../services/nativeAdapters';
@@ -18,8 +18,6 @@ interface DraggableCoachBubbleProps {
 }
 
 const STORAGE_KEY = 'levelmak_coach_bubble_slot';
-const BUBBLE_SIZE_MOBILE = 54;
-const BUBBLE_SIZE_DESKTOP = 62;
 
 export const DraggableCoachBubble: React.FC<DraggableCoachBubbleProps> = ({
   onClick,
@@ -36,148 +34,102 @@ export const DraggableCoachBubble: React.FC<DraggableCoachBubbleProps> = ({
     return 'bottom-right';
   });
 
-  const [windowDimensions, setWindowDimensions] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 400,
-    height: typeof window !== 'undefined' ? window.innerHeight : 800,
-  });
-
   const [isDragging, setIsDragging] = useState(false);
-  const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
+  const dragStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hasMovedRef = useRef(false);
 
-  // Resize handler
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
+  const handleDragStart = (_: any, info: PanInfo) => {
+    setIsDragging(true);
+    hasMovedRef.current = false;
+    dragStartPosRef.current = { x: info.point.x, y: info.point.y };
+  };
 
-  const isDesktop = windowDimensions.width >= 768;
-  const bubbleSize = isDesktop ? BUBBLE_SIZE_DESKTOP : BUBBLE_SIZE_MOBILE;
-
-  // Calculate coordinates for the 6 docking slots
-  const slotsCoordinates = useMemo(() => {
-    const { width, height } = windowDimensions;
-    const marginX = isDesktop ? 24 : 16;
-    
-    // Top offset safely below header
-    const topY = isDesktop ? 96 : 84;
-    // Mid offset at vertical center
-    const midY = Math.max(topY + bubbleSize, Math.round((height / 2) - (bubbleSize / 2)));
-    // Bottom offset safely above the mobile navbar (navbar is ~80px + safe area)
-    const bottomY = Math.max(midY + bubbleSize, height - (isDesktop ? 90 : 150) - bubbleSize);
-
-    const leftX = marginX;
-    const rightX = Math.max(leftX, width - marginX - bubbleSize);
-
-    return {
-      'top-left': { x: leftX, y: topY },
-      'top-right': { x: rightX, y: topY },
-      'mid-left': { x: leftX, y: midY },
-      'mid-right': { x: rightX, y: midY },
-      'bottom-left': { x: leftX, y: bottomY },
-      'bottom-right': { x: rightX, y: bottomY },
-    };
-  }, [windowDimensions, isDesktop, bubbleSize]);
-
-  // Current target position based on active slot
-  const currentPos = slotsCoordinates[slot] || slotsCoordinates['bottom-right'];
-
-  // Calculate closest slot on drag release
   const handleDragEnd = useCallback((_: any, info: PanInfo) => {
     setIsDragging(false);
 
-    // If practically no movement, treat as simple click/tap
-    const movedDistance = Math.hypot(info.offset.x, info.offset.y);
-    if (movedDistance < 6) {
-      setHasMovedDuringDrag(false);
+    const dist = Math.hypot(
+      info.point.x - dragStartPosRef.current.x,
+      info.point.y - dragStartPosRef.current.y
+    );
+
+    // Si le déplacement est minime (simple tap), ne pas recalculer le slot
+    if (dist < 10) {
+      hasMovedRef.current = false;
       return;
     }
 
-    setHasMovedDuringDrag(true);
-    setTimeout(() => setHasMovedDuringDrag(false), 200);
+    hasMovedRef.current = true;
+    setTimeout(() => { hasMovedRef.current = false; }, 200);
 
-    // Find closest slot by Euclidean distance from drop point (centered on bubble)
-    const dropCenterX = info.point.x;
-    const dropCenterY = info.point.y;
+    const screenW = window.innerWidth;
+    const screenH = window.innerHeight;
 
-    let closestSlot: CoachDockSlot = slot;
-    let minDistance = Infinity;
+    // 1. Détermination stricte du côté horizontal : GAUCHE ou DROITE (jamais au centre)
+    const newSide = info.point.x < screenW / 2 ? 'left' : 'right';
 
-    (Object.entries(slotsCoordinates) as [CoachDockSlot, { x: number; y: number }][]).forEach(([slotId, coords]) => {
-      const slotCenterX = coords.x + bubbleSize / 2;
-      const slotCenterY = coords.y + bubbleSize / 2;
-      const dist = Math.hypot(slotCenterX - dropCenterX, slotCenterY - dropCenterY);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestSlot = slotId;
-      }
-    });
+    // 2. Détermination stricte du niveau vertical : HAUT, MILIEU ou BAS (bornes sécurisées)
+    let newLevel: 'top' | 'mid' | 'bottom';
+    if (info.point.y < screenH * 0.35) {
+      newLevel = 'top';
+    } else if (info.point.y > screenH * 0.65) {
+      newLevel = 'bottom';
+    } else {
+      newLevel = 'mid';
+    }
 
-    setSlot(closestSlot);
+    const newSlot: CoachDockSlot = `${newLevel}-${newSide}` as CoachDockSlot;
+    setSlot(newSlot);
     try {
-      localStorage.setItem(STORAGE_KEY, closestSlot);
+      localStorage.setItem(STORAGE_KEY, newSlot);
     } catch (_) {}
 
     HapticFeedback.selection();
-  }, [slot, slotsCoordinates, bubbleSize]);
-
-  const handlePointerDown = () => {
-    setHasMovedDuringDrag(false);
-  };
+  }, []);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isDragging || hasMovedDuringDrag) return;
+    if (isDragging || hasMovedRef.current) return;
     HapticFeedback.selection();
     onClick();
   };
 
-  // Hidden when chat modal or full-screen modals are open
   if (isOpen || isModalOpen) {
     return null;
   }
 
+  // Positionnement fixe strict sur les 6 bordures avec respect des safe-areas :
+  // - HAUT : sous le header (78px mobile / 96px desktop), impossible de dépasser vers le haut
+  // - MILIEU : exactement centré verticalement sur les côtés gauche/droit
+  // - BAS : 96px au-dessus du bord écran (au-dessus de la barre de navigation), impossible d'être coupé en bas
+  const slotClasses = {
+    'top-left': 'top-[calc(78px+env(safe-area-inset-top,0px))] md:top-24 left-4 md:left-6',
+    'top-right': 'top-[calc(78px+env(safe-area-inset-top,0px))] md:top-24 right-4 md:right-6',
+    'mid-left': 'top-1/2 -translate-y-1/2 left-4 md:left-6',
+    'mid-right': 'top-1/2 -translate-y-1/2 right-4 md:right-6',
+    'bottom-left': 'bottom-[calc(96px+env(safe-area-inset-bottom,0px))] md:bottom-8 left-4 md:left-6',
+    'bottom-right': 'bottom-[calc(96px+env(safe-area-inset-bottom,0px))] md:bottom-8 right-4 md:right-6',
+  }[slot];
+
   return (
     <AnimatePresence>
       <motion.div
+        layout
         drag
-        dragMomentum={false}
-        dragElastic={0.12}
-        onPointerDown={handlePointerDown}
-        onDragStart={() => setIsDragging(true)}
+        dragSnapToOrigin
+        dragElastic={0.2}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        initial={{ scale: 0, opacity: 0, x: currentPos.x, y: currentPos.y }}
+        initial={{ scale: 0, opacity: 0 }}
         animate={{
-          scale: isDragging ? 1.12 : 1,
+          scale: isDragging ? 1.15 : 1,
           opacity: 1,
-          x: currentPos.x,
-          y: currentPos.y,
         }}
         exit={{ scale: 0, opacity: 0 }}
         transition={{
-          type: 'spring',
-          stiffness: isDragging ? 600 : 380,
-          damping: isDragging ? 40 : 26,
-          mass: 0.8,
+          layout: { type: 'spring', stiffness: 350, damping: 28 },
+          scale: { type: 'spring', stiffness: 400, damping: 25 },
         }}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: bubbleSize,
-          height: bubbleSize,
-          zIndex: 120,
-        }}
-        className="touch-none select-none cursor-grab active:cursor-grabbing"
+        className={`fixed z-[120] touch-none select-none cursor-grab active:cursor-grabbing w-14 h-14 md:w-16 md:h-16 ${slotClasses}`}
       >
         <button
           type="button"
@@ -185,21 +137,21 @@ export const DraggableCoachBubble: React.FC<DraggableCoachBubbleProps> = ({
           aria-label="Ouvrir le Coach IA d'Élite"
           className="relative w-full h-full rounded-2xl md:rounded-[1.35rem] bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white shadow-[0_8px_30px_rgba(79,70,229,0.45)] dark:shadow-[0_8px_35px_rgba(99,102,241,0.55)] border-2 border-white/25 flex items-center justify-center transition-transform active:scale-95 group overflow-hidden"
         >
-          {/* Subtle pulse background animation */}
+          {/* Fond subtil animé */}
           <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
 
-          {/* Sparkle badge */}
+          {/* Badge brillant */}
           <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-amber-400 rounded-full border-2 border-slate-900 flex items-center justify-center animate-pulse shadow-sm">
             <Sparkles className="text-slate-950 w-2.5 h-2.5 md:w-3 md:h-3" />
           </div>
 
-          {/* Center Coach Icon */}
+          {/* Icône Message */}
           <MessageCircle
-            size={isDesktop ? 30 : 26}
-            className="group-hover:rotate-12 transition-transform duration-300 drop-shadow-sm"
+            size={28}
+            className="md:w-8 md:h-8 group-hover:rotate-12 transition-transform duration-300 drop-shadow-sm"
           />
 
-          {/* Magnetic Dock Slot Hint Indicator (Subtle micro dot) */}
+          {/* Indicateur de dock magnétique discret */}
           <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-white/40" />
         </button>
       </motion.div>

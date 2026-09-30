@@ -88,9 +88,9 @@ export const mapProfileToUser = (profile: any): User => {
         }
     }
 
-    const rawEducation = stats.education || profile.education || '';
-    let computedGradeClass = (stats.gradeClass || profile.grade_class) as GradeClass;
-    let computedLevel = profile.level as SchoolLevel;
+    const rawEducation = stats.education || profile.education || stats.gradeClass || '';
+    let computedGradeClass = (stats.gradeClass || profile.grade_class || rawEducation) as GradeClass;
+    let computedLevel = (stats.level || profile.level) as SchoolLevel;
 
     const lowerEd = String(rawEducation).toLowerCase();
     if (lowerEd.includes('univ') || lowerEd.includes('fac') || lowerEd.includes('licence') || lowerEd.includes('master') || lowerEd.includes('doctorat')) {

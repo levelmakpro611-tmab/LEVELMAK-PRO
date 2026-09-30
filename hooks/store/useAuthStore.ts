@@ -105,6 +105,13 @@ export const useAuthStore = () => {
                                         customGoals: cachedGoals || parsedUser?.analytics?.customGoals
                                     };
                                 }
+                                // Préserver la classe/éducation locale si le profil distant ne l'a pas encore propagée
+                                if (!appUser.education && parsedUser?.education) {
+                                    appUser.education = parsedUser.education;
+                                }
+                                if ((!appUser.gradeClass || appUser.gradeClass === 'Terminale') && parsedUser?.gradeClass && parsedUser.gradeClass !== 'Terminale') {
+                                    appUser.gradeClass = parsedUser.gradeClass;
+                                }
                                 setUser(appUser);
                                 safeLocalStorageSet('levelmak_user', JSON.stringify(appUser));
                                 triggerSync(appUser.id);
@@ -330,7 +337,9 @@ export const useAuthStore = () => {
             if ((updates as any)?.activeSubjects !== undefined) updatedStats.activeSubjects = (updates as any).activeSubjects;
             if ((updates as any)?.subjectTargets !== undefined) updatedStats.subjectTargets = (updates as any).subjectTargets;
             if ((updates as any)?.education !== undefined) (updatedStats as any).education = (updates as any).education;
+            if (updates?.education !== undefined) (updatedStats as any).education = updates.education;
             if (updates?.gradeClass !== undefined) (updatedStats as any).gradeClass = updates.gradeClass;
+            if (updates?.level !== undefined) (updatedStats as any).level = updates.level;
             if (updates?.analytics !== undefined) updatedStats.analytics = updates.analytics;
 
             // Strictly preserve garden and consumables so they are never lost across profile syncs
@@ -427,7 +436,9 @@ export const useAuthStore = () => {
                         analytics: user.analytics || user.stats?.analytics,
                         garden: user.garden || user.stats?.garden || { plants: [] },
                         consumables: user.consumables || user.stats?.consumables || { water_can: 1 },
-                        education: user.education
+                        education: user.education || user.stats?.education,
+                        gradeClass: user.gradeClass || user.stats?.gradeClass,
+                        level: user.level || user.stats?.level
                     },
                     badges: user.badges,
                     streak: user.streak,
