@@ -1280,20 +1280,19 @@ export const logAdminAction = async (
 
 export const syncUserEvent = async (userId: string, userName: string, event: string, details: any): Promise<void> => {
     try {
-        await supabase.from('admin_logs').insert({
-            admin_id: 'system',
-            admin_name: 'Système (Auto)',
-            action: 'user_activity',
-            target_user_id: userId,
-            timestamp: new Date().toISOString(),
-            details: {
+        await logAdminAction(
+            'system',
+            'Système (Auto)',
+            'user_activity',
+            {
                 userName,
                 event,
                 ...details
-            }
-        });
+            },
+            userId
+        );
     } catch (error) {
-        console.error('Error syncing user event:', error);
+        console.warn('[SyncUserEvent] Log action skipped:', error);
     }
 };
 

@@ -372,8 +372,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         </div>
       </header>
 
+      {/* Mobile Drawer Backdrop Overlay */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="md:hidden fixed inset-0 bg-black/60 z-[140] transform-gpu"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-[150] w-72 glass border-none transform transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} no-scrollbar`}>
+      <aside className={`fixed inset-y-0 left-0 z-[150] w-72 bg-white dark:bg-[#070d1e] border-r border-slate-200/80 dark:border-white/10 shadow-2xl md:shadow-none transform-gpu will-change-transform transition-transform duration-300 ease-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} no-scrollbar`}>
         <div className="h-full flex flex-col p-6 md:pt-6 pt-20 overflow-y-auto no-scrollbar">
           <div className="hidden md:flex flex-col items-center mb-10 group no-scrollbar">
             <div className="relative">
