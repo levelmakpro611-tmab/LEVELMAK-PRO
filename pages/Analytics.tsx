@@ -572,10 +572,16 @@ const Analytics: React.FC = () => {
                                     if (savedGoalsStr) {
                                         try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
                                     }
-                                    const goalsToDisplay = (analytics.customGoals && analytics.customGoals.length > 0)
+                                    const baseGoals = (analytics.customGoals && analytics.customGoals.length > 0)
                                         ? analytics.customGoals
                                         : (cachedGoals || DEFAULT_CUSTOM_GOALS);
-                                    return goalsToDisplay.map((goal) => (
+                                    const goalsToDisplay = (!cachedGoals || cachedGoals.length === 0)
+                                        ? baseGoals
+                                        : baseGoals.map((g: any) => {
+                                            const cached = cachedGoals.find((c: any) => c.id === g.id || c.text === g.text);
+                                            return cached ? { ...g, completed: cached.completed } : g;
+                                        });
+                                    return goalsToDisplay.map((goal: any) => (
                                         <button
                                             key={goal.id}
                                             onClick={() => handleToggleGoal(goal.id)}
@@ -887,10 +893,16 @@ const Analytics: React.FC = () => {
                                         if (savedGoalsStr) {
                                             try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
                                         }
-                                        const modalGoals = (analytics.customGoals && analytics.customGoals.length > 0)
+                                        const baseGoals = (analytics.customGoals && analytics.customGoals.length > 0)
                                             ? analytics.customGoals
                                             : (cachedGoals || DEFAULT_CUSTOM_GOALS);
-                                        return modalGoals.map((goal) => (
+                                        const modalGoals = (!cachedGoals || cachedGoals.length === 0)
+                                            ? baseGoals
+                                            : baseGoals.map((g: any) => {
+                                                const cached = cachedGoals.find((c: any) => c.id === g.id || c.text === g.text);
+                                                return cached ? { ...g, completed: cached.completed } : g;
+                                            });
+                                        return modalGoals.map((goal: any) => (
                                             <div key={goal.id} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between gap-3 group">
                                                 <span className={`text-xs font-bold text-slate-300 leading-snug ${goal.completed ? 'line-through text-slate-500' : ''}`}>{goal.text}</span>
                                                 <button

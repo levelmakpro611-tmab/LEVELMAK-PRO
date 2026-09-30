@@ -92,6 +92,19 @@ export const useAuthStore = () => {
                                     localStorage.setItem(`levelmak_demo_premium_${appUser.id}`, 'true');
                                     localStorage.setItem(`levelmak_demo_premium_until_${appUser.id}`, targetExp);
                                 }
+                                // Preserve local analytics and customGoals so background check never reverts toggled goals
+                                const savedGoalsStr = appUser.id ? localStorage.getItem(`levelmak_custom_goals_${appUser.id}`) : null;
+                                let cachedGoals = null;
+                                if (savedGoalsStr) {
+                                    try { cachedGoals = JSON.parse(savedGoalsStr); } catch (_) {}
+                                }
+                                if (cachedGoals || parsedUser?.analytics?.customGoals) {
+                                    appUser.analytics = {
+                                        ...(appUser.analytics || {}),
+                                        ...(parsedUser?.analytics || {}),
+                                        customGoals: cachedGoals || parsedUser?.analytics?.customGoals
+                                    };
+                                }
                                 setUser(appUser);
                                 safeLocalStorageSet('levelmak_user', JSON.stringify(appUser));
                                 triggerSync(appUser.id);
@@ -133,6 +146,18 @@ export const useAuthStore = () => {
                             user.premium_until = targetExp;
                             localStorage.setItem(`levelmak_demo_premium_${user.id}`, 'true');
                             localStorage.setItem(`levelmak_demo_premium_until_${user.id}`, targetExp);
+                        }
+                        const savedGoalsStr = user.id ? localStorage.getItem(`levelmak_custom_goals_${user.id}`) : null;
+                        if (savedGoalsStr) {
+                            try {
+                                const cachedGoals = JSON.parse(savedGoalsStr);
+                                if (cachedGoals) {
+                                    user.analytics = {
+                                        ...(user.analytics || {}),
+                                        customGoals: cachedGoals
+                                    };
+                                }
+                            } catch (_) {}
                         }
                         setUser(user);
                         safeLocalStorageSet('levelmak_user', JSON.stringify(user));
@@ -341,6 +366,9 @@ export const useAuthStore = () => {
                     stats: {
                         ...u.stats,
                         analytics: u.analytics || u.stats?.analytics,
+                        gradeClass: u.gradeClass,
+                        education: u.education,
+                        level: u.level,
                         garden: u.garden || u.stats?.garden || { plants: [] },
                         consumables: u.consumables || u.stats?.consumables || { water_can: 1 }
                     },
@@ -351,8 +379,6 @@ export const useAuthStore = () => {
                     avatar_config: u.avatar,
                     coach_sessions: u.coachSessions
                 };
-                if (u.level) updatePayload.level = u.level;
-                if (u.gradeClass) updatePayload.grade_class = u.gradeClass;
                 if (u.is_premium !== undefined) updatePayload.is_premium = u.is_premium;
                 if (u.premium_until !== undefined) updatePayload.premium_until = u.premium_until;
 

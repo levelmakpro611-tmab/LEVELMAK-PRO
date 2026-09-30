@@ -681,9 +681,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   weeklyGoals: { target: 120, achieved: 0 },
                   customGoals: cachedGoals || DEFAULT_CUSTOM_GOALS
                 };
-                const goalsList = (analytics.customGoals && analytics.customGoals.length > 0)
-                  ? analytics.customGoals
-                  : (cachedGoals || DEFAULT_CUSTOM_GOALS);
+                const mergedGoals = (() => {
+                  const base = (analytics.customGoals && analytics.customGoals.length > 0)
+                    ? analytics.customGoals
+                    : (cachedGoals || DEFAULT_CUSTOM_GOALS);
+                  if (!cachedGoals || cachedGoals.length === 0) return base;
+                  return base.map((g: any) => {
+                    const cached = cachedGoals.find((c: any) => c.id === g.id || c.text === g.text);
+                    return cached ? { ...g, completed: cached.completed } : g;
+                  });
+                })();
+                const goalsList = mergedGoals;
                 const totalGoals = goalsList.length;
                 const completedGoals = goalsList.filter(g => g.completed).length;
                 const goalsPct = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
