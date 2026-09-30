@@ -366,27 +366,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
               </span>
             )}
           </button>
-          <button 
-            type="button" 
-            onClick={() => { HapticFeedback.selection(); setIsSidebarOpen(prev => !prev); }} 
-            className="p-3 ml-1 text-slate-600 dark:text-slate-300 active:scale-95 transition-transform bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-            aria-label="Menu principal"
-          >
+          <button onClick={() => { HapticFeedback.selection(); setIsSidebarOpen(!isSidebarOpen); }} className="p-3 ml-1 text-slate-600 dark:text-slate-300 active:scale-90 transition-transform bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
             {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </header>
 
-      {/* Mobile Drawer Backdrop Overlay (Optimized without heavy backdrop-filter to prevent screen flicker) */}
+      {/* Mobile Drawer Backdrop Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            transition={{ duration: 0.2 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="md:hidden fixed inset-0 bg-black/60 z-[140] pointer-events-auto"
+            className="md:hidden fixed inset-0 bg-black/60 z-[140] transform-gpu"
           />
         )}
       </AnimatePresence>
@@ -420,7 +415,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                 <item.icon size={22} className={`transition-all duration-300 ${activeTab === item.id ? 'text-blue-500 scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'group-hover:scale-110'}`} />
                 <span className="tracking-wide text-[15px]">{item.label}</span>
                 {activeTab === item.id && (
-                  <div 
+                  <motion.div 
+                    layoutId="sidebar-active-dot"
                     className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"
                   />
                 )}

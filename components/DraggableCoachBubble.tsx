@@ -113,7 +113,6 @@ export const DraggableCoachBubble: React.FC<DraggableCoachBubbleProps> = ({
   return (
     <AnimatePresence>
       <motion.div
-        layout
         drag
         dragSnapToOrigin
         dragElastic={0.2}
@@ -126,10 +125,9 @@ export const DraggableCoachBubble: React.FC<DraggableCoachBubbleProps> = ({
         }}
         exit={{ scale: 0, opacity: 0 }}
         transition={{
-          layout: { type: 'spring', stiffness: 350, damping: 28 },
           scale: { type: 'spring', stiffness: 400, damping: 25 },
         }}
-        className={`fixed z-[120] touch-none select-none cursor-grab active:cursor-grabbing w-14 h-14 md:w-16 md:h-16 ${slotClasses}`}
+        className={`fixed z-[120] touch-none select-none cursor-grab active:cursor-grabbing w-14 h-14 md:w-16 md:h-16 transition-[top,bottom,left,right] duration-300 ease-out ${slotClasses}`}
       >
         <button
           type="button"
