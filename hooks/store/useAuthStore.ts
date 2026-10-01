@@ -106,12 +106,37 @@ export const useAuthStore = () => {
                                     };
                                 }
                                 // Préserver la classe/éducation locale si le profil distant ne l'a pas encore propagée
-                                if (!appUser.education && parsedUser?.education) {
-                                    appUser.education = parsedUser.education;
-                                }
-                                if ((!appUser.gradeClass || appUser.gradeClass === 'Terminale') && parsedUser?.gradeClass && parsedUser.gradeClass !== 'Terminale') {
+                                if (data.grade_class) {
+                                    appUser.gradeClass = data.grade_class;
+                                } else if ((!appUser.gradeClass || appUser.gradeClass === 'Terminale') && parsedUser?.gradeClass && parsedUser.gradeClass !== 'Terminale') {
                                     appUser.gradeClass = parsedUser.gradeClass;
                                 }
+                                if (data.education) {
+                                    appUser.education = data.education;
+                                } else if (!appUser.education && parsedUser?.education) {
+                                    appUser.education = parsedUser.education;
+                                }
+
+                                // Persistance des notifications au rechargement
+                                const localNotifsStr = appUser.id ? localStorage.getItem(`levelmak_notifications_${appUser.id}`) : null;
+                                let localNotifs = [];
+                                if (localNotifsStr) {
+                                    try { localNotifs = JSON.parse(localNotifsStr); } catch (_) {}
+                                }
+                                const finalNotifs = (data.stats?.notifications && Array.isArray(data.stats.notifications) && data.stats.notifications.length > 0)
+                                    ? data.stats.notifications
+                                    : (parsedUser?.stats?.notifications && parsedUser.stats.notifications.length > 0)
+                                        ? parsedUser.stats.notifications
+                                        : localNotifs;
+
+                                appUser.stats = {
+                                    ...(appUser.stats || {}),
+                                    notifications: finalNotifs
+                                };
+                                if (appUser.id) {
+                                    localStorage.setItem(`levelmak_notifications_${appUser.id}`, JSON.stringify(finalNotifs));
+                                }
+
                                 setUser(appUser);
                                 safeLocalStorageSet('levelmak_user', JSON.stringify(appUser));
                                 triggerSync(appUser.id);
@@ -165,6 +190,23 @@ export const useAuthStore = () => {
                                     };
                                 }
                             } catch (_) {}
+                        }
+                        if (profile.grade_class) user.gradeClass = profile.grade_class;
+                        if (profile.education) user.education = profile.education;
+                        const localNotifsStr = user.id ? localStorage.getItem(`levelmak_notifications_${user.id}`) : null;
+                        let localNotifs = [];
+                        if (localNotifsStr) {
+                            try { localNotifs = JSON.parse(localNotifsStr); } catch (_) {}
+                        }
+                        const finalNotifs = (profile.stats?.notifications && Array.isArray(profile.stats.notifications) && profile.stats.notifications.length > 0)
+                            ? profile.stats.notifications
+                            : localNotifs;
+                        user.stats = {
+                            ...(user.stats || {}),
+                            notifications: finalNotifs
+                        };
+                        if (user.id) {
+                            localStorage.setItem(`levelmak_notifications_${user.id}`, JSON.stringify(finalNotifs));
                         }
                         setUser(user);
                         safeLocalStorageSet('levelmak_user', JSON.stringify(user));
@@ -372,6 +414,8 @@ export const useAuthStore = () => {
                     xp: u.xp,
                     total_xp: u.totalXp,
                     level_coins: u.levelCoins,
+                    grade_class: u.gradeClass || (u.stats as any)?.gradeClass || u.education,
+                    education: u.education || (u.stats as any)?.education || u.gradeClass,
                     stats: {
                         ...u.stats,
                         analytics: u.analytics || u.stats?.analytics,
@@ -379,7 +423,8 @@ export const useAuthStore = () => {
                         education: u.education,
                         level: u.level,
                         garden: u.garden || u.stats?.garden || { plants: [] },
-                        consumables: u.consumables || u.stats?.consumables || { water_can: 1 }
+                        consumables: u.consumables || u.stats?.consumables || { water_can: 1 },
+                        notifications: u.stats?.notifications || []
                     },
                     badges: u.badges,
                     streak: u.streak,
@@ -392,9 +437,13 @@ export const useAuthStore = () => {
                 if (u.premium_until !== undefined) updatePayload.premium_until = u.premium_until;
 
                 const { error } = await supabase.from('profiles').update(updatePayload).eq('id', u.id);
-                if (error) console.error('[Supabase updateProfile Sync Error]:', error);
+                if (error) {
+                    console.error('[Supabase updateProfile Sync Error]:', error);
+                    throw error;
+                }
             } catch (err) {
                 console.error('[Supabase updateProfile Exception]:', err);
+                throw err;
             }
         }
     }, []);
@@ -431,6 +480,8 @@ export const useAuthStore = () => {
                     xp: user.xp,
                     total_xp: user.totalXp,
                     level_coins: user.levelCoins,
+                    grade_class: user.gradeClass || (user.stats as any)?.gradeClass || user.education,
+                    education: user.education || (user.stats as any)?.education || user.gradeClass,
                     stats: {
                         ...user.stats,
                         analytics: user.analytics || user.stats?.analytics,
@@ -438,7 +489,8 @@ export const useAuthStore = () => {
                         consumables: user.consumables || user.stats?.consumables || { water_can: 1 },
                         education: user.education || user.stats?.education,
                         gradeClass: user.gradeClass || user.stats?.gradeClass,
-                        level: user.level || user.stats?.level
+                        level: user.level || user.stats?.level,
+                        notifications: user.stats?.notifications || []
                     },
                     badges: user.badges,
                     streak: user.streak,

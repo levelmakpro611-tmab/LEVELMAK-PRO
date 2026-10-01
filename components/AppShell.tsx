@@ -284,12 +284,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   React.useEffect(() => {
     if (!user) return;
 
-    // Track time every 1 minute but only update global state every 5 minutes
+    // Track time every 1 minute while page is visible
     const timeInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         timeBufferRef.current += 1;
 
-        if (timeBufferRef.current >= 5) {
+        if (timeBufferRef.current >= 1) {
           trackTime(timeBufferRef.current);
           timeBufferRef.current = 0;
         }
@@ -345,7 +345,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       <OfflineIndicator />
 
       {/* Mobile Header - Re-adjusted for "Married" look */}
-      <header className="md:hidden glass border-b border-black/5 dark:border-white/5 px-4 pt-[env(safe-area-inset-top)] pb-3 flex items-center justify-between sticky top-0 z-[100] bg-background/90 backdrop-blur-xl transition-all">
+      <header className="md:hidden border-b border-black/5 dark:border-white/5 px-4 pt-[env(safe-area-inset-top)] pb-3 flex items-center justify-between sticky top-0 z-[100] bg-white/95 dark:bg-[#070d1e]/95 transition-colors">
         <div className="flex items-center gap-2 pt-2">
           <img src="/logo.png" alt="LEVELMAK" className="h-14 w-auto object-contain brightness-110 dark:brightness-125 drop-shadow-[0_0_15px_rgba(59,130,246,0.2)] dark:drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]" />
         </div>
@@ -372,19 +372,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         </div>
       </header>
 
-      {/* Mobile Drawer Backdrop Overlay */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setIsSidebarOpen(false)}
-            className="md:hidden fixed inset-0 bg-black/60 z-[140] transform-gpu"
-          />
-        )}
-      </AnimatePresence>
+      {/* Mobile Drawer Backdrop Overlay — always mounted, no AnimatePresence to avoid GPU recomposition */}
+      <div
+        onClick={() => setIsSidebarOpen(false)}
+        className={`md:hidden fixed inset-0 bg-black/60 z-[140] transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      />
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-[150] w-72 bg-white dark:bg-[#070d1e] border-r border-slate-200/80 dark:border-white/10 shadow-2xl md:shadow-none transform-gpu will-change-transform transition-transform duration-300 ease-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} no-scrollbar`}>

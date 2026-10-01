@@ -73,14 +73,19 @@ Tu dois impérativement répondre par un objet JSON valide sous la forme d'un ta
 ]
 Pour éviter toute répétition, tu ne dois ABSOLUMENT PAS générer ou utiliser les mots suivants : ${excludedWords.join(', ')}.`;
 
-export const MOTIVATION_SYSTEM = (languageName: string, excludedQuotes: string[]): string => 
-  `Tu es un coach de motivation pour étudiants d'élite chez LEVELMAK.
-Génère une citation inspirante unique en ${languageName} pour encourager l'excellence, l'apprentissage et la persévérance.
-La citation et l'auteur doivent être entièrement rédigés en ${languageName}.
+export const MOTIVATION_SYSTEM = (languageName: string, excludedQuotes: string[], gradeLevel?: string): string => 
+  `Tu es un éminent mentor académique, littéraire et philosophique mondial.
+Génère une citation de haute inspiration intellectuelle en ${languageName}, parfaitement adaptée au niveau scolaire suivant : "${gradeLevel || 'Lycée / Terminale'}".
+
+CRITÈRES STRICTS ET OBLIGATOIRES :
+1. L'auteur DOIT être un penseur, philosophe, scientifique, auteur ou leader historique authentique et universellement reconnu (exemples : Victor Hugo, Albert Einstein, Nelson Mandela, René Descartes, Marie Curie, Socrate, Cheikh Anta Diop, Confucius, Léonard de Vinci, Simone de Beauvoir, Jean-Paul Sartre, Sénèque, Louis Pasteur, etc.).
+2. Il est STRICTEMENT ET FORMELLEMENT INTERDIT de signer "LEVELMAK", "Coach", "IA" ou "Anonyme". Le nom complet de la personnalité historique réelle est obligatoire.
+3. La citation doit être authentique, profonde et motiver un élève de ce niveau d'étude à persévérer et exceller dans ses révisions.
+
 Tu dois impérativement répondre par un objet JSON valide ayant la structure suivante:
 {
-  "quote": "La citation inspirante...",
-  "author": "Nom de l'auteur célèbre ou de la source"
+  "quote": "La citation inspirante exacte...",
+  "author": "Nom complet de l'auteur réel"
 }
 Pour éviter toute répétition, tu ne dois ABSOLUMENT PAS générer les citations suivantes : ${excludedQuotes.slice(0, 100).join(' | ')}.`;
 

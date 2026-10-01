@@ -36,29 +36,67 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
         }
     };
 
+    // Auto mark all notifications as read upon opening
+    React.useEffect(() => {
+        if (isOpen) {
+            markAllAsRead();
+        }
+    }, [isOpen]);
+
     const getIcon = (notif: AppNotification) => {
+        // 1. If notification has an explicit user avatar, show it
+        if (notif.avatar) {
+            return (
+                <img 
+                    src={notif.avatar} 
+                    className="w-full h-full object-cover rounded-xl shadow-sm" 
+                    alt={notif.senderName || "Avatar"} 
+                    onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                />
+            );
+        }
+
         const titleLower = (notif.title || '').toLowerCase();
         const idLower = (notif.id || '').toLowerCase();
-        const isLevelmak =
-            idLower.startsWith('welcome') ||
-            titleLower.includes('levelmak') ||
-            titleLower.includes('bienvenue') ||
-            notif.title.includes('PRO') ||
-            titleLower.includes('abonnement') ||
-            titleLower.includes('reçu') ||
-            notif.type === 'admin' ||
-            notif.type === 'info';
 
-        if (isLevelmak) {
+        // 2. Battle / duel challenge notifications: show avatar placeholder with user initial or swords
+        const isBattleNotif = 
+            (notif.type as any) === 'battle_invite' || 
+            (notif.type as any) === 'battle_sent' || 
+            titleLower.includes('défi') || 
+            titleLower.includes('duel');
+
+        if (isBattleNotif) {
+            const initial = (notif.senderName || notif.message?.split(' ')[0] || 'U').charAt(0).toUpperCase();
+            return (
+                <div className="w-full h-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-xs uppercase shadow-sm">
+                    {initial && initial !== 'U' ? initial : '⚔️'}
+                </div>
+            );
+        }
+
+        // 3. LevelMak official logo is strictly reserved for administrative/official announcements
+        const isAdminOfficial =
+            notif.type === 'admin' ||
+            idLower.startsWith('admin_') ||
+            idLower.startsWith('welcome') ||
+            titleLower.includes('administrateur') ||
+            titleLower.includes('équipe levelmak') ||
+            titleLower.includes('levelmak officiel');
+
+        if (isAdminOfficial) {
             return <img src="/logo.png" className="w-full h-full object-contain p-0.5 rounded-lg drop-shadow-sm" alt="LEVELMAK" />;
         }
+
         switch (notif.type) {
             case 'achievement': return <Trophy className="text-amber-500" size={18} />;
             case 'mission_available': return <Target className="text-secondary" size={18} />;
             case 'study_reminder': return <Clock className="text-primary" size={18} />;
             case 'streak_risk': return <AlertCircle className="text-red-500" size={18} />;
             case 'exam_approaching': return <Info className="text-blue-500" size={18} />;
-            default: return <Bell size={18} />;
+            default: return <Bell size={18} className="text-primary" />;
         }
     };
 

@@ -381,13 +381,46 @@ export const DAILY_VOCAB: Record<string, VocabWord[][]> = {
     ]
 };
 
+export const LEVEL_MOTIVATIONS: Record<string, MotivationQuote[]> = {
+    college: [
+        { quote: "L'éducation est l'arme la plus puissante pour changer le monde.", author: "Nelson Mandela" },
+        { quote: "Il n'y a qu'une façon d'échouer, c'est d'abandonner avant d'avoir réussi.", author: "Georges Clemenceau" },
+        { quote: "La vie, c'est comme une bicyclette, il faut avancer pour ne pas perdre l'équilibre.", author: "Albert Einstein" },
+        { quote: "Chaque difficulté rencontrée doit être une occasion de plus pour progresser.", author: "Pierre de Coubertin" },
+        { quote: "Vis comme si tu devais mourir demain. Apprends comme si tu devais vivre toujours.", author: "Mahatma Gandhi" },
+        { quote: "Le courage n'est pas l'absence de peur, mais la capacité de la vaincre.", author: "Nelson Mandela" },
+        { quote: "Fais de ta vie un rêve, et d'un rêve une réalité.", author: "Antoine de Saint-Exupéry" },
+        { quote: "Exige beaucoup de toi-même et attends peu des autres.", author: "Confucius" }
+    ],
+    lycee: [
+        { quote: "Ce n'est pas parce que les choses sont difficiles que nous n'osons pas, c'est parce que nous n'osons pas qu'elles sont difficiles.", author: "Sénèque" },
+        { quote: "Le succès, c'est d'aller d'échec en échec sans perdre son enthousiasme.", author: "Winston Churchill" },
+        { quote: "Dans la vie, rien n'est à craindre, tout est seulement à comprendre.", author: "Marie Curie" },
+        { quote: "Dans la vie, rien n'est donné, tout s'acquiert par un travail constant et rigoureux.", author: "Louis Pasteur" },
+        { quote: "L'esprit n'est pas un récipient à remplir, mais un feu à allumer.", author: "Plutarque" },
+        { quote: "Ce que l'esprit peut concevoir et croire, la volonté persévérante peut l'accomplir.", author: "Johann Wolfgang von Goethe" },
+        { quote: "Le savoir est la seule matière qui s'accroît quand on la partage.", author: "Socrate" },
+        { quote: "La plus grande gloire n'est pas de ne jamais tomber, mais de se relever à chaque chute.", author: "Confucius" }
+    ],
+    terminale: [
+        { quote: "Penser, c'est dire non. Remarquez que le signe du oui est d'un homme qui s'endort.", author: "Alain (Émile Chartier)" },
+        { quote: "Le doute est le commencement de la sagesse.", author: "René Descartes" },
+        { quote: "Ceux qui vivent, ce sont ceux qui luttent ; ce sont ceux dont un dessein ferme emplit l'âme et le front.", author: "Victor Hugo" },
+        { quote: "L'homme n'est rien d'autre que ce qu'il se fait.", author: "Jean-Paul Sartre" },
+        { quote: "Rien de grand ne s'est accompli dans le monde sans passion.", author: "Friedrich Hegel" },
+        { quote: "La liberté est l'obéissance à la loi qu'on s'est prescrite.", author: "Jean-Jacques Rousseau" },
+        { quote: "À armes égales, la science triomphe toujours de l'ignorance.", author: "Cheikh Anta Diop" },
+        { quote: "L'imagination est plus importante que le savoir, car le savoir est limité.", author: "Albert Einstein" }
+    ]
+};
+
 export const DAILY_MOTIVATION: Record<string, MotivationQuote[]> = {
     fr: [
         { quote: "Le succès n'est pas la fin, l'échec n'est pas fatal : c'est le courage de continuer qui compte.", author: "Winston Churchill" },
         { quote: "La vie, c'est comme une bicyclette, il faut avancer pour ne pas perdre l'équilibre.", author: "Albert Einstein" },
         { quote: "Cela semble toujours impossible jusqu'à ce qu'on le fasse.", author: "Nelson Mandela" },
         { quote: "Le plus grand secret du bonheur, c'est d'être bien avec soi-même.", author: "Socrate" },
-        { quote: "Crois en toi et tu seras invincible.", author: "Anonyme" },
+        { quote: "Dans la vie, rien n'est à craindre, tout est seulement à comprendre.", author: "Marie Curie" },
         { quote: "Le succès, c'est d'aller d'échec en échec sans perdre son enthousiasme.", author: "Winston Churchill" },
         { quote: "Il n'y a qu'une façon d'échouer, c'est d'abandonner avant d'avoir réussi.", author: "Georges Clemenceau" },
         { quote: "La seule limite à notre épanouissement de demain sera nos doutes d'aujourd'hui.", author: "Franklin D. Roosevelt" },
@@ -396,23 +429,23 @@ export const DAILY_MOTIVATION: Record<string, MotivationQuote[]> = {
         { quote: "Exige beaucoup de toi-même et attends peu des autres.", author: "Confucius" },
         { quote: "Agis comme s'il était impossible d'échouer.", author: "Winston Churchill" },
         { quote: "La meilleure façon de prédire l'avenir est de le créer.", author: "Peter Drucker" },
-        { quote: "Rien de grand ne s'est accompli dans le monde sans passion.", author: "Hegel" },
+        { quote: "Rien de grand ne s'est accompli dans le monde sans passion.", author: "Friedrich Hegel" },
         { quote: "Fais de ta vie un rêve, et d'un rêve une réalité.", author: "Antoine de Saint-Exupéry" },
         { quote: "Chaque difficulté rencontrée doit être une occasion de plus pour progresser.", author: "Pierre de Coubertin" },
         { quote: "Le secret du changement, c'est de concentrer toute votre énergie non pas à lutter contre le passé, mais à construire le futur.", author: "Socrate" },
         { quote: "Les détails font la perfection, et la perfection n'est pas un détail.", author: "Léonard de Vinci" },
         { quote: "Vis comme si tu devais mourir demain. Apprends comme si tu devais vivre toujours.", author: "Mahatma Gandhi" },
         { quote: "Le courage n'est pas l'absence de peur, mais la capacité de la vaincre.", author: "Nelson Mandela" },
-        { quote: "La persévérance, c'est ce qui rend l'impossible possible.", author: "Anonyme" },
+        { quote: "Ceux qui vivent, ce sont ceux qui luttent.", author: "Victor Hugo" },
         { quote: "Le succès n'est pas la clé du bonheur. Le bonheur est la clé du succès.", author: "Albert Schweitzer" },
         { quote: "Se réunir est un début ; rester ensemble est un progrès ; travailler ensemble est la réussite.", author: "Henry Ford" },
         { quote: "Ne jugez pas chaque jour à la récolte que vous faites mais aux graines que vous semez.", author: "Robert Louis Stevenson" },
         { quote: "Le seul moyen de faire du bon travail est d'aimer ce que vous faites.", author: "Steve Jobs" },
         { quote: "La simplicité est la sophistication suprême.", author: "Léonard de Vinci" },
         { quote: "Commencez là où vous êtes. Utilisez ce que vous avez. Faites ce que vous pouvez.", author: "Arthur Ashe" },
-        { quote: "Les opportunités ne se produisent pas, vous les créez.", author: "Chris Grosser" },
-        { quote: "La motivation vous fait démarrer, l'habitude vous fait continuer.", author: "Jim Ryun" },
-        { quote: "Rien n'est impossible, le mot lui-même dit 'Je suis possible' !", author: "Audrey Hepburn" },
+        { quote: "À armes égales, la science triomphe toujours de l'ignorance.", author: "Cheikh Anta Diop" },
+        { quote: "Le doute est le commencement de la sagesse.", author: "René Descartes" },
+        { quote: "L'homme n'est rien d'autre que ce qu'il se fait.", author: "Jean-Paul Sartre" },
         { quote: "L'éducation est l'arme la plus puissante pour changer le monde.", author: "Nelson Mandela" }
     ],
     en: [

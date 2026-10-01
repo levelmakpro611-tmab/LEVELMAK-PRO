@@ -19,7 +19,9 @@ import {
     Type,
     GraduationCap,
     FileText,
-    CreditCard
+    CreditCard,
+    Loader2,
+    AlertCircle
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { audioService } from '../services/audio';
@@ -45,6 +47,7 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
     const [education, setEducation] = useState(user?.education || user?.gradeClass || '');
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [saveError, setSaveError] = useState('');
     const [biometricEnabled, setBiometricEnabled] = useState(false);
     const [legalTab, setLegalTab] = useState<'privacy' | 'terms'>('privacy');
     const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
@@ -110,6 +113,8 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
     const handleSaveProfile = async () => {
         if (!user) return;
         setIsSaving(true);
+        setSaveError('');
+        setShowSuccess(false);
         try {
             const cleanName = name.trim();
             const cleanPhone = phone.trim();
@@ -146,11 +151,12 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                 gradeClass: (deducedGrade || cleanEducation || 'Terminale') as any,
                 level: deducedLevel
             });
-            addActivity('profile', t('settings.success'), '');
             setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
+            setTimeout(() => setShowSuccess(false), 3500);
         } catch (error) {
-            console.error(error);
+            console.error('[handleSaveProfile Error]:', error);
+            setSaveError('Erreur, recommencer');
+            setTimeout(() => setSaveError(''), 4000);
         } finally {
             setIsSaving(false);
         }
@@ -315,20 +321,33 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                                                 <motion.div
                                                                     initial={{ opacity: 0, x: -10 }}
                                                                     animate={{ opacity: 1, x: 0 }}
-                                                                    className="text-success text-xs md:text-sm font-bold flex items-center gap-1.5"
+                                                                    className="text-emerald-500 text-xs md:text-sm font-black flex items-center gap-1.5"
                                                                 >
-                                                                    <Check size={16} /> {t('settings.success')}
+                                                                    <Check size={16} /> Modifications enregistrées !
+                                                                </motion.div>
+                                                            )}
+                                                            {saveError && (
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, x: -10 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    className="text-rose-500 text-xs md:text-sm font-black flex items-center gap-1.5"
+                                                                >
+                                                                    <AlertCircle size={16} /> {saveError}
                                                                 </motion.div>
                                                             )}
                                                         </div>
                                                         <button
                                                             onClick={handleSaveProfile}
                                                             disabled={isSaving}
-                                                            className="px-6 md:px-8 py-3 md:py-4 bg-primary hover:bg-primary-light text-white rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-xs transition-all shadow-glow flex items-center gap-2 disabled:opacity-50"
+                                                            className="px-6 md:px-8 py-3 md:py-4 bg-primary hover:bg-primary-light text-white rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-xs transition-all shadow-glow flex items-center gap-2 disabled:opacity-60"
                                                         >
-                                                            {isSaving ? t('settings.saving') : (
+                                                            {isSaving ? (
                                                                 <>
-                                                                    <Save size={16} /> {t('settings.saveBtn')}
+                                                                    <Loader2 size={16} className="animate-spin" /> Synchronisation...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Save size={16} /> Enregistrer les modifications
                                                                 </>
                                                             )}
                                                         </button>

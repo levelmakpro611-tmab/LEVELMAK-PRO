@@ -76,7 +76,7 @@ interface TicTacToeProps {
 export const TicTacToe: React.FC<TicTacToeProps> = ({ 
     battleId, currentUser, opponent, isHost, onEnd, onRematch, onExit, currentScore, currentBet = 0 
 }) => {
-    const { addLevelCoins, addNotification, resolveBattle } = useStore();
+    const { addLevelCoins, addXp, addNotification, resolveBattle } = useStore();
     const [board, setBoard] = useState<(string | null)[]>(Array(9).fill(null));
     const [isMyTurn, setIsMyTurn] = useState(isHost);
     const [winner, setWinner] = useState<string | 'draw' | null>(null);
@@ -223,6 +223,10 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
 
                 if (targetWinner === currentUser.id) {
                     audioService.playSuccess('quiz');
+                    HapticFeedback.levelUp();
+                    import('canvas-confetti').then(({ default: confetti }) => {
+                        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+                    }).catch(() => {});
                 } else {
                     audioService.playError('quiz');
                 }
@@ -269,16 +273,13 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
     useEffect(() => {
         if (abandonedByOpponent && !abandonRewardsClaimed) {
             setAbandonRewardsClaimed(true);
-            const isCustom = currentBet > 0;
-            if (isCustom) {
-                addLevelCoins(currentBet);
-                addNotification('success', '🏆 Victoire par Forfait !', `L'adversaire a quitté. Vous remportez ${currentBet} LevelCoins !`);
-            } else {
-                resolveBattle(currentUser.id, false);
-                addNotification('success', '🏆 Victoire par Forfait !', "L'adversaire a abandonné. Victoire enregistrée !");
-            }
+            const winCoins = currentBet > 0 ? currentBet * 2 : 20;
+            addLevelCoins(winCoins);
+            addXp(50);
+            resolveBattle(currentUser.id, false);
+            addNotification('success', '🏆 Victoire par Forfait !', `L'adversaire a abandonné. Vous remportez ${winCoins} LevelCoins et +50 XP !`);
         }
-    }, [abandonedByOpponent, abandonRewardsClaimed, currentBet, currentUser.id, resolveBattle, addLevelCoins, addNotification]);
+    }, [abandonedByOpponent, abandonRewardsClaimed, currentBet, currentUser.id, resolveBattle, addLevelCoins, addXp, addNotification]);
 
     const handleMove = (index: number) => {
         if (!isMyTurn || board[index] || winner || abandonedByOpponent) return;
@@ -304,15 +305,16 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
             gameChannel?.send({
                 type: 'broadcast',
                 event: 'battle_abandoned',
-                payload: { senderId: currentUser.id }
+                payload: { senderId: currentUser.id, betAmount: currentBet }
             });
         }
         if (currentBet > 0) {
-            addLevelCoins(-currentBet);
+            // Mise déjà débitée au début du duel (startBattle)
+            addNotification('info', 'Défi abandonné 🏳️', `Tu as abandonné le duel. La mise de ${currentBet} LevelCoins est perdue.`);
         }
         setTimeout(() => {
             onExit();
-        }, 500);
+        }, 300);
     };
 
     const handleRequestRematch = () => {
@@ -348,19 +350,30 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
     };
 
     return (
-        <div className="flex flex-col items-center justify-center h-full w-full max-w-md mx-auto p-4 font-sans relative">
+        <div className="flex flex-col items-center justify-between h-full max-h-[100dvh] w-full max-w-sm sm:max-w-md mx-auto p-2 sm:p-3 font-sans relative overflow-hidden select-none">
             
-            {/* Close/Quit button in active gameplay */}
-            {!winner && !abandonedByOpponent && (
-                <div className="absolute top-4 right-4 z-20">
+            {/* Top Navigation Bar with Title & Close button */}
+            <div className="w-full flex items-center justify-between mb-2 shrink-0">
+                <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-xs sm:text-sm shadow-md">
+                        ⚔️
+                    </span>
+                    <div>
+                        <h3 className="text-xs font-black text-white uppercase tracking-wider leading-none">Morpion Stratégique</h3>
+                        <p className="text-[9px] sm:text-[10px] text-blue-400 font-bold mt-0.5">Partie en Direct</p>
+                    </div>
+                </div>
+
+                {!winner && !abandonedByOpponent && (
                     <button 
                         onClick={() => setShowQuitConfirm(true)} 
-                        className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors text-white border border-white/10"
+                        className="p-2 sm:p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-xl transition-all text-slate-300 hover:text-white border border-white/10 shadow-lg cursor-pointer"
+                        title="Quitter la partie"
                     >
-                        <X size={20} />
+                        <X size={16} />
                     </button>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* Scoreboard */}
             {(() => {
@@ -370,38 +383,40 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                 const guestName = !isHost ? 'Toi' : opponent.name;
 
                 return (
-                    <div className="w-full glass-card p-4 rounded-3xl mb-6 flex items-center justify-between shadow-xl border border-white/10">
-                        <div className="flex flex-col items-center">
-                            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 mb-1 overflow-hidden">
+                    <div className="w-full bg-[#0d1425]/90 backdrop-blur-xl py-2 px-3 sm:px-4 rounded-2xl mb-2 flex items-center justify-between shadow-2xl border border-blue-500/20 shrink-0">
+                        <div className="flex flex-col items-center min-w-[65px]">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 p-0.5 mb-0.5 shadow-md shadow-blue-500/30 overflow-hidden flex items-center justify-center text-white">
                                 {hostAvatar ? (
-                                    <img src={hostAvatar} className="w-full h-full object-cover" alt="Host" />
+                                    <img src={hostAvatar} className="w-full h-full object-cover rounded-[10px]" alt="Host" />
                                 ) : (
-                                    <span className="text-lg font-black text-blue-400 uppercase">{(hostName || 'U').charAt(0)}</span>
+                                    <span className="text-sm font-black uppercase">{(hostName || 'U').charAt(0)}</span>
                                 )}
                             </div>
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">{hostName}</span>
-                            <span className="text-2xl font-black text-blue-500">{currentScore.host}</span>
+                            <span className="text-[9px] font-black text-white uppercase tracking-wider max-w-[75px] truncate text-center">{hostName}</span>
+                            <span className="text-base sm:text-lg font-black text-blue-400 leading-none mt-0.5">{currentScore.host}</span>
                         </div>
                         
-                        <div className="flex flex-col items-center">
-                            <div className="px-4 py-1.5 bg-yellow-500/20 rounded-full border border-yellow-500/30 mb-2">
-                                <span className="text-yellow-500 font-black text-xs flex items-center gap-1">
-                                    <Coins size={14} /> {currentBet} LC
+                        <div className="flex flex-col items-center px-2">
+                            <div className="px-2.5 py-0.5 bg-amber-500/20 rounded-full border border-amber-500/30 mb-0.5">
+                                <span className="text-amber-400 font-black text-[10px] flex items-center gap-1">
+                                    <Coins size={11} /> {currentBet > 0 ? `POT : ${currentBet * 2} LC` : '+20 LC'}
                                 </span>
                             </div>
-                            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">VS</div>
+                            <div className="text-slate-400 text-[8px] font-bold">
+                                {currentBet > 0 ? `Mise : ${currentBet} LC` : 'Amical'}
+                            </div>
                         </div>
 
-                        <div className="flex flex-col items-center">
-                            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 flex items-center justify-center text-rose-400 mb-1 overflow-hidden">
+                        <div className="flex flex-col items-center min-w-[65px]">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-pink-600 p-0.5 mb-0.5 shadow-md shadow-rose-500/30 overflow-hidden flex items-center justify-center text-white">
                                 {guestAvatar ? (
-                                    <img src={guestAvatar} className="w-full h-full object-cover" alt="Guest" />
+                                    <img src={guestAvatar} className="w-full h-full object-cover rounded-[10px]" alt="Guest" />
                                 ) : (
-                                    <span className="text-lg font-black text-rose-400 uppercase">{(guestName || 'U').charAt(0)}</span>
+                                    <span className="text-sm font-black uppercase">{(guestName || 'U').charAt(0)}</span>
                                 )}
                             </div>
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">{guestName}</span>
-                            <span className="text-2xl font-black text-rose-500">{currentScore.guest}</span>
+                            <span className="text-[9px] font-black text-white uppercase tracking-wider max-w-[75px] truncate text-center">{guestName}</span>
+                            <span className="text-base sm:text-lg font-black text-rose-400 leading-none mt-0.5">{currentScore.guest}</span>
                         </div>
                     </div>
                 );
@@ -409,90 +424,118 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
 
             {/* Turn Indicator */}
             {!winner && !abandonedByOpponent && (
-                <div className={`mb-6 px-6 py-2 rounded-full border transition-all ${isMyTurn ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 animate-pulse' : 'bg-slate-800 border-white/5 text-slate-500'}`}>
-                    <span className="font-black text-xs uppercase tracking-widest">
-                        {isMyTurn ? 'C\'est ton tour ! ⚡' : `En attente de ${opponent.name}...`}
+                <div className={`mb-2 px-3 py-1 rounded-full border transition-all shrink-0 ${isMyTurn ? 'bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.25)] animate-pulse' : 'bg-slate-900/80 border-white/10 text-slate-400'}`}>
+                    <span className="font-black text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+                        {isMyTurn ? '⚡ C\'est ton tour ! Joue ton coup' : `⏳ Au tour de ${opponent.name}...`}
                     </span>
                 </div>
             )}
 
-            {/* Game Board */}
-            <div className="grid grid-cols-3 gap-3 w-full aspect-square p-3 glass-card rounded-[2.5rem] border border-white/5 shadow-2xl relative">
+            {/* Game Board - clamped to maximum viewport percentage so it fits on screen without overflowing */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-full max-w-[min(320px,46vh)] aspect-square p-2.5 sm:p-3 glass-card rounded-2xl sm:rounded-3xl border border-white/5 shadow-2xl relative shrink-0">
                 {board.map((cell, i) => {
                     const isWinningCell = winningLine?.includes(i);
                     return (
                         <motion.button
                             key={`cell-${i}`}
-                            whileHover={{ scale: cell ? 1 : 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: cell ? 1 : 1.04 }}
+                            whileTap={{ scale: 0.96 }}
                             onClick={() => handleMove(i)}
-                            className={`relative flex items-center justify-center aspect-square rounded-2xl transition-colors ${!cell ? 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700' : cell === 'X' ? 'bg-blue-500/20' : 'bg-rose-500/20'} ${isWinningCell ? (cell === 'X' ? 'ring-4 ring-blue-500' : 'ring-4 ring-rose-500') : ''}`}
+                            className={`relative flex items-center justify-center aspect-square rounded-xl sm:rounded-2xl transition-colors ${!cell ? 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700' : cell === 'X' ? 'bg-blue-500/20' : 'bg-rose-500/20'} ${isWinningCell ? (cell === 'X' ? 'ring-2 sm:ring-4 ring-blue-500' : 'ring-2 sm:ring-4 ring-rose-500') : ''}`}
                         >
                             <AnimatePresence>
                                 {cell === 'X' && (
                                     <motion.div initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }} className="text-blue-500">
-                                        <X size={48} strokeWidth={3} className="drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]" />
+                                        <X size={38} strokeWidth={3} className="drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]" />
                                     </motion.div>
                                 )}
                                 {cell === 'O' && (
                                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-rose-500">
-                                        <Circle size={40} strokeWidth={3} className="drop-shadow-[0_0_15px_rgba(244,63,94,0.6)]" />
+                                        <Circle size={32} strokeWidth={3} className="drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]" />
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                         </motion.button>
                     );
                 })}
-                
-                {/* Result Overlay */}
-                <AnimatePresence>
-                    {winner && !abandonedByOpponent && (
-                        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-slate-950/80 rounded-[2.5rem] backdrop-blur-md border border-white/10">
-                            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-4 ${winner === currentUser.id ? 'bg-emerald-500/20 text-emerald-400' : winner === 'draw' ? 'bg-slate-500/20 text-slate-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                {winner === currentUser.id ? <Trophy size={40} /> : winner === 'draw' ? <RefreshCw size={40} /> : <X size={40} />}
+            </div>
+
+            {/* Full-Screen End Match Modal Overlay */}
+            <AnimatePresence>
+                {winner && !abandonedByOpponent && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[1100] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6 text-center"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.85, y: 20 }} 
+                            animate={{ scale: 1, y: 0 }} 
+                            className="bg-slate-900 border border-white/10 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center"
+                        >
+                            <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-3 shadow-lg ${winner === currentUser.id ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-emerald-500/20' : winner === 'draw' ? 'bg-slate-500/20 text-slate-300 border border-slate-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-rose-500/20'}`}>
+                                {winner === currentUser.id ? <Trophy size={40} className="animate-bounce" /> : winner === 'draw' ? <RefreshCw size={36} /> : <X size={40} />}
                             </div>
                             
-                            <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2 italic">
-                                {winner === currentUser.id ? 'GAGNÉ ! 🏆' : winner === 'draw' ? 'ÉGALITÉ 🤝' : 'PERDU... 💀'}
+                            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight mb-1">
+                                {winner === currentUser.id ? 'VICTOIRE ! 🏆' : winner === 'draw' ? 'MATCH NUL 🤝' : 'DÉFAITE... 💀'}
                             </h2>
-                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-8">
-                                {winner === currentUser.id ? `Tu remportes ${currentBet} LevelCoins !` : winner === 'draw' ? 'Mises récupérées.' : `${opponent.name} remporte la mise.`}
+
+                            <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full my-3 bg-white/5 border border-white/10">
+                                <Coins size={15} className="text-amber-400" />
+                                <span className={`text-xs font-black uppercase tracking-wider ${winner === currentUser.id ? 'text-emerald-400' : winner === 'draw' ? 'text-slate-300' : 'text-rose-400'}`}>
+                                    {winner === currentUser.id 
+                                        ? `+${currentBet > 0 ? currentBet * 2 : 20} LevelCoins remportés !` 
+                                        : winner === 'draw' 
+                                            ? (currentBet > 0 ? `Mise de ${currentBet} LC remboursée` : 'Égalité parfaite') 
+                                            : (currentBet > 0 ? `Mise de ${currentBet} LC perdue` : 'Partie perdue')}
+                                </span>
+                            </div>
+
+                            <p className="text-slate-400 text-xs sm:text-sm mb-6 max-w-xs leading-relaxed">
+                                {winner === currentUser.id 
+                                    ? `Bravo ! Tu as vaincu ${opponent.name} dans l'arène.` 
+                                    : winner === 'draw' 
+                                        ? `Duel très serré face à ${opponent.name} !` 
+                                        : `${opponent.name} a remporté la partie.`}
                             </p>
 
-                            <div className="grid grid-cols-2 gap-4 w-full">
+                            <div className="flex flex-col gap-3 w-full">
                                 {rematchRequestedByMe ? (
                                     <button 
                                         disabled
-                                        className="flex items-center justify-center gap-2 py-4 bg-blue-600/50 text-white/70 rounded-2xl font-black uppercase tracking-widest text-[10px] cursor-not-allowed"
+                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600/50 text-white/70 rounded-2xl font-black uppercase tracking-wider text-xs cursor-not-allowed shadow-lg"
                                     >
-                                        <RefreshCw size={14} className="animate-spin" /> En attente...
+                                        <RefreshCw size={15} className="animate-spin" /> En attente de l'adversaire...
                                     </button>
                                 ) : rematchRequestedByOpponent ? (
                                     <button 
                                         onClick={handleAcceptRematch}
-                                        className="flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-600/20 transition-all active:scale-95 animate-pulse"
+                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-black uppercase tracking-wider text-xs shadow-xl shadow-emerald-500/25 active:scale-98 transition-all animate-pulse"
                                     >
-                                        <RefreshCw size={14} /> Accepter
+                                        <Swords size={16} /> Accepter la revanche ⚔️
                                     </button>
                                 ) : (
                                     <button 
                                         onClick={handleRequestRematch}
-                                        className="flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-600/20 transition-all active:scale-95"
+                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-black uppercase tracking-wider text-xs shadow-xl shadow-blue-500/25 active:scale-98 transition-all"
                                     >
-                                        <RefreshCw size={14} /> Revanche
+                                        <Swords size={16} /> Revanche immédiate ⚔️
                                     </button>
                                 )}
+
                                 <button 
-                                    onClick={() => onExit()}
-                                    className="flex items-center justify-center gap-2 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all active:scale-95"
+                                    onClick={onExit}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-slate-800 hover:bg-slate-700 active:scale-98 text-slate-200 hover:text-white rounded-2xl font-black uppercase tracking-wider text-xs border border-white/10 transition-all shadow-md"
                                 >
-                                    <LogOut size={14} /> Quitter
+                                    🗺️ Défier un autre élève / Retour Arène
                                 </button>
                             </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Quit Confirmation Dialog */}
             <AnimatePresence>
@@ -501,29 +544,32 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[1001] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-6 text-center"
+                        className="fixed inset-0 z-[1001] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 text-center"
                     >
                         <motion.div 
-                            initial={{ scale: 0.9, y: 20 }}
+                            initial={{ scale: 0.9, y: 15 }}
                             animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
-                            className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl"
+                            exit={{ scale: 0.9, y: 15 }}
+                            className="bg-slate-900 border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
                         >
-                            <h3 className="text-2xl font-black text-white uppercase mb-4 tracking-tight">Abandonner le duel ?</h3>
-                            <p className="text-slate-400 text-sm mb-8 leading-relaxed">
-                                Attention ! Si vous quittez maintenant, l'adversaire remportera la mise de {currentBet} LevelCoins par forfait.
+                            <h3 className="text-xl font-black text-white uppercase mb-3 tracking-tight">Abandonner le duel ?</h3>
+                            <p className="text-slate-400 text-xs sm:text-sm mb-6 leading-relaxed">
+                                {currentBet > 0 
+                                    ? `Attention ! Si vous quittez maintenant, l'adversaire remportera la mise de ${currentBet * 2} LevelCoins par forfait.`
+                                    : "Attention ! Si vous quittez maintenant, vous perdrez la partie et l'adversaire remportera la victoire par forfait."
+                                }
                             </p>
                             
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-2.5">
                                 <button 
                                     onClick={confirmQuit} 
-                                    className="w-full py-4 bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                                    className="w-full py-3 bg-red-500 text-white rounded-xl font-black uppercase tracking-widest text-xs hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
                                 >
                                     Oui, abandonner 🏳️
                                 </button>
                                 <button 
                                     onClick={() => setShowQuitConfirm(false)} 
-                                    className="w-full py-4 bg-slate-850 text-slate-300 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-colors border border-white/5"
+                                    className="w-full py-3 bg-slate-800 text-slate-300 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-slate-700 transition-colors border border-white/5"
                                 >
                                     Non, continuer ⚔️
                                 </button>
@@ -538,42 +584,42 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                 {abandonedByOpponent && (
                     <motion.div 
                         initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }}
-                        className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
+                        animate={{ opacity: 1 }} 
+                        className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 text-center"
                     >
                         <motion.div 
                             initial={{ scale: 0, rotate: -10 }} 
                             animate={{ scale: 1, rotate: 0 }} 
                             transition={{ type: 'spring', bounce: 0.5, delay: 0.1 }}
                         >
-                            <Trophy size={100} className="mb-6 text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.5)] animate-bounce" />
+                            <Trophy size={80} className="mb-4 text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.5)] animate-bounce" />
                         </motion.div>
-                        <h2 className="text-4xl font-black text-white mb-2 uppercase tracking-widest italic">
+                        <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-widest italic">
                             🏆 Victoire par Forfait !
                         </h2>
-                        <p className="text-slate-400 max-w-sm mb-6 text-sm">
+                        <p className="text-slate-400 max-w-xs mb-4 text-xs">
                             L'adversaire a abandonné ou s'est déconnecté. Tu remportes automatiquement ce duel !
                         </p>
 
-                        <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-6 py-3 rounded-full font-black text-lg mb-10 shadow-premium">
-                            <Coins size={22} className="animate-spin-slow" />
-                            {currentBet > 0 ? `+${currentBet * 2} LevelCoins` : `+10 LevelCoins • +50 XP`}
+                        <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-5 py-2.5 rounded-full font-black text-base mb-6 shadow-premium">
+                            <Coins size={18} className="animate-spin-slow" />
+                            {currentBet > 0 ? `+${currentBet * 2} LevelCoins` : `+20 LevelCoins • +50 XP`}
                         </div>
 
                         <button 
                             onClick={onExit} 
-                            className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl"
+                            className="bg-white text-slate-900 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-transform shadow-2xl flex items-center gap-2"
                         >
-                            Retourner à la carte
+                            🗺️ Défier un autre élève / Retour Arène
                         </button>
                     </motion.div>
                 )}
             </AnimatePresence>
 
             {/* Footer decoration */}
-            <div className="mt-8 flex items-center gap-2 text-slate-600">
-                <Swords size={14} />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Arène Tic-Tac-Toe Elite</span>
+            <div className="mt-1 flex items-center gap-1.5 text-slate-500/70 shrink-0">
+                <Swords size={12} />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Arène Morpion Elite</span>
             </div>
         </div>
     );

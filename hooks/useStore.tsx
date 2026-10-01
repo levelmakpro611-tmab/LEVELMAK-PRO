@@ -1,5 +1,6 @@
 import { safeLocalStorageSet } from '../services/storage';
-import React, { createContext, useContext, ReactNode, useMemo, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useEffect, useState, useCallback, useRef } from 'react';
+import { BattleRequest } from '../types';
 
 import { useAuthStore } from './store/useAuthStore';
 import { useContentStore } from './store/useContentStore';
@@ -70,14 +71,184 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   
   // Gamification needs access to user and addActivity
   const gamification = useGamificationStore(auth.user, auth.setUser, auth.addActivity);
-  const daily = useDailyStore(ui.settings.language);
+  const daily = useDailyStore(ui.settings.language, auth.user?.gradeClass || auth.user?.education);
 
   // Missing legacy states
   const notifications = useMemo(() => {
-    return auth.user?.stats?.notifications || [];
-  }, [auth.user?.stats?.notifications]);
+    if (auth.user?.stats?.notifications && Array.isArray(auth.user.stats.notifications) && auth.user.stats.notifications.length > 0) {
+      return auth.user.stats.notifications;
+    }
+    if (auth.user?.id) {
+      try {
+        const stored = localStorage.getItem(`levelmak_notifications_${auth.user.id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (_) {}
+    }
+    return [];
+  }, [auth.user?.id, auth.user?.stats?.notifications]);
   const [continuousStudyTime, setContinuousStudyTime] = useState(0);
   const [offlinePacks, setOfflinePacks] = useState<string[]>([]);
+  const [pendingBattleInvite, setPendingBattleInvite] = useState<BattleRequest | null>(null);
+  const [acceptedBattleRequest, setAcceptedBattleRequest] = useState<BattleRequest | null>(null);
+  const globalBattleChannelRef = useRef<any>(null);
+  const seenBattleInvitesRef = useRef<Set<string>>(new Set());
+
+  // ─── GLOBAL BATTLE INVITE LISTENER ──────────────────────────────────────
+  // Listens on user's dedicated channel, device session channel and map channel
+  // so the invited user receives the challenge anywhere in the app.
+  useEffect(() => {
+    const currentDeviceId = typeof window !== 'undefined' ? sessionStorage.getItem('levelmak_device_session_id') : null;
+    const userId = auth.user?.id || currentDeviceId;
+    if (!userId) return;
+
+    // Remove any stale channels before creating new ones
+    if (globalBattleChannelRef.current) {
+      if (Array.isArray(globalBattleChannelRef.current)) {
+        globalBattleChannelRef.current.forEach((ch: any) => supabase.removeChannel(ch));
+      } else {
+        supabase.removeChannel(globalBattleChannelRef.current);
+      }
+      globalBattleChannelRef.current = null;
+    }
+
+    const handleBattleInvite = (p: any) => {
+      const request: BattleRequest = p.payload?.request;
+      if (!request || !request.id) return;
+
+      const deviceId = typeof window !== 'undefined' ? sessionStorage.getItem('levelmak_device_session_id') : null;
+      const myName = (auth.user?.name || '').trim().toLowerCase();
+      const guestName = (request.guest?.name || '').trim().toLowerCase();
+      const isNameMatch = myName.length > 1 && guestName.length > 1 && (myName === guestName || myName.includes(guestName) || guestName.includes(myName));
+
+      const isForMe = request.guest?.id === userId || 
+                      (request.guest as any)?.original_id === userId ||
+                      (request.guest as any)?.user_id === userId ||
+                      (request.guest as any)?.sessionId === deviceId ||
+                      (deviceId && request.guest?.id === deviceId) ||
+                      isNameMatch;
+
+      if (!isForMe) return;
+
+      // Deduplicate: ignore if this invite ID was already received in the session
+      if (seenBattleInvitesRef.current.has(request.id)) {
+        return;
+      }
+      seenBattleInvitesRef.current.add(request.id);
+
+      console.log('⚔️ [GlobalBattle] Received unique battle_invite for this user:', request);
+      setPendingBattleInvite(request);
+
+      const typeName = request.type === 'quiz' ? 'Quiz' : request.type === 'doodle' ? 'Doodle' : 'Morpion';
+      const hostName = request.host?.name || 'Un ami';
+      const hostAvatar = request.host?.avatar || null;
+
+      // 1. Add directly to user's notifications center (shown in notification drawer)
+      auth.setUser((prev: any) => {
+        if (!prev) return prev;
+        const currentStats = prev.stats || {};
+        const currentNotifs = currentStats.notifications || [];
+        
+        // Guard against duplicate notification in list
+        const alreadyInList = currentNotifs.some((n: any) => 
+          n.id === request.id || 
+          n.battleId === request.id ||
+          (n.title?.includes('Nouveau Défi') && n.message?.includes(hostName) && (Date.now() - new Date(n.timestamp).getTime()) < 30000)
+        );
+        if (alreadyInList) return prev;
+
+        const newNotif: AppNotification = {
+          id: request.id,
+          battleId: request.id,
+          type: 'info',
+          title: 'Nouveau Défi ! ⚔️',
+          message: `${hostName} te défie au ${typeName} !`,
+          avatar: hostAvatar,
+          senderName: hostName,
+          timestamp: new Date().toISOString(),
+          read: false
+        };
+        const updatedStats = {
+          ...currentStats,
+          notifications: [newNotif, ...currentNotifs].slice(0, 50)
+        };
+        const updatedUser = {
+          ...prev,
+          stats: updatedStats
+        };
+        safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
+        return updatedUser;
+      });
+
+      // 2. Play sound, haptics & native notification
+      import('../services/audio').then(({ audioService }) => {
+        audioService.playBattleInvite();
+      }).catch(() => {});
+      import('../services/nativeAdapters').then(({ sendLocalNotification, HapticFeedback }) => {
+        sendLocalNotification('Nouveau Défi ! ⚔️', `${hostName} te défie au ${typeName}`);
+        HapticFeedback.success();
+      }).catch(() => {});
+    };
+
+    const handleBattleAccept = (p: any) => {
+      const request: BattleRequest = p.payload?.request;
+      if (!request) return;
+      if (request.host?.id === userId || (request.host as any)?.original_id === userId) {
+        console.log('⚔️ [GlobalBattle] Host received battle_accept in useStore:', request);
+        window.dispatchEvent(new CustomEvent('host_received_battle_accept', { detail: { request } }));
+      }
+    };
+
+    const channels: any[] = [];
+
+    // 1. Listen on user's dedicated personal channel
+    const userChannel = supabase.channel(`user-battles-${userId}`)
+      .on('broadcast', { event: 'battle_invite' }, handleBattleInvite)
+      .on('broadcast', { event: 'battle_accept' }, handleBattleAccept)
+      .subscribe((status, err) => {
+        console.log(`⚔️ [GlobalBattle] user-battles-${userId} status:`, status, err || '');
+      });
+    channels.push(userChannel);
+
+    // 2. If device session ID exists and is different from userId, listen on session channel as well
+    if (currentDeviceId && currentDeviceId !== userId) {
+      const sessionChannel = supabase.channel(`user-battles-${currentDeviceId}`)
+        .on('broadcast', { event: 'battle_invite' }, handleBattleInvite)
+        .on('broadcast', { event: 'battle_accept' }, handleBattleAccept)
+        .subscribe((status, err) => {
+          console.log(`⚔️ [GlobalBattle] user-battles-${currentDeviceId} status:`, status, err || '');
+        });
+      channels.push(sessionChannel);
+    }
+
+    // 3. Global map channel listener
+    const presenceChannel = supabase.channel('world-presence-v3')
+      .on('broadcast', { event: 'battle_invite' }, handleBattleInvite)
+      .on('broadcast', { event: 'battle_accept' }, handleBattleAccept)
+      .subscribe((status, err) => {
+        console.log(`⚔️ [GlobalBattle] world-presence-v3 status:`, status, err || '');
+      });
+    channels.push(presenceChannel);
+
+    globalBattleChannelRef.current = channels;
+
+    return () => {
+      if (globalBattleChannelRef.current) {
+        if (Array.isArray(globalBattleChannelRef.current)) {
+          globalBattleChannelRef.current.forEach((ch: any) => supabase.removeChannel(ch));
+        } else {
+          supabase.removeChannel(globalBattleChannelRef.current);
+        }
+        globalBattleChannelRef.current = null;
+      }
+    };
+  }, [auth.user?.id, auth.user?.name]);
+
+  const clearPendingBattleInvite = useCallback(() => setPendingBattleInvite(null), []);
+  const clearAcceptedBattleRequest = useCallback(() => setAcceptedBattleRequest(null), []);
+  // ────────────────────────────────────────────────────────────────────────
 
   const resetContinuousStudyTime = useCallback(() => {
     setContinuousStudyTime(0);
@@ -214,13 +385,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [auth.user?.id]);
 
-  const addNotification = useCallback((notificationOrType: any, title?: string, message?: string) => {
+  const addNotification = useCallback((notificationOrType: any, title?: string, message?: string, avatar?: string | null) => {
     let newNotif: AppNotification;
     if (typeof notificationOrType === 'string' && title && message) {
       newNotif = {
         type: notificationOrType as any,
         title,
         message,
+        avatar: avatar || null,
         id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date().toISOString(),
         read: false
@@ -228,8 +400,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } else {
       newNotif = {
         ...notificationOrType,
-        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: new Date().toISOString(),
+        id: notificationOrType.id || `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: notificationOrType.timestamp || new Date().toISOString(),
         read: false
       };
     }
@@ -238,15 +410,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (!prev) return prev;
       const currentStats = prev.stats || {};
       const currentNotifications = currentStats.notifications || [];
+
+      // Guard: prevent identical notification within 10 seconds
+      const isDuplicate = currentNotifications.some((n: any) => 
+        (newNotif.id && n.id === newNotif.id) ||
+        (n.title === newNotif.title && n.message === newNotif.message && (Date.now() - new Date(n.timestamp).getTime()) < 10000)
+      );
+      if (isDuplicate) return prev;
+
       const updatedStats = {
         ...currentStats,
-        // ✅ FIX 3: Cap notifications at 50 to prevent localStorage overflow
+        // Cap notifications at 50 to prevent localStorage overflow
         notifications: [newNotif, ...currentNotifications].slice(0, 50)
       };
       const updatedUser = {
         ...prev,
         stats: updatedStats
       };
+      if (prev.id) {
+        safeLocalStorageSet(`levelmak_notifications_${prev.id}`, JSON.stringify(updatedStats.notifications));
+      }
       safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
@@ -270,6 +453,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
+      if (prev.id) {
+        safeLocalStorageSet(`levelmak_notifications_${prev.id}`, JSON.stringify(updatedStats.notifications));
+      }
       safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
@@ -293,6 +479,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
+      if (prev.id) {
+        safeLocalStorageSet(`levelmak_notifications_${prev.id}`, JSON.stringify(updatedStats.notifications));
+      }
       safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
@@ -316,6 +505,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...prev,
         stats: updatedStats
       };
+      if (prev.id) {
+        safeLocalStorageSet(`levelmak_notifications_${prev.id}`, JSON.stringify(updatedStats.notifications));
+      }
       safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
         supabase.from('profiles').update({ stats: updatedStats }).eq('id', prev.id).then(({ error }) => {
@@ -342,6 +534,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
       if (prev.id) {
         localStorage.setItem(`levelmak_welcome_delivered_${prev.id}`, 'true');
+        safeLocalStorageSet(`levelmak_notifications_${prev.id}`, JSON.stringify(updatedStats.notifications));
       }
       safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
@@ -368,6 +561,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
       if (prev.id) {
         localStorage.setItem(`levelmak_welcome_delivered_${prev.id}`, 'true');
+        safeLocalStorageSet(`levelmak_notifications_${prev.id}`, JSON.stringify([]));
       }
       safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
       if (prev.id && !prev.id.includes('anon')) {
@@ -391,6 +585,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [addNotification]);
 
   const trackTime = useCallback((minutes: number, subject?: string) => {
+    if (!minutes || isNaN(minutes) || minutes <= 0) return;
     setContinuousStudyTime(prev => prev + minutes);
     auth.setUser(prev => {
       if (!prev) return prev;
@@ -433,14 +628,39 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         weeklyGoals: updatedWeeklyGoals
       };
 
-      return {
+      const currentHours = prev.stats?.hoursLearned || 0;
+      const currentMins = (prev.stats as any)?.studyMinutes || Math.round(currentHours * 60);
+      const newMinutes = currentMins + Math.round(minutes);
+      const newHours = parseFloat((newMinutes / 60).toFixed(2));
+
+      const updatedStats = {
+        ...prev.stats,
+        hoursLearned: newHours,
+        studyMinutes: newMinutes
+      };
+
+      const updatedUser = {
         ...prev,
-        stats: {
-          ...prev.stats,
-          hoursLearned: (prev.stats?.hoursLearned || 0) + (minutes / 60)
-        },
+        stats: updatedStats,
         analytics: updatedAnalytics
       };
+
+      safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
+
+      if (updatedUser.id && !updatedUser.id.includes('anon')) {
+        import('../services/supabase').then(({ supabase }) => {
+          supabase.from('profiles').update({
+            stats: {
+              ...updatedUser.stats,
+              analytics: updatedAnalytics
+            }
+          }).eq('id', updatedUser.id).then(({ error }) => {
+            if (error) console.warn('[trackTime sync error]:', error.message);
+          });
+        }).catch(() => {});
+      }
+
+      return updatedUser;
     });
   }, [auth]);
 
@@ -563,8 +783,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     offlinePacks,
     downloadCourse,
     incrementFlashcardsStudied,
-    updateSRSMetadata
-  }), [auth, content, ui, coach, gamification, daily, changePassword, registerTeacher, resolveBattle, rollDice, notifications, continuousStudyTime, resetContinuousStudyTime, deleteCurrentUserAccount, addNotification, markNotificationAsRead, toggleNotificationRead, markAllNotificationsAsRead, deleteNotification, clearNotifications, trackTime, offlinePacks, downloadCourse, incrementFlashcardsStudied, updateSRSMetadata]);
+    updateSRSMetadata,
+    pendingBattleInvite,
+    clearPendingBattleInvite,
+    acceptedBattleRequest,
+    setAcceptedBattleRequest,
+    clearAcceptedBattleRequest
+  }), [auth, content, ui, coach, gamification, daily, changePassword, registerTeacher, resolveBattle, rollDice, notifications, continuousStudyTime, resetContinuousStudyTime, deleteCurrentUserAccount, addNotification, markNotificationAsRead, toggleNotificationRead, markAllNotificationsAsRead, deleteNotification, clearNotifications, trackTime, offlinePacks, downloadCourse, incrementFlashcardsStudied, updateSRSMetadata, pendingBattleInvite, clearPendingBattleInvite, acceptedBattleRequest, clearAcceptedBattleRequest]);
 
   return (
     <AppContext.Provider value={value as any}>

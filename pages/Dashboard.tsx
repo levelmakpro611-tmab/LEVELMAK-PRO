@@ -205,19 +205,44 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return decks.filter(d => deckIds.has(d.id));
   }, [dueFlashcards, decks]);
 
-  const formatTime = React.useCallback((hours: number) => {
-    if (!hours || hours === 0) return `0 ${t('dashboard.time.min')}`;
-    const totalMinutes = Math.floor(hours * 60);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    const hUnit = t('dashboard.time.hoursShort');
-    const mUnit = t('dashboard.time.minShort');
+  const totalStudyMinutes = React.useMemo(() => {
+    if (!user) return 0;
+    const fromStatsMinutes = (user.stats as any)?.studyMinutes;
+    if (typeof fromStatsMinutes === 'number' && fromStatsMinutes > 0) return fromStatsMinutes;
+
+    const fromHours = user.stats?.hoursLearned ? Math.round(user.stats.hoursLearned * 60) : 0;
+    if (fromHours > 0) return fromHours;
+
+    const fromSubjects = Object.values(user.analytics?.studyTimeBySubject || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0), 0);
+    if (fromSubjects > 0) return fromSubjects;
+
+    const fromDays = (user.analytics?.studyTimeByDay || []).reduce((acc: number, d: any) => acc + (Number(d.minutes) || 0), 0);
+    return fromDays;
+  }, [user?.stats, user?.analytics]);
+
+  const formatStudyTime = React.useCallback((minutes: number) => {
+    if (!minutes || minutes <= 0) return `0 ${t('dashboard.time.min') || 'min'}`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    const hUnit = t('dashboard.time.hoursShort') || 'h';
+    const mUnit = t('dashboard.time.minShort') || 'min';
 
     if (h > 0) {
       return m > 0 ? `${h}${hUnit} ${m}${mUnit}` : `${h}${hUnit}`;
     }
     return `${m} ${mUnit}`;
   }, [t]);
+
+  const displayMotivationAuthor = React.useMemo(() => {
+    const raw = (dailyMotivation?.author || '').trim();
+    if (!raw || raw.toLowerCase().includes('levelmak') || raw.toLowerCase().includes('coach') || raw.toLowerCase().includes('anonyme')) {
+      const grade = (user?.gradeClass || user?.educationLevel || '').toLowerCase();
+      if (grade.includes('terminale') || grade.includes('bac')) return "Victor Hugo";
+      if (grade.includes('11') || grade.includes('12') || grade.includes('première') || grade.includes('seconde')) return "Marie Curie";
+      return "Nelson Mandela";
+    }
+    return raw;
+  }, [dailyMotivation?.author, user?.gradeClass, user?.educationLevel]);
 
   if (!user) {
     console.warn('[Dashboard] User is null, showing inner loader');
@@ -319,18 +344,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 {isPremiumActive ? (
                   (() => {
                     const tier = user.subscription_tier || user.subscriptionTier;
-                    const tierLabel = tier === 'annuel' ? 'Annuel'
-                      : tier === 'mensuel' ? 'Mensuel'
+                    const expiryDate = user.premium_until ? new Date(user.premium_until) : null;
+                    const daysRemaining = expiryDate ? Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+
+                    const tierLabel = (tier === 'annuel' || daysRemaining > 100) ? 'Annuel'
+                      : (tier === 'mensuel' || (daysRemaining > 14 && daysRemaining <= 100)) ? 'Mensuel'
                       : tier === 'hebdo' ? 'Hebdo'
                       : 'Premium';
-                    const expiryStr = user.premium_until
-                      ? new Date(user.premium_until).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+                    const expiryStr = expiryDate
+                      ? expiryDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
                       : null;
                     return (
                       <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 text-amber-300 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border border-amber-500/40 shadow-sm shadow-amber-950/30">
                         <Crown size={13} className="text-amber-400 fill-amber-400" />
                         {tierLabel}
-                        {expiryStr && <span className="text-amber-500/70 font-medium normal-case tracking-normal ml-1 hidden sm:inline">• exp. {expiryStr}</span>}
+                        {expiryStr && <span className="text-amber-500/80 font-medium normal-case tracking-normal ml-1">• exp. {expiryStr}</span>}
                       </div>
                     );
                   })()
@@ -378,7 +406,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             {[
               { label: t('dashboard.stats.xp'), value: user.totalXp || 0, icon: Zap, color: 'text-amber-500', glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]', border: 'border-amber-500/10' },
               { label: t('dashboard.stats.quiz'), value: quizzes.length, icon: BookOpenCheck, color: 'text-blue-500', glow: 'shadow-[0_0_15px_rgba(37,99,235,0.15)]', border: 'border-blue-500/10' },
-              { label: t('dashboard.stats.time'), value: formatTime(user.stats?.hoursLearned || 0), icon: Clock, color: 'text-purple-500', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]', border: 'border-purple-500/10', tab: 'analytics' },
+              { label: t('dashboard.stats.time'), value: formatStudyTime(totalStudyMinutes), icon: Clock, color: 'text-purple-500', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]', border: 'border-purple-500/10', tab: 'analytics' },
               { label: t('dashboard.stats.badges'), value: (user.badges || []).length, icon: Award, color: 'text-rose-500', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]', border: 'border-rose-500/10' },
             ].map((stat) => (
               <div
@@ -412,7 +440,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <h4 className="text-base md:text-2xl font-display font-bold text-slate-900 dark:text-white leading-tight italic">
                   {dailyMotivation.loading ? t('dashboard.motivation.loading') : `"${dailyMotivation.quote}"`}
                 </h4>
-                <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest">— {dailyMotivation.loading ? t('dashboard.motivation.author') : dailyMotivation.author}</p>
+                <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest">— {dailyMotivation.loading ? t('dashboard.motivation.author') : displayMotivationAuthor}</p>
               </div>
             </div>
           </div>

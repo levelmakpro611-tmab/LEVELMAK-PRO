@@ -452,20 +452,20 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
   if (showQuitConfirm) {
     const isCustom = battle.type === 'custom_quiz' && battle.betAmount;
     return (
-      <div className="fixed inset-0 z-[1001] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-6 text-center">
-        <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl">
-          <h3 className="text-2xl font-black text-white uppercase mb-4">Abandonner le duel ?</h3>
-          <p className="text-slate-400 text-sm mb-8">
+      <div className="fixed inset-0 z-[1001] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 text-center animate-fade-in">
+        <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl overflow-hidden">
+          <h3 className="text-xl sm:text-2xl font-black text-white uppercase mb-3">Abandonner le duel ?</h3>
+          <p className="text-slate-400 text-xs sm:text-sm mb-6 leading-relaxed">
             {isCustom 
               ? `Attention ! Si vous quittez maintenant, vous perdrez votre mise de ${battle.betAmount} LevelCoins et l'adversaire remportera la partie.` 
               : "Si vous quittez maintenant, le duel sera annulé et vous perdrez vos points accumulés."}
           </p>
           
-          <div className="flex flex-col gap-3">
-            <button onClick={confirmQuit} className="w-full py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-sm hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20">
+          <div className="flex flex-col gap-2.5">
+            <button onClick={confirmQuit} className="w-full py-3.5 bg-red-500 text-white rounded-xl sm:rounded-2xl font-black uppercase text-xs sm:text-sm hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 active:scale-95">
               Oui, abandonner 🏳️
             </button>
-            <button onClick={() => setShowQuitConfirm(false)} className="w-full py-4 bg-slate-800 text-slate-300 rounded-2xl font-black uppercase text-sm hover:bg-slate-700 transition-colors">
+            <button onClick={() => setShowQuitConfirm(false)} className="w-full py-3.5 bg-slate-800 text-slate-300 rounded-xl sm:rounded-2xl font-black uppercase text-xs sm:text-sm hover:bg-slate-700 transition-colors active:scale-95">
               Non, continuer ⚔️
             </button>
           </div>
@@ -579,8 +579,8 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
             </div>
           </div>
 
-          <button onClick={onClose} className="w-full max-w-md bg-white text-slate-900 py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform shadow-2xl uppercase tracking-wider">
-            Retour à la carte
+          <button onClick={onClose} className="w-full max-w-md bg-white text-slate-900 py-4 rounded-2xl font-black text-base hover:scale-105 active:scale-95 transition-all shadow-2xl uppercase tracking-wider flex items-center justify-center gap-2">
+            🗺️ Défier un autre élève / Retour Arène
           </button>
         </div>
       </div>
@@ -598,48 +598,49 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
   const question = activeQuestions[safeIndex];
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-slate-950 flex flex-col items-center justify-between p-3 md:p-8 overflow-y-auto">
-      <div className="absolute top-3 right-3 z-20">
-        <button onClick={handleQuitClick} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors text-white"><X size={20} /></button>
+    <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-between p-3 sm:p-4 md:p-6 overflow-hidden select-none">
+      <div className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-20">
+        <button onClick={handleQuitClick} className="p-2 sm:p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors text-white shadow-lg"><X size={18} /></button>
       </div>
 
       {battle.type === 'custom_quiz' && battle.betAmount && (
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full">
+        <div className="absolute top-2.5 left-2.5 sm:top-4 sm:left-4 z-20 flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full">
           <Coins size={12} className="text-amber-500" />
           <span className="text-amber-400 font-black text-[9px] uppercase tracking-widest">{t('quiz.battle.betLabel', { amount: battle.betAmount * 2 })}</span>
         </div>
       )}
 
       {/* Battle Header */}
-      <div className="w-full max-w-2xl mt-10 md:mt-12 bg-slate-900 border border-white/10 px-3 py-3 md:p-4 rounded-2xl md:rounded-3xl flex justify-between items-center relative overflow-hidden shadow-2xl flex-shrink-0">
+      <div className="w-full max-w-xl mt-6 sm:mt-1 bg-slate-900/90 border border-white/10 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl flex justify-between items-center relative overflow-hidden shadow-xl shrink-0">
         <div className="flex flex-col items-center flex-1 relative z-10">
-          <div className="w-12 h-12 md:w-16 md:h-16 bg-blue-500 rounded-full mb-1.5 p-0.5 shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-            <img src={battle.host.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${battle.host.name}`} alt="Host" className="w-full h-full rounded-full bg-slate-800" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full mb-1 p-0.5 shadow-[0_0_15px_rgba(59,130,246,0.4)]">
+            <img src={battle.host.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${battle.host.name}`} alt="Host" className="w-full h-full rounded-full bg-slate-800 object-cover" />
           </div>
-          <p className="font-bold text-white uppercase text-[10px] tracking-wider truncate max-w-[80px]">{battle.host.name}</p>
-          <div className="font-black text-xl md:text-2xl text-blue-400">{Number(battle.host?.score) || 0}</div>
+          <p className="font-bold text-white uppercase text-[10px] tracking-wider truncate max-w-[75px] sm:max-w-[100px]">{battle.host.name}</p>
+          <div className="font-black text-lg sm:text-xl text-blue-400">{Number(battle.host?.score) || 0}</div>
         </div>
         <div className="flex flex-col items-center justify-center z-10 px-2">
-          <Swords size={24} className="text-slate-500 mb-0.5" />
+          <Swords size={20} className="text-slate-500 mb-0.5" />
           <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Q{battle.currentQuestionIndex + 1}/{questions.length}</span>
         </div>
         <div className="flex flex-col items-center flex-1 relative z-10">
-          <div className="w-12 h-12 md:w-16 md:h-16 bg-red-500 rounded-full mb-1.5 p-0.5 shadow-[0_0_20px_rgba(239,68,68,0.5)]">
-            <img src={battle.guest.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${battle.guest.name}`} alt="Guest" className="w-full h-full rounded-full bg-slate-800" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500 rounded-full mb-1 p-0.5 shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+            <img src={battle.guest.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${battle.guest.name}`} alt="Guest" className="w-full h-full rounded-full bg-slate-800 object-cover" />
           </div>
-          <p className="font-bold text-white uppercase text-[10px] tracking-wider truncate max-w-[80px]">{battle.guest.name}</p>
-          <div className="font-black text-xl md:text-2xl text-red-400">{Number(battle.guest?.score) || 0}</div>
+          <p className="font-bold text-white uppercase text-[10px] tracking-wider truncate max-w-[75px] sm:max-w-[100px]">{battle.guest.name}</p>
+          <div className="font-black text-lg sm:text-xl text-red-400">{Number(battle.guest?.score) || 0}</div>
         </div>
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute top-0 right-1/2 bottom-0 bg-blue-500/10 skew-x-12 translate-x-10" />
           <div className="absolute top-0 left-1/2 bottom-0 bg-red-500/10 -skew-x-12 -translate-x-10" />
         </div>
       </div>
 
-      {/* Question Area */}
-      <div className="w-full max-w-2xl text-center flex-1 flex flex-col justify-center py-3 md:py-4">
-        <div className="mb-4 md:mb-6 w-full max-w-sm mx-auto">
-          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+      {/* Question & Answers Area */}
+      <div className="w-full max-w-xl text-center flex-1 flex flex-col justify-between py-2 sm:py-3 min-h-0">
+        {/* Timer */}
+        <div className="mb-2 sm:mb-2.5 w-full max-w-xs mx-auto shrink-0">
+          <div className="h-1.5 sm:h-2 bg-slate-800 rounded-full overflow-hidden">
             <motion.div
               style={{ originX: 0 }}
               initial={{ scaleX: 1 }}
@@ -648,23 +649,27 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
               className={`h-full w-full ${timeLeft <= 5 ? 'bg-red-500' : 'bg-emerald-500'}`}
             />
           </div>
-          <p className={`mt-1.5 font-black text-xl md:text-2xl ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>{timeLeft}s</p>
+          <p className={`mt-1 font-black text-base sm:text-lg ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>{timeLeft}s</p>
         </div>
 
-        <h3 className="text-base md:text-xl font-black text-white mb-5 md:mb-8 leading-tight px-2">{question.text}</h3>
+        {/* Question Text */}
+        <div className="shrink-0 mb-2 sm:mb-3 flex items-center justify-center min-h-[48px]">
+          <h3 className="text-sm sm:text-base md:text-lg font-black text-white leading-snug px-2 line-clamp-3">{question.text}</h3>
+        </div>
 
-        <div className="space-y-2.5 md:space-y-3">
+        {/* Options */}
+        <div className="grid grid-cols-1 gap-2 sm:gap-2.5 flex-1 min-h-0 content-center">
           {question.options.map((option, idx) => {
-            let btnStyle = "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+            let btnStyle = "bg-slate-800/90 text-slate-200 border-slate-700/80 hover:bg-slate-700 hover:border-slate-600";
             let badgeText = "";
             
             if (showResult) {
               if (idx === question.correctAnswer) {
-                btnStyle = "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]";
+                btnStyle = "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]";
               } else if (idx === localSelected) {
                 btnStyle = "bg-red-500 text-white border-red-400";
               } else if (idx === opponentSelected) {
-                btnStyle = "bg-red-950/40 border-red-900/60 text-red-400/80";
+                btnStyle = "bg-red-950/50 border-red-900/60 text-red-400/80";
               } else {
                 btnStyle = "bg-slate-900 border-slate-800 text-slate-600 opacity-40";
               }
@@ -682,17 +687,20 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
             
             return (
               <button key={`option-${idx}`} disabled={showResult} onClick={() => submitAnswer(idx)}
-                className={`w-full p-3.5 md:p-4 rounded-xl md:rounded-2xl border-2 font-bold text-sm text-left transition-all flex items-center justify-between active:scale-[0.98] ${btnStyle}`}>
-                <div className="flex items-center gap-3">
-                  <span>{option}</span>
+                className={`w-full py-2.5 sm:py-3 px-3.5 sm:px-4 rounded-xl sm:rounded-2xl border-2 font-bold text-xs sm:text-sm text-left transition-all flex items-center justify-between active:scale-[0.98] ${btnStyle}`}>
+                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 pr-2">
+                  <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-black shrink-0">
+                    {String.fromCharCode(65 + idx)}
+                  </span>
+                  <span className="truncate">{option}</span>
                   {badgeText && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/20 text-white font-black uppercase tracking-wider">
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/20 text-white font-black uppercase tracking-wider shrink-0 ml-auto">
                       {badgeText}
                     </span>
                   )}
                 </div>
-                {showResult && idx === question.correctAnswer && <CheckCircle className="text-white shrink-0" size={18} />}
-                {showResult && idx === localSelected && idx !== question.correctAnswer && <XCircle className="text-white shrink-0" size={18} />}
+                {showResult && idx === question.correctAnswer && <CheckCircle className="text-white shrink-0" size={16} />}
+                {showResult && idx === localSelected && idx !== question.correctAnswer && <XCircle className="text-white shrink-0" size={16} />}
               </button>
             );
           })}
@@ -700,9 +708,9 @@ export const QuizBattle: React.FC<QuizBattleProps> = ({ initialState, isHost, on
 
         {showResult && question.explanation && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="mt-4 bg-blue-500/10 text-blue-400 p-3 rounded-xl text-xs font-medium border border-blue-500/20">
-            <p className="font-bold mb-1">{t('quiz.battle.explanation')}</p>
-            {question.explanation}
+            className="mt-2 bg-blue-500/10 text-blue-400 p-2 sm:p-2.5 rounded-xl text-[11px] sm:text-xs font-medium border border-blue-500/20 shrink-0">
+            <p className="font-bold mb-0.5">{t('quiz.battle.explanation')}</p>
+            <p className="line-clamp-2">{question.explanation}</p>
           </motion.div>
         )}
       </div>

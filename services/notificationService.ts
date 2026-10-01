@@ -15,6 +15,9 @@ export interface AppNotification {
     timestamp: string;
     read: boolean;
     actionUrl?: string;
+    avatar?: string | null;
+    senderName?: string;
+    battleId?: string;
 }
 
 class NotificationService {

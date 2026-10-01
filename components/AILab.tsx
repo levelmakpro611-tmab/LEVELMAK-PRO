@@ -607,12 +607,19 @@ const TimeMachine = ({ onBack, initialSession }: { onBack: () => void, initialSe
               {messages.map((msg, i) => (
                 <motion.div key={`${msg.role}-${i}`} initial={{ opacity: 0, x: msg.role === 'assistant' ? -20 : 20 }} animate={{ opacity: 1, x: 0 }} className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'} animate-fade-in`}>
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/20 flex items-center justify-center mr-3 mt-1 shrink-0">
-                      <Sparkles size={14} className="text-purple-400" />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-purple-500/40 overflow-hidden shadow-md mr-2.5 sm:mr-3 mt-0.5 shrink-0 bg-slate-800">
+                      <img
+                        src={selectedChar?.image || "https://ui-avatars.com/api/?name=H&background=7c3aed&color=fff"}
+                        alt={selectedChar?.name || "Personnage Historique"}
+                        className="w-full h-full object-cover object-top"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedChar?.name || 'H')}&background=7c3aed&color=fff`;
+                        }}
+                      />
                     </div>
                   )}
                   <div className={`
-                    max-w-[85%] p-4 rounded-2xl text-sm font-semibold leading-relaxed
+                    max-w-[85%] sm:max-w-[80%] p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm font-semibold leading-relaxed
                     ${msg.role === 'user'
                       ? 'bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-tr-none shadow-lg shadow-purple-900/20'
                       : 'bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-slate-200 border border-slate-200/80 dark:border-white/5 rounded-tl-none shadow-sm'}

@@ -537,15 +537,15 @@ const LevelBot: React.FC = () => {
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                     {msg.role === 'bot' && (
-                      <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/20 flex items-center justify-center mr-3 mt-1 shrink-0">
-                        <Sparkles size={14} className="text-primary dark:text-primary-light" />
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-white/10 p-1 flex items-center justify-center mr-2.5 sm:mr-3 mt-0.5 shrink-0 shadow-md">
+                        <img src="/logo.png" alt="LevelMak Coach" className="w-full h-full object-contain" />
                       </div>
                     )}
                     <div className={`
-                      max-w-[85%] p-4 rounded-2xl text-sm font-medium leading-relaxed whitespace-pre-wrap
+                      max-w-[85%] sm:max-w-[80%] p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm font-medium leading-relaxed whitespace-pre-wrap
                       ${msg.role === 'user'
                         ? 'bg-gradient-to-br from-primary to-secondary text-white rounded-tr-none shadow-lg'
-                        : 'bg-white dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/5 rounded-tl-none shadow-sm dark:shadow-inner'}
+                        : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-white/10 rounded-tl-none shadow-sm dark:shadow-md'}
                     `}>
                       {msg.image && (
                         <div className="mb-2 rounded-xl overflow-hidden border border-slate-200 dark:border-white/20">
@@ -564,8 +564,8 @@ const LevelBot: React.FC = () => {
                 ))}
                 {isTyping && (
                   <div className="flex justify-start animate-fade-in">
-                    <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-white/5 border border-slate-300 dark:border-white/5 flex items-center justify-center mr-3 mt-1">
-                      <Loader2 size={14} className="animate-spin text-slate-500" />
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-white/10 p-1 flex items-center justify-center mr-2.5 sm:mr-3 mt-0.5 shrink-0 shadow-md">
+                      <img src="/logo.png" alt="LevelMak Coach" className="w-full h-full object-contain opacity-70 animate-pulse" />
                     </div>
                     <div className="bg-white dark:bg-white/5 px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/5 rounded-tl-none shadow-sm flex items-center gap-3">
                       <div className="flex gap-1">

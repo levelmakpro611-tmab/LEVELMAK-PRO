@@ -60,13 +60,22 @@ export const useGamificationStore = (
     const addLevelCoins = useCallback((amount: number) => {
         setUser(prev => {
             if (!prev) return null;
-            const newCoins = (prev.levelCoins || 0) + amount;
-            const updated = { ...prev, levelCoins: newCoins };
+            const currentCoins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
+            const newCoins = Math.max(0, currentCoins + amount);
+            const updated = { 
+                ...prev, 
+                levelCoins: newCoins,
+                level_coins: newCoins,
+                stats: {
+                    ...(prev.stats || {}),
+                    levelCoins: newCoins
+                }
+            };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
 
             if (prev.id && !prev.id.includes('anon')) {
                 supabase.from('profiles').update({
-                    coins: newCoins,
+                    level_coins: newCoins,
                     stats: {
                         ...(prev.stats || {}),
                         levelCoins: newCoins
@@ -83,10 +92,34 @@ export const useGamificationStore = (
     const betLevelCoins = useCallback((amount: number) => {
         let success = false;
         setUser(prev => {
-            if (!prev || (prev.levelCoins || 0) < amount) return prev;
+            if (!prev) return prev;
+            const currentCoins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
+            if (currentCoins < amount) return prev;
             success = true;
-            const updated = { ...prev, levelCoins: prev.levelCoins - amount };
+            const newCoins = Math.max(0, currentCoins - amount);
+            const updated = { 
+                ...prev, 
+                levelCoins: newCoins,
+                level_coins: newCoins,
+                stats: {
+                    ...(prev.stats || {}),
+                    levelCoins: newCoins
+                }
+            };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
+
+            if (prev.id && !prev.id.includes('anon')) {
+                supabase.from('profiles').update({
+                    level_coins: newCoins,
+                    stats: {
+                        ...(prev.stats || {}),
+                        levelCoins: newCoins
+                    }
+                }).eq('id', prev.id).then(({ error }) => {
+                    if (error) console.error('[betLevelCoins Supabase Sync Error]:', error);
+                });
+            }
+
             return updated;
         });
         return success;
@@ -333,7 +366,8 @@ export const useGamificationStore = (
 
     const purchasePotion = useCallback((potionId: string, originalId?: string) => {
         const potion = POTIONS.find(p => p.id === (originalId || potionId));
-        if (!user || !potion || (user.levelCoins || 0) < potion.price) return false;
+        const userCoins = Number(user?.levelCoins ?? (user as any)?.level_coins ?? 0);
+        if (!user || !potion || userCoins < potion.price) return false;
 
         setUser(prev => {
             if (!prev) return null;
@@ -346,9 +380,12 @@ export const useGamificationStore = (
                 ...prev.stats,
                 consumables: newConsumables
             };
+            const curCoins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
+            const remainingCoins = Math.max(0, curCoins - potion.price);
             const updated = {
                 ...prev,
-                levelCoins: prev.levelCoins - potion.price,
+                levelCoins: remainingCoins,
+                level_coins: remainingCoins,
                 consumables: newConsumables,
                 stats: newStats
             };

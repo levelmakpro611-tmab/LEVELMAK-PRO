@@ -39,9 +39,10 @@ import AppShell from './components/AppShell';
 import { PremiumAlertModal } from './components/PremiumAlertModal';
 import BlockedAccountModal from './components/BlockedAccountModal';
 import { Quiz, FlashcardDeck, Flashcard, Book as BookType } from './types';
-import { Loader2, AlertTriangle, RefreshCw, Check } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw, Check, X, Swords } from 'lucide-react';
 import { aiService } from './services/aiService';
-import { initializeNativeFeatures, isNativePlatform, hideSplashScreen } from './services/nativeAdapters';
+import { initializeNativeFeatures, isNativePlatform, hideSplashScreen, HapticFeedback } from './services/nativeAdapters';
+import { supabase } from './services/supabase';
 import { App as CapacitorApp } from '@capacitor/app';
 import { initCrashReporter, reportReactCrash } from './services/crashReportService';
 
@@ -138,7 +139,7 @@ const PageLoader = ({ message = "Synchronisation...", fullScreen = true }: { mes
 );
 
 const AppContent: React.FC = () => {
-  const { user, loading, settings, t, updateProfile, addNotification } = useStore();
+  const { user, loading, settings, t, updateProfile, addNotification, pendingBattleInvite, clearPendingBattleInvite, setAcceptedBattleRequest } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
   const shouldReduceMotion = useReducedMotion();
   
@@ -692,6 +693,136 @@ const AppContent: React.FC = () => {
 
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== GLOBAL LIVE BATTLE INVITE POPUP (DISPLAYS ANYWHERE IN APP) ===== */}
+      <AnimatePresence>
+        {pendingBattleInvite && (
+          <motion.div
+            initial={{ y: 80, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 80, opacity: 0, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-[420px] z-[999999] bg-[#09101e]/95 backdrop-blur-2xl p-4 sm:p-5 rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_30px_rgba(59,130,246,0.35)] border-2 border-blue-500 flex flex-col gap-3.5"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 flex-shrink-0 bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/30 overflow-hidden">
+                {pendingBattleInvite.host.avatar ? (
+                  <img src={pendingBattleInvite.host.avatar} alt={pendingBattleInvite.host.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{pendingBattleInvite.host.name?.[0] || '⚔️'}</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">Nouveau Défi en Direct !</p>
+                </div>
+                <p className="text-sm font-bold text-white truncate mt-1">
+                  <span className="text-blue-300 font-black">{pendingBattleInvite.host.name}</span> te défie au{' '}
+                  <span className="text-amber-400 font-black">
+                    {pendingBattleInvite.type === 'quiz' ? 'Quiz' : pendingBattleInvite.type === 'doodle' ? 'Doodle' : 'Morpion'}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 pt-1">
+              <button
+                onClick={() => {
+                  HapticFeedback.selection();
+                  const reqId = pendingBattleInvite.id;
+
+                  // 1. Broadcast reject on dedicated duel room
+                  const duelRoom = supabase.channel(`duel-${reqId}`);
+                  duelRoom.subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                      duelRoom.send({
+                        type: 'broadcast',
+                        event: 'battle_exit',
+                        payload: { battleId: reqId, senderId: user?.id }
+                      });
+                    }
+                  });
+
+                  // 2. Broadcast reject on presence channel
+                  const mapChannel = supabase.channel('world-presence-v3');
+                  mapChannel.subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                      mapChannel.send({
+                        type: 'broadcast',
+                        event: 'battle_exit',
+                        payload: { battleId: reqId, senderId: user?.id }
+                      });
+                    }
+                  });
+
+                  clearPendingBattleInvite();
+                }}
+                className="flex-1 py-3 bg-white/5 hover:bg-white/10 active:scale-95 text-slate-400 hover:text-white rounded-2xl font-black uppercase tracking-wider text-xs border border-white/10 transition-all flex items-center justify-center gap-1.5"
+              >
+                <X size={16} /> Refuser
+              </button>
+              <button
+                onClick={() => {
+                  HapticFeedback.success();
+                  const req = { ...pendingBattleInvite, status: 'active' };
+
+                  // 1. Send accept on dedicated duel channel
+                  const duelRoom = supabase.channel(`duel-${req.id}`);
+                  if (duelRoom.state === 'joined') {
+                    duelRoom.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                  } else {
+                    duelRoom.subscribe((status) => {
+                      if (status === 'SUBSCRIBED') {
+                        duelRoom.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                      }
+                    });
+                  }
+
+                  // 2. Also send on map channel
+                  const mapChannel = supabase.channel('world-presence-v3');
+                  if (mapChannel.state === 'joined') {
+                    mapChannel.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                  } else {
+                    mapChannel.subscribe((status) => {
+                      if (status === 'SUBSCRIBED') {
+                        mapChannel.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                      }
+                    });
+                  }
+
+                  // 3. Also send to host's private battle channel
+                  if (req.host?.id) {
+                    const hostChan = supabase.channel(`user-battles-${req.host.id}`);
+                    if (hostChan.state === 'joined') {
+                      hostChan.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                      setTimeout(() => supabase.removeChannel(hostChan), 2500);
+                    } else {
+                      hostChan.subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                          hostChan.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                          setTimeout(() => supabase.removeChannel(hostChan), 2500);
+                        }
+                      });
+                    }
+                  }
+
+                  clearPendingBattleInvite();
+                  // Store accepted battle reliably for WorldBrainMap mount
+                  setAcceptedBattleRequest(req);
+                  // Open Map
+                  handleSetActiveTab('map');
+                  // Trigger event immediately in case WorldBrainMap is already mounted
+                  window.dispatchEvent(new CustomEvent('start_received_battle', { detail: { request: req } }));
+                }}
+                className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white rounded-2xl font-black uppercase tracking-wider text-xs shadow-lg shadow-blue-600/40 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Swords size={16} /> Accepter
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

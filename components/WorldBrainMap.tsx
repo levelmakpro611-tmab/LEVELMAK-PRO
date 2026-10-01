@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HapticFeedback, sendLocalNotification } from '../services/nativeAdapters';
-import { Globe, Menu, X, Waves, HardHat, Mountain, Thermometer, Ghost, Eye, Star } from 'lucide-react';
+import { Globe, Menu, X, Waves, HardHat, Mountain, Thermometer, Ghost, Eye, Star, Coins } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -89,7 +89,7 @@ const isAdminUser = (u: any) => {
 };
 
 export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
-  const { t, user, addNotification, mapFocusFeatureId, setMapFocusFeatureId, setAtlasFocusFeatureId, addLevelCoins, resolveBattle } = useStore();
+  const { t, user, addNotification, mapFocusFeatureId, setMapFocusFeatureId, setAtlasFocusFeatureId, addLevelCoins, betLevelCoins, addXp, resolveBattle, pendingBattleInvite, clearPendingBattleInvite, acceptedBattleRequest, clearAcceptedBattleRequest } = useStore();
 
   const [activeAtlasCategory, setActiveAtlasCategory] = useState<'none' | 'river' | 'resource' | 'relief' | 'climate'>('none');
   const [isAtlasMenuOpen, setIsAtlasMenuOpen] = useState(false);
@@ -135,11 +135,32 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   }, []);
   const [activeBattle, setActiveBattle] = useState<any>(null);
   const [sessionScore, setSessionScore] = useState({ host: 0, guest: 0 });
-  const [incomingInvite, setIncomingInvite] = useState<BattleRequest | null>(null);
+  // incomingInvite is now sourced from the global store (pendingBattleInvite)
+  // keeping a local setter for channel fallback when the map is already open
+  const [localIncomingInvite, setLocalIncomingInvite] = useState<BattleRequest | null>(null);
+  const incomingInvite = pendingBattleInvite ?? localIncomingInvite;
   const [isBettingOpen, setIsBettingOpen] = useState(false);
+  const [outgoingBattleRequest, setOutgoingBattleRequest] = useState<any>(null);
+  const duelChannelRef = useRef<any>(null);
+  const inviteRetryIntervalRef = useRef<any>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [pendingDuelType, setPendingDuelType] = useState<string>('quiz');
   const [pendingDifficulty, setPendingDifficulty] = useState<'easy' | 'hard' | 'expert'>('easy');
+  const [pendingBetAmount, setPendingBetAmount] = useState<number>(20);
+
+  // Clamp bet amount to available balance
+  useEffect(() => {
+    if (isBettingOpen) {
+      const currentCoins = Number(user?.levelCoins ?? (user as any)?.level_coins ?? 0);
+      setPendingBetAmount(prev => {
+        if (prev > currentCoins) {
+          return currentCoins >= 10 ? 10 : (currentCoins > 0 ? currentCoins : 0);
+        }
+        return prev;
+      });
+    }
+  }, [isBettingOpen, user?.levelCoins, (user as any)?.level_coins]);
+
   const [highlightedFeatureId, setHighlightedFeatureId] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<'searching' | 'locked' | 'error'>('searching');
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -148,8 +169,94 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   const channelRef = useRef<any>(null);
   const hasCentered = useRef(!!mapFocusFeatureId);
 
+  // Stable battle launcher that clears any retry timers
+  const startBattle = useCallback((request: any, isHost: boolean) => {
+    if (inviteRetryIntervalRef.current) {
+      clearInterval(inviteRetryIntervalRef.current);
+      inviteRetryIntervalRef.current = null;
+    }
+    const bet = Number(request?.betAmount) || 0;
+    if (bet > 0) {
+      betLevelCoins(bet);
+    }
+    setActiveBattle({ state: { ...request, status: 'active' }, questions: request.questions, isHost });
+  }, [betLevelCoins]);
+
   // Device-specific session ID
-  const deviceSessionId = useMemo(() => `device_${Math.random().toString(36).substring(2, 12)}`, []);
+  const deviceSessionId = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      let id = sessionStorage.getItem('levelmak_device_session_id');
+      if (!id) {
+        id = `device_${Math.random().toString(36).substring(2, 12)}`;
+        sessionStorage.setItem('levelmak_device_session_id', id);
+      }
+      return id;
+    }
+    return `device_${Math.random().toString(36).substring(2, 12)}`;
+  }, []);
+
+  // Listen to battle start events (e.g. when accepted from global banner)
+  useEffect(() => {
+    const handleStartReceivedBattle = (e: any) => {
+      if (e.detail?.request) {
+        console.log("📍 [Map] Received start_received_battle event:", e.detail.request);
+        setOutgoingBattleRequest(null);
+        startBattle(e.detail.request, false);
+      }
+    };
+    window.addEventListener('start_received_battle', handleStartReceivedBattle);
+    return () => window.removeEventListener('start_received_battle', handleStartReceivedBattle);
+  }, [startBattle]);
+
+  // Check if a battle was already accepted while Map was not yet mounted
+  useEffect(() => {
+    if (acceptedBattleRequest) {
+      console.log("📍 [Map] Consuming acceptedBattleRequest from store on mount:", acceptedBattleRequest);
+      setOutgoingBattleRequest(null);
+      startBattle(acceptedBattleRequest, false);
+      clearAcceptedBattleRequest();
+    }
+  }, [acceptedBattleRequest, clearAcceptedBattleRequest, startBattle]);
+
+  // Listen to battle accept for host (e.g. captured by useStore)
+  useEffect(() => {
+    const handleHostAccept = (e: any) => {
+      if (e.detail?.request) {
+        console.log("📍 [Map] Received host_received_battle_accept event:", e.detail.request);
+        if (inviteRetryIntervalRef.current) {
+          clearInterval(inviteRetryIntervalRef.current);
+          inviteRetryIntervalRef.current = null;
+        }
+        setOutgoingBattleRequest(null);
+        startBattle(e.detail.request, true);
+      }
+    };
+    window.addEventListener('host_received_battle_accept', handleHostAccept);
+    return () => window.removeEventListener('host_received_battle_accept', handleHostAccept);
+  }, [startBattle]);
+
+  // Listen to active_battle in user's profile stats as fail-safe guarantee
+  useEffect(() => {
+    if (outgoingBattleRequest && user?.stats?.active_battle?.id === outgoingBattleRequest.id) {
+      console.log("📍 [Map] Active battle detected via Supabase profile sync:", user.stats.active_battle);
+      setOutgoingBattleRequest(null);
+      startBattle(user.stats.active_battle, true);
+    }
+  }, [user?.stats?.active_battle, outgoingBattleRequest, startBattle]);
+
+  // Clean up duel room channel and timers on unmount
+  useEffect(() => {
+    return () => {
+      if (inviteRetryIntervalRef.current) {
+        clearInterval(inviteRetryIntervalRef.current);
+        inviteRetryIntervalRef.current = null;
+      }
+      if (duelChannelRef.current) {
+        supabase.removeChannel(duelChannelRef.current);
+        duelChannelRef.current = null;
+      }
+    };
+  }, []);
 
   // ✅ FIX 15: Cache avatar_config locally at mount to avoid re-fetching every 10s in heartbeat
   const cachedAvatarConfigRef = useRef<any>(null);
@@ -173,38 +280,9 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     return () => window.removeEventListener('find_opponent', handleFindOpponent);
   }, []);
 
-  // GPS Location Calculation (Throttled strictly to 30 minutes)
-  const GPS_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
-
+  // GPS Realtime Location (High Accuracy & Instant Sync)
   const requestGps = async (force: boolean = false) => {
     try {
-      const now = Date.now();
-      const lastCalcStr = localStorage.getItem('levelmak_last_gps_calc');
-      const cachedCoordsStr = localStorage.getItem('levelmak_cached_gps_coords');
-
-      // Check if we calculated location in the last 30 minutes
-      if (!force && lastCalcStr && cachedCoordsStr) {
-        const lastCalc = parseInt(lastCalcStr, 10);
-        if (now - lastCalc < GPS_INTERVAL_MS) {
-          try {
-            const parsed = JSON.parse(cachedCoordsStr);
-            if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
-              if (isMountedRef.current) {
-                setMyLocation({ lat: parsed.lat, lng: parsed.lng });
-                setGpsStatus('locked');
-                if (mapRef.current && !hasCentered.current && !mapFocusFeatureId) {
-                  try {
-                    mapRef.current.flyTo([parsed.lat, parsed.lng], 13);
-                    hasCentered.current = true;
-                  } catch (_) {}
-                }
-              }
-              return null;
-            }
-          } catch (_) {}
-        }
-      }
-
       setGpsStatus('searching');
 
       const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
@@ -227,13 +305,13 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           navigator.geolocation.getCurrentPosition(
             (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
             (err) => reject(err),
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: GPS_INTERVAL_MS }
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
           );
         });
       };
 
       try {
-        console.log("📍 [Map] Calculating GPS position (interval 30 min)...");
+        console.log("📍 [Map] Fetching real high-accuracy GPS position...");
         const coords = await getBrowserPosition();
         if (isMountedRef.current) {
           const newLoc = { lat: coords.latitude, lng: coords.longitude };
@@ -241,15 +319,60 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           setGpsStatus('locked');
           localStorage.setItem('levelmak_cached_gps_coords', JSON.stringify(newLoc));
           localStorage.setItem('levelmak_last_gps_calc', String(Date.now()));
+          
           if (mapRef.current && !mapFocusFeatureId && !hasCentered.current) {
             try {
               mapRef.current.flyTo([coords.latitude, coords.longitude], 13);
               hasCentered.current = true;
             } catch (_) {}
           }
+
+          // Instant sync to Supabase profile and Realtime Presence
+          if (user?.id && !user.id.includes('anon') && !isGhostMode) {
+            const config = cachedAvatarConfigRef.current || user.avatar || {};
+            const updatedConfig = {
+              ...config,
+              location: {
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                isPublic: true
+              }
+            };
+            cachedAvatarConfigRef.current = updatedConfig;
+            supabase.from('profiles').update({
+              status: 'online',
+              last_active: new Date().toISOString(),
+              avatar_config: updatedConfig
+            }).eq('id', user.id).then(() => {});
+
+            if (channelRef.current && isSubscribed) {
+              channelRef.current.track({
+                user_id: user.id,
+                session_id: deviceSessionId,
+                name: user.name,
+                avatar: user.avatar?.image,
+                lat: coords.latitude,
+                lng: coords.longitude,
+                has_location: true,
+                is_ghost: false,
+                last_seen: Date.now()
+              });
+            }
+          }
         }
       } catch (err: any) {
-        console.warn("📍 [Map] Position fetch fallback:", err);
+        console.warn("📍 [Map] GPS fetch error, checking cache:", err);
+        const cachedCoordsStr = localStorage.getItem('levelmak_cached_gps_coords');
+        if (cachedCoordsStr) {
+          try {
+            const parsed = JSON.parse(cachedCoordsStr);
+            if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+              setMyLocation({ lat: parsed.lat, lng: parsed.lng });
+              setGpsStatus('locked');
+              return null;
+            }
+          } catch (_) {}
+        }
         setGpsStatus('error');
       }
 
@@ -262,11 +385,11 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
   };
 
   useEffect(() => {
-    requestGps();
-    // Re-calculate GPS position strictly every 30 minutes
+    requestGps(true);
+    // Periodically refresh position every 2 minutes
     const interval = setInterval(() => {
       requestGps(true);
-    }, GPS_INTERVAL_MS);
+    }, 120000);
     return () => clearInterval(interval);
   }, []);
 
@@ -293,16 +416,44 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         setActiveUsers(users);
       })
       .on('broadcast', { event: 'battle_invite' }, (p) => { 
-          if (p.payload.request.guest.id === user.id) {
-              setIncomingInvite(p.payload.request); 
-              sendLocalNotification('Nouveau Défi ! ⚔️', `${p.payload.request.host.name} te défie au ${p.payload.request.type === 'quiz' ? 'Quiz' : p.payload.request.type === 'doodle' ? 'Doodle' : 'Morpion'}`);
+          const req = p?.payload?.request;
+          if (!req) return;
+          const currentDeviceId = typeof window !== 'undefined' ? sessionStorage.getItem('levelmak_device_session_id') : null;
+          const myName = (user?.name || '').trim().toLowerCase();
+          const guestName = (req.guest?.name || '').trim().toLowerCase();
+          const isNameMatch = myName.length > 1 && guestName.length > 1 && (myName === guestName || myName.includes(guestName) || guestName.includes(myName));
+
+          const isForMe = req.guest?.id === user?.id || 
+                          req.guest?.original_id === user?.id || 
+                          req.guest?.user_id === user?.id ||
+                          (req.guest as any)?.sessionId === currentDeviceId ||
+                          isNameMatch;
+
+          if (isForMe) {
+              console.log("⚔️ [Map] Received battle_invite in WorldBrainMap:", req);
+              setLocalIncomingInvite(req); 
+              setPendingBattleInvite(req);
+              sendLocalNotification('Nouveau Défi ! ⚔️', `${req.host?.name || 'Un ami'} te défie au ${req.type === 'quiz' ? 'Quiz' : req.type === 'doodle' ? 'Doodle' : 'Morpion'}`);
               HapticFeedback.success();
               audioService.playBattleInvite();
           }
       })
-      .on('broadcast', { event: 'battle_accept' }, (p) => { if (p.payload.request.host.id === user.id) startBattle(p.payload.request, true); })
+      .on('broadcast', { event: 'battle_accept' }, (p) => { 
+          if (p.payload.request.host.id === user.id) {
+              setOutgoingBattleRequest(null);
+              startBattle(p.payload.request, true); 
+          }
+      })
       .on('broadcast', { event: 'battle_exit' }, (p) => {
           if (p.payload.battleId) {
+              setOutgoingBattleRequest(prev => {
+                  if (prev && prev.id === p.payload.battleId && p.payload.senderId !== user.id) {
+                      addNotification('info', 'Défi décliné ⚔️', `L'adversaire a décliné le défi.`);
+                      HapticFeedback.navigation();
+                      return null;
+                  }
+                  return prev;
+              });
               setActiveBattle(prev => {
                   if (prev && prev.state.id === p.payload.battleId && p.payload.senderId !== user.id) {
                       if (prev.state.status === 'active') return prev;
@@ -320,6 +471,8 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
               setIsSubscribed(true);
           }
       });
+
+
 
     // Fetch profiles from Supabase database for metadata enrichment and online presence
     // ✅ FIX 8: Added .limit(300) to avoid loading the entire profiles table at once
@@ -374,8 +527,10 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
       .subscribe();
 
     return () => { 
-        console.log("📍 [Map] Removing Supabase presence channel");
-        supabase.removeChannel(channel); 
+        console.log("📍 [Map] Cleaning up presence tracking");
+        if (channelRef.current) {
+          channelRef.current.untrack().catch(() => {});
+        }
         supabase.removeChannel(profileSub);
     };
   }, [user?.id, deviceSessionId]);
@@ -462,18 +617,38 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     }
   }, [map, mapFocusFeatureId]);
 
-  const startBattle = (request: any, isHost: boolean) => {
-      setActiveBattle({ state: { ...request, status: 'active' }, questions: request.questions, isHost });
-  };
-
   const handleBattleEnd = (winnerId: string | 'draw') => {
     if (!activeBattle || !user) return;
     const isWin = winnerId === user.id;
-    if (winnerId !== 'draw') {
+    const isDraw = winnerId === 'draw';
+    const bet = Number(activeBattle.state.betAmount) || 0;
+    const baseWinReward = 20;
+
+    if (!isDraw) {
         setSessionScore(p => ({ host: p.host + (activeBattle.isHost ? (isWin?1:0) : (isWin?0:1)), guest: p.guest + (activeBattle.isHost ? (isWin?0:1) : (isWin?1:0)) }));
-        if (activeBattle.state.betAmount) addLevelCoins(isWin ? activeBattle.state.betAmount : -activeBattle.state.betAmount);
+        if (isWin) {
+            // Puisque la mise a été déduite au début chez les 2 joueurs, le vainqueur remporte la TOTALITÉ du pot commun (bet * 2) !
+            const winAmount = bet > 0 ? bet * 2 : baseWinReward;
+            const xpGained = bet > 0 ? bet * 5 : 50;
+            addLevelCoins(winAmount);
+            addXp(xpGained);
+            addNotification('success', '🏆 Victoire en Duel !', `Tu as remporté le pot de ${winAmount} LevelCoins et +${xpGained} XP !`);
+        } else {
+            // Le perdant a déjà perdu sa mise de départ (-bet LC), pas de double déduction.
+            addXp(10);
+            if (bet > 0) {
+                addNotification('info', 'Défi terminé', `Tu as perdu le duel (${bet} LC misés).`);
+            }
+        }
+    } else {
+        // En cas d'égalité, chaque joueur est remboursé de sa mise
+        if (bet > 0) {
+            addLevelCoins(bet);
+            addNotification('info', 'Match Nul 🤝', `Égalité ! Ta mise de ${bet} LevelCoins t'a été remboursée.`);
+        }
+        addXp(20);
     }
-    resolveBattle(winnerId === 'draw' ? '' : winnerId, winnerId === 'draw');
+    resolveBattle(isDraw ? '' : winnerId, isDraw);
   };
 
   const finalUsers = useMemo(() => {
@@ -488,30 +663,34 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
         if (
           !isCurrentSession && 
           !u.is_ghost && 
-          !isAdminUser(u) &&
-          typeof u.lat === 'number' && 
-          typeof u.lng === 'number' &&
-          u.lat !== 0 &&
-          u.lng !== 0
+          !isAdminUser(u)
         ) {
           const isSelfOtherDevice = uUserId === user?.id;
           const dbMatch = allProfiles.find(p => (p.user_id || p.id) === uUserId) || {};
           const isDbGhost = dbMatch.avatar_config?.location?.isPublic === false;
           if (!isDbGhost) {
             const key = u.session_id || uUserId;
+            const realUserId = uUserId || dbMatch.id || (key.startsWith('device_') ? null : key);
+            const lat = (typeof u.lat === 'number' && u.lat !== 0) ? u.lat : (dbMatch.avatar_config?.location?.latitude || null);
+            const lng = (typeof u.lng === 'number' && u.lng !== 0) ? u.lng : (dbMatch.avatar_config?.location?.longitude || null);
+
             mapUsers.set(key, { 
               ...dbMatch, 
               ...u, 
-              user_id: key, 
-              original_user_id: uUserId,
+              lat,
+              lng,
+              user_id: realUserId || key, 
+              original_user_id: realUserId || uUserId || dbMatch.id,
+              session_id: u.session_id || key,
               name: isSelfOtherDevice ? `${u.name || user?.name || 'Moi'} (Mon autre appareil)` : (u.name || dbMatch.name || 'Élève'),
+              avatar: u.avatar || dbMatch.avatar || dbMatch.avatar_config?.image || null,
               is_online: true 
             });
           }
         }
       });
 
-      // 2. Database fallback: ONLY users with status === 'online', heartbeat within last 45s, AND real explicit GPS coordinates
+      // 2. Database fallback: active within the last 5 minutes
       allProfiles.forEach(p => {
         const pUserId = p.user_id || p.id;
         if (
@@ -524,15 +703,16 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           const hasGps = loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number' && loc.latitude !== 0 && loc.longitude !== 0;
           const isGhost = loc?.isPublic === false;
 
-          if (!isGhost && hasGps && p.status === 'online' && p.last_active) {
+          if (!isGhost && p.status === 'online' && p.last_active) {
             const lastActiveTime = new Date(p.last_active).getTime();
-            if (!isNaN(lastActiveTime) && (now - lastActiveTime) < 45000) {
+            if (!isNaN(lastActiveTime) && (now - lastActiveTime) < 5 * 60 * 1000) {
               mapUsers.set(pUserId, {
                 ...p,
                 user_id: pUserId,
                 original_user_id: pUserId,
-                lat: loc.latitude,
-                lng: loc.longitude,
+                lat: hasGps ? loc.latitude : null,
+                lng: hasGps ? loc.longitude : null,
+                avatar: p.avatar || p.avatar_config?.image || null,
                 is_online: true,
                 is_ghost: false
               });
@@ -711,7 +891,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                 );
             })}
 
-            {activeAtlasCategory === 'none' && finalUsers.filter(u => u.is_online).map((u) => (
+            {activeAtlasCategory === 'none' && finalUsers.filter(u => u.is_online && typeof u.lat === 'number' && typeof u.lng === 'number' && u.lat !== 0 && u.lng !== 0).map((u) => (
                 <Marker 
                   key={u.user_id} 
                   position={[u.lat, u.lng]} 
@@ -948,8 +1128,8 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
 
       <AnimatePresence>
         {isBettingOpen && selectedUser && (
-          <div className="fixed inset-0 z-[1000] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-white/10">
+          <div key="betting-modal-backdrop" className="fixed inset-0 z-[1000] bg-slate-950/85 flex items-center justify-center p-6">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.15 }} className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-white/10">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-black dark:text-white uppercase">Défier {selectedUser.name}</h3>
                     <button onClick={() => setIsBettingOpen(false)}><X size={24} className="dark:text-white" /></button>
@@ -987,6 +1167,71 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                         </div>
                     </div>
 
+                    <div>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 text-center flex items-center justify-center gap-1.5">
+                            <Coins size={12} className="text-amber-400" /> Mise en jeu (LevelCoins)
+                        </p>
+                        {(() => {
+                            const currentBalance = Number(user?.levelCoins ?? (user as any)?.level_coins ?? 0);
+                            return (
+                                <>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {[0, 10, 25, 50].map(amount => {
+                                            const isInsufficient = amount > currentBalance;
+                                            return (
+                                                <button 
+                                                    key={amount}
+                                                    type="button"
+                                                    disabled={isInsufficient}
+                                                    onClick={() => setPendingBetAmount(amount)}
+                                                    className={`py-2.5 rounded-2xl font-black uppercase text-[10px] transition-all flex flex-col items-center justify-center gap-0.5 ${
+                                                        isInsufficient
+                                                            ? 'opacity-35 cursor-not-allowed bg-slate-100/50 dark:bg-white/5 text-slate-400 border border-transparent'
+                                                            : pendingBetAmount === amount 
+                                                                ? 'bg-amber-500 text-slate-900 shadow-glow-amber scale-105 font-black' 
+                                                                : 'bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <span>{amount === 0 ? 'Amical' : `${amount} LC`}</span>
+                                                    <span className="text-[8px] opacity-75">{amount === 0 ? 'Gratuit' : isInsufficient ? 'Trop élevé' : 'Mise'}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Custom free bet input */}
+                                    <div className="mt-3 flex items-center gap-2 bg-slate-100 dark:bg-white/5 p-2.5 rounded-2xl border border-slate-200 dark:border-white/10">
+                                        <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap pl-1">
+                                            Mise personnalisée :
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            min={0} 
+                                            max={currentBalance}
+                                            value={pendingBetAmount === 0 ? '' : pendingBetAmount}
+                                            onChange={(e) => {
+                                                const raw = e.target.value;
+                                                if (raw === '') {
+                                                    setPendingBetAmount(0);
+                                                    return;
+                                                }
+                                                const val = Math.max(0, Math.min(Math.floor(Number(raw) || 0), currentBalance));
+                                                setPendingBetAmount(val);
+                                            }}
+                                            placeholder="0"
+                                            className="w-full bg-transparent text-right font-black text-sm text-amber-500 dark:text-amber-400 focus:outline-none pr-1"
+                                        />
+                                        <span className="text-xs font-black text-amber-500 dark:text-amber-400 pr-1">LC</span>
+                                    </div>
+
+                                    <p className="text-[9px] text-slate-400 text-center mt-2">
+                                        Solde disponible : <strong className="text-amber-400 font-bold">{currentBalance} LC</strong>
+                                    </p>
+                                </>
+                            );
+                        })()}
+                    </div>
+
                     {selectedUser.user_id === 'levelbot' && (
                         <div>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 text-center">Difficulté de l'IA</p>
@@ -1014,30 +1259,262 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                                     type: pendingDuelType,
                                     host: { id: user?.id, name: user?.name, avatar: user?.avatar?.image, score: 0 },
                                     guest: { id: 'levelbot', name: `LevelBot 🤖 (${difficultyLabel})`, avatar: null, difficulty: pendingDifficulty, score: 0 },
+                                    betAmount: pendingBetAmount,
                                     status: 'active',
                                     timestamp: new Date().toISOString()
                                 };
                                 setIsBettingOpen(false);
                                 startBattle(request, true);
                             } else {
+                                const targetUserId = selectedUser.original_user_id || selectedUser.id || (selectedUser.user_id?.startsWith('device_') ? '' : selectedUser.user_id);
+                                const targetSessionId = selectedUser.session_id || (selectedUser.user_id?.startsWith('device_') ? selectedUser.user_id : undefined);
+
                                 const request = {
                                     id: `battle_${Date.now()}`,
                                     type: pendingDuelType,
                                     host: { id: user?.id, name: user?.name, avatar: user?.avatar?.image },
-                                    guest: { id: selectedUser.user_id, name: selectedUser.name, avatar: selectedUser.avatar },
+                                    guest: { 
+                                        id: targetUserId, 
+                                        original_id: targetUserId,
+                                        sessionId: targetSessionId,
+                                        name: selectedUser.name, 
+                                        avatar: selectedUser.avatar 
+                                    },
+                                    betAmount: pendingBetAmount,
                                     status: 'pending',
                                     timestamp: new Date().toISOString()
                                 };
-                                channelRef.current.send({ type: 'broadcast', event: 'battle_invite', payload: { request } });
+
+                                // Helper to broadcast invite across all potential channels
+                                const broadcastBattleInvite = (req: any) => {
+                                    console.log('⚔️ [Map] Initiating broadcastBattleInvite to:', targetUserId, targetSessionId);
+
+                                    // 1. Global map channel broadcast
+                                    if (channelRef.current) {
+                                        channelRef.current.send({ type: 'broadcast', event: 'battle_invite', payload: { request: req } })
+                                          .then((res: any) => console.log('⚔️ [Map] Map broadcast result:', res))
+                                          .catch((err: any) => console.warn('⚔️ [Map] Map broadcast err:', err));
+                                    }
+
+                                    // 2. Direct user battle channel broadcast (by userId)
+                                    if (targetUserId) {
+                                        const directChannel = supabase.channel(`user-battles-${targetUserId}`);
+                                        if (directChannel.state === 'joined') {
+                                            directChannel.send({ type: 'broadcast', event: 'battle_invite', payload: { request: req } })
+                                              .then((res: any) => console.log('⚔️ [Map] Direct invite by userId sent:', res))
+                                              .catch((err: any) => console.warn('⚔️ [Map] Direct invite error:', err));
+                                        } else {
+                                            directChannel.subscribe((status) => {
+                                                if (status === 'SUBSCRIBED') {
+                                                    directChannel.send({ type: 'broadcast', event: 'battle_invite', payload: { request: req } })
+                                                      .then((res: any) => console.log('⚔️ [Map] Direct invite by userId sent (subscribed):', res))
+                                                      .catch((err: any) => console.warn('⚔️ [Map] Direct invite error:', err));
+                                                }
+                                            });
+                                        }
+                                    }
+
+                                    // 3. Direct user battle channel broadcast (by sessionId if different)
+                                    if (targetSessionId && targetSessionId !== targetUserId) {
+                                        const sessionChannel = supabase.channel(`user-battles-${targetSessionId}`);
+                                        if (sessionChannel.state === 'joined') {
+                                            sessionChannel.send({ type: 'broadcast', event: 'battle_invite', payload: { request: req } })
+                                              .then((res: any) => console.log('⚔️ [Map] Direct invite by sessionId sent:', res))
+                                              .catch((err: any) => console.warn('⚔️ [Map] Direct invite by sessionId error:', err));
+                                        } else {
+                                            sessionChannel.subscribe((status) => {
+                                                if (status === 'SUBSCRIBED') {
+                                                    sessionChannel.send({ type: 'broadcast', event: 'battle_invite', payload: { request: req } })
+                                                      .then((res: any) => console.log('⚔️ [Map] Direct invite by sessionId sent (subscribed):', res))
+                                                      .catch((err: any) => console.warn('⚔️ [Map] Direct invite by sessionId error:', err));
+                                                }
+                                            });
+                                        }
+                                    }
+                                };
+
+                                // 1. Immediately subscribe to dedicated duel room for this battle
+                                if (duelChannelRef.current) {
+                                    supabase.removeChannel(duelChannelRef.current);
+                                    duelChannelRef.current = null;
+                                }
+                                if (inviteRetryIntervalRef.current) {
+                                    clearInterval(inviteRetryIntervalRef.current);
+                                    inviteRetryIntervalRef.current = null;
+                                }
+
+                                const duelRoom = supabase.channel(`duel-${request.id}`);
+                                duelRoom
+                                  .on('broadcast', { event: 'battle_accept' }, (p: any) => {
+                                      console.log('⚔️ [Map] Received battle_accept on duel room:', p);
+                                      if (inviteRetryIntervalRef.current) {
+                                          clearInterval(inviteRetryIntervalRef.current);
+                                          inviteRetryIntervalRef.current = null;
+                                      }
+                                      setOutgoingBattleRequest(null);
+                                      startBattle(p.payload.request, true);
+                                  })
+                                  .on('broadcast', { event: 'battle_exit' }, (p: any) => {
+                                      console.log('⚔️ [Map] Opponent rejected on duel room:', p);
+                                      if (inviteRetryIntervalRef.current) {
+                                          clearInterval(inviteRetryIntervalRef.current);
+                                          inviteRetryIntervalRef.current = null;
+                                      }
+                                      setOutgoingBattleRequest(null);
+                                      addNotification('info', 'Défi refusé ⚔️', `${selectedUser.name} a décliné le défi.`);
+                                      HapticFeedback.navigation();
+                                  })
+                                  .subscribe((status) => {
+                                      if (status === 'SUBSCRIBED') {
+                                          console.log('⚔️ [Map] Host duel room SUBSCRIBED, broadcasting invite now');
+                                          broadcastBattleInvite(request);
+
+                                          // Retry broadcast up to 3 times (every 3.5s) in case of network jitter
+                                          let retries = 0;
+                                          if (inviteRetryIntervalRef.current) clearInterval(inviteRetryIntervalRef.current);
+                                          inviteRetryIntervalRef.current = setInterval(() => {
+                                              retries++;
+                                              if (retries >= 3) {
+                                                  if (inviteRetryIntervalRef.current) {
+                                                      clearInterval(inviteRetryIntervalRef.current);
+                                                      inviteRetryIntervalRef.current = null;
+                                                  }
+                                                  return;
+                                              }
+                                              console.log(`⚔️ [Map] Retrying battle invite broadcast (${retries + 1}/3)...`);
+                                              broadcastBattleInvite(request);
+                                          }, 3500);
+                                      }
+                                  });
+                                duelChannelRef.current = duelRoom;
+
+                                // 2. Show waiting screen immediately
+                                setOutgoingBattleRequest(request);
                                 setIsBettingOpen(false);
-                                addNotification('info', 'Défi envoyé !', `Attente de la réponse de ${selectedUser.name}...`);
+
+                                // 5. Save notification in database for recipient (strictly deduplicated and with real host avatar)
+                                if (targetUserId && !targetUserId.startsWith('device_')) {
+                                    const typeLabel = pendingDuelType === 'quiz' ? 'Quiz' : pendingDuelType === 'doodle' ? 'Doodle' : 'Morpion';
+                                    supabase.from('profiles').select('stats').eq('id', targetUserId).single().then(({ data }) => {
+                                        if (data) {
+                                            const currentStats = data.stats || {};
+                                            const notifs = currentStats.notifications || [];
+                                            const alreadyExists = notifs.some((n: any) => n.id === request.id || n.battleId === request.id);
+                                            if (!alreadyExists) {
+                                                const newNotif = {
+                                                    id: request.id,
+                                                    battleId: request.id,
+                                                    type: 'battle_invite',
+                                                    title: 'Nouveau Défi ! ⚔️',
+                                                    message: `${user?.name || 'Un ami'} te défie au ${typeLabel} !`,
+                                                    avatar: user?.avatar?.image || null,
+                                                    senderName: user?.name || 'Un ami',
+                                                    timestamp: new Date().toISOString(),
+                                                    read: false,
+                                                    metadata: { request }
+                                                };
+                                                supabase.from('profiles').update({
+                                                    stats: { ...currentStats, notifications: [newNotif, ...notifs].slice(0, 50) }
+                                                }).eq('id', targetUserId).then(() => {});
+                                            }
+                                        }
+                                    });
+                                }
+
+                                addNotification({
+                                    id: `sent_${request.id}`,
+                                    battleId: request.id,
+                                    type: 'battle_sent',
+                                    title: 'Défi envoyé ! ⚔️',
+                                    message: `Attente de la réponse de ${selectedUser.name}...`,
+                                    avatar: selectedUser.avatar || selectedUser.avatar_config?.image || null,
+                                    senderName: selectedUser.name
+                                });
                             }
                         }}
-                        className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 transition-transform"
+                        disabled={pendingBetAmount > Number(user?.levelCoins ?? (user as any)?.level_coins ?? 0)}
+                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl transition-all ${
+                            pendingBetAmount > Number(user?.levelCoins ?? (user as any)?.level_coins ?? 0)
+                                ? 'bg-slate-300 dark:bg-white/10 text-slate-400 cursor-not-allowed'
+                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105 active:scale-95'
+                        }`}
                     >
-                        Lancer le défi ⚔️
+                        {pendingBetAmount > Number(user?.levelCoins ?? (user as any)?.level_coins ?? 0) ? 'Solde insuffisant ❌' : 'Lancer le défi ⚔️'}
                     </button>
                 </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* ===== OUTGOING CHALLENGE WAITING SCREEN (HOST WAITING MODAL) ===== */}
+        {outgoingBattleRequest && (
+          <div className="fixed inset-0 z-[2500] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-6">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#09101e] border-2 border-blue-500/80 rounded-[2.5rem] p-8 max-w-sm w-full text-center flex flex-col items-center shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(59,130,246,0.35)] relative overflow-hidden"
+            >
+              <div className="relative mb-6 flex items-center justify-center mt-2">
+                <div className="w-24 h-24 rounded-full bg-blue-500/20 animate-ping absolute" />
+                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-3xl shadow-xl shadow-blue-500/50">
+                  ⚔️
+                </div>
+              </div>
+
+              <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">
+                Invitation Envoyée
+              </span>
+
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                Défi envoyé à {outgoingBattleRequest.guest.name} !
+              </h3>
+              <p className="text-xs text-amber-400 font-bold mt-1 uppercase tracking-wider">
+                Mode : {outgoingBattleRequest.type === 'quiz' ? 'Quiz de Connaissances' : outgoingBattleRequest.type === 'doodle' ? 'Toile Doodle' : 'Morpion Stratégique'}
+              </p>
+
+              <div className="flex items-center gap-2 mt-4 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <p className="text-xs text-slate-300 font-medium">
+                  En attente de sa réponse en direct...
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  try {
+                    HapticFeedback.selection();
+                    if (inviteRetryIntervalRef.current) {
+                      clearInterval(inviteRetryIntervalRef.current);
+                      inviteRetryIntervalRef.current = null;
+                    }
+                    if (channelRef.current) {
+                      channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'battle_exit',
+                        payload: { battleId: outgoingBattleRequest.id, senderId: user?.id }
+                      });
+                    }
+                    if (duelChannelRef.current) {
+                      duelChannelRef.current.send({
+                        type: 'broadcast',
+                        event: 'battle_exit',
+                        payload: { battleId: outgoingBattleRequest.id, senderId: user?.id }
+                      });
+                      supabase.removeChannel(duelChannelRef.current);
+                      duelChannelRef.current = null;
+                    }
+                    addNotification('info', 'Défi annulé ⚔️', `Tu as annulé le défi pour ${outgoingBattleRequest.guest.name}.`);
+                  } catch (err) {
+                    console.warn('[Map Cancel Warning]:', err);
+                  } finally {
+                    setOutgoingBattleRequest(null);
+                  }
+                }}
+                className="w-full mt-6 py-3.5 bg-white/5 hover:bg-red-500/10 hover:border-red-500/40 hover:text-red-400 text-slate-400 rounded-2xl font-black uppercase tracking-wider text-xs border border-white/10 transition-all cursor-pointer select-none"
+              >
+                Annuler le défi
+              </button>
             </motion.div>
           </div>
         )}
@@ -1050,17 +1527,65 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   </div>
                   <div className="min-w-0">
                       <p className="text-xs font-black text-blue-500 uppercase">Nouveau Défi !</p>
-                      <p className="text-sm font-bold dark:text-white truncate">{incomingInvite.host.name} te défie au {incomingInvite.type === 'quiz' ? 'Quiz' : incomingInvite.type === 'doodle' ? 'Doodle' : 'Morpion'}</p>
+                      <p className="text-sm font-bold dark:text-white truncate">
+                          {incomingInvite.host.name} te défie au {incomingInvite.type === 'quiz' ? 'Quiz' : incomingInvite.type === 'doodle' ? 'Doodle' : 'Morpion'}
+                          {incomingInvite.betAmount ? ` • ${incomingInvite.betAmount} LC` : ''}
+                      </p>
                   </div>
               </div>
               <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => setIncomingInvite(null)} className="p-2.5 bg-slate-100 dark:bg-white/5 rounded-xl text-slate-500"><X size={18}/></button>
+                  <button onClick={() => { setLocalIncomingInvite(null); clearPendingBattleInvite(); }} className="p-2.5 bg-slate-100 dark:bg-white/5 rounded-xl text-slate-500"><X size={18}/></button>
                   <button 
                     onClick={() => {
+                        const bet = incomingInvite.betAmount || 0;
+                        if ((user?.levelCoins || 0) < bet) {
+                            addNotification({
+                                title: "Solde insuffisant ❌",
+                                message: `Tu as besoin de ${bet} LC pour relever ce défi.`,
+                                type: 'system'
+                            });
+                            setLocalIncomingInvite(null);
+                            clearPendingBattleInvite();
+                            return;
+                        }
                         HapticFeedback.success();
                         const req = { ...incomingInvite, status: 'active' };
-                        channelRef.current.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
-                        setIncomingInvite(null);
+
+                        // 1. Dedicated duel room
+                        const duelRoom = supabase.channel(`duel-${req.id}`);
+                        if (duelRoom.state === 'joined') {
+                            duelRoom.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                        } else {
+                            duelRoom.subscribe((s) => {
+                                if (s === 'SUBSCRIBED') {
+                                    duelRoom.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                                }
+                            });
+                        }
+
+                        // 2. Map channel
+                        if (channelRef.current) {
+                            channelRef.current.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                        }
+
+                        // 3. Direct host channel
+                        if (req.host?.id) {
+                            const hostChan = supabase.channel(`user-battles-${req.host.id}`);
+                            if (hostChan.state === 'joined') {
+                                hostChan.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                                setTimeout(() => supabase.removeChannel(hostChan), 2500);
+                            } else {
+                                hostChan.subscribe((s) => {
+                                    if (s === 'SUBSCRIBED') {
+                                        hostChan.send({ type: 'broadcast', event: 'battle_accept', payload: { request: req } });
+                                        setTimeout(() => supabase.removeChannel(hostChan), 2500);
+                                    }
+                                });
+                            }
+                        }
+
+                        setLocalIncomingInvite(null);
+                        clearPendingBattleInvite();
                         startBattle(req, false);
                     }}
                     className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black uppercase text-xs shadow-lg whitespace-nowrap"
@@ -1087,13 +1612,14 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   onEnd={handleBattleEnd} 
                   onExit={() => {
                       if (activeBattle.state.status !== 'finished') {
-                          channelRef.current.send({
+                          channelRef.current?.send({
                               type: 'broadcast',
                               event: 'battle_exit',
                               payload: { battleId: activeBattle.state.id, senderId: user!.id }
                           });
                       }
                       setActiveBattle(null);
+                      setIsUsersListOpen(true);
                   }} 
                 />
               ) : activeBattle.state.type === 'quiz' ? (
@@ -1102,13 +1628,14 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   isHost={activeBattle.isHost} 
                   onClose={() => {
                       if (activeBattle.state.status !== 'finished') {
-                          channelRef.current.send({
+                          channelRef.current?.send({
                               type: 'broadcast',
                               event: 'battle_exit',
                               payload: { battleId: activeBattle.state.id, senderId: user!.id }
                           });
                       }
                       setActiveBattle(null);
+                      setIsUsersListOpen(true);
                   }} 
                 />
               ) : activeBattle.state.type === 'doodle' ? (
@@ -1117,13 +1644,14 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   isHost={activeBattle.isHost} 
                   onClose={() => {
                       if (activeBattle.state.status !== 'finished') {
-                          channelRef.current.send({
+                          channelRef.current?.send({
                               type: 'broadcast',
                               event: 'battle_exit',
                               payload: { battleId: activeBattle.state.id, senderId: user!.id }
                           });
                       }
                       setActiveBattle(null);
+                      setIsUsersListOpen(true);
                   }} 
                 />
               ) : null}

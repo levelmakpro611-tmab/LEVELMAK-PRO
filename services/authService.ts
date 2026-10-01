@@ -66,7 +66,15 @@ export const mapProfileToUser = (profile: any): User => {
         } catch (_) {}
     }
 
-    const calculatedTier = isPremium ? (profile.subscription_tier || stats.subscriptionTier || 'mensuel') : 'free';
+    let calculatedTier = isPremium ? (profile.subscription_tier || stats.subscriptionTier) : 'free';
+    if (isPremium) {
+        const daysLeft = (bestExpiry - now) / (1000 * 60 * 60 * 24);
+        if (daysLeft > 100 || profile.subscription_tier === 'annuel' || stats.subscriptionTier === 'annuel') {
+            calculatedTier = 'annuel';
+        } else if (!calculatedTier) {
+            calculatedTier = 'mensuel';
+        }
+    }
 
     // Real Daily Streak (Série) Calculation:
     const rawStreak = profile.streak || { current: 1, lastLogin: new Date().toISOString() };
@@ -88,12 +96,13 @@ export const mapProfileToUser = (profile: any): User => {
         }
     }
 
-    const rawEducation = stats.education || profile.education || stats.gradeClass || '';
-    let computedGradeClass = (stats.gradeClass || profile.grade_class || rawEducation) as GradeClass;
-    let computedLevel = (stats.level || profile.level) as SchoolLevel;
+    const rawEducation = profile.education || stats.education || profile.grade_class || stats.gradeClass || '';
+    let computedGradeClass = (profile.grade_class || stats.gradeClass || profile.education || stats.education || rawEducation) as GradeClass;
+    let computedLevel = (profile.level || stats.level) as SchoolLevel;
 
     const lowerEd = String(rawEducation).toLowerCase();
-    if (lowerEd.includes('univ') || lowerEd.includes('fac') || lowerEd.includes('licence') || lowerEd.includes('master') || lowerEd.includes('doctorat')) {
+    const lowerGrade = String(computedGradeClass).toLowerCase();
+    if (lowerEd.includes('univ') || lowerEd.includes('fac') || lowerEd.includes('licence') || lowerEd.includes('master') || lowerEd.includes('doctorat') || lowerGrade.includes('univ')) {
         computedGradeClass = 'Université';
         computedLevel = SchoolLevel.UNIVERSITY;
     } else if (lowerEd.includes('collège') || lowerEd.includes('college') || lowerEd.includes('10ème') || lowerEd.includes('10eme') || /^[789]/.test(lowerEd)) {
@@ -117,7 +126,7 @@ export const mapProfileToUser = (profile: any): User => {
         computedGradeClass = rawEducation as GradeClass;
     }
 
-    if (computedGradeClass === 'Université' && (!computedLevel || computedLevel === SchoolLevel.HIGH)) {
+    if (computedGradeClass === 'Université') {
         computedLevel = SchoolLevel.UNIVERSITY;
     }
 
@@ -829,6 +838,8 @@ export const updateUserProfile = async (userId: string, updates: Partial<User>):
         if (updates.badges !== undefined) dbUpdates.badges = updates.badges;
         if (updates.streak !== undefined) dbUpdates.streak = updates.streak;
         if (updates.inventory !== undefined) dbUpdates.inventory = updates.inventory;
+        if (updates.gradeClass !== undefined) dbUpdates.grade_class = updates.gradeClass;
+        if (updates.education !== undefined) dbUpdates.education = updates.education;
 
         const { error } = await supabase
             .from('profiles')

@@ -56,7 +56,14 @@ class CacheService {
         this.loadFromStorage();
         const today = new Date().toISOString().split('T')[0];
         if (this.storage.dailyMotivation && this.storage.dailyMotivation.dateString === today) {
-            return this.storage.dailyMotivation.data;
+            const data = this.storage.dailyMotivation.data;
+            if (data && typeof data === 'object') {
+                const author = String(data.author || '').trim();
+                if (!author || author.toUpperCase().includes('LEVELMAK') || author.toLowerCase().includes('coach') || author.toLowerCase().includes('anonyme')) {
+                    return { ...data, author: "Victor Hugo" };
+                }
+            }
+            return data;
         }
         return null;
     }
@@ -145,10 +152,19 @@ class CacheService {
         const today = new Date().toISOString().split('T')[0];
         const cacheKey = `motivation_${lang}`;
 
+        const sanitizeQuote = (item: any) => {
+            if (!item || typeof item !== 'object') return item;
+            let author = String(item.author || '').trim();
+            if (!author || author.toUpperCase().includes('LEVELMAK') || author.toLowerCase().includes('coach') || author.toLowerCase().includes('anonyme')) {
+                author = "Victor Hugo";
+            }
+            return { ...item, author };
+        };
+
         if (this.storage.dailyMotivation && this.storage.dailyMotivation.dateString === today) {
             const cachedData = this.storage.dailyMotivation.data;
             if (cachedData && typeof cachedData === 'object' && this.isValidText(cachedData.quote)) {
-                return cachedData;
+                return sanitizeQuote(cachedData);
             } else {
                 this.storage.dailyMotivation = null;
                 localStorage.removeItem(`levelmak_motivation_cache_${lang}`);
@@ -163,7 +179,7 @@ class CacheService {
                 .single();
 
             if (cloudData && cloudData.date_string === today) {
-                const cloudDataContent = cloudData.data;
+                const cloudDataContent = sanitizeQuote(cloudData.data);
                 if (cloudDataContent && typeof cloudDataContent === 'object' && this.isValidText(cloudDataContent.quote)) {
                     console.log(`☁️ Motivation (${lang}) récupérée de Supabase`);
                     const result = { data: cloudDataContent, timestamp: Date.now(), dateString: today };
@@ -174,7 +190,8 @@ class CacheService {
             }
 
             console.log(`🔄 Génération nouvelle motivation (${lang})...`);
-            const data = await generator();
+            const rawData = await generator();
+            const data = sanitizeQuote(rawData);
 
             // Validation stricte du contenu
             if (!data || typeof data !== 'object' || !this.isValidText(data.quote)) {
