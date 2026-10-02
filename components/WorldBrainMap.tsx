@@ -651,6 +651,18 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
     resolveBattle(isDraw ? '' : winnerId, isDraw);
   };
 
+  const handleBattleRematch = () => {
+    if (!activeBattle || !user) return;
+    const bet = Number(activeBattle.state.betAmount) || 0;
+    if (bet > 0) {
+      if ((user.levelCoins || 0) < bet) {
+        addNotification('error', 'Solde insuffisant ❌', `Tu as besoin de ${bet} LC pour rejouer.`);
+        return;
+      }
+      betLevelCoins(bet);
+    }
+  };
+
   const finalUsers = useMemo(() => {
       const mapUsers = new Map<string, any>();
       const now = Date.now();
@@ -1608,7 +1620,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                   channel={channelRef.current} 
                   currentScore={sessionScore} 
                   currentBet={activeBattle.state.betAmount || 0}
-                  onRematch={() => {}}
+                  onRematch={handleBattleRematch}
                   onEnd={handleBattleEnd} 
                   onExit={() => {
                       if (activeBattle.state.status !== 'finished') {
@@ -1618,6 +1630,12 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
                               payload: { battleId: activeBattle.state.id, senderId: user!.id }
                           });
                       }
+                      const duelChan = supabase.channel(`duel-${activeBattle.state.id}`);
+                      duelChan.send({
+                          type: 'broadcast',
+                          event: 'battle_exit',
+                          payload: { battleId: activeBattle.state.id, senderId: user!.id }
+                      });
                       setActiveBattle(null);
                       setIsUsersListOpen(true);
                   }} 

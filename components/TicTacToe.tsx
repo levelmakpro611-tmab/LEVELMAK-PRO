@@ -91,6 +91,15 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
     // Rematch states
     const [rematchRequestedByMe, setRematchRequestedByMe] = useState(false);
     const [rematchRequestedByOpponent, setRematchRequestedByOpponent] = useState(false);
+    const [opponentLeft, setOpponentLeft] = useState(false);
+
+    // Refs to avoid tearing down WebSocket channels upon match conclusion
+    const winnerRef = useRef(winner);
+    winnerRef.current = winner;
+    const abandonedByOpponentRef = useRef(abandonedByOpponent);
+    abandonedByOpponentRef.current = abandonedByOpponent;
+    const rematchRequestedByMeRef = useRef(rematchRequestedByMe);
+    rematchRequestedByMeRef.current = rematchRequestedByMe;
 
     const getAvatarSrc = (avatar: any) => {
         if (!avatar) return '';
@@ -123,7 +132,13 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
     useEffect(() => {
         if (opponent.id === 'levelbot') return;
 
+        // Dedicated match channel - stays connected across rematches
         const activeChannel = supabase.channel(`ttt_battle_${battleId}`, {
+            config: { broadcast: { self: false } }
+        });
+
+        // Dedicated duel fallback room
+        const duelChan = supabase.channel(`duel-${battleId}`, {
             config: { broadcast: { self: false } }
         });
 
@@ -145,8 +160,15 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
             }
         };
 
+        const handleExitBroadcast = ({ payload }: any) => {
+            if (payload.senderId !== currentUser.id) {
+                setOpponentLeft(true);
+                setRematchRequestedByOpponent(false);
+            }
+        };
+
         const handlePresenceSync = () => {
-            if (winner || abandonedByOpponent) return;
+            if (winnerRef.current || abandonedByOpponentRef.current) return;
             const presenceState = activeChannel.presenceState();
             const pList = Object.values(presenceState).flat() as any[];
             const opponentId = opponent.id;
@@ -162,7 +184,7 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                     const currentPresence = activeChannel.presenceState();
                     const currentList = Object.values(currentPresence).flat() as any[];
                     const stillGone = !currentList.some((p: any) => p.userId === opponentId);
-                    if (stillGone && !winner && !abandonedByOpponent) {
+                    if (stillGone && !winnerRef.current && !abandonedByOpponentRef.current) {
                         setAbandonedByOpponent(true);
                         HapticFeedback.levelUp();
                     }
@@ -172,26 +194,41 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
 
         const handleRematchRequestBroadcast = ({ payload }: any) => {
             if (payload.senderId !== currentUser.id) {
-                setRematchRequestedByOpponent(true);
-                HapticFeedback.selection();
+                if (rematchRequestedByMeRef.current) {
+                    // Les deux joueurs ont cliqué sur Revanche -> Démarrage direct synchronisé !
+                    executeAcceptRematch();
+                } else {
+                    setRematchRequestedByOpponent(true);
+                    HapticFeedback.levelUp();
+                    audioService.playSuccess('quiz');
+                    addNotification('info', 'Demande de Revanche ⚔️', `${opponent.name} souhaite prendre sa revanche !`);
+                }
             }
         };
 
         const handleRematchAcceptBroadcast = () => {
+            onRematch?.(currentBet);
             setBoard(Array(9).fill(null));
             setWinner(null);
             setWinningLine(null);
             setRematchRequestedByMe(false);
             setRematchRequestedByOpponent(false);
+            setOpponentLeft(false);
             setIsMyTurn(isHost ? false : true);
             HapticFeedback.success();
+            audioService.playClick();
         };
 
         activeChannel.on('broadcast', { event: 'ttt_move' }, handleMoveBroadcast);
         activeChannel.on('broadcast', { event: 'battle_abandoned' }, handleAbandonBroadcast);
+        activeChannel.on('broadcast', { event: 'battle_exit' }, handleExitBroadcast);
         activeChannel.on('broadcast', { event: 'ttt_rematch_request' }, handleRematchRequestBroadcast);
         activeChannel.on('broadcast', { event: 'ttt_rematch_accept' }, handleRematchAcceptBroadcast);
         activeChannel.on('presence', { event: 'sync' }, handlePresenceSync);
+
+        duelChan.on('broadcast', { event: 'ttt_rematch_request' }, handleRematchRequestBroadcast);
+        duelChan.on('broadcast', { event: 'ttt_rematch_accept' }, handleRematchAcceptBroadcast);
+        duelChan.on('broadcast', { event: 'battle_exit' }, handleExitBroadcast);
 
         activeChannel.subscribe(async (status) => {
             if (status === 'SUBSCRIBED' && currentUser) {
@@ -199,12 +236,15 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
             }
         });
 
+        duelChan.subscribe();
+
         setGameChannel(activeChannel);
 
         return () => {
             supabase.removeChannel(activeChannel);
+            supabase.removeChannel(duelChan);
         };
-    }, [battleId, winner, abandonedByOpponent, opponent.id, currentUser.id]);
+    }, [battleId, opponent.id, currentUser.id]);
 
     const checkWinner = (currentBoard: (string | null)[]) => {
         if (winner) return;
@@ -317,36 +357,101 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
         }, 300);
     };
 
-    const handleRequestRematch = () => {
-        setRematchRequestedByMe(true);
-        if (opponent.id === 'levelbot') {
-            setTimeout(() => {
-                handleAcceptRematch();
-            }, 1000);
-        } else {
-            gameChannel?.send({
-                type: 'broadcast',
-                event: 'ttt_rematch_request',
-                payload: { senderId: currentUser.id }
-            });
+    const executeAcceptRematch = () => {
+        if ((currentUser.levelCoins || 0) < currentBet) {
+            addNotification('error', 'Solde insuffisant ❌', `Tu as besoin de ${currentBet} LC pour relancer un duel.`);
+            return;
         }
-    };
 
-    const handleAcceptRematch = () => {
+        const payload = { senderId: currentUser.id, battleId };
+
         if (opponent.id !== 'levelbot') {
             gameChannel?.send({
                 type: 'broadcast',
                 event: 'ttt_rematch_accept',
-                payload: {}
+                payload
             });
+            const duelChan = supabase.channel(`duel-${battleId}`);
+            if (duelChan.state === 'joined') {
+                duelChan.send({ type: 'broadcast', event: 'ttt_rematch_accept', payload });
+            } else {
+                duelChan.subscribe((s) => {
+                    if (s === 'SUBSCRIBED') {
+                        duelChan.send({ type: 'broadcast', event: 'ttt_rematch_accept', payload });
+                        setTimeout(() => supabase.removeChannel(duelChan), 3000);
+                    }
+                });
+            }
         }
+
+        onRematch?.(currentBet);
         setBoard(Array(9).fill(null));
         setWinner(null);
         setWinningLine(null);
         setRematchRequestedByMe(false);
         setRematchRequestedByOpponent(false);
+        setOpponentLeft(false);
         setIsMyTurn(isHost ? false : true);
         HapticFeedback.success();
+    };
+
+    const handleRequestRematch = () => {
+        if ((currentUser.levelCoins || 0) < currentBet) {
+            addNotification('error', 'Solde insuffisant ❌', `Tu as besoin de ${currentBet} LC pour demander une revanche.`);
+            return;
+        }
+
+        setRematchRequestedByMe(true);
+        HapticFeedback.selection();
+
+        if (opponent.id === 'levelbot') {
+            setTimeout(() => {
+                executeAcceptRematch();
+            }, 800);
+            return;
+        }
+
+        const payload = {
+            senderId: currentUser.id,
+            senderName: currentUser.name || 'Adversaire',
+            battleId,
+            betAmount: currentBet
+        };
+
+        // 1. Send on gameChannel
+        gameChannel?.send({
+            type: 'broadcast',
+            event: 'ttt_rematch_request',
+            payload
+        });
+
+        // 2. Send on duelChan
+        const duelChan = supabase.channel(`duel-${battleId}`);
+        if (duelChan.state === 'joined') {
+            duelChan.send({ type: 'broadcast', event: 'ttt_rematch_request', payload });
+        } else {
+            duelChan.subscribe((s) => {
+                if (s === 'SUBSCRIBED') {
+                    duelChan.send({ type: 'broadcast', event: 'ttt_rematch_request', payload });
+                    setTimeout(() => supabase.removeChannel(duelChan), 3000);
+                }
+            });
+        }
+
+        // 3. Send on direct user channel
+        if (opponent.id) {
+            const oppChan = supabase.channel(`user-battles-${opponent.id}`);
+            if (oppChan.state === 'joined') {
+                oppChan.send({ type: 'broadcast', event: 'ttt_rematch_request', payload });
+            } else {
+                oppChan.subscribe((s) => {
+                    if (s === 'SUBSCRIBED') {
+                        oppChan.send({ type: 'broadcast', event: 'ttt_rematch_request', payload });
+                        setTimeout(() => supabase.removeChannel(oppChan), 3000);
+                    }
+                });
+            }
+        }
     };
 
     return (
@@ -502,27 +607,42 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
                             </p>
 
                             <div className="flex flex-col gap-3 w-full">
-                                {rematchRequestedByMe ? (
-                                    <button 
-                                        disabled
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600/50 text-white/70 rounded-2xl font-black uppercase tracking-wider text-xs cursor-not-allowed shadow-lg"
-                                    >
-                                        <RefreshCw size={15} className="animate-spin" /> En attente de l'adversaire...
-                                    </button>
-                                ) : rematchRequestedByOpponent ? (
-                                    <button 
-                                        onClick={handleAcceptRematch}
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-black uppercase tracking-wider text-xs shadow-xl shadow-emerald-500/25 active:scale-98 transition-all animate-pulse"
-                                    >
-                                        <Swords size={16} /> Accepter la revanche ⚔️
-                                    </button>
-                                ) : (
-                                    <button 
-                                        onClick={handleRequestRematch}
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-black uppercase tracking-wider text-xs shadow-xl shadow-blue-500/25 active:scale-98 transition-all"
-                                    >
-                                        <Swords size={16} /> Revanche immédiate ⚔️
-                                    </button>
+                                {opponentLeft && (
+                                    <div className="w-full p-3 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-bold text-center flex items-center justify-center gap-2">
+                                        <span>🚪</span> {opponent.name} a quitté le duel.
+                                    </div>
+                                )}
+
+                                {rematchRequestedByOpponent && !opponentLeft && (
+                                    <div className="w-full p-2.5 rounded-2xl bg-amber-500/20 border-2 border-amber-500/50 text-amber-300 text-xs font-black text-center animate-pulse flex items-center justify-center gap-2">
+                                        <span>⚔️</span> {opponent.name} demande une revanche immédiate !
+                                    </div>
+                                )}
+
+                                {!opponentLeft && (
+                                    rematchRequestedByMe ? (
+                                        <button 
+                                            onClick={handleRequestRematch}
+                                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600/30 hover:bg-blue-600/50 active:scale-98 text-blue-200 rounded-2xl font-black uppercase tracking-wider text-xs border border-blue-500/40 transition-all shadow-lg"
+                                            title="Cliquer pour renvoyer le signal"
+                                        >
+                                            <RefreshCw size={15} className="animate-spin text-blue-400" /> En attente de {opponent.name}... (Renvoyer 🔔)
+                                        </button>
+                                    ) : rematchRequestedByOpponent ? (
+                                        <button 
+                                            onClick={executeAcceptRematch}
+                                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-black uppercase tracking-wider text-xs shadow-xl shadow-emerald-500/30 active:scale-98 transition-all animate-pulse"
+                                        >
+                                            <Swords size={16} /> Accepter la revanche ⚔️
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            onClick={handleRequestRematch}
+                                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-black uppercase tracking-wider text-xs shadow-xl shadow-blue-500/25 active:scale-98 transition-all"
+                                        >
+                                            <Swords size={16} /> Revanche immédiate ⚔️
+                                        </button>
+                                    )
                                 )}
 
                                 <button 

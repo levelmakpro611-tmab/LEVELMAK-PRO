@@ -113,35 +113,36 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0a0f1d] flex flex-col pt-10 px-4 md:px-8 pb-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8 max-w-2xl mx-auto w-full">
+    <div className="fixed inset-0 z-[200] bg-[#0a0f1d] flex flex-col justify-between overflow-y-auto pt-[max(env(safe-area-inset-top,0px),1rem)] pb-[max(env(safe-area-inset-bottom,0px),1rem)] px-4 sm:px-6 md:px-8 select-none">
+      {/* Header - Positioned below safe area on iOS and Android */}
+      <div className="flex justify-between items-center mb-4 sm:mb-6 max-w-2xl mx-auto w-full shrink-0 pt-2">
         <button 
           onClick={() => { HapticFeedback.selection(); onClose(); }}
-          className="p-3 bg-white/5 rounded-xl hover:bg-white/10 text-slate-300 transition-colors"
+          className="p-3 sm:p-3.5 bg-white/10 hover:bg-white/20 active:scale-90 rounded-2xl text-white transition-all shadow-lg border border-white/10 flex items-center justify-center cursor-pointer"
+          title="Retour aux cours"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={22} className="stroke-[2.5]" />
         </button>
         
-        <div className="text-center">
-          <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Répétition Espacée</p>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2 justify-center">
-            <Brain className="text-purple-400" /> Mode Flashcards
+        <div className="text-center px-2">
+          <p className="text-[10px] sm:text-xs font-black text-purple-400 uppercase tracking-widest leading-tight">Répétition Espacée</p>
+          <h2 className="text-base sm:text-lg md:text-xl font-black text-white flex items-center gap-1.5 justify-center leading-tight mt-0.5">
+            <Brain className="text-purple-400 shrink-0" size={20} /> Mode Flashcards
           </h2>
         </div>
         
-        <div className="p-3 bg-white/5 rounded-xl text-slate-300 font-bold font-mono">
+        <div className="px-3 py-2 sm:px-4 sm:py-2.5 bg-white/10 rounded-2xl text-white font-black font-mono text-xs sm:text-sm border border-white/10 shadow-lg shrink-0">
           {currentIndex + 1} / {cardsToReview.length}
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full max-w-2xl mx-auto h-1 bg-white/10 rounded-full mb-10 overflow-hidden">
+      <div className="w-full max-w-2xl mx-auto h-1.5 bg-white/10 rounded-full mb-6 sm:mb-8 overflow-hidden shrink-0">
         <motion.div 
-          className="h-full bg-purple-500 w-full"
+          className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 w-full"
           style={{ originX: 0 }}
           initial={{ scaleX: 0 }}
-          animate={{ scaleX: cardsToReview.length > 0 ? currentIndex / cardsToReview.length : 0 }}
+          animate={{ scaleX: cardsToReview.length > 0 ? (currentIndex + 1) / cardsToReview.length : 0 }}
         />
       </div>
       {/* Card Area with Floating Navigation Arrows */}
@@ -180,7 +181,7 @@ export const FlashcardMode: React.FC<{ onClose: () => void, filterTopic?: string
 
         <div className="w-full min-w-0">
           <motion.div
-              className="relative w-full h-[440px] sm:h-[500px] md:h-[540px] cursor-pointer mx-auto"
+              className="relative w-full h-[min(440px,50vh)] sm:h-[480px] md:h-[520px] cursor-pointer mx-auto"
               style={{ transformStyle: 'preserve-3d' }}
               onClick={handleFlip}
               initial={false}
