@@ -432,7 +432,6 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
           if (isForMe) {
               console.log("⚔️ [Map] Received battle_invite in WorldBrainMap:", req);
               setLocalIncomingInvite(req); 
-              setPendingBattleInvite(req);
               sendLocalNotification('Nouveau Défi ! ⚔️', `${req.host?.name || 'Un ami'} te défie au ${req.type === 'quiz' ? 'Quiz' : req.type === 'doodle' ? 'Doodle' : 'Morpion'}`);
               HapticFeedback.success();
               audioService.playBattleInvite();

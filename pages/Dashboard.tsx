@@ -126,6 +126,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return calculateLevelAndXp(user?.totalXp || 0, user?.xp);
   }, [user?.totalXp, user?.xp]);
 
+  const prevLevelRef = React.useRef<number>(levelData.level);
+
   React.useEffect(() => {
     if (levelData.level > prevLevelRef.current) {
       feedbackService.fullSuccess();
@@ -212,7 +214,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const fromHours = user.stats?.hoursLearned ? Math.round(user.stats.hoursLearned * 60) : 0;
     if (fromHours > 0) return fromHours;
 
-    const fromSubjects = Object.values(user.analytics?.studyTimeBySubject || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0), 0);
+    const fromSubjects: number = Number(Object.values(user.analytics?.studyTimeBySubject || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0), 0));
     if (fromSubjects > 0) return fromSubjects;
 
     const fromDays = (user.analytics?.studyTimeByDay || []).reduce((acc: number, d: any) => acc + (Number(d.minutes) || 0), 0);
