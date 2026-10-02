@@ -104,7 +104,12 @@ export const MindGarden: React.FC = () => {
             HapticFeedback.success();
             if (harvestPlant) {
               const res = harvestPlant(plant.id);
-              addNotification('success', 'Récolte réussie ! 🌾', `Tu as cueilli ta plante avec succès (+${res?.coins || 15} LevelCoins et +${res?.xp || 25} XP remportés) !`);
+              addNotification(
+                'success',
+                'Récolte réussie ! 🌸',
+                `Tu as cueilli ta fleur avec succès (+${res?.coins || 200} LevelCoins et +${res?.xp || 100} XP remportés) !`,
+                '/assets/garden/flower_harvest.png'
+              );
             }
             return;
           }
@@ -138,13 +143,18 @@ export const MindGarden: React.FC = () => {
               HapticFeedback.success();
               if (harvestPlant) {
                 const res = harvestPlant(plant.id);
-                addNotification('success', 'Récolte réussie ! 🌾', `Tu as cueilli ta plante avec succès (+${res.coins || 15} LevelCoins et +${res.xp || 25} XP remportés) !`);
+                addNotification(
+                  'success',
+                  'Récolte réussie ! 🌸',
+                  `Tu as cueilli ta fleur avec succès (+${res?.coins || 200} LevelCoins et +${res?.xp || 100} XP remportés) !`,
+                  '/assets/garden/flower_harvest.png'
+                );
               }
             }}
-            className="mt-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-500 hover:from-amber-400 hover:to-emerald-400 text-white font-black text-[9px] rounded-full shadow-lg shadow-emerald-500/30 animate-bounce flex items-center gap-1 active:scale-90 transition-transform"
+            className="mt-1.5 px-3 py-1 bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-500 hover:from-amber-400 hover:to-emerald-400 text-white font-black text-[9px] rounded-full shadow-lg shadow-emerald-500/30 animate-bounce flex items-center gap-1 active:scale-90 transition-transform"
           >
             <span>🌾 Cueillir</span>
-            <span className="text-[8px] bg-black/30 px-1 rounded-full">+15🪙</span>
+            <span className="text-[8px] bg-black/30 px-1 rounded-full">+200🪙</span>
           </button>
         )}
 
@@ -213,7 +223,12 @@ export const MindGarden: React.FC = () => {
                         if (weedCures > 0) {
                             HapticFeedback.success();
                             waterGarden(plant.id, 'weed_cure');
-                            addNotification('success', 'Racines protégées ! 🛡️', 'Les parasites ont été éradiqués avec succès !');
+                            addNotification(
+                              'success',
+                              'Parasites éradiqués ! 🐛',
+                              'Les parasites ont été éliminés avec succès ! Les racines de ta plante sont désormais saines et protégées.',
+                              '/assets/garden/garden_pest.png'
+                            );
                         } else {
                             addNotification('info', 'Pas de soin anti-parasites !', 'Achète le Soin Désherbeur & Anti-Parasites dans la boutique.');
                         }
@@ -238,7 +253,7 @@ export const MindGarden: React.FC = () => {
     const needsWater = garden.plants.some(p => getPlantHealth(p) === 'thirsty' || getPlantHealth(p) === 'withered');
     if (needsWater) return { title: "Alerte hydratation 💧", text: "Utilise tes bidons d'eau pour hydrater tes plantes !", color: "text-amber-600 dark:text-amber-500" };
     
-    const hasAdult = garden.plants.some(p => (p.quizzesContributed || 0) >= 10 && (p.growthStage ?? 0) >= 4);
+    const hasAdult = garden.plants.some(p => (p.quizzesContributed || 0) >= 10 || (p.growthStage ?? 0) >= 4);
     if (hasAdult) return { title: "Récolte disponible 🌸", text: "Une plante est arrivée à pleine maturité ! Cueille-la pour tes récompenses.", color: "text-amber-500 dark:text-amber-400" };
 
     const growingCount = garden.plants.filter(p => (p.quizzesContributed || p.growthStage || 1) < 10).length;

@@ -90,6 +90,28 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
             return <img src="/logo.png" className="w-full h-full object-contain p-0.5 rounded-lg drop-shadow-sm" alt="LEVELMAK" />;
         }
 
+        // 4. Garden Harvest / Flower notification
+        if (titleLower.includes('récolte') || titleLower.includes('fleur') || titleLower.includes('cueilli') || (notif.type as any) === 'garden_harvest') {
+            return (
+                <img 
+                    src="/assets/garden/flower_harvest.png" 
+                    className="w-full h-full object-cover rounded-xl shadow-sm" 
+                    alt="Récolte Fleur" 
+                />
+            );
+        }
+
+        // 5. Garden Pest / Parasite notification
+        if (titleLower.includes('parasite') || titleLower.includes('racine') || titleLower.includes('éradiqué') || (notif.type as any) === 'garden_pests') {
+            return (
+                <img 
+                    src="/assets/garden/garden_pest.png" 
+                    className="w-full h-full object-cover rounded-xl shadow-sm" 
+                    alt="Parasite" 
+                />
+            );
+        }
+
         switch (notif.type) {
             case 'achievement': return <Trophy className="text-amber-500" size={18} />;
             case 'mission_available': return <Target className="text-secondary" size={18} />;

@@ -400,25 +400,27 @@ export const useGamificationStore = (
         });
     }, [setUser]);
 
-    const harvestPlant = useCallback((plantId: string) => {
-        let rewardCoins = 15;
-        let rewardXp = 25;
+    const harvestPlant = useCallback((plantId?: string) => {
+        const rewardCoins = 200;
+        const rewardXp = 100;
 
         setUser(prev => {
             if (!prev) return null;
 
             const localGardenStr = prev.id ? localStorage.getItem(`levelmak_garden_${prev.id}`) : null;
             const baseGarden = resolveGarden(prev.garden, prev.stats?.garden, localGardenStr);
-            const plant = (baseGarden.plants || []).find(p => p.id === plantId);
-            if (!plant) return prev;
+            const plants = baseGarden.plants || [];
 
-            if (plant.type === 'tree' || plant.type === 'lotus' || plant.type === 'bonsai') {
-                rewardCoins = 20;
-                rewardXp = 35;
+            // Identify plant to harvest: matching plantId or the mature plant (10 quiz / stage 4)
+            let targetPlant = plantId ? plants.find(p => p.id === plantId) : null;
+            if (!targetPlant) {
+                targetPlant = plants.find(p => (p.quizzesContributed || 0) >= 10 || (p.growthStage ?? 0) >= 4) || plants[0];
             }
+            if (!targetPlant) return prev;
 
-            // Libère l'emplacement pour semer une nouvelle graine
-            const updatedPlants = (baseGarden.plants || []).filter(p => p.id !== plantId);
+            const targetId = targetPlant.id;
+            // Remove the harvested plant so the slot is cleared completely
+            const updatedPlants = plants.filter(p => p.id !== targetId && p.id !== plantId);
             const newGarden = {
                 ...baseGarden,
                 plants: updatedPlants
@@ -435,6 +437,11 @@ export const useGamificationStore = (
                 levelCoins: newCoins
             };
 
+            const updatedAvatar = {
+                ...(prev.avatar || {}),
+                garden: newGarden
+            };
+
             const updated = {
                 ...prev,
                 levelCoins: newCoins,
@@ -443,6 +450,7 @@ export const useGamificationStore = (
                 xp: xpLevelInfo.currentLevelXp,
                 level: String(xpLevelInfo.level),
                 garden: newGarden,
+                avatar: updatedAvatar,
                 stats: newStats
             };
 
@@ -459,10 +467,7 @@ export const useGamificationStore = (
                     xp: xpLevelInfo.currentLevelXp,
                     level: String(xpLevelInfo.level),
                     stats: newStats,
-                    avatar_config: {
-                        ...(prev.avatar || {}),
-                        garden: newGarden
-                    }
+                    avatar_config: updatedAvatar
                 }).eq('id', prev.id).then(({ error }) => {
                     if (error) console.error('[harvestPlant sync error]:', error);
                 });
@@ -471,6 +476,7 @@ export const useGamificationStore = (
             return updated;
         });
 
+        return { coins: rewardCoins, xp: rewardXp };
     }, [setUser]);
 
     const purchaseItem = useCallback((itemId: string, price: number, originalId?: string): boolean => {
