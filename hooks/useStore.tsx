@@ -75,19 +75,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Missing legacy states
   const notifications = useMemo(() => {
-    let list: any[] = [];
-    if (auth.user?.stats?.notifications && Array.isArray(auth.user.stats.notifications) && auth.user.stats.notifications.length > 0) {
-      list = auth.user.stats.notifications;
-    } else if (auth.user?.id) {
+    const notifsMap = new Map<string, any>();
+
+    // 1. From localStorage
+    if (auth.user?.id) {
       try {
         const stored = localStorage.getItem(`levelmak_notifications_${auth.user.id}`);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
+          if (Array.isArray(parsed)) {
+            parsed.forEach((n: any) => { if (n?.id) notifsMap.set(String(n.id), n); });
+          }
         }
       } catch (_) {}
     }
-    return list.map(normalizeNotification);
+
+    // 2. From user profile stats
+    if (auth.user?.stats?.notifications && Array.isArray(auth.user.stats.notifications)) {
+      auth.user.stats.notifications.forEach((n: any) => {
+        if (n?.id) notifsMap.set(String(n.id), n);
+      });
+    }
+
+    const list = Array.from(notifsMap.values()).map(normalizeNotification);
+    list.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+    return list;
   }, [auth.user?.id, auth.user?.stats?.notifications]);
   const [continuousStudyTime, setContinuousStudyTime] = useState(0);
   const [offlinePacks, setOfflinePacks] = useState<string[]>([]);

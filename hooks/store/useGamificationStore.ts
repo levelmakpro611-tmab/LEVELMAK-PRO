@@ -219,11 +219,11 @@ export const useGamificationStore = (
                     // 8-9 = Stage 3 (Pre-bloom Bud 🌺)
                     // 10 = Stage 4 (Full Mature Bloom 🌸/🌳) -> requires at least 2 days of real maintenance
                     let nextStage = 1;
-                    if (quizzes >= 10 && (ageDays >= 1.8 || daysMaintained >= 2)) {
+                    if (quizzes >= 10 && ageDays >= 2.0 && daysMaintained >= 2) {
                         nextStage = 4;
                     } else if (quizzes >= 7) {
                         nextStage = 3;
-                    } else if (quizzes >= 3) {
+                    } else if (quizzes >= 4) {
                         nextStage = 2;
                     } else {
                         nextStage = 1;
@@ -328,10 +328,10 @@ export const useGamificationStore = (
                     };
                 }
 
-                // Water gives hydration and +0.5 quiz progress; Fertilizer gives a full +1.5 quiz progress boost
-                const boost = itemType === 'water_can' ? 0.5 : 1.5;
+                // Hydration micro-progression : eau (+0.01) et engrais (+0.02), croissance progressive sur 2 à 3 jours réels
+                const boost = itemType === 'water_can' ? 0.01 : 0.02;
                 const currentQuizzes = Number(plant.quizzesContributed || plant.growthStage || 1);
-                const newQuizzes = Math.min(10, currentQuizzes + boost);
+                const newQuizzes = Math.min(10, Number((currentQuizzes + boost).toFixed(2)));
 
                 const plantedTime = new Date(plant.plantedAt || Date.now()).getTime();
                 const ageDays = (Date.now() - plantedTime) / (1000 * 60 * 60 * 24);
@@ -341,11 +341,12 @@ export const useGamificationStore = (
                     : (plant.daysMaintained || 1);
 
                 let nextStage = plant.growthStage;
-                if (newQuizzes >= 10 && (ageDays >= 1.8 || daysMaintained >= 2)) {
+                // Stade adulte 4 requiert 10 quiz ET au moins 2 jours réels d'entretien
+                if (newQuizzes >= 10 && ageDays >= 2.0 && daysMaintained >= 2) {
                     nextStage = 4;
                 } else if (newQuizzes >= 7) {
                     nextStage = 3;
-                } else if (newQuizzes >= 3) {
+                } else if (newQuizzes >= 4) {
                     nextStage = 2;
                 } else {
                     nextStage = 1;

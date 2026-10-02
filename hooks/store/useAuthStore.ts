@@ -168,23 +168,39 @@ export const useAuthStore = () => {
                                     appUser.education = savedEducation;
                                 }
 
-                                // Persistance des notifications au rechargement
+                                // Persistance et fusion intégrale des notifications au démarrage
                                 const localNotifsStr = appUser.id ? localStorage.getItem(`levelmak_notifications_${appUser.id}`) : null;
-                                let localNotifs = [];
+                                let localNotifs: any[] = [];
                                 if (localNotifsStr) {
                                     try { localNotifs = JSON.parse(localNotifsStr); } catch (_) {}
                                 }
-                                const rawNotifs = (data.stats?.notifications && Array.isArray(data.stats.notifications) && data.stats.notifications.length > 0)
-                                    ? data.stats.notifications
-                                    : (parsedUser?.stats?.notifications && parsedUser.stats.notifications.length > 0)
-                                        ? parsedUser.stats.notifications
-                                        : localNotifs;
+                                const dbNotifs = Array.isArray(data.stats?.notifications) ? data.stats.notifications : [];
+                                const cachedUserNotifs = Array.isArray(parsedUser?.stats?.notifications) ? parsedUser.stats.notifications : [];
 
-                                let finalNotifs = rawNotifs.map(normalizeNotification);
+                                const notifsMap = new Map<string, any>();
+                                // Fusionner sans jamais supprimer de notifications
+                                localNotifs.forEach((n: any) => { if (n?.id) notifsMap.set(String(n.id), n); });
+                                cachedUserNotifs.forEach((n: any) => { if (n?.id && !notifsMap.has(String(n.id))) notifsMap.set(String(n.id), n); });
+                                dbNotifs.forEach((n: any) => { if (n?.id && !notifsMap.has(String(n.id))) notifsMap.set(String(n.id), n); });
 
-                                // Filter out any stale artificial bonus notifications
-                                finalNotifs = finalNotifs.filter((n: any) => n?.id !== `bonus_admin_${appUser.id}`);
+                                // Si l'utilisateur possède un abonnement premium actif, garantir la présence d'une notification officielle
+                                if (appUser.is_premium && appUser.premium_until) {
+                                    const subNotifKey = `sub_active_${appUser.id}_${appUser.premium_until.substring(0, 10)}`;
+                                    if (!notifsMap.has(subNotifKey)) {
+                                        const expiryFormatted = new Date(appUser.premium_until).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                                        notifsMap.set(subNotifKey, {
+                                            id: subNotifKey,
+                                            type: 'admin',
+                                            title: '👑 Abonnement LEVELMAK PRO Actif',
+                                            message: `Votre abonnement LEVELMAK PRO est actif jusqu'au ${expiryFormatted}. Accédez sans limite à tous vos outils exclusifs !`,
+                                            timestamp: new Date().toISOString(),
+                                            read: false
+                                        });
+                                    }
+                                }
 
+                                let finalNotifs = Array.from(notifsMap.values()).map(normalizeNotification);
+                                finalNotifs.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
 
                                 // Synchronisation et persistance infaillible du Jardin de l'Esprit & Consommables
                                 const localGardenStr = appUser.id ? localStorage.getItem(`levelmak_garden_${appUser.id}`) : null;
@@ -816,6 +832,55 @@ export const useAuthStore = () => {
                                 customGoals: preservedCustomGoals || currentUser?.analytics?.customGoals
                             } : undefined;
 
+                            // Preserve and merge notifications across remote updates
+                            const localNotifsStr = currentUser?.id ? localStorage.getItem(`levelmak_notifications_${currentUser.id}`) : null;
+                            let cachedLocalNotifs: any[] = [];
+                            if (localNotifsStr) {
+                                try { cachedLocalNotifs = JSON.parse(localNotifsStr); } catch (_) {}
+                            }
+                            const currentNotifs = currentUser?.stats?.notifications || [];
+                            const remoteNotifs = mappedUser.stats?.notifications || [];
+
+                            const notifsMap = new Map<string, any>();
+                            cachedLocalNotifs.forEach((n: any) => { if (n?.id) notifsMap.set(String(n.id), n); });
+                            currentNotifs.forEach((n: any) => { if (n?.id && !notifsMap.has(String(n.id))) notifsMap.set(String(n.id), n); });
+                            remoteNotifs.forEach((n: any) => { if (n?.id && !notifsMap.has(String(n.id))) notifsMap.set(String(n.id), n); });
+
+                            // Detect if admin gave bonus coins via Realtime
+                            const oldCoins = Number(currentUser?.levelCoins ?? (currentUser as any)?.level_coins ?? 0);
+                            const newCoins = Number(mappedUser.levelCoins ?? (mappedUser as any)?.level_coins ?? 0);
+                            const coinDiff = newCoins - oldCoins;
+                            if (coinDiff > 0) {
+                                const coinNotifId = `bonus_coins_${Date.now()}`;
+                                notifsMap.set(coinNotifId, {
+                                    id: coinNotifId,
+                                    type: 'admin',
+                                    title: '🎁 Bonus LevelCoins Reçu !',
+                                    message: `L'administration vous a accordé un bonus de +${coinDiff} LevelCoins !`,
+                                    timestamp: new Date().toISOString(),
+                                    read: false
+                                });
+                            }
+
+                            // Detect if admin prolonged subscription
+                            if (mappedUser.premium_until && currentUser?.premium_until && mappedUser.premium_until !== currentUser.premium_until) {
+                                const bonusSubId = `bonus_sub_${mappedUser.premium_until.substring(0, 10)}`;
+                                if (!notifsMap.has(bonusSubId)) {
+                                    const expiryFormatted = new Date(mappedUser.premium_until).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                                    notifsMap.set(bonusSubId, {
+                                        id: bonusSubId,
+                                        type: 'admin',
+                                        title: '👑 Abonnement Prolongé !',
+                                        message: `L'administration a prolongé votre abonnement LEVELMAK PRO jusqu'au ${expiryFormatted}. Profitez pleinement de vos avantages !`,
+                                        timestamp: new Date().toISOString(),
+                                        read: false
+                                    });
+                                }
+                            }
+
+                            const mergedNotifs = Array.from(notifsMap.values()).map(normalizeNotification);
+                            mergedNotifs.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+
                             const finalUser = {
                                 ...mappedUser,
                                 avatar: preservedAvatar,
@@ -824,6 +889,7 @@ export const useAuthStore = () => {
                                 consumables: preservedConsumables,
                                 stats: {
                                     ...(mappedUser.stats || {}),
+                                    notifications: mergedNotifs,
                                     garden: preservedGarden,
                                     consumables: preservedConsumables
                                 },
@@ -834,17 +900,12 @@ export const useAuthStore = () => {
                             };
 
                             if (finalUser.id) {
+                                localStorage.setItem(`levelmak_notifications_${finalUser.id}`, JSON.stringify(mergedNotifs));
                                 saveLocalGarden(finalUser.id, preservedGarden);
                                 saveLocalConsumables(finalUser.id, preservedConsumables);
                             }
 
-                            // Detect if there are genuinely NEW notifications (strictly once per ID)
-                            // Also detect if admin gave bonus coins via Realtime
-                            const oldCoins = Number(currentUser?.levelCoins ?? (currentUser as any)?.level_coins ?? 0);
-                            const newCoins = Number(mappedUser.levelCoins ?? (mappedUser as any)?.level_coins ?? 0);
-                            const coinDiff = newCoins - oldCoins;
-
-                            let newNotifs = (finalUser.stats?.notifications || []).map(normalizeNotification);
+                            let newNotifs = mergedNotifs;
 
 
 

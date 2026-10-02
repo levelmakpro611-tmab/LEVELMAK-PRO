@@ -50,8 +50,9 @@ export const MindGarden: React.FC = () => {
     else if (health === 'withered') filter = 'grayscale(60%) sepia(60%) hue-rotate(-30deg) brightness(0.75)';
     else if (health === 'dead') filter = 'grayscale(100%) opacity(0.4)';
 
-    const quizzes = Math.min(10, Math.max(1, Math.round(plant.quizzesContributed || plant.growthStage || 1)));
-    const isAdult = quizzes >= 10 || (plant.growthStage ?? 0) >= 4;
+    const rawQuizzes = Math.min(10, Math.max(1, plant.quizzesContributed || plant.growthStage || 1));
+    const quizzes = Math.min(10, Number(rawQuizzes.toFixed(2)));
+    const isAdult = (quizzes >= 10 || (plant.growthStage ?? 0) >= 4) && (plant.daysMaintained || 1) >= 2;
 
     let emoji = '🌱';
     let emojiClass = 'text-5xl';
@@ -131,7 +132,15 @@ export const MindGarden: React.FC = () => {
             />
         </div>
         <span className="text-[9px] font-black tracking-tight text-slate-700 dark:text-slate-300 mt-1 text-center">
-          {isAdult ? '🌸 Prête à récolter' : health === 'pests' ? '🐛 Parasites aux racines' : health === 'withered' ? '🥀 Fanée' : `🌱 ${quizzes}/10 quiz`}
+          {isAdult 
+            ? '🌸 Prête à récolter' 
+            : health === 'pests' 
+              ? '🐛 Parasites aux racines' 
+              : health === 'withered' 
+                ? '🥀 Fanée' 
+                : quizzes >= 10 
+                  ? '🌸 En floraison (soins J-2 requis)' 
+                  : `🌱 ${quizzes % 1 === 0 ? quizzes : quizzes.toFixed(2)}/10 quiz`}
         </span>
 
         {/* Bouton de récolte quand la plante est adulte */}
@@ -220,6 +229,11 @@ export const MindGarden: React.FC = () => {
                 <button 
                     onClick={(e) => {
                         e.stopPropagation();
+                        const isInfested = health === 'pests' || plant.hasPests || plant.state === 'pests';
+                        if (!isInfested) {
+                            addNotification('info', 'Plante en pleine santé 🌱', 'Tes racines sont parfaitement saines ! Conserve ton Soin Désherbeur pour le moment où des parasites attaqueront.');
+                            return;
+                        }
                         if (weedCures > 0) {
                             HapticFeedback.success();
                             waterGarden(plant.id, 'weed_cure');
@@ -233,8 +247,12 @@ export const MindGarden: React.FC = () => {
                             addNotification('info', 'Pas de soin anti-parasites !', 'Achète le Soin Désherbeur & Anti-Parasites dans la boutique.');
                         }
                     }}
-                    className={`p-2 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-all active:scale-90 ${weedCures > 0 ? 'bg-amber-500 text-white hover:bg-amber-400 shadow-md' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
-                    title="Soin Désherbeur & Anti-Parasites (sauve les racines)"
+                    className={`p-2 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-all active:scale-90 ${
+                        (health === 'pests' || plant.hasPests || plant.state === 'pests')
+                            ? (weedCures > 0 ? 'bg-amber-500 text-white hover:bg-amber-400 shadow-md animate-pulse' : 'bg-rose-900/60 text-rose-300')
+                            : 'bg-slate-800 text-slate-500 opacity-60 cursor-not-allowed'
+                    }`}
+                    title={health === 'pests' || plant.hasPests ? 'Soin Désherbeur & Anti-Parasites (éradique les parasites)' : 'Plante saine : aucun parasite à soigner'}
                 >
                     <ShieldCheck size={12} /> {weedCures}
                 </button>
@@ -253,7 +271,7 @@ export const MindGarden: React.FC = () => {
     const needsWater = garden.plants.some(p => getPlantHealth(p) === 'thirsty' || getPlantHealth(p) === 'withered');
     if (needsWater) return { title: "Alerte hydratation 💧", text: "Utilise tes bidons d'eau pour hydrater tes plantes !", color: "text-amber-600 dark:text-amber-500" };
     
-    const hasAdult = garden.plants.some(p => (p.quizzesContributed || 0) >= 10 || (p.growthStage ?? 0) >= 4);
+    const hasAdult = garden.plants.some(p => ((p.quizzesContributed || 0) >= 10 || (p.growthStage ?? 0) >= 4) && (p.daysMaintained || 1) >= 2);
     if (hasAdult) return { title: "Récolte disponible 🌸", text: "Une plante est arrivée à pleine maturité ! Cueille-la pour tes récompenses.", color: "text-amber-500 dark:text-amber-400" };
 
     const growingCount = garden.plants.filter(p => (p.quizzesContributed || p.growthStage || 1) < 10).length;
@@ -320,27 +338,12 @@ export const MindGarden: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  HapticFeedback.success();
-                  plantInGarden('tree');
-                  addNotification('success', 'Graine semée !', 'Ta première pousse est apparue ! Fais des quiz pour l\'arroser et la faire fleurir.');
-                }}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
-              >
-                <Sprout size={14} />
-                <span>Semer ma graine</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!garden || garden.plants.length === 0) {
-                    plantInGarden('tree');
-                  }
                   window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'quiz' } }));
                 }}
-                className="px-3.5 py-2 bg-slate-900/10 dark:bg-white/10 hover:bg-slate-900/20 dark:hover:bg-white/20 text-slate-800 dark:text-white font-black text-xs rounded-xl border border-slate-300/80 dark:border-white/10 transition-all active:scale-95 flex items-center gap-1.5"
+                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-500/25 transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
               >
-                <Sparkles size={14} className="text-amber-500" />
-                <span>Lancer un Quiz</span>
+                <Sparkles size={15} className="text-amber-300" />
+                <span>Lancer un Quiz pour semer</span>
               </button>
             </div>
           </div>
