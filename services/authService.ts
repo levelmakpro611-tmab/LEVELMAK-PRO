@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { User, SchoolLevel, GradeClass } from '../types';
+import { resolveGarden, resolveConsumables, saveLocalGarden, saveLocalConsumables } from './gardenSyncService';
 
 // ======================================================
 // Helper: Normalize phone to a consistent email format
@@ -130,42 +131,58 @@ export const mapProfileToUser = (profile: any): User => {
         computedLevel = SchoolLevel.UNIVERSITY;
     }
 
-    return {
-        ...profile,
-        streak: { current: currentStreak, lastLogin: lastLoginIso },
-        is_premium: isPremium,
-        premium_until: premiumUntil,
-        education: rawEducation,
-        phoneNumber: profile.phone_number,
-        totalXp: profile.total_xp || 0,
-        levelCoins: profile.level_coins || 50,
-        onboardingCompleted: profile.onboarding_completed || false,
-        level: computedLevel || SchoolLevel.HIGH,
-        gradeClass: computedGradeClass || 'Terminale',
-        subscriptionTier: calculatedTier as any,
-        avatar: profile.avatar_config || {
-            baseColor: '#3B82F6',
-            accessory: 'none',
-            aura: 'none',
-            currentLevel: 1
-        },
-        stats: stats,
-        garden: stats.garden || profile.garden || profile.avatar_config?.garden || { plants: [] },
-        consumables: stats.consumables || profile.consumables || { water_can: 1 },
-        customSubjects: stats.customSubjects || profile.customSubjects || [],
-        activeSubjects: stats.activeSubjects || profile.activeSubjects || undefined,
-        subjectTargets: stats.subjectTargets || profile.subjectTargets || {},
-        analytics: stats.analytics || profile.analytics || undefined,
-        coachSessions: profile.coach_sessions || [],
-        status: profile.status || 'active',
-        badges: profile.badges || [],
-        favorites: profile.favorites || [],
-        friends: profile.friends || [],
-        inventory: profile.inventory || [],
-        activities: profile.activities || [],
-        progression: profile.progression || [],
-    } as User;
-};
+        const localGardenRaw = profile.id ? localStorage.getItem(`levelmak_garden_${profile.id}`) : null;
+        const localConsumablesRaw = profile.id ? localStorage.getItem(`levelmak_consumables_${profile.id}`) : null;
+        const resolvedGarden = resolveGarden(stats.garden, profile.garden, profile.avatar_config?.garden, localGardenRaw);
+        const resolvedConsumables = resolveConsumables(stats.consumables, profile.consumables, localConsumablesRaw);
+
+        if (profile.id && resolvedGarden.plants.length > 0) {
+            saveLocalGarden(profile.id, resolvedGarden);
+        }
+        if (profile.id) {
+            saveLocalConsumables(profile.id, resolvedConsumables);
+        }
+
+        return {
+            ...profile,
+            streak: { current: currentStreak, lastLogin: lastLoginIso },
+            is_premium: isPremium,
+            premium_until: premiumUntil,
+            education: rawEducation,
+            phoneNumber: profile.phone_number,
+            totalXp: profile.total_xp || 0,
+            levelCoins: profile.level_coins || 50,
+            onboardingCompleted: profile.onboarding_completed || false,
+            level: computedLevel || SchoolLevel.HIGH,
+            gradeClass: computedGradeClass || 'Terminale',
+            subscriptionTier: calculatedTier as any,
+            avatar: profile.avatar_config || {
+                baseColor: '#3B82F6',
+                accessory: 'none',
+                aura: 'none',
+                currentLevel: 1
+            },
+            stats: {
+                ...stats,
+                garden: resolvedGarden,
+                consumables: resolvedConsumables
+            },
+            garden: resolvedGarden,
+            consumables: resolvedConsumables,
+            customSubjects: stats.customSubjects || profile.customSubjects || [],
+            activeSubjects: stats.activeSubjects || profile.activeSubjects || undefined,
+            subjectTargets: stats.subjectTargets || profile.subjectTargets || {},
+            analytics: stats.analytics || profile.analytics || undefined,
+            coachSessions: profile.coach_sessions || [],
+            status: profile.status || 'active',
+            badges: profile.badges || [],
+            favorites: profile.favorites || [],
+            friends: profile.friends || [],
+            inventory: profile.inventory || [],
+            activities: profile.activities || [],
+            progression: profile.progression || [],
+        } as User;
+    };
 
 const convertCache = new Map<string, Promise<User | null>>();
 

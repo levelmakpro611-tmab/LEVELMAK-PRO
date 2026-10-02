@@ -3,6 +3,13 @@ import React, { useState, useCallback } from 'react';
 import { User, Mission, GardenPlant } from '../../types';
 import { XP_PER_LEVEL, POTIONS, getXpForNextLevel } from '../../constants';
 import { supabase } from '../../services/supabase';
+import { 
+    resolveGarden, 
+    resolveConsumables, 
+    saveLocalGarden, 
+    saveLocalConsumables, 
+    syncGardenToSupabase 
+} from '../../services/gardenSyncService';
 
 export const useGamificationStore = (
     user: User | null, 
@@ -146,7 +153,10 @@ export const useGamificationStore = (
         setUser(prev => {
             if (!prev) return null;
 
-            const existingPlants = prev.garden?.plants || [];
+            const localGardenStr = prev.id ? localStorage.getItem(`levelmak_garden_${prev.id}`) : null;
+            const baseGarden = resolveGarden(prev.garden, prev.stats?.garden, localGardenStr);
+            const existingPlants = baseGarden.plants || [];
+
             // Find if there is an active growing plant (not yet mature at stage 4)
             const activePlantIndex = existingPlants.findIndex(p => (p.growthStage ?? 0) < 4);
 
@@ -194,14 +204,16 @@ export const useGamificationStore = (
             }
 
             const newGarden = {
-                ...prev.garden,
+                ...baseGarden,
                 plants: updatedPlants
             };
 
             // Award +1 water can when starting a new plant or continuing care
-            const currentWater = prev.consumables?.['water_can'] || 0;
+            const localConsumablesStr = prev.id ? localStorage.getItem(`levelmak_consumables_${prev.id}`) : null;
+            const currentConsumables = resolveConsumables(prev.consumables, prev.stats?.consumables, localConsumablesStr);
+            const currentWater = currentConsumables.water_can || 0;
             const newConsumables = {
-                ...prev.consumables,
+                ...currentConsumables,
                 water_can: isNewPlant ? currentWater + 1 : currentWater
             };
             const newStats = {
@@ -216,13 +228,16 @@ export const useGamificationStore = (
                 consumables: newConsumables,
                 stats: newStats
             };
+
+            if (prev.id) {
+                saveLocalGarden(prev.id, newGarden);
+                saveLocalConsumables(prev.id, newConsumables);
+            }
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
 
             // Sync immediately to Supabase
             if (prev.id && !prev.id.includes('anon')) {
-                supabase.from('profiles').update({ stats: newStats }).eq('id', prev.id).then(({ error }) => {
-                    if (error) console.error('[plantInGarden Sync Error]:', error);
-                });
+                syncGardenToSupabase(prev.id, newGarden, newConsumables, prev.avatar);
             }
 
             return updated;
@@ -233,10 +248,15 @@ export const useGamificationStore = (
         setUser(prev => {
             if (!prev) return null;
             
-            const currentItemCount = prev.consumables?.[itemType] || 0;
+            const localConsumablesStr = prev.id ? localStorage.getItem(`levelmak_consumables_${prev.id}`) : null;
+            const currentConsumables = resolveConsumables(prev.consumables, prev.stats?.consumables, localConsumablesStr);
+            const currentItemCount = currentConsumables[itemType] || 0;
             if (currentItemCount <= 0) return prev;
 
-            const updatedPlants = (prev.garden?.plants || []).map(plant => {
+            const localGardenStr = prev.id ? localStorage.getItem(`levelmak_garden_${prev.id}`) : null;
+            const baseGarden = resolveGarden(prev.garden, prev.stats?.garden, localGardenStr);
+
+            const updatedPlants = (baseGarden.plants || []).map(plant => {
                 if (plant.id !== plantId) return plant;
                 
                 // Water gives hydration and +0.5 quiz progress; Fertilizer gives a full +1.5 quiz progress boost
@@ -260,12 +280,12 @@ export const useGamificationStore = (
             });
 
             const newGarden = {
-                ...prev.garden,
+                ...baseGarden,
                 plants: updatedPlants
             };
 
             const newConsumables = {
-                ...prev.consumables,
+                ...currentConsumables,
                 [itemType]: currentItemCount - 1
             };
 
@@ -281,13 +301,16 @@ export const useGamificationStore = (
                 garden: newGarden,
                 stats: newStats
             };
+
+            if (prev.id) {
+                saveLocalGarden(prev.id, newGarden);
+                saveLocalConsumables(prev.id, newConsumables);
+            }
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
 
             // Sync immediately to Supabase
             if (prev.id && !prev.id.includes('anon')) {
-                supabase.from('profiles').update({ stats: newStats }).eq('id', prev.id).then(({ error }) => {
-                    if (error) console.error('[waterGarden Sync Error]:', error);
-                });
+                syncGardenToSupabase(prev.id, newGarden, newConsumables, prev.avatar);
             }
 
             return updated;

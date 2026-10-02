@@ -4,14 +4,20 @@ import { Sprout, Droplets, Leaf, Sparkles } from 'lucide-react';
 import { HapticFeedback } from '../services/nativeAdapters';
 import { POTIONS } from '../constants';
 import { GardenPlant } from '../types';
+import { resolveGarden, resolveConsumables } from '../services/gardenSyncService';
 
 export const MindGarden: React.FC = () => {
   const { user, waterGarden, addNotification, plantInGarden } = useStore();
-  const garden = user?.garden;
   const [selectedPlant, setSelectedPlant] = useState<string | null>(null);
 
-  const waterCans = user?.consumables?.['water_can'] || 0;
-  const fertilizers = user?.consumables?.['fertilizer'] || 0;
+  const localGardenStr = user?.id ? localStorage.getItem(`levelmak_garden_${user.id}`) : null;
+  const garden = resolveGarden(user?.garden, user?.stats?.garden, localGardenStr);
+
+  const localConsumablesStr = user?.id ? localStorage.getItem(`levelmak_consumables_${user.id}`) : null;
+  const consumables = resolveConsumables(user?.consumables, user?.stats?.consumables, localConsumablesStr);
+
+  const waterCans = consumables.water_can || 0;
+  const fertilizers = consumables.fertilizer || 0;
 
   // Dynamic health based on lastWateredAt:
   // - 0 to 24h: Healthy (Pleine forme)

@@ -14,6 +14,13 @@ import {
     signOutUser,
     mapProfileToUser
 } from '../../services/authService';
+import { 
+    resolveGarden, 
+    resolveConsumables, 
+    saveLocalGarden, 
+    saveLocalConsumables, 
+    syncGardenToSupabase 
+} from '../../services/gardenSyncService';
 
 export const useAuthStore = () => {
     const [user, setUser] = useState<User | null>(null);
@@ -127,12 +134,42 @@ export const useAuthStore = () => {
                                         ? parsedUser.stats.notifications
                                         : localNotifs;
 
+                                // Synchronisation et persistance infaillible du Jardin de l'Esprit & Consommables
+                                const localGardenStr = appUser.id ? localStorage.getItem(`levelmak_garden_${appUser.id}`) : null;
+                                const localConsumablesStr = appUser.id ? localStorage.getItem(`levelmak_consumables_${appUser.id}`) : null;
+                                const finalGarden = resolveGarden(
+                                    data.stats?.garden,
+                                    data.avatar_config?.garden,
+                                    data.garden,
+                                    parsedUser?.garden,
+                                    parsedUser?.stats?.garden,
+                                    localGardenStr
+                                );
+                                const finalConsumables = resolveConsumables(
+                                    data.stats?.consumables,
+                                    data.consumables,
+                                    parsedUser?.consumables,
+                                    parsedUser?.stats?.consumables,
+                                    localConsumablesStr
+                                );
+
+                                appUser.garden = finalGarden;
+                                appUser.consumables = finalConsumables;
                                 appUser.stats = {
                                     ...(appUser.stats || {}),
-                                    notifications: finalNotifs
+                                    notifications: finalNotifs,
+                                    garden: finalGarden,
+                                    consumables: finalConsumables
                                 };
+
                                 if (appUser.id) {
                                     localStorage.setItem(`levelmak_notifications_${appUser.id}`, JSON.stringify(finalNotifs));
+                                    saveLocalGarden(appUser.id, finalGarden);
+                                    saveLocalConsumables(appUser.id, finalConsumables);
+                                    // Si des plantes existent localement mais pas encore enregistrées en base, synchroniser immédiatement
+                                    if (finalGarden.plants.length > 0 && (!data.stats?.garden || (data.stats.garden.plants?.length || 0) === 0)) {
+                                        syncGardenToSupabase(appUser.id, finalGarden, finalConsumables, appUser.avatar);
+                                    }
                                 }
 
                                 setUser(appUser);
@@ -199,12 +236,34 @@ export const useAuthStore = () => {
                         const finalNotifs = (profile.stats?.notifications && Array.isArray(profile.stats.notifications) && profile.stats.notifications.length > 0)
                             ? profile.stats.notifications
                             : localNotifs;
+
+                        // Synchronisation et persistance infaillible du Jardin de l'Esprit & Consommables
+                        const localGardenStr = user.id ? localStorage.getItem(`levelmak_garden_${user.id}`) : null;
+                        const localConsumablesStr = user.id ? localStorage.getItem(`levelmak_consumables_${user.id}`) : null;
+                        const finalGarden = resolveGarden(
+                            profile.stats?.garden,
+                            profile.avatar_config?.garden,
+                            profile.garden,
+                            localGardenStr
+                        );
+                        const finalConsumables = resolveConsumables(
+                            profile.stats?.consumables,
+                            profile.consumables,
+                            localConsumablesStr
+                        );
+
+                        user.garden = finalGarden;
+                        user.consumables = finalConsumables;
                         user.stats = {
                             ...(user.stats || {}),
-                            notifications: finalNotifs
+                            notifications: finalNotifs,
+                            garden: finalGarden,
+                            consumables: finalConsumables
                         };
                         if (user.id) {
                             localStorage.setItem(`levelmak_notifications_${user.id}`, JSON.stringify(finalNotifs));
+                            saveLocalGarden(user.id, finalGarden);
+                            saveLocalConsumables(user.id, finalConsumables);
                         }
                         setUser(user);
                         safeLocalStorageSet('levelmak_user', JSON.stringify(user));
@@ -383,10 +442,24 @@ export const useAuthStore = () => {
             if (updates?.analytics !== undefined) updatedStats.analytics = updates.analytics;
 
             // Strictly preserve garden and consumables so they are never lost across profile syncs
-            const currentGarden = updates?.garden || prev.garden || prev.stats?.garden || { plants: [] };
-            const currentConsumables = updates?.consumables || prev.consumables || prev.stats?.consumables || { water_can: 1 };
+            const currentGarden = resolveGarden(
+                updates?.garden,
+                prev.garden,
+                prev.stats?.garden,
+                prev.id ? localStorage.getItem(`levelmak_garden_${prev.id}`) : null
+            );
+            const currentConsumables = resolveConsumables(
+                updates?.consumables,
+                prev.consumables,
+                prev.stats?.consumables,
+                prev.id ? localStorage.getItem(`levelmak_consumables_${prev.id}`) : null
+            );
             updatedStats.garden = currentGarden;
             updatedStats.consumables = currentConsumables;
+            if (prev.id) {
+                saveLocalGarden(prev.id, currentGarden);
+                saveLocalConsumables(prev.id, currentConsumables);
+            }
 
             const updated = { 
                 ...prev, 
@@ -415,6 +488,17 @@ export const useAuthStore = () => {
                     if (educationVal) localStorage.setItem(`levelmak_education_${u.id}`, educationVal);
                 }
 
+                const currentGarden = resolveGarden(
+                    u.garden,
+                    u.stats?.garden,
+                    u.id ? localStorage.getItem(`levelmak_garden_${u.id}`) : null
+                );
+                const currentConsumables = resolveConsumables(
+                    u.consumables,
+                    u.stats?.consumables,
+                    u.id ? localStorage.getItem(`levelmak_consumables_${u.id}`) : null
+                );
+
                 const updatePayload: any = {
                     name: u.name,
                     phone_number: u.phoneNumber,
@@ -427,15 +511,18 @@ export const useAuthStore = () => {
                         gradeClass: gradeClassVal,
                         education: educationVal,
                         level: u.level,
-                        garden: u.garden || u.stats?.garden || { plants: [] },
-                        consumables: u.consumables || u.stats?.consumables || { water_can: 1 },
+                        garden: currentGarden,
+                        consumables: currentConsumables,
                         notifications: u.stats?.notifications || []
                     },
                     badges: u.badges,
                     streak: u.streak,
                     inventory: u.inventory,
                     wallpaper: u.wallpaper,
-                    avatar_config: u.avatar,
+                    avatar_config: {
+                        ...(u.avatar || {}),
+                        garden: currentGarden
+                    },
                     coach_sessions: u.coachSessions
                 };
                 if (u.is_premium !== undefined) updatePayload.is_premium = u.is_premium;
@@ -481,6 +568,16 @@ export const useAuthStore = () => {
             try {
                 const gradeClassVal = user.gradeClass || (user.stats as any)?.gradeClass || user.education;
                 const educationVal = user.education || (user.stats as any)?.education || user.gradeClass;
+                const safeGarden = resolveGarden(
+                    user.garden,
+                    user.stats?.garden,
+                    user.id ? localStorage.getItem(`levelmak_garden_${user.id}`) : null
+                );
+                const safeConsumables = resolveConsumables(
+                    user.consumables,
+                    user.stats?.consumables,
+                    user.id ? localStorage.getItem(`levelmak_consumables_${user.id}`) : null
+                );
 
                 await supabase.from('profiles').update({
                     name: user.name,
@@ -491,8 +588,8 @@ export const useAuthStore = () => {
                     stats: {
                         ...user.stats,
                         analytics: user.analytics || user.stats?.analytics,
-                        garden: user.garden || user.stats?.garden || { plants: [] },
-                        consumables: user.consumables || user.stats?.consumables || { water_can: 1 },
+                        garden: safeGarden,
+                        consumables: safeConsumables,
                         education: educationVal,
                         gradeClass: gradeClassVal,
                         level: user.level || user.stats?.level,
@@ -502,7 +599,10 @@ export const useAuthStore = () => {
                     streak: user.streak,
                     inventory: user.inventory,
                     wallpaper: user.wallpaper,
-                    avatar_config: user.avatar,
+                    avatar_config: {
+                        ...(user.avatar || {}),
+                        garden: safeGarden
+                    },
                     coach_sessions: user.coachSessions
                 }).eq('id', user.id);
                 
@@ -613,9 +713,22 @@ export const useAuthStore = () => {
                             const preservedWallpaper = (user?.wallpaper && !dbProfile.wallpaper)
                                 ? user.wallpaper
                                 : mappedUser.wallpaper;
-                            const preservedGarden = (user?.garden?.plants?.length && (!mappedUser.garden || mappedUser.garden.plants.length === 0))
-                                ? user.garden
-                                : mappedUser.garden;
+                            // ✅ Preserve garden and consumables across remote updates
+                            const preservedGarden = resolveGarden(
+                                mappedUser.garden,
+                                dbProfile.stats?.garden,
+                                dbProfile.avatar_config?.garden,
+                                user?.garden,
+                                user?.stats?.garden,
+                                user?.id ? localStorage.getItem(`levelmak_garden_${user.id}`) : null
+                            );
+                            const preservedConsumables = resolveConsumables(
+                                mappedUser.consumables,
+                                dbProfile.stats?.consumables,
+                                user?.consumables,
+                                user?.stats?.consumables,
+                                user?.id ? localStorage.getItem(`levelmak_consumables_${user.id}`) : null
+                            );
 
                             // ✅ Preserve customGoals and analytics so local goal toggles are never wiped by remote updates
                             const localGoals = user?.analytics?.customGoals;
@@ -641,11 +754,22 @@ export const useAuthStore = () => {
                                 avatar: preservedAvatar,
                                 wallpaper: preservedWallpaper,
                                 garden: preservedGarden,
+                                consumables: preservedConsumables,
+                                stats: {
+                                    ...(mappedUser.stats || {}),
+                                    garden: preservedGarden,
+                                    consumables: preservedConsumables
+                                },
                                 analytics: preservedAnalytics,
                                 customSubjects: user?.customSubjects || mappedUser.customSubjects,
                                 activeSubjects: user?.activeSubjects || mappedUser.activeSubjects,
                                 subjectTargets: user?.subjectTargets || mappedUser.subjectTargets
                             };
+
+                            if (finalUser.id) {
+                                saveLocalGarden(finalUser.id, preservedGarden);
+                                saveLocalConsumables(finalUser.id, preservedConsumables);
+                            }
 
                             // Detect if there are genuinely NEW notifications (strictly once per ID)
                             const newNotifs = finalUser.stats?.notifications || [];
