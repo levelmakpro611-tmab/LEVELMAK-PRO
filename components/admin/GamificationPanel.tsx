@@ -77,7 +77,7 @@ const GamificationPanel: React.FC = () => {
                     phoneNumber: u.phone_number,
                     level: u.level || 1,
                     badges: Array.isArray(u.badges) ? u.badges : [],
-                    levelCoins: Number(u.level_coins || 0),
+                    levelCoins: Number(u.level_coins ?? u.stats?.levelCoins ?? 0),
                     streak: u.streak || { current: 0, lastLogin: new Date().toISOString() },
                     stats: u.stats || {},
                     activities: u.activities || [],
@@ -131,6 +131,7 @@ const GamificationPanel: React.FC = () => {
         const updatedSelected = { ...selectedUser, badges: updatedBadges };
         setSelectedUser(updatedSelected);
         setLeaderboard(prev => prev.map(u => u.id === selectedUser.id ? { ...u, badges: updatedBadges } : u));
+        setSearchResults(prev => prev.map(u => u.id === selectedUser.id ? { ...u, badges: updatedBadges } : u));
 
         try {
             await grantUserBadge(selectedUser.id, badgeId);
@@ -139,7 +140,7 @@ const GamificationPanel: React.FC = () => {
             getLeaderboard(50).then(updatedUsers => {
                 setLeaderboard(updatedUsers);
                 const fresh = updatedUsers.find(u => u.id === selectedUser.id);
-                if (fresh) setSelectedUser(fresh);
+                if (fresh) setSelectedUser(curr => curr ? { ...fresh, badges: curr.badges } : null);
             }).catch(console.error);
         } catch (e: any) {
             console.error('Error granting badge:', e);
@@ -171,6 +172,11 @@ const GamificationPanel: React.FC = () => {
             totalXp: newXp,
             levelCoins: newCoins,
         } : u));
+        setSearchResults(prev => prev.map(u => u.id === selectedUser.id ? {
+            ...u,
+            totalXp: newXp,
+            levelCoins: newCoins,
+        } : u));
 
         const label = type === 'coins' ? `${amount > 0 ? '+' : ''}${amount} Coins 🪙` : `${amount > 0 ? '+' : ''}${amount} XP ⚡`;
 
@@ -184,13 +190,29 @@ const GamificationPanel: React.FC = () => {
 
             setSelectedUser(curr => curr ? { ...curr, totalXp: finalXp, levelCoins: finalCoins } : null);
             setLeaderboard(prev => prev.map(u => u.id === selectedUser.id ? { ...u, totalXp: finalXp, levelCoins: finalCoins } : u));
+            setSearchResults(prev => prev.map(u => u.id === selectedUser.id ? { ...u, totalXp: finalXp, levelCoins: finalCoins } : u));
 
-            // Sync full leaderboard in background (preserve selectedUser even if outside top 50)
+            // Sync full leaderboard in background (preserve authoritative updated values against replication lag)
             getLeaderboard(50).then(updatedUsers => {
-                setLeaderboard(updatedUsers);
+                setLeaderboard(prev => {
+                    return updatedUsers.map(fresh => {
+                        if (fresh.id === selectedUser.id) {
+                            return {
+                                ...fresh,
+                                totalXp: Math.max(Number(fresh.totalXp || 0), finalXp),
+                                levelCoins: finalCoins
+                            };
+                        }
+                        return fresh;
+                    });
+                });
                 const fresh = updatedUsers.find(u => u.id === selectedUser.id);
                 if (fresh) {
-                    setSelectedUser(fresh);
+                    setSelectedUser(curr => curr ? {
+                        ...fresh,
+                        totalXp: Math.max(Number(fresh.totalXp || 0), finalXp),
+                        levelCoins: finalCoins
+                    } : null);
                 }
             }).catch(console.error);
         } catch (e: any) {

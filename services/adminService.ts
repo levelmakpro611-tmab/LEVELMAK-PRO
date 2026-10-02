@@ -1449,43 +1449,87 @@ export const grantUserBadge = async (userId: string, badgeId: string): Promise<v
 
 export const adjustUserResources = async (userId: string, type: 'xp' | 'coins', amount: number): Promise<{ totalXp?: number; levelCoins?: number }> => {
     try {
-        // 1. Try Edge Function (Admin Service Role bypasses RLS)
+        const numAmount = Number(amount) || 0;
+        if (!userId || numAmount === 0) {
+            return {};
+        }
+
+        // 1. Try Edge Function (Admin Service Role bypasses RLS completely)
         try {
             const { data: edgeRes, error: edgeErr } = await supabase.functions.invoke('submit-comment', {
-                body: { action: 'adjust_user_resources', userId, type, amount }
+                body: { action: 'adjust_user_resources', userId, type, amount: numAmount }
             });
             if (!edgeErr && edgeRes?.success) {
-                await logAdminAction('system', 'System', 'user_activity', { type: 'resource_adjust', resource: type, amount }, userId);
+                await logAdminAction('system', 'System', 'user_activity', { type: 'resource_adjust', resource: type, amount: numAmount }, userId);
+                const retXp = edgeRes.data?.total_xp ?? edgeRes.profile?.total_xp;
+                const retCoins = edgeRes.data?.level_coins ?? edgeRes.profile?.level_coins;
                 return {
-                    totalXp: edgeRes.data?.total_xp,
-                    levelCoins: edgeRes.data?.level_coins
+                    totalXp: retXp !== undefined ? Number(retXp) : undefined,
+                    levelCoins: retCoins !== undefined ? Number(retCoins) : undefined
                 };
             }
-        } catch (_) {}
+            if (edgeErr) {
+                console.warn('[adjustUserResources] Edge function warning, attempting direct fallback:', edgeErr);
+            }
+        } catch (edgeEx) {
+            console.warn('[adjustUserResources] Edge function invocation exception:', edgeEx);
+        }
 
-        // 2. Direct Supabase Fallback
+        // 2. Direct Supabase Fallback (updates profiles + stats + real-time notification)
         const { data: userData, error: fetchError } = await supabase
             .from('profiles')
-            .select('xp, total_xp, level_coins')
+            .select('xp, total_xp, level_coins, stats')
             .eq('id', userId)
             .single();
 
         if (fetchError) throw fetchError;
 
-        let resTotalXp = userData.total_xp;
-        let resLevelCoins = userData.level_coins;
+        let resTotalXp = Number(userData.total_xp || 0);
+        let resLevelCoins = Number(userData.level_coins ?? userData.stats?.levelCoins ?? 0);
+        const currentStats = (userData.stats && typeof userData.stats === 'object') ? userData.stats : {};
+
+        const notifId = `reward_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const notif = {
+            id: notifId,
+            title: type === 'coins' ? '🪙 Level Coins Reçus !' : '⚡ Points d\'Expérience Reçus !',
+            message: type === 'coins'
+                ? `L'administration vous a accordé ${numAmount > 0 ? '+' : ''}${numAmount} Level Coins ! Nouveau solde : ${Math.max(0, resLevelCoins + numAmount)} 🪙`
+                : `L'administration vous a accordé ${numAmount > 0 ? '+' : ''}${numAmount} XP ! Nouveau total : ${Math.max(0, resTotalXp + numAmount)} ⚡`,
+            timestamp: new Date().toISOString(),
+            read: false,
+            type: 'reward'
+        };
+
+        const existingNotifs = Array.isArray(currentStats.notifications) ? currentStats.notifications : [];
+        const updatedNotifs = [notif, ...existingNotifs.slice(0, 49)];
 
         if (type === 'xp') {
-            const newXp = Math.max(0, (userData.xp || 0) + amount);
-            resTotalXp = Math.max(0, (userData.total_xp || 0) + amount);
-            const { error: upErr } = await supabase.from('profiles').update({ xp: newXp, total_xp: resTotalXp }).eq('id', userId);
+            const newXp = Math.max(0, Number(userData.xp || 0) + numAmount);
+            resTotalXp = Math.max(0, resTotalXp + numAmount);
+            const { error: upErr } = await supabase.from('profiles').update({
+                xp: newXp,
+                total_xp: resTotalXp,
+                stats: {
+                    ...currentStats,
+                    totalXp: resTotalXp,
+                    xp: newXp,
+                    notifications: updatedNotifs
+                }
+            }).eq('id', userId);
             if (upErr) throw upErr;
         } else {
-            resLevelCoins = Math.max(0, (userData.level_coins || 0) + amount);
-            const { error: upErr } = await supabase.from('profiles').update({ level_coins: resLevelCoins }).eq('id', userId);
+            resLevelCoins = Math.max(0, resLevelCoins + numAmount);
+            const { error: upErr } = await supabase.from('profiles').update({
+                level_coins: resLevelCoins,
+                stats: {
+                    ...currentStats,
+                    levelCoins: resLevelCoins,
+                    notifications: updatedNotifs
+                }
+            }).eq('id', userId);
             if (upErr) throw upErr;
         }
-        await logAdminAction('system', 'System', 'user_activity', { type: 'resource_adjust', resource: type, amount }, userId);
+        await logAdminAction('system', 'System', 'user_activity', { type: 'resource_adjust', resource: type, amount: numAmount }, userId);
         return {
             totalXp: resTotalXp,
             levelCoins: resLevelCoins

@@ -656,6 +656,9 @@ export const useAuthStore = () => {
     const lastNotifSoundRef = useRef<number>(0);
     // Persistent Set of known notification IDs so existing notifications never trigger sounds
     const knownNotifIdsRef = useRef<Set<string>>(new Set());
+    // Persistent ref to latest user state to prevent stale closures in event listeners
+    const userRef = useRef(user);
+    userRef.current = user;
 
     // Real-time listener for profile updates (admin notifications, block/suspend, or resource adjustments)
     useEffect(() => {
@@ -682,6 +685,8 @@ export const useAuthStore = () => {
                     console.log('Realtime profile updated in DB:', payload.new);
                     const dbProfile = payload.new;
                     if (dbProfile) {
+                        const currentUser = userRef.current || user;
+
                         // Check if block/suspend happened
                         if (dbProfile.status === 'blocked' || dbProfile.status === 'suspended') {
                             signOutUser().then(() => {
@@ -695,14 +700,14 @@ export const useAuthStore = () => {
 
                         // Map database row to App User
                         const mappedUser = mapProfileToUser(dbProfile);
-                        if (user?.role === 'teacher' || localStorage.getItem('levelmak_signing_up_teacher') === 'true') {
+                        if (currentUser?.role === 'teacher' || localStorage.getItem('levelmak_signing_up_teacher') === 'true') {
                             mappedUser.role = 'teacher';
                         }
 
-                        // ✅ FIX Bug 1: Include avatar & wallpaper in comparison to avoid false-positive changes
-                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'status', 'stats', 'analytics', 'badges', 'is_premium', 'premium_until', 'inventory', 'consumables', 'garden'];
+                        // Compare against fresh currentUser state
+                        const keysToCompare = ['xp', 'totalXp', 'levelCoins', 'level_coins', 'status', 'stats', 'analytics', 'badges', 'is_premium', 'premium_until', 'inventory', 'consumables', 'garden'];
                         const hasChanges = keysToCompare.some(key => {
-                            const val1 = JSON.stringify((user as any)[key]);
+                            const val1 = JSON.stringify((currentUser as any)[key]);
                             const val2 = JSON.stringify((mappedUser as any)[key]);
                             return val1 !== val2;
                         });
@@ -710,32 +715,32 @@ export const useAuthStore = () => {
                         if (hasChanges) {
                             console.log('Applying remote database updates to local state');
 
-                            // ✅ FIX Bug 1: Preserve locally-equipped avatar & wallpaper
-                            const preservedAvatar = (user?.avatar?.image && !dbProfile.avatar_config?.image)
-                                ? user.avatar
+                            // Preserve locally-equipped avatar & wallpaper
+                            const preservedAvatar = (currentUser?.avatar?.image && !dbProfile.avatar_config?.image)
+                                ? currentUser.avatar
                                 : mappedUser.avatar;
-                            const preservedWallpaper = (user?.wallpaper && !dbProfile.wallpaper)
-                                ? user.wallpaper
+                            const preservedWallpaper = (currentUser?.wallpaper && !dbProfile.wallpaper)
+                                ? currentUser.wallpaper
                                 : mappedUser.wallpaper;
-                            // ✅ Preserve garden and consumables across remote updates
+                            // Preserve garden and consumables across remote updates
                             const preservedGarden = resolveGarden(
                                 mappedUser.garden,
                                 dbProfile.stats?.garden,
                                 dbProfile.avatar_config?.garden,
-                                user?.garden,
-                                user?.stats?.garden,
-                                user?.id ? localStorage.getItem(`levelmak_garden_${user.id}`) : null
+                                currentUser?.garden,
+                                currentUser?.stats?.garden,
+                                currentUser?.id ? localStorage.getItem(`levelmak_garden_${currentUser.id}`) : null
                             );
                             const preservedConsumables = resolveConsumables(
                                 mappedUser.consumables,
                                 dbProfile.stats?.consumables,
-                                user?.consumables,
-                                user?.stats?.consumables,
-                                user?.id ? localStorage.getItem(`levelmak_consumables_${user.id}`) : null
+                                currentUser?.consumables,
+                                currentUser?.stats?.consumables,
+                                currentUser?.id ? localStorage.getItem(`levelmak_consumables_${currentUser.id}`) : null
                             );
 
-                            // ✅ Preserve customGoals and analytics so local goal toggles are never wiped by remote updates
-                            const localGoals = user?.analytics?.customGoals;
+                            // Preserve customGoals and analytics so local goal toggles are never wiped by remote updates
+                            const localGoals = currentUser?.analytics?.customGoals;
                             const remoteGoals = mappedUser.analytics?.customGoals;
                             let preservedCustomGoals = remoteGoals || localGoals;
                             if (localGoals && localGoals.length > 0 && (!remoteGoals || remoteGoals.length === 0)) {
@@ -747,10 +752,10 @@ export const useAuthStore = () => {
                                 });
                             }
 
-                            const preservedAnalytics = (user?.analytics || mappedUser.analytics) ? {
+                            const preservedAnalytics = (currentUser?.analytics || mappedUser.analytics) ? {
                                 ...(mappedUser.analytics || {}),
-                                ...(user?.analytics || {}),
-                                customGoals: preservedCustomGoals || user?.analytics?.customGoals
+                                ...(currentUser?.analytics || {}),
+                                customGoals: preservedCustomGoals || currentUser?.analytics?.customGoals
                             } : undefined;
 
                             const finalUser = {
@@ -765,9 +770,9 @@ export const useAuthStore = () => {
                                     consumables: preservedConsumables
                                 },
                                 analytics: preservedAnalytics,
-                                customSubjects: user?.customSubjects || mappedUser.customSubjects,
-                                activeSubjects: user?.activeSubjects || mappedUser.activeSubjects,
-                                subjectTargets: user?.subjectTargets || mappedUser.subjectTargets
+                                customSubjects: currentUser?.customSubjects || mappedUser.customSubjects,
+                                activeSubjects: currentUser?.activeSubjects || mappedUser.activeSubjects,
+                                subjectTargets: currentUser?.subjectTargets || mappedUser.subjectTargets
                             };
 
                             if (finalUser.id) {
@@ -803,8 +808,8 @@ export const useAuthStore = () => {
                                 }
                             }
 
-                            // ✅ FIX 6: Mark this update as coming from Realtime
-                            // so the sync useEffect (above) skips it and doesn't send
+                            // Mark this update as coming from Realtime
+                            // so the sync useEffect skips it and doesn't send
                             // an unnecessary write back to Supabase.
                             isFromRemoteRef.current = true;
                             setUser(finalUser);

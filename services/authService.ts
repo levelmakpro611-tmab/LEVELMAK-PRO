@@ -173,6 +173,12 @@ export const mapProfileToUser = (profile: any): User => {
             },
             stats: {
                 ...stats,
+                levelCoins: (profile.level_coins !== undefined && profile.level_coins !== null && !isNaN(Number(profile.level_coins))) 
+                    ? Number(profile.level_coins) 
+                    : (stats?.levelCoins !== undefined && stats?.levelCoins !== null && !isNaN(Number(stats.levelCoins)))
+                        ? Number(stats.levelCoins)
+                        : 50,
+                totalXp: profile.total_xp || 0,
                 garden: resolvedGarden,
                 consumables: resolvedConsumables
             },

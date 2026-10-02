@@ -582,31 +582,71 @@ serve(async (req) => {
     // 13-B. ADJUST USER RESOURCES (XP, Total XP, Level Coins - Admin direct update)
     if (action === 'adjust_user_resources') {
       const { userId, type, amount } = body;
-      if (!userId) {
-        return new Response(JSON.stringify({ error: 'userId requis' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!userId || !type) {
+        return new Response(JSON.stringify({ error: 'userId et type requis' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { data: profile, error: pErr } = await supabaseAdmin.from('profiles').select('xp, total_xp, level_coins, stats').eq('id', userId).maybeSingle();
+      const numAmount = Number(amount) || 0;
+      if (numAmount === 0) {
+        return new Response(JSON.stringify({ error: 'Montant non nul requis' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const { data: profile, error: pErr } = await supabaseAdmin.from('profiles').select('id, name, xp, total_xp, level_coins, stats').eq('id', userId).maybeSingle();
       if (pErr) {
         return new Response(JSON.stringify({ error: pErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      
-      const numAmount = Number(amount) || 0;
-      let updates: any = {};
-      if (type === 'xp') {
-        const curXp = Number(profile?.xp || 0);
-        const curTotalXp = Number(profile?.total_xp || 0);
-        updates.xp = Math.max(0, curXp + numAmount);
-        updates.total_xp = Math.max(0, curTotalXp + numAmount);
-      } else {
-        const curCoins = Number(profile?.level_coins || 0);
-        updates.level_coins = Math.max(0, curCoins + numAmount);
+      if (!profile) {
+        return new Response(JSON.stringify({ error: 'Utilisateur introuvable' }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
+      const currentStats = (profile.stats && typeof profile.stats === 'object') ? profile.stats : {};
+      let updates: any = {};
+      let newTotalXp = Number(profile.total_xp || 0);
+      let newXp = Number(profile.xp || 0);
+      let newCoins = Number(profile.level_coins ?? profile.stats?.levelCoins ?? 0);
+
+      const notifId = `reward_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      let notifTitle = '';
+      let notifMsg = '';
+
+      if (type === 'xp') {
+        newXp = Math.max(0, newXp + numAmount);
+        newTotalXp = Math.max(0, newTotalXp + numAmount);
+        updates.xp = newXp;
+        updates.total_xp = newTotalXp;
+        notifTitle = '⚡ XP Accordé par l\'administration !';
+        notifMsg = numAmount > 0
+          ? `Félicitations ! L'administration vous a crédité +${numAmount} XP. Nouveau total : ${newTotalXp} ⚡`
+          : `Ajustement administratif : ${numAmount} XP. Nouveau total : ${newTotalXp} ⚡`;
+      } else {
+        newCoins = Math.max(0, newCoins + numAmount);
+        updates.level_coins = newCoins;
+        notifTitle = '🪙 Level Coins Reçus !';
+        notifMsg = numAmount > 0
+          ? `Super ! L'administration vous a accordé +${numAmount} Level Coins. Nouveau solde : ${newCoins} 🪙`
+          : `Ajustement administratif : ${numAmount} Level Coins. Nouveau solde : ${newCoins} 🪙`;
+      }
+
+      const notif = {
+        id: notifId,
+        title: notifTitle,
+        message: notifMsg,
+        timestamp: new Date().toISOString(),
+        read: false,
+        type: 'reward'
+      };
+
+      const existingNotifs = Array.isArray(currentStats.notifications) ? currentStats.notifications : [];
+      updates.stats = {
+        ...currentStats,
+        ...(type === 'xp' ? { totalXp: newTotalXp, xp: newXp } : { levelCoins: newCoins }),
+        notifications: [notif, ...existingNotifs.slice(0, 49)]
+      };
 
       const { data: updatedProfile, error: uErr } = await supabaseAdmin
         .from('profiles')
         .update(updates)
         .eq('id', userId)
-        .select()
+        .select('id, name, xp, total_xp, level_coins, stats')
         .single();
 
       if (uErr) {
@@ -614,7 +654,17 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true, profile: updatedProfile }),
+        JSON.stringify({
+          success: true,
+          profile: updatedProfile,
+          data: {
+            id: updatedProfile.id,
+            xp: updatedProfile.xp,
+            total_xp: updatedProfile.total_xp,
+            level_coins: updatedProfile.level_coins,
+            stats: updatedProfile.stats
+          }
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -769,55 +819,6 @@ serve(async (req) => {
       );
     }
 
-    // 25. ADJUST USER RESOURCES (COINS / XP) - ADMIN
-    if (action === 'adjust_user_resources') {
-      const { userId, type, amount } = body;
-      if (!userId || !type || typeof amount !== 'number') {
-        return new Response(
-          JSON.stringify({ error: 'userId, type (coins|xp) et amount requis' }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const { data: userProfile, error: fetchErr } = await supabaseAdmin
-        .from('profiles')
-        .select('xp, total_xp, level_coins')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (fetchErr) throw fetchErr;
-      if (!userProfile) {
-        return new Response(
-          JSON.stringify({ error: 'Utilisateur introuvable' }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      let updatePayload: Record<string, any> = {};
-      if (type === 'xp') {
-        const newXp = Math.max(0, (userProfile.xp || 0) + amount);
-        const newTotalXp = Math.max(0, (userProfile.total_xp || 0) + amount);
-        updatePayload = { xp: newXp, total_xp: newTotalXp };
-      } else {
-        const newCoins = Math.max(0, (userProfile.level_coins || 0) + amount);
-        updatePayload = { level_coins: newCoins };
-      }
-
-      const { data: updatedData, error: updateErr } = await supabaseAdmin
-        .from('profiles')
-        .update(updatePayload)
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (updateErr) throw updateErr;
-
-      return new Response(
-        JSON.stringify({ success: true, data: updatedData }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // 26. GRANT USER BADGE - ADMIN
     if (action === 'grant_user_badge') {
       const { userId, badgeId } = body;
@@ -870,67 +871,6 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, users: users || [] }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // 28. ADJUST USER RESOURCES (XP / LEVEL COINS) - ADMIN
-    if (action === 'adjust_user_resources') {
-      const { userId, type, amount } = body;
-      if (!userId || !type || typeof amount !== 'number') {
-        return new Response(
-          JSON.stringify({ error: 'userId, type (xp|coins) et amount requis' }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const { data: userProfile, error: fetchErr } = await supabaseAdmin
-        .from('profiles')
-        .select('xp, total_xp, level_coins')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (fetchErr) throw fetchErr;
-      if (!userProfile) {
-        return new Response(
-          JSON.stringify({ error: 'Utilisateur introuvable' }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      let updatedData: any = {};
-      if (type === 'xp') {
-        const newXp = Math.max(0, (userProfile.xp || 0) + amount);
-        const newTotalXp = Math.max(0, (userProfile.total_xp || 0) + amount);
-        const { data: updated, error: updateErr } = await supabaseAdmin
-          .from('profiles')
-          .update({ xp: newXp, total_xp: newTotalXp })
-          .eq('id', userId)
-          .select('id, xp, total_xp, level_coins')
-          .single();
-
-        if (updateErr) throw updateErr;
-        updatedData = updated;
-      } else if (type === 'coins') {
-        const newCoins = Math.max(0, (userProfile.level_coins || 0) + amount);
-        const { data: updated, error: updateErr } = await supabaseAdmin
-          .from('profiles')
-          .update({ level_coins: newCoins })
-          .eq('id', userId)
-          .select('id, xp, total_xp, level_coins')
-          .single();
-
-        if (updateErr) throw updateErr;
-        updatedData = updated;
-      } else {
-        return new Response(
-          JSON.stringify({ error: 'Type invalide: doit être xp ou coins' }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ success: true, data: updatedData }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
