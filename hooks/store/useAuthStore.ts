@@ -499,14 +499,16 @@ export const useAuthStore = () => {
                     u.id ? localStorage.getItem(`levelmak_consumables_${u.id}`) : null
                 );
 
+                const finalCoins = Number(u.levelCoins ?? (u as any).level_coins ?? 0);
                 const updatePayload: any = {
                     name: u.name,
                     phone_number: u.phoneNumber,
                     xp: u.xp,
                     total_xp: u.totalXp,
-                    level_coins: u.levelCoins,
+                    level_coins: finalCoins,
                     stats: {
                         ...u.stats,
+                        levelCoins: finalCoins,
                         analytics: u.analytics || u.stats?.analytics,
                         gradeClass: gradeClassVal,
                         education: educationVal,
@@ -578,15 +580,17 @@ export const useAuthStore = () => {
                     user.stats?.consumables,
                     user.id ? localStorage.getItem(`levelmak_consumables_${user.id}`) : null
                 );
+                const finalCoins = Number(user.levelCoins ?? (user as any).level_coins ?? 0);
 
                 await supabase.from('profiles').update({
                     name: user.name,
                     phone_number: user.phoneNumber,
                     xp: user.xp,
                     total_xp: user.totalXp,
-                    level_coins: user.levelCoins,
+                    level_coins: finalCoins,
                     stats: {
                         ...user.stats,
+                        levelCoins: finalCoins,
                         analytics: user.analytics || user.stats?.analytics,
                         garden: safeGarden,
                         consumables: safeConsumables,

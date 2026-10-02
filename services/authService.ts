@@ -151,7 +151,16 @@ export const mapProfileToUser = (profile: any): User => {
             education: rawEducation,
             phoneNumber: profile.phone_number,
             totalXp: profile.total_xp || 0,
-            levelCoins: profile.level_coins || 50,
+            levelCoins: (profile.level_coins !== undefined && profile.level_coins !== null && !isNaN(Number(profile.level_coins))) 
+                ? Number(profile.level_coins) 
+                : (stats?.levelCoins !== undefined && stats?.levelCoins !== null && !isNaN(Number(stats.levelCoins)))
+                    ? Number(stats.levelCoins)
+                    : 50,
+            level_coins: (profile.level_coins !== undefined && profile.level_coins !== null && !isNaN(Number(profile.level_coins))) 
+                ? Number(profile.level_coins) 
+                : (stats?.levelCoins !== undefined && stats?.levelCoins !== null && !isNaN(Number(stats.levelCoins)))
+                    ? Number(stats.levelCoins)
+                    : 50,
             onboardingCompleted: profile.onboarding_completed || false,
             level: computedLevel || SchoolLevel.HIGH,
             gradeClass: computedGradeClass || 'Terminale',

@@ -136,7 +136,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
         const translatedName = t(`items.${item.id}.name`);
         const displayName = translatedName.startsWith('items.') ? item.name : translatedName;
 
-        if (item.category === 'potion') {
+        if (item.category === 'potion' || item.category === 'garden') {
             const success = purchasePotion(item.id, item.originalId);
             if (success) {
                 setPurchaseSuccess(displayName);
