@@ -12,12 +12,12 @@ import CreativeWriting from './pages/CreativeWriting';
 import Flashcards from './pages/Flashcards';
 import AISummary from './pages/AISummary';
 import Settings from './pages/Settings';
+import QuizPlayer from './pages/QuizPlayer';
 
 // Lazy load secondary/heavy pages
 const Auth = lazy(() => import('./pages/Auth'));
 const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
 const Library = lazy(() => import('./pages/Library'));
-const QuizPlayer = lazy(() => import('./pages/QuizPlayer'));
 const Community = lazy(() => import('./pages/Community'));
 const Shop = lazy(() => import('./pages/Shop'));
 const StudyPlanner = lazy(() => import('./pages/StudyPlanner'));
@@ -573,9 +573,7 @@ const AppContent: React.FC = () => {
           />
         </Suspense>
       ) : currentQuiz ? (
-        <Suspense fallback={<PageLoader fullScreen={false} />}>
-          <QuizPlayer quiz={currentQuiz} onClose={() => setCurrentQuiz(null)} />
-        </Suspense>
+        <QuizPlayer quiz={currentQuiz} onClose={() => setCurrentQuiz(null)} />
       ) : currentDeck ? (
         <Suspense fallback={<PageLoader fullScreen={false} />}>
           <FlashcardPlayer deck={currentDeck.deck} cards={currentDeck.cards} onClose={() => setCurrentDeck(null)} />

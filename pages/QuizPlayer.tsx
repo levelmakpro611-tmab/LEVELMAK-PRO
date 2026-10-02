@@ -58,7 +58,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
   const { addFromErrors } = useFlashcardStore();
 
   const [shieldActive, setShieldActive] = useState(false);
-  const [showOracle, setShowOracle] = useState(true);
+  const [showOracle, setShowOracle] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
   const [betAmount, setBetAmount] = useState(0);
   const [betTarget, setBetTarget] = useState(80); // Target score percentage
@@ -380,15 +380,22 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-xl animate-fade-in">
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[3rem] p-8 md:p-12 space-y-10 shadow-2xl relative overflow-hidden"
+          className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[3rem] p-8 md:p-12 space-y-8 shadow-2xl relative overflow-hidden"
         >
+          <button
+            onClick={() => setShowOracle(false)}
+            className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+            title="Fermer"
+          >
+            <X size={20} />
+          </button>
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
           <div className="text-center space-y-4">
-            <div className="w-20 h-20 bg-primary/10 dark:bg-primary/20 rounded-[1.5rem] flex items-center justify-center mx-auto border border-primary/20 mb-6">
-              <History size={40} className="text-primary animate-pulse" />
+            <div className="w-20 h-20 bg-primary/10 dark:bg-primary/20 rounded-[1.5rem] flex items-center justify-center mx-auto border border-primary/20 mb-4">
+              <History size={40} className="text-primary" />
             </div>
             <h2 className="text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">{t('quiz.player.oracle.title')}</h2>
             <p className="text-slate-600 dark:text-slate-400 text-sm font-semibold">{t('quiz.player.oracle.subtitle')}</p>
@@ -683,6 +690,14 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ quiz, onClose }) => {
                 <span className="text-[9px] md:text-[10px] font-black pr-1">{consumables['potion_skip']}</span>
               </button>
             )}
+            <button
+              onClick={() => setShowOracle(true)}
+              className="p-1.5 md:p-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-primary/40 text-slate-600 dark:text-slate-400 hover:text-primary rounded-xl flex items-center gap-1.5 transition-all text-xs font-bold"
+              title="L'Oracle (Parier)"
+            >
+              <History size={16} className="text-primary" />
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider">Oracle</span>
+            </button>
             <button onClick={onClose} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl md:rounded-2xl transition-all">
               <X size={20} />
             </button>
