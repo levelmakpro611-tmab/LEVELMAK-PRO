@@ -105,16 +105,14 @@ export const useAuthStore = () => {
                                         customGoals: cachedGoals || parsedUser?.analytics?.customGoals
                                     };
                                 }
-                                // Préserver la classe/éducation locale si le profil distant ne l'a pas encore propagée
-                                if (data.grade_class) {
-                                    appUser.gradeClass = data.grade_class;
-                                } else if ((!appUser.gradeClass || appUser.gradeClass === 'Terminale') && parsedUser?.gradeClass && parsedUser.gradeClass !== 'Terminale') {
-                                    appUser.gradeClass = parsedUser.gradeClass;
+                                // Préserver la classe/éducation depuis stats Supabase, cache local ou user parsé
+                                const savedGradeClass = data.stats?.gradeClass || (data.stats as any)?.grade_class || (data as any).grade_class || localStorage.getItem(`levelmak_grade_class_${appUser.id}`) || parsedUser?.gradeClass;
+                                if (savedGradeClass) {
+                                    appUser.gradeClass = savedGradeClass;
                                 }
-                                if (data.education) {
-                                    appUser.education = data.education;
-                                } else if (!appUser.education && parsedUser?.education) {
-                                    appUser.education = parsedUser.education;
+                                const savedEducation = data.stats?.education || (data as any).education || localStorage.getItem(`levelmak_education_${appUser.id}`) || parsedUser?.education;
+                                if (savedEducation) {
+                                    appUser.education = savedEducation;
                                 }
 
                                 // Persistance des notifications au rechargement
@@ -408,19 +406,26 @@ export const useAuthStore = () => {
         if (updatedUser && (updatedUser as User).id && !(updatedUser as User).id.includes('anon')) {
             try {
                 const u = updatedUser as User;
+                const gradeClassVal = u.gradeClass || (u.stats as any)?.gradeClass || u.education;
+                const educationVal = u.education || (u.stats as any)?.education || u.gradeClass;
+
+                // Cache localement pour persistance immédiate
+                if (u.id) {
+                    if (gradeClassVal) localStorage.setItem(`levelmak_grade_class_${u.id}`, gradeClassVal);
+                    if (educationVal) localStorage.setItem(`levelmak_education_${u.id}`, educationVal);
+                }
+
                 const updatePayload: any = {
                     name: u.name,
                     phone_number: u.phoneNumber,
                     xp: u.xp,
                     total_xp: u.totalXp,
                     level_coins: u.levelCoins,
-                    grade_class: u.gradeClass || (u.stats as any)?.gradeClass || u.education,
-                    education: u.education || (u.stats as any)?.education || u.gradeClass,
                     stats: {
                         ...u.stats,
                         analytics: u.analytics || u.stats?.analytics,
-                        gradeClass: u.gradeClass,
-                        education: u.education,
+                        gradeClass: gradeClassVal,
+                        education: educationVal,
                         level: u.level,
                         garden: u.garden || u.stats?.garden || { plants: [] },
                         consumables: u.consumables || u.stats?.consumables || { water_can: 1 },
@@ -474,21 +479,22 @@ export const useAuthStore = () => {
 
         const timer = setTimeout(async () => {
             try {
+                const gradeClassVal = user.gradeClass || (user.stats as any)?.gradeClass || user.education;
+                const educationVal = user.education || (user.stats as any)?.education || user.gradeClass;
+
                 await supabase.from('profiles').update({
                     name: user.name,
                     phone_number: user.phoneNumber,
                     xp: user.xp,
                     total_xp: user.totalXp,
                     level_coins: user.levelCoins,
-                    grade_class: user.gradeClass || (user.stats as any)?.gradeClass || user.education,
-                    education: user.education || (user.stats as any)?.education || user.gradeClass,
                     stats: {
                         ...user.stats,
                         analytics: user.analytics || user.stats?.analytics,
                         garden: user.garden || user.stats?.garden || { plants: [] },
                         consumables: user.consumables || user.stats?.consumables || { water_can: 1 },
-                        education: user.education || user.stats?.education,
-                        gradeClass: user.gradeClass || user.stats?.gradeClass,
+                        education: educationVal,
+                        gradeClass: gradeClassVal,
                         level: user.level || user.stats?.level,
                         notifications: user.stats?.notifications || []
                     },
