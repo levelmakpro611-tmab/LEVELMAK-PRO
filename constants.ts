@@ -1,18 +1,22 @@
 
-export const XP_PER_LEVEL = 1000; // Base XP for level 1
+export const XP_PER_LEVEL = 500; // Progression de 500 en 500 XP par niveau
 
-export const getXpForNextLevel = (level: number) => {
-  // Scaling XP needed per level (Level 1: 500 XP, Level 2: 1000 XP, etc.)
-  return Math.max(500, level * 500);
+export const getXpForNextLevel = (_level?: number) => {
+  return 500;
+};
+
+export const calculateLevelAndXp = (totalXp: number, _rawCurrentXp?: number) => {
+  const total = Math.max(0, Number(totalXp || 0));
+  const level = Math.max(1, Math.floor(total / 500) + 1);
+  const currentLevelXp = total % 500;
+  const needed = 500;
+  const remaining = Math.max(0, needed - currentLevelXp);
+  const percentage = Math.min(100, Math.max(0, (currentLevelXp / needed) * 100));
+  return { level, currentLevelXp, needed, remaining, percentage };
 };
 
 export const getTotalXpAtLevel = (level: number) => {
-  // Sum of all XP needed for all levels up to this one
-  let total = 0;
-  for (let i = 1; i < level; i++) {
-    total += getXpForNextLevel(i);
-  }
-  return total;
+  return Math.max(0, (level - 1) * 500);
 };
 
 export const AVATAR_LEVELS = [

@@ -1,7 +1,7 @@
 import { safeLocalStorageSet } from '../../services/storage';
 import React, { useState, useCallback } from 'react';
 import { User, Mission, GardenPlant } from '../../types';
-import { XP_PER_LEVEL, POTIONS, getXpForNextLevel } from '../../constants';
+import { XP_PER_LEVEL, POTIONS, getXpForNextLevel, calculateLevelAndXp } from '../../constants';
 import { supabase } from '../../services/supabase';
 import { 
     resolveGarden, 
@@ -22,23 +22,25 @@ export const useGamificationStore = (
         setUser(prev => {
             if (!prev) return null;
             const newTotalXp = (prev.totalXp || 0) + amount;
-            let remainingXp = (prev.xp || 0) + amount;
-            let updatedLevel = prev.avatar?.currentLevel || 1;
-            
-            let needed = getXpForNextLevel(updatedLevel);
-            while (remainingXp >= needed) {
-                remainingXp -= needed;
-                updatedLevel++;
-                needed = getXpForNextLevel(updatedLevel);
-            }
+            const calc = calculateLevelAndXp(newTotalXp);
+            const updatedLevel = calc.level;
+            const remainingXp = calc.currentLevelXp;
 
             const updatedUser = {
                 ...prev,
                 totalXp: newTotalXp,
                 xp: remainingXp,
+                level: updatedLevel,
                 avatar: {
                     ...prev.avatar,
                     currentLevel: updatedLevel
+                },
+                stats: {
+                    ...(prev.stats || {}),
+                    level: updatedLevel,
+                    currentLevel: updatedLevel,
+                    totalXp: newTotalXp,
+                    xp: remainingXp
                 }
             };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updatedUser));
@@ -49,12 +51,8 @@ export const useGamificationStore = (
                     total_xp: newTotalXp,
                     xp: remainingXp,
                     level: updatedLevel,
-                    stats: {
-                        ...(prev.stats || {}),
-                        level: updatedLevel,
-                        totalXp: newTotalXp,
-                        xp: remainingXp
-                    }
+                    avatar_config: updatedUser.avatar,
+                    stats: updatedUser.stats
                 }).eq('id', prev.id).then(({ error }) => {
                     if (error) console.error('[addXp Supabase Sync Error]:', error);
                 });

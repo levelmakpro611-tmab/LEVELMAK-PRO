@@ -632,7 +632,7 @@ export const WorldBrainMap: React.FC<any> = ({ onCloseMap, onNavigate }) => {
             const xpGained = bet > 0 ? bet * 5 : 50;
             addLevelCoins(winAmount);
             addXp(xpGained);
-            addNotification('success', '🏆 Victoire en Duel !', `Tu as remporté le pot de ${winAmount} LevelCoins et +${xpGained} XP !`);
+            addNotification('success', '⚔️ Victoire de Défi IA !', `Tu as remporté le pot de ${winAmount} LevelCoins et +${xpGained} XP !`);
         } else {
             // Le perdant a déjà perdu sa mise de départ (-bet LC), pas de double déduction.
             addXp(10);

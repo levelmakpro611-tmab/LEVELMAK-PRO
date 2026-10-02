@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { User, SchoolLevel, GradeClass } from '../types';
 import { resolveGarden, resolveConsumables, saveLocalGarden, saveLocalConsumables } from './gardenSyncService';
+import { calculateLevelAndXp } from '../constants';
 
 // ======================================================
 // Helper: Normalize phone to a consistent email format
@@ -143,6 +144,10 @@ export const mapProfileToUser = (profile: any): User => {
             saveLocalConsumables(profile.id, resolvedConsumables);
         }
 
+        const calculatedLevelInfo = calculateLevelAndXp(profile.total_xp || 0, profile.xp);
+        const resolvedLevel = Math.max(calculatedLevelInfo.level, profile.avatar_config?.currentLevel || 1, Number(profile.level) || 1);
+        const resolvedCurrentXp = calculatedLevelInfo.currentLevelXp;
+
         return {
             ...profile,
             streak: { current: currentStreak, lastLogin: lastLoginIso },
@@ -150,6 +155,7 @@ export const mapProfileToUser = (profile: any): User => {
             premium_until: premiumUntil,
             education: rawEducation,
             phoneNumber: profile.phone_number,
+            xp: resolvedCurrentXp,
             totalXp: profile.total_xp || 0,
             levelCoins: (profile.level_coins !== undefined && profile.level_coins !== null && !isNaN(Number(profile.level_coins))) 
                 ? Number(profile.level_coins) 
@@ -162,23 +168,28 @@ export const mapProfileToUser = (profile: any): User => {
                     ? Number(stats.levelCoins)
                     : 50,
             onboardingCompleted: profile.onboarding_completed || false,
-            level: computedLevel || SchoolLevel.HIGH,
+            level: resolvedLevel,
             gradeClass: computedGradeClass || 'Terminale',
             subscriptionTier: calculatedTier as any,
-            avatar: profile.avatar_config || {
-                baseColor: '#3B82F6',
-                accessory: 'none',
-                aura: 'none',
-                currentLevel: 1
+            avatar: {
+                ...(profile.avatar_config || {
+                    baseColor: '#3B82F6',
+                    accessory: 'none',
+                    aura: 'none'
+                }),
+                currentLevel: resolvedLevel
             },
             stats: {
                 ...stats,
+                level: resolvedLevel,
+                currentLevel: resolvedLevel,
                 levelCoins: (profile.level_coins !== undefined && profile.level_coins !== null && !isNaN(Number(profile.level_coins))) 
                     ? Number(profile.level_coins) 
                     : (stats?.levelCoins !== undefined && stats?.levelCoins !== null && !isNaN(Number(stats.levelCoins)))
                         ? Number(stats.levelCoins)
                         : 50,
                 totalXp: profile.total_xp || 0,
+                xp: resolvedCurrentXp,
                 garden: resolvedGarden,
                 consumables: resolvedConsumables
             },

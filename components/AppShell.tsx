@@ -344,12 +344,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
     <div className="min-h-screen min-h-[100dvh] w-full bg-transparent flex flex-col md:flex-row font-sans text-slate-900 dark:text-slate-200 relative overflow-hidden transition-colors duration-500">
       <OfflineIndicator />
 
-      {/* Mobile Header - Re-adjusted for "Married" look */}
-      <header className="md:hidden border-b border-black/5 dark:border-white/5 px-4 pt-[env(safe-area-inset-top)] pb-3 flex items-center justify-between sticky top-0 z-[100] bg-white/95 dark:bg-[#070d1e]/95 transition-colors">
-        <div className="flex items-center gap-2 pt-2">
-          <img src="/logo.png" alt="LEVELMAK" className="h-14 w-auto object-contain brightness-110 dark:brightness-125 drop-shadow-[0_0_15px_rgba(59,130,246,0.2)] dark:drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]" />
+      {/* Mobile Header - Fully adapted for Android & iOS Safe Areas */}
+      <header 
+        className="md:hidden border-b border-black/5 dark:border-white/5 px-4 pb-2.5 flex items-center justify-between sticky top-0 z-[100] bg-white/95 dark:bg-[#070d1e]/95 backdrop-blur-xl transition-colors shadow-sm"
+        style={{ 
+          paddingTop: 'max(14px, env(safe-area-inset-top, 14px))',
+          minHeight: 'calc(58px + max(14px, env(safe-area-inset-top, 14px)))'
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="LEVELMAK" className="h-11 w-auto object-contain brightness-110 dark:brightness-125 drop-shadow-[0_0_15px_rgba(59,130,246,0.2)] dark:drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]" />
         </div>
-        <div className="flex items-center gap-1 pt-2">
+        <div className="flex items-center gap-1">
           {showInstallButton && (
             <button onClick={handleInstallClick} className="p-3 text-blue-500 dark:text-blue-400 relative active:scale-95 transition-all bg-blue-500/10 dark:bg-blue-400/10 rounded-full hover:bg-blue-500/20 shadow-glow-blue animate-pulse">
               <Download size={22} />
@@ -500,7 +506,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         </div>
 
         {activeTab !== 'social' && (
-          <nav className={`md:hidden fixed bottom-0 left-0 right-0 w-full z-40 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transform-gpu transition-all duration-200 ease-out ${(isKeyboardOpen || isBotOpen) ? 'hidden pointer-events-none opacity-0 translate-y-48' : 'flex translate-y-0 opacity-100'}`}>
+          <nav 
+            className={`md:hidden fixed bottom-0 left-0 right-0 w-full z-40 bg-white/95 dark:bg-[#050b18]/80 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 items-center justify-around px-2 m-0 rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transform-gpu transition-all duration-200 ease-out ${(isKeyboardOpen || isBotOpen) ? 'hidden pointer-events-none opacity-0 translate-y-48' : 'flex translate-y-0 opacity-100'}`}
+            style={{ 
+              height: 'calc(74px + max(10px, env(safe-area-inset-bottom, 10px)))',
+              paddingBottom: 'max(10px, env(safe-area-inset-bottom, 10px))'
+            }}
+          >
             {[
               { id: 'quiz', icon: BrainCircuit, label: 'Quiz' },
               { id: 'flashcards', icon: Layers, label: 'Flash' },

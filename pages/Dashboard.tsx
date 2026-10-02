@@ -45,7 +45,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
 import { useFlashcardStore } from '../services/flashcardStore';
 import { aiService } from '../services/aiService';
-import { getXpForNextLevel, AVATAR_LEVELS, LEAGUES, getLeagueFromXp, DEFAULT_CUSTOM_GOALS } from '../constants';
+import { getXpForNextLevel, calculateLevelAndXp, AVATAR_LEVELS, LEAGUES, getLeagueFromXp, DEFAULT_CUSTOM_GOALS } from '../constants';
 import { feedbackService } from '../services/feedbackService';
 
 // Lazy load heavy components
@@ -122,18 +122,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }, [user?.is_premium, user?.premium_until, user?.id]);
 
   // ✅ All hooks must be declared unconditionally before any early return
-  const prevLevelRef = React.useRef(user?.avatar?.currentLevel || 1);
+  const levelData = React.useMemo(() => {
+    return calculateLevelAndXp(user?.totalXp || 0, user?.xp);
+  }, [user?.totalXp, user?.xp]);
 
   React.useEffect(() => {
-    if ((user?.avatar?.currentLevel || 1) > prevLevelRef.current) {
+    if (levelData.level > prevLevelRef.current) {
       feedbackService.fullSuccess();
-      prevLevelRef.current = user?.avatar?.currentLevel || 1;
+      prevLevelRef.current = levelData.level;
     }
-  }, [user?.avatar?.currentLevel]);
+  }, [levelData.level]);
 
   const currentLevelInfo = React.useMemo(() =>
-    AVATAR_LEVELS.find(l => l.level === (user?.avatar?.currentLevel || 1)) || AVATAR_LEVELS[0],
-    [user?.avatar?.currentLevel]
+    AVATAR_LEVELS.find(l => l.level === levelData.level) || AVATAR_LEVELS[0],
+    [levelData.level]
   );
 
   const handleToggleGoal = React.useCallback((goalId: string) => {
@@ -177,10 +179,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     });
   }, [user, updateProfile]);
 
-  const xpPercentage = React.useMemo(() => {
-    const xpNeeded = getXpForNextLevel(user?.avatar?.currentLevel || 1);
-    return Math.min(100, Math.max(0, ((user?.xp || 0) / xpNeeded) * 100));
-  }, [user?.xp, user?.avatar?.currentLevel]);
+  const xpPercentage = levelData.percentage;
 
   const today = React.useMemo(() => new Date().toISOString().split('T')[0], []);
   
@@ -235,7 +234,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   const displayMotivationAuthor = React.useMemo(() => {
     const raw = (dailyMotivation?.author || '').trim();
-    if (!raw || raw.toLowerCase().includes('levelmak') || raw.toLowerCase().includes('coach') || raw.toLowerCase().includes('anonyme')) {
+    if (!raw || raw.toLowerCase() === 'anonyme' || raw.toLowerCase() === 'inconnu') {
       const grade = (user?.gradeClass || user?.educationLevel || '').toLowerCase();
       if (grade.includes('terminale') || grade.includes('bac')) return "Victor Hugo";
       if (grade.includes('11') || grade.includes('12') || grade.includes('première') || grade.includes('seconde')) return "Marie Curie";
@@ -274,7 +273,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </div>
                 <div className="absolute -bottom-2 inset-x-0 flex justify-center">
                   <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-black text-[10px] md:text-xs px-3.5 py-1 rounded-full shadow-lg border-2 border-white dark:border-slate-950 flex items-center gap-1 uppercase tracking-widest">
-                    ⭐ {t('dashboard.profile.level')} {user.avatar?.currentLevel || 1}
+                    ⭐ {t('dashboard.profile.level')} {levelData.level}
                   </span>
                 </div>
               </div>
@@ -379,22 +378,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               {/* Energy Progress Bar */}
               <div className="w-full max-w-lg space-y-2 pt-2">
                 <p className="text-xs md:text-sm text-slate-700 dark:text-slate-300 font-bold text-center leading-relaxed">
-                  Niveau {user.avatar?.currentLevel || 1} • <span className="text-amber-600 dark:text-amber-400 font-black">{Math.round(xpPercentage)}%</span> vers le Niveau {(user.avatar?.currentLevel || 1) + 1}
+                  Niveau {levelData.level} • <span className="text-amber-600 dark:text-amber-400 font-black">{Math.round(levelData.percentage)}%</span> vers le Niveau {levelData.level + 1}
                 </p>
 
                 <div className="w-full bg-slate-200/80 dark:bg-slate-950/80 rounded-full h-4 md:h-5 p-1 border border-slate-300/60 dark:border-white/10 shadow-inner relative overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(139,92,246,0.4)] relative"
-                    style={{ width: `${xpPercentage}%` }}
+                    style={{ width: `${levelData.percentage}%` }}
                   >
                     <div className="absolute right-0 top-0 bottom-0 w-2 bg-white blur-[1px] opacity-75 animate-pulse"></div>
                   </div>
                 </div>
 
                 <div className="flex justify-between text-[9px] md:text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
-                  <span>{user.xp || 0} / {getXpForNextLevel(user.avatar?.currentLevel || 1)} XP</span>
+                  <span>{levelData.currentLevelXp} / 500 XP</span>
                   <span className="text-amber-600 dark:text-amber-400 font-bold">
-                    {Math.max(0, Math.round(getXpForNextLevel(user.avatar?.currentLevel || 1) - (user.xp || 0)))} XP restants
+                    {levelData.remaining} XP restants
                   </span>
                 </div>
               </div>

@@ -725,6 +725,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     gamification.addXp(xpAmount);
     if (coinAmount > 0) gamification.addLevelCoins(coinAmount);
 
+    // Contribuer au Jardin de l'Esprit lors d'un quiz/duel contre l'IA ou joueur
+    const plantTypes: ('flower' | 'tree' | 'shrub')[] = ['flower', 'tree', 'shrub'];
+    const selectedPlant = plantTypes[Math.floor(Math.random() * plantTypes.length)];
+    gamification.plantInGarden(selectedPlant);
+
     auth.addActivity('battle', isWinner ? 'Victoire ! 🏆' : isDraw ? 'Match Nul' : 'Défi relevé', 
       isWinner ? 'Tu as remporté le duel.' : 'Belle tentative dans l\'arène.');
   }, [auth.user, gamification, auth.addActivity]);

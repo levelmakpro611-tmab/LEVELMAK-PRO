@@ -26,15 +26,35 @@ export const normalizeNotification = (notif: any): any => {
     if (!notif) return notif;
     const title = String(notif.title || '');
     const message = String(notif.message || '');
+
+    // 1. Victoire de Défi / Pari remporté contre l'IA ou un joueur
+    const isBattleWin =
+        title.includes('Victoire') ||
+        title.includes('Duel') ||
+        title.includes('Pari') ||
+        title.includes('Défi') ||
+        message.includes('remporté le pot') ||
+        message.includes('duel') ||
+        message.includes('pari') ||
+        message.includes('Forfait');
+
+    if (isBattleWin) {
+        return {
+            ...notif,
+            type: 'battle_win',
+            title: '⚔️ Victoire de Défi IA !',
+            message: message.replace(/^Modération\s*:\s*/i, '').replace(/^Attribution de\s*/i, '')
+        };
+    }
+
+    // 2. Bonus ou attribution de l'administration
     const isBonusOrAdminCredit =
         title.includes('AVERTISSEMENT / SANCTION ADMIN') ||
         title.includes('SANCTION') ||
         title.includes('MODÉRATION') ||
         message.includes('Attribution de') ||
-        message.includes('Level Coins') ||
-        message.includes('LevelCoins') ||
-        message.includes('bonus') ||
-        message.includes('Bonus');
+        message.includes('accordé un bonus') ||
+        (message.includes('bonus de') && !isBattleWin);
 
     if (isBonusOrAdminCredit && (message.includes('Level Coins') || message.includes('LevelCoins') || message.includes('Coins') || message.includes('XP') || message.includes('Attribution de'))) {
         const isXp = message.includes('XP') && !message.includes('Coins');
@@ -162,22 +182,9 @@ export const useAuthStore = () => {
 
                                 let finalNotifs = rawNotifs.map(normalizeNotification);
 
-                                // Ensure bonus notification exists if user has high coins (>= 2000)
-                                const hasBonusNotif = finalNotifs.some((n: any) => 
-                                    n.title?.includes('Bonus') || n.title?.includes('LevelCoins') || n.title?.includes('Level Coins') ||
-                                    n.message?.includes('bonus') || n.message?.includes('Level Coins')
-                                );
-                                const coinsTotal = Number(data.level_coins ?? appUser.levelCoins ?? 0);
-                                if (!hasBonusNotif && coinsTotal >= 2000) {
-                                    finalNotifs.unshift({
-                                        id: `bonus_admin_${appUser.id}`,
-                                        type: 'admin',
-                                        title: '🎁 Bonus LevelCoins Reçu !',
-                                        message: `L'administration principale vous a accordé un bonus de LevelCoins 🪙 ! Votre solde est de ${coinsTotal.toLocaleString()} 🪙.`,
-                                        timestamp: new Date().toISOString(),
-                                        read: false
-                                    });
-                                }
+                                // Filter out any stale artificial bonus notifications
+                                finalNotifs = finalNotifs.filter((n: any) => n?.id !== `bonus_admin_${appUser.id}`);
+
 
                                 // Synchronisation et persistance infaillible du Jardin de l'Esprit & Consommables
                                 const localGardenStr = appUser.id ? localStorage.getItem(`levelmak_garden_${appUser.id}`) : null;
@@ -284,21 +291,9 @@ export const useAuthStore = () => {
 
                         let finalNotifs = rawNotifs.map(normalizeNotification);
 
-                        const hasBonusNotif = finalNotifs.some((n: any) => 
-                            n.title?.includes('Bonus') || n.title?.includes('LevelCoins') || n.title?.includes('Level Coins') ||
-                            n.message?.includes('bonus') || n.message?.includes('Level Coins')
-                        );
-                        const coinsTotal = Number(profile.level_coins ?? user.levelCoins ?? 0);
-                        if (!hasBonusNotif && coinsTotal >= 2000) {
-                            finalNotifs.unshift({
-                                id: `bonus_admin_${user.id}`,
-                                type: 'admin',
-                                title: '🎁 Bonus LevelCoins Reçu !',
-                                message: `L'administration principale vous a accordé un bonus de LevelCoins 🪙 ! Votre solde est de ${coinsTotal.toLocaleString()} 🪙.`,
-                                timestamp: new Date().toISOString(),
-                                read: false
-                            });
-                        }
+                        // Filter out any stale artificial bonus notifications
+                        finalNotifs = finalNotifs.filter((n: any) => n?.id !== `bonus_admin_${user.id}`);
+
 
                         // Synchronisation et persistance infaillible du Jardin de l'Esprit & Consommables
                         const localGardenStr = user.id ? localStorage.getItem(`levelmak_garden_${user.id}`) : null;
@@ -851,24 +846,7 @@ export const useAuthStore = () => {
 
                             let newNotifs = (finalUser.stats?.notifications || []).map(normalizeNotification);
 
-                            if (coinDiff > 0) {
-                                const bonusNotif = {
-                                    id: `bonus_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-                                    type: 'admin',
-                                    title: '🎁 Bonus LevelCoins Reçu !',
-                                    message: `L'administration principale vous a accordé un bonus de +${coinDiff.toLocaleString()} LevelCoins 🪙 ! Nouveau solde : ${newCoins.toLocaleString()} 🪙.`,
-                                    timestamp: new Date().toISOString(),
-                                    read: false
-                                };
-                                newNotifs = [bonusNotif, ...newNotifs].slice(0, 50);
-                                finalUser.stats = {
-                                    ...finalUser.stats,
-                                    notifications: newNotifs
-                                };
-                                if (finalUser.id) {
-                                    localStorage.setItem(`levelmak_notifications_${finalUser.id}`, JSON.stringify(newNotifs));
-                                }
-                            }
+
 
                             const newlyAdded = newNotifs.filter((n: any) => n?.id && !knownNotifIdsRef.current.has(String(n.id)));
 
