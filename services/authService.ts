@@ -51,10 +51,13 @@ export const mapProfileToUser = (profile: any): User => {
             localStorage.setItem(`levelmak_demo_premium_${userId}`, 'true');
             localStorage.setItem(`levelmak_demo_premium_until_${userId}`, premiumUntil);
         } catch (_) {}
-    } else if (Boolean(profile.is_premium) && !profile.premium_until) {
-        // Admin marked user as premium in DB without setting expiry date
+    } else if (Boolean(profile.is_premium) || profile.role === 'admin') {
+        // Admin or user explicitly marked as premium in DB (e.g. 2-year subscription)
         isPremium = true;
-        premiumUntil = new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString();
+        const guaranteedExpiry = now + 2 * 365 * 24 * 60 * 60 * 1000;
+        premiumUntil = (profile.premium_until && new Date(profile.premium_until).getTime() > now)
+            ? profile.premium_until
+            : new Date(guaranteedExpiry).toISOString();
         try {
             localStorage.setItem(`levelmak_demo_premium_${userId}`, 'true');
             localStorage.setItem(`levelmak_demo_premium_until_${userId}`, premiumUntil);

@@ -27,7 +27,7 @@ export const MindGarden: React.FC = () => {
   // - 48h+: Withered (Fanée 🥀)
   const getPlantHealth = (plant: GardenPlant): 'healthy' | 'thirsty' | 'withered' | 'pests' | 'dead' => {
     if (plant.hasPests || plant.state === 'pests') return 'pests';
-    const isAdult = (plant.quizzesContributed || 0) >= 10 && (plant.growthStage ?? 0) >= 4;
+    const isAdult = (plant.quizzesContributed || 0) >= 10 || (plant.growthStage ?? 0) >= 4;
     if (isAdult) return 'healthy';
 
     if (plant.state === 'dead') return 'dead';
@@ -51,7 +51,7 @@ export const MindGarden: React.FC = () => {
     else if (health === 'dead') filter = 'grayscale(100%) opacity(0.4)';
 
     const quizzes = Math.min(10, Math.max(1, Math.round(plant.quizzesContributed || plant.growthStage || 1)));
-    const isAdult = quizzes >= 10 && (plant.growthStage ?? 0) >= 4;
+    const isAdult = quizzes >= 10 || (plant.growthStage ?? 0) >= 4;
 
     let emoji = '🌱';
     let emojiClass = 'text-5xl';
@@ -99,7 +99,17 @@ export const MindGarden: React.FC = () => {
       <div 
         className={`flex flex-col items-center justify-end min-h-[160px] w-28 transition-all duration-500 hover:scale-105 cursor-pointer relative ${health === 'pests' || health === 'thirsty' || health === 'withered' ? 'animate-pulse' : ''} ${isSelected ? 'scale-115 z-20' : ''}`}
         style={{ filter }}
-        onClick={() => setSelectedPlant(isSelected ? null : plant.id)}
+        onClick={() => {
+          if (isAdult) {
+            HapticFeedback.success();
+            if (harvestPlant) {
+              const res = harvestPlant(plant.id);
+              addNotification('success', 'Récolte réussie ! 🌾', `Tu as cueilli ta plante avec succès (+${res?.coins || 15} LevelCoins et +${res?.xp || 25} XP remportés) !`);
+            }
+            return;
+          }
+          setSelectedPlant(isSelected ? null : plant.id);
+        }}
       >
         <span 
           className={`${emojiClass} select-none transition-all duration-500`}
@@ -240,26 +250,26 @@ export const MindGarden: React.FC = () => {
   const status = getGardenStatus();
 
   return (
-    <div className="bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-teal-500/10 dark:from-green-900/20 dark:to-emerald-900/10 p-6 md:p-8 rounded-[2.5rem] border border-green-500/20 shadow-xl overflow-hidden relative group">
+    <div className="bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-teal-500/10 dark:from-green-900/20 dark:to-emerald-900/10 p-4 sm:p-6 md:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-green-500/20 shadow-xl overflow-hidden relative group">
       {/* Decors */}
-      <div className="absolute -bottom-10 -right-10 opacity-10">
+      <div className="absolute -bottom-10 -right-10 opacity-10 pointer-events-none">
         <Leaf size={150} className="text-emerald-500 rotate-45" />
       </div>
       
-      <div className="flex justify-between items-start mb-6 relative z-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6 relative z-10">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-            <Sprout className="text-emerald-500 dark:text-emerald-400" size={28} />
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+            <Sprout className="text-emerald-500 dark:text-emerald-400" size={26} />
             Jardin de l'Esprit
           </h2>
-          <p className={`text-sm font-bold mt-1 ${status.color}`}>{status.title} : <span className="text-slate-700 dark:text-slate-400 font-semibold">{status.text}</span></p>
+          <p className={`text-xs sm:text-sm font-bold mt-1 ${status.color}`}>{status.title} : <span className="text-slate-700 dark:text-slate-400 font-semibold">{status.text}</span></p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 self-start sm:self-auto">
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'shop' } }))}
-              className="px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-700 dark:text-blue-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-700 dark:text-blue-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
               title="Acheter des bidons d'eau dans la Boutique"
             >
                 <Droplets size={14} /> {waterCans}
@@ -267,7 +277,7 @@ export const MindGarden: React.FC = () => {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'shop' } }))}
-              className="px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-500/20 hover:bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-500/20 hover:bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
               title="Acheter de l'engrais magique dans la Boutique"
             >
                 <Sparkles size={14} /> {fertilizers}
@@ -275,7 +285,7 @@ export const MindGarden: React.FC = () => {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'shop' } }))}
-              className="px-3 py-1.5 bg-amber-500/10 dark:bg-amber-500/20 hover:bg-amber-500/20 rounded-xl border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 bg-amber-500/10 dark:bg-amber-500/20 hover:bg-amber-500/20 rounded-xl border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
               title="Acheter Soin Désherbeur & Anti-Parasites dans la Boutique"
             >
                 <ShieldCheck size={14} /> {weedCures}

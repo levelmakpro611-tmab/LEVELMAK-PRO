@@ -214,8 +214,15 @@ const AppContent: React.FC = () => {
     };
   }, []);
 
-  // Strict premium check: user must have is_premium=true AND a valid non-expired premium_until date
-  const isPremiumActive = !!(user && user.is_premium && user.premium_until && new Date(user.premium_until).getTime() > Date.now());
+  // Premium check: user is premium if is_premium is true, role is admin, premium_until is in the future, or local demo override exists
+  const isPremiumActive = Boolean(
+    user && (
+      user.role === 'admin' ||
+      user.is_premium === true ||
+      (user.premium_until && new Date(user.premium_until).getTime() > Date.now()) ||
+      (user.id && localStorage.getItem(`levelmak_demo_premium_${user.id}`) === 'true')
+    )
+  );
 
   const handleSetActiveTab = (tab: string) => {
     const isMobile = isNativePlatform();
@@ -232,7 +239,7 @@ const AppContent: React.FC = () => {
       return;
     }
 
-    const freeTabs = ['dashboard', 'quiz', 'flashcards', 'settings', 'pricing', 'flashcard_mode'];
+    const freeTabs = ['dashboard', 'quiz', 'flashcards', 'settings', 'pricing', 'flashcard_mode', 'shop', 'ranking', 'social'];
     if (!isPremiumActive && !freeTabs.includes(tab)) {
       if (isMobile) {
         setPremiumAlert({
@@ -270,6 +277,7 @@ const AppContent: React.FC = () => {
     if (!user || !user.is_premium || !user.premium_until) return;
 
     const checkExpiry = () => {
+      if (user.role === 'admin') return;
       const expiryTime = new Date(user.premium_until!).getTime();
       const currentTime = new Date().getTime();
 
