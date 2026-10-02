@@ -205,12 +205,17 @@ export interface User {
 
 export interface GardenPlant {
   id: string;
-  type: 'flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus';
+  type: 'flower' | 'tree' | 'cactus' | 'bonsai' | 'lotus' | 'shrub';
   plantedAt: string;
   lastWateredAt: string;
-  growthStage: number; // 0: seed, 1: sprout, 2: growing, 3: mature, 4: bloom
-  quizzesContributed?: number; // 0 to 5 quizzes
-  state: 'healthy' | 'yellowing' | 'dead';
+  growthStage: number; // 1: seed/sprout, 2: growing stem, 3: bush/bud, 4: mature bloom
+  quizzesContributed?: number; // 0 to 10 quizzes
+  state: 'healthy' | 'thirsty' | 'withered' | 'pests' | 'dead';
+  hasPests?: boolean;
+  pestsSince?: string;
+  daysMaintained?: number;
+  lastCaredDay?: string;
+  harvested?: boolean;
 }
 
 export interface UserGarden {

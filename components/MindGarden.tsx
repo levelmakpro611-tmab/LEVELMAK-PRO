@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../hooks/useStore';
-import { Sprout, Droplets, Leaf, Sparkles } from 'lucide-react';
+import { Sprout, Droplets, Leaf, Sparkles, ShieldCheck, Bug } from 'lucide-react';
 import { HapticFeedback } from '../services/nativeAdapters';
 import { POTIONS } from '../constants';
 import { GardenPlant } from '../types';
 import { resolveGarden, resolveConsumables } from '../services/gardenSyncService';
 
 export const MindGarden: React.FC = () => {
-  const { user, waterGarden, addNotification, plantInGarden } = useStore();
+  const { user, waterGarden, harvestPlant, addNotification, plantInGarden } = useStore();
   const [selectedPlant, setSelectedPlant] = useState<string | null>(null);
 
   const localGardenStr = user?.id ? localStorage.getItem(`levelmak_garden_${user.id}`) : null;
@@ -18,15 +18,17 @@ export const MindGarden: React.FC = () => {
 
   const waterCans = consumables.water_can || 0;
   const fertilizers = consumables.fertilizer || 0;
+  const weedCures = consumables.weed_cure || 0;
 
-  // Dynamic health based on lastWateredAt:
+  // Dynamic health based on lastWateredAt and pests:
+  // - Pests: Root parasites attacking plant
   // - 0 to 24h: Healthy (Pleine forme)
   // - 24h to 48h: Thirsty (Avertissement soif 💧)
-  // - 48h+: Withered (Fanée 🥀 - perte de vitalité)
-  // - Note: Fully mature plants (5/5) are immortal trophies!
-  const getPlantHealth = (plant: GardenPlant): 'healthy' | 'thirsty' | 'withered' | 'dead' => {
-    const isAdult = (plant.quizzesContributed || 0) >= 5 || (plant.growthStage ?? 0) >= 4;
-    if (isAdult) return 'healthy'; // Les plantes adultes 5/5 sont immortelles dans la collection
+  // - 48h+: Withered (Fanée 🥀)
+  const getPlantHealth = (plant: GardenPlant): 'healthy' | 'thirsty' | 'withered' | 'pests' | 'dead' => {
+    if (plant.hasPests || plant.state === 'pests') return 'pests';
+    const isAdult = (plant.quizzesContributed || 0) >= 10 && (plant.growthStage ?? 0) >= 4;
+    if (isAdult) return 'healthy';
 
     if (plant.state === 'dead') return 'dead';
     if (!plant.lastWateredAt) return plant.state || 'healthy';
@@ -37,19 +39,19 @@ export const MindGarden: React.FC = () => {
     return 'healthy';
   };
 
-  // Render different system emojis for plants based on the 5-quiz growth progression
+  // Render different system emojis for plants based on the 10-quiz growth progression
   const renderPlant = (plant: GardenPlant) => {
     const { type } = plant;
     const health = getPlantHealth(plant);
-    const isSad = health === 'thirsty' || health === 'withered' || health === 'dead';
     
     let filter = 'none';
-    if (health === 'thirsty') filter = 'sepia(30%) brightness(0.9)';
+    if (health === 'pests') filter = 'sepia(60%) hue-rotate(80deg) contrast(1.1)';
+    else if (health === 'thirsty') filter = 'sepia(30%) brightness(0.9)';
     else if (health === 'withered') filter = 'grayscale(60%) sepia(60%) hue-rotate(-30deg) brightness(0.75)';
     else if (health === 'dead') filter = 'grayscale(100%) opacity(0.4)';
 
-    const quizzes = Math.min(5, Math.max(1, Math.round(plant.quizzesContributed || plant.growthStage || 1)));
-    const isAdult = quizzes >= 5 || (plant.growthStage ?? 0) >= 4;
+    const quizzes = Math.min(10, Math.max(1, Math.round(plant.quizzesContributed || plant.growthStage || 1)));
+    const isAdult = quizzes >= 10 && (plant.growthStage ?? 0) >= 4;
 
     let emoji = '🌱';
     let emojiClass = 'text-5xl';
@@ -57,24 +59,24 @@ export const MindGarden: React.FC = () => {
     if (health === 'withered') {
       emoji = type === 'tree' ? '🍂' : '🥀';
       emojiClass = 'text-5xl mb-0';
-    } else if (quizzes === 1) {
+    } else if (quizzes <= 2) {
       emoji = '🌱';
       emojiClass = 'text-3xl mb-1';
-    } else if (quizzes === 2) {
+    } else if (quizzes <= 4) {
       if (type === 'flower') emoji = '🌿';
       else if (type === 'tree') emoji = '🌿';
       else if (type === 'cactus') emoji = '🌵';
       else if (type === 'bonsai') emoji = '🌿';
       else if (type === 'lotus') emoji = '🍃';
       emojiClass = 'text-4xl mb-1';
-    } else if (quizzes === 3) {
+    } else if (quizzes <= 6) {
       if (type === 'flower') emoji = '🌷';
       else if (type === 'tree') emoji = '🌲';
       else if (type === 'cactus') emoji = '🌵';
       else if (type === 'bonsai') emoji = '🪴';
       else if (type === 'lotus') emoji = '🪷';
       emojiClass = 'text-5xl mb-0';
-    } else if (quizzes === 4) {
+    } else if (quizzes <= 9) {
       if (type === 'flower') emoji = '🌺';
       else if (type === 'tree') emoji = '🌲';
       else if (type === 'cactus') emoji = '🌵';
@@ -82,7 +84,7 @@ export const MindGarden: React.FC = () => {
       else if (type === 'lotus') emoji = '🪷';
       emojiClass = 'text-6xl mb-[-2px]';
     } else {
-      // 5 quizzes: Full mature bloom
+      // 10 quizzes: Full mature bloom
       if (type === 'flower') emoji = '🌸';
       else if (type === 'tree') emoji = '🌳';
       else if (type === 'cactus') emoji = '🏜️';
@@ -95,7 +97,7 @@ export const MindGarden: React.FC = () => {
 
     return (
       <div 
-        className={`flex flex-col items-center justify-end h-36 w-24 transition-all duration-500 hover:scale-110 cursor-pointer relative ${health === 'thirsty' || health === 'withered' ? 'animate-pulse' : ''} ${isSelected ? 'scale-125 z-20' : ''}`}
+        className={`flex flex-col items-center justify-end min-h-[160px] w-28 transition-all duration-500 hover:scale-105 cursor-pointer relative ${health === 'pests' || health === 'thirsty' || health === 'withered' ? 'animate-pulse' : ''} ${isSelected ? 'scale-115 z-20' : ''}`}
         style={{ filter }}
         onClick={() => setSelectedPlant(isSelected ? null : plant.id)}
       >
@@ -106,16 +108,42 @@ export const MindGarden: React.FC = () => {
           {emoji}
         </span>
         
-        {/* Growth Progress Bar & Counter (5 Quizzes target) */}
-        <div className="w-14 h-1.5 bg-black/30 dark:bg-white/10 rounded-full mt-2 overflow-hidden border border-white/5">
+        {/* Growth Progress Bar & Counter (10 Quizzes target) */}
+        <div className="w-16 h-1.5 bg-black/30 dark:bg-white/10 rounded-full mt-2 overflow-hidden border border-white/5">
             <div 
-                className={`h-full transition-all duration-1000 ${isAdult ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : health === 'withered' ? 'bg-amber-600' : 'bg-emerald-500'}`} 
-                style={{ width: `${(quizzes / 5) * 100}%` }}
+                className={`h-full transition-all duration-1000 ${isAdult ? 'bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400' : health === 'pests' ? 'bg-rose-500' : health === 'withered' ? 'bg-amber-600' : 'bg-emerald-500'}`} 
+                style={{ width: `${(quizzes / 10) * 100}%` }}
             />
         </div>
-        <span className="text-[9px] font-black tracking-tight text-slate-600 dark:text-slate-400 mt-1">
-          {isAdult ? '🌸 5/5 Adulte' : health === 'withered' ? '🥀 Fanée (-1)' : `🌱 ${quizzes}/5 quiz`}
+        <span className="text-[9px] font-black tracking-tight text-slate-700 dark:text-slate-300 mt-1 text-center">
+          {isAdult ? '🌸 Prête à récolter' : health === 'pests' ? '🐛 Parasites aux racines' : health === 'withered' ? '🥀 Fanée' : `🌱 ${quizzes}/10 quiz`}
         </span>
+
+        {/* Bouton de récolte quand la plante est adulte */}
+        {isAdult && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              HapticFeedback.success();
+              if (harvestPlant) {
+                const res = harvestPlant(plant.id);
+                addNotification('success', 'Récolte réussie ! 🌾', `Tu as cueilli ta plante avec succès (+${res.coins || 15} LevelCoins et +${res.xp || 25} XP remportés) !`);
+              }
+            }}
+            className="mt-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-500 hover:from-amber-400 hover:to-emerald-400 text-white font-black text-[9px] rounded-full shadow-lg shadow-emerald-500/30 animate-bounce flex items-center gap-1 active:scale-90 transition-transform"
+          >
+            <span>🌾 Cueillir</span>
+            <span className="text-[8px] bg-black/30 px-1 rounded-full">+15🪙</span>
+          </button>
+        )}
+
+        {health === 'pests' && (
+          <div className="absolute -top-4 bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1 animate-bounce">
+            <Bug size={10} />
+            Parasites !
+          </div>
+        )}
 
         {health === 'thirsty' && (
           <div className="absolute -top-4 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1 animate-bounce">
@@ -138,7 +166,7 @@ export const MindGarden: React.FC = () => {
         )}
 
         {isSelected && (
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-2 bg-slate-800/95 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-1.5 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-200 z-30">
                 <button 
                     onClick={(e) => {
                         e.stopPropagation();
@@ -169,6 +197,22 @@ export const MindGarden: React.FC = () => {
                 >
                     <Sparkles size={12} /> {fertilizers}
                 </button>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (weedCures > 0) {
+                            HapticFeedback.success();
+                            waterGarden(plant.id, 'weed_cure');
+                            addNotification('success', 'Racines protégées ! 🛡️', 'Les parasites ont été éradiqués avec succès !');
+                        } else {
+                            addNotification('info', 'Pas de soin anti-parasites !', 'Achète le Soin Désherbeur & Anti-Parasites dans la boutique.');
+                        }
+                    }}
+                    className={`p-2 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-all active:scale-90 ${weedCures > 0 ? 'bg-amber-500 text-white hover:bg-amber-400 shadow-md' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                    title="Soin Désherbeur & Anti-Parasites (sauve les racines)"
+                >
+                    <ShieldCheck size={12} /> {weedCures}
+                </button>
             </div>
         )}
       </div>
@@ -176,15 +220,21 @@ export const MindGarden: React.FC = () => {
   };
 
   const getGardenStatus = () => {
-    if (!garden || garden.plants.length === 0) return { title: "Ton jardin est vide", text: "Plante tes premières graines après un quiz (5 quiz par plante fleurie).", color: "text-slate-700 dark:text-slate-400" };
+    if (!garden || garden.plants.length === 0) return { title: "Ton jardin est prêt", text: "Complète un quiz pour semer ta graine (10 quiz & soins requis).", color: "text-slate-700 dark:text-slate-400" };
     
-    const needsWater = garden.plants.some(p => getPlantHealth(p) === 'thirsty' || getPlantHealth(p) === 'withered');
-    if (needsWater) return { title: "Alerte hydratation", text: "Utilise tes bidons d'eau pour sauver tes plantes !", color: "text-amber-600 dark:text-amber-500" };
-    
-    const growingCount = garden.plants.filter(p => (p.quizzesContributed || p.growthStage || 1) < 5).length;
-    if (growingCount > 0) return { title: "Culture en cours", text: "Chaque quiz nourrit ta plante (5 quiz nécessaires pour la faire fleurir) !", color: "text-emerald-700 dark:text-emerald-400" };
+    const hasPests = garden.plants.some(p => getPlantHealth(p) === 'pests');
+    if (hasPests) return { title: "Alerte Ravageurs 🐛", text: "Des parasites attaquent les racines ! Utilise le soin désherbeur.", color: "text-rose-600 dark:text-rose-400" };
 
-    return { title: "Jardin luxuriant", text: "Toutes tes plantes sont splendides ! Lance un quiz pour en semer une nouvelle.", color: "text-emerald-700 dark:text-emerald-500" };
+    const needsWater = garden.plants.some(p => getPlantHealth(p) === 'thirsty' || getPlantHealth(p) === 'withered');
+    if (needsWater) return { title: "Alerte hydratation 💧", text: "Utilise tes bidons d'eau pour hydrater tes plantes !", color: "text-amber-600 dark:text-amber-500" };
+    
+    const hasAdult = garden.plants.some(p => (p.quizzesContributed || 0) >= 10 && (p.growthStage ?? 0) >= 4);
+    if (hasAdult) return { title: "Récolte disponible 🌸", text: "Une plante est arrivée à pleine maturité ! Cueille-la pour tes récompenses.", color: "text-amber-500 dark:text-amber-400" };
+
+    const growingCount = garden.plants.filter(p => (p.quizzesContributed || p.growthStage || 1) < 10).length;
+    if (growingCount > 0) return { title: "Culture vivante en cours 🌱", text: "Chaque quiz et arrosage nourrit ta plante (10 quiz et soins sur 2 à 3 jours).", color: "text-emerald-700 dark:text-emerald-400" };
+
+    return { title: "Jardin luxuriant ✨", text: "Toutes tes plantes sont splendides ! Lance un quiz pour en semer une nouvelle.", color: "text-emerald-700 dark:text-emerald-500" };
   };
 
   const status = getGardenStatus();
@@ -209,7 +259,7 @@ export const MindGarden: React.FC = () => {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'shop' } }))}
-              className="px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-700 dark:text-blue-400 text-xs font-black flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
+              className="px-3 py-1.5 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 rounded-xl border border-blue-500/30 text-blue-700 dark:text-blue-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
               title="Acheter des bidons d'eau dans la Boutique"
             >
                 <Droplets size={14} /> {waterCans}
@@ -217,10 +267,18 @@ export const MindGarden: React.FC = () => {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'shop' } }))}
-              className="px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-500/20 hover:bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-black flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
+              className="px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-500/20 hover:bg-emerald-500/20 rounded-xl border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
               title="Acheter de l'engrais magique dans la Boutique"
             >
                 <Sparkles size={14} /> {fertilizers}
+            </button>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('navigate_tab', { detail: { tab: 'shop' } }))}
+              className="px-3 py-1.5 bg-amber-500/10 dark:bg-amber-500/20 hover:bg-amber-500/20 rounded-xl border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-black flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
+              title="Acheter Soin Désherbeur & Anti-Parasites dans la Boutique"
+            >
+                <ShieldCheck size={14} /> {weedCures}
             </button>
         </div>
       </div>

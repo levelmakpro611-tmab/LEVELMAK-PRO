@@ -98,8 +98,12 @@ export const mapProfileToUser = (profile: any): User => {
         }
     }
 
-    const rawEducation = profile.education || stats.education || profile.grade_class || stats.gradeClass || '';
-    let computedGradeClass = (profile.grade_class || stats.gradeClass || profile.education || stats.education || rawEducation) as GradeClass;
+    const localGradeClass = profile.id ? localStorage.getItem(`levelmak_grade_class_${profile.id}`) : null;
+    const localEducation = profile.id ? localStorage.getItem(`levelmak_education_${profile.id}`) : null;
+
+    // Explicit user selections take priority over old default fallback values
+    const rawEducation = localEducation || profile.education || stats.education || localGradeClass || profile.grade_class || stats.gradeClass || '';
+    let computedGradeClass = (localGradeClass || profile.grade_class || stats.gradeClass || profile.education || stats.education || rawEducation) as GradeClass;
     let computedLevel = (profile.level || stats.level) as SchoolLevel;
 
     const lowerEd = String(rawEducation).toLowerCase();

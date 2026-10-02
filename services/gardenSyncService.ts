@@ -4,6 +4,7 @@ import { GardenPlant, UserGarden } from '../types';
 export interface ConsumablesState {
   water_can: number;
   fertilizer: number;
+  weed_cure: number;
   [key: string]: any;
 }
 
@@ -83,6 +84,7 @@ export const resolveGarden = (...candidates: any[]): UserGarden => {
 export const resolveConsumables = (...candidates: any[]): ConsumablesState => {
   let maxWater = 1; // Always at least 1 free water can for onboarding
   let maxFertilizer = 0;
+  let maxWeedCure = 0;
   let mergedExtra: Record<string, any> = {};
 
   for (const cand of candidates) {
@@ -103,6 +105,9 @@ export const resolveConsumables = (...candidates: any[]): ConsumablesState => {
     if (obj.fertilizer !== undefined && !isNaN(Number(obj.fertilizer))) {
       maxFertilizer = Math.max(maxFertilizer, Number(obj.fertilizer));
     }
+    if (obj.weed_cure !== undefined && !isNaN(Number(obj.weed_cure))) {
+      maxWeedCure = Math.max(maxWeedCure, Number(obj.weed_cure));
+    }
 
     mergedExtra = { ...mergedExtra, ...obj };
   }
@@ -110,7 +115,8 @@ export const resolveConsumables = (...candidates: any[]): ConsumablesState => {
   return {
     ...mergedExtra,
     water_can: maxWater,
-    fertilizer: maxFertilizer
+    fertilizer: maxFertilizer,
+    weed_cure: maxWeedCure
   };
 };
 

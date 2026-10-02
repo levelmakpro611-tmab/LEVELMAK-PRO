@@ -193,41 +193,70 @@ export const useGamificationStore = (
             let isNewPlant = false;
 
             if (activePlantIndex !== -1) {
-                // Grow the existing active plant with +1 quiz contributed
+                // Grow the existing active plant with +1 quiz contributed (target: 10 quizzes)
                 updatedPlants = existingPlants.map((plant, idx) => {
                     if (idx !== activePlantIndex) return plant;
-                    const quizzes = Math.min(5, (plant.quizzesContributed || plant.growthStage || 1) + 1);
-                    // 5 quizzes progression:
-                    // 1 quiz = Stage 1 (Sprout 🌱 - 20%)
-                    // 2 quizzes = Stage 2 (Growing Stem 🌿 - 40%)
-                    // 3 quizzes = Stage 2 (Stronger Stem 🌿 - 60%)
-                    // 4 quizzes = Stage 3 (Bud / Pre-bloom 🌺/🌲 - 80%)
-                    // 5 quizzes = Stage 4 (Full Mature Bloom 🌸/🌹/🌳/🪷 - 100%)
+
+                    // If roots are infested by pests, growth is paused until cured
+                    if (plant.hasPests) {
+                        return plant;
+                    }
+
+                    const currentQuizzes = Number(plant.quizzesContributed || plant.growthStage || 1);
+                    const quizzes = Math.min(10, currentQuizzes + 1);
+
+                    const plantedTime = new Date(plant.plantedAt || Date.now()).getTime();
+                    const ageDays = (Date.now() - plantedTime) / (1000 * 60 * 60 * 24);
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const daysMaintained = (plant.lastCaredDay && plant.lastCaredDay !== todayStr)
+                        ? (plant.daysMaintained || 1) + 1
+                        : (plant.daysMaintained || 1);
+
+                    // Progression sur 10 quiz et exigence d'entretien sur 2 jours :
+                    // 1-2 = Stage 1 (Sprout 🌱)
+                    // 3-5 = Stage 2 (Growing Stem 🌿)
+                    // 6-7 = Stage 2 (Strong Bush 🪴)
+                    // 8-9 = Stage 3 (Pre-bloom Bud 🌺)
+                    // 10 = Stage 4 (Full Mature Bloom 🌸/🌳) -> requires at least 2 days of real maintenance
                     let nextStage = 1;
-                    if (quizzes >= 5) nextStage = 4;
-                    else if (quizzes >= 4) nextStage = 3;
-                    else if (quizzes >= 2) nextStage = 2;
-                    else nextStage = 1;
+                    if (quizzes >= 10 && (ageDays >= 1.8 || daysMaintained >= 2)) {
+                        nextStage = 4;
+                    } else if (quizzes >= 7) {
+                        nextStage = 3;
+                    } else if (quizzes >= 3) {
+                        nextStage = 2;
+                    } else {
+                        nextStage = 1;
+                    }
+
+                    // Risque d'attaque de parasites sur les racines (12% à partir du 3e quiz)
+                    const pestAttack = (!plant.hasPests && quizzes >= 3 && Math.random() < 0.12);
 
                     return {
                         ...plant,
                         growthStage: nextStage,
                         quizzesContributed: quizzes,
-                        state: 'healthy' as const,
+                        state: pestAttack ? ('pests' as const) : ('healthy' as const),
+                        hasPests: pestAttack || plant.hasPests,
+                        pestsSince: pestAttack ? new Date().toISOString() : plant.pestsSince,
+                        daysMaintained,
+                        lastCaredDay: todayStr,
                         lastWateredAt: new Date().toISOString()
                     };
                 });
             } else {
-                // All plants are mature or garden is empty -> Plant a new seed/sprout (Quiz 1/5)
+                // All plants are mature or garden is empty -> Plant a new seed/sprout (Quiz 1/10)
                 isNewPlant = true;
                 const newPlant: GardenPlant = {
                     id: `plant_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
                     type,
                     growthStage: 1, // Stage 1 (Sprout 🌱)
-                    quizzesContributed: 1, // 1 quiz completed out of 5
+                    quizzesContributed: 1, // 1 quiz completed out of 10
                     state: 'healthy',
                     lastWateredAt: new Date().toISOString(),
-                    plantedAt: new Date().toISOString()
+                    plantedAt: new Date().toISOString(),
+                    daysMaintained: 1,
+                    lastCaredDay: new Date().toISOString().split('T')[0]
                 };
                 updatedPlants = [...existingPlants, newPlant];
             }
@@ -273,7 +302,7 @@ export const useGamificationStore = (
         });
     }, [setUser]);
 
-    const waterGarden = useCallback((plantId: string, itemType: 'water_can' | 'fertilizer') => {
+    const waterGarden = useCallback((plantId: string, itemType: 'water_can' | 'fertilizer' | 'weed_cure') => {
         setUser(prev => {
             if (!prev) return null;
             
@@ -288,22 +317,47 @@ export const useGamificationStore = (
             const updatedPlants = (baseGarden.plants || []).map(plant => {
                 if (plant.id !== plantId) return plant;
                 
+                if (itemType === 'weed_cure') {
+                    // Élimination des vers/parasites des racines & régénération
+                    return {
+                        ...plant,
+                        hasPests: false,
+                        pestsSince: undefined,
+                        state: 'healthy' as const,
+                        lastWateredAt: new Date().toISOString()
+                    };
+                }
+
                 // Water gives hydration and +0.5 quiz progress; Fertilizer gives a full +1.5 quiz progress boost
                 const boost = itemType === 'water_can' ? 0.5 : 1.5;
-                const currentQuizzes = plant.quizzesContributed || plant.growthStage || 1;
-                const newQuizzes = Math.min(5, currentQuizzes + boost);
+                const currentQuizzes = Number(plant.quizzesContributed || plant.growthStage || 1);
+                const newQuizzes = Math.min(10, currentQuizzes + boost);
+
+                const plantedTime = new Date(plant.plantedAt || Date.now()).getTime();
+                const ageDays = (Date.now() - plantedTime) / (1000 * 60 * 60 * 24);
+                const todayStr = new Date().toISOString().split('T')[0];
+                const daysMaintained = (plant.lastCaredDay && plant.lastCaredDay !== todayStr)
+                    ? (plant.daysMaintained || 1) + 1
+                    : (plant.daysMaintained || 1);
 
                 let nextStage = plant.growthStage;
-                if (newQuizzes >= 5) nextStage = 4;
-                else if (newQuizzes >= 4) nextStage = 3;
-                else if (newQuizzes >= 2) nextStage = 2;
-                else nextStage = 1;
+                if (newQuizzes >= 10 && (ageDays >= 1.8 || daysMaintained >= 2)) {
+                    nextStage = 4;
+                } else if (newQuizzes >= 7) {
+                    nextStage = 3;
+                } else if (newQuizzes >= 3) {
+                    nextStage = 2;
+                } else {
+                    nextStage = 1;
+                }
                 
                 return { 
                     ...plant, 
                     growthStage: nextStage,
                     quizzesContributed: newQuizzes,
-                    state: 'healthy' as const, 
+                    daysMaintained,
+                    lastCaredDay: todayStr,
+                    state: plant.hasPests ? ('pests' as const) : ('healthy' as const), 
                     lastWateredAt: new Date().toISOString() 
                 };
             });
@@ -344,6 +398,79 @@ export const useGamificationStore = (
 
             return updated;
         });
+    }, [setUser]);
+
+    const harvestPlant = useCallback((plantId: string) => {
+        let rewardCoins = 15;
+        let rewardXp = 25;
+
+        setUser(prev => {
+            if (!prev) return null;
+
+            const localGardenStr = prev.id ? localStorage.getItem(`levelmak_garden_${prev.id}`) : null;
+            const baseGarden = resolveGarden(prev.garden, prev.stats?.garden, localGardenStr);
+            const plant = (baseGarden.plants || []).find(p => p.id === plantId);
+            if (!plant) return prev;
+
+            if (plant.type === 'tree' || plant.type === 'lotus' || plant.type === 'bonsai') {
+                rewardCoins = 20;
+                rewardXp = 35;
+            }
+
+            // Libère l'emplacement pour semer une nouvelle graine
+            const updatedPlants = (baseGarden.plants || []).filter(p => p.id !== plantId);
+            const newGarden = {
+                ...baseGarden,
+                plants: updatedPlants
+            };
+
+            const curCoins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
+            const newCoins = curCoins + rewardCoins;
+            const totalXp = (prev.totalXp || 0) + rewardXp;
+            const xpLevelInfo = calculateLevelAndXp(totalXp, (prev.xp || 0) + rewardXp);
+
+            const newStats = {
+                ...(prev.stats || {}),
+                garden: newGarden,
+                levelCoins: newCoins
+            };
+
+            const updated = {
+                ...prev,
+                levelCoins: newCoins,
+                level_coins: newCoins,
+                totalXp,
+                xp: xpLevelInfo.currentLevelXp,
+                level: String(xpLevelInfo.level),
+                garden: newGarden,
+                stats: newStats
+            };
+
+            if (prev.id) {
+                saveLocalGarden(prev.id, newGarden);
+            }
+            safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
+
+            // Sync to Supabase
+            if (prev.id && !prev.id.includes('anon')) {
+                supabase.from('profiles').update({
+                    level_coins: newCoins,
+                    total_xp: totalXp,
+                    xp: xpLevelInfo.currentLevelXp,
+                    level: String(xpLevelInfo.level),
+                    stats: newStats,
+                    avatar_config: {
+                        ...(prev.avatar || {}),
+                        garden: newGarden
+                    }
+                }).eq('id', prev.id).then(({ error }) => {
+                    if (error) console.error('[harvestPlant sync error]:', error);
+                });
+            }
+
+            return updated;
+        });
+
     }, [setUser]);
 
     const purchaseItem = useCallback((itemId: string, price: number, originalId?: string): boolean => {
@@ -579,6 +706,7 @@ export const useGamificationStore = (
         grantBadge,
         plantInGarden,
         waterGarden,
+        harvestPlant,
         purchaseItem,
         equipItem,
         purchasePotion,

@@ -143,6 +143,16 @@ export const POTIONS = [
     icon: 'Sparkles',
     image: '/assets/garden/fertilizer.png',
     category: 'garden'
+  },
+  {
+    id: 'weed_cure',
+    name: 'Soin Désherbeur & Anti-Parasites',
+    description: 'Élimine les vers et parasites qui attaquent les racines et protège ta plante.',
+    price: 50,
+    color: '#F59E0B',
+    icon: 'ShieldCheck',
+    image: '/assets/garden/weed_cure.png',
+    category: 'garden'
   }
 ];
 
