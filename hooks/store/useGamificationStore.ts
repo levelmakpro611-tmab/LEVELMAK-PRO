@@ -96,31 +96,50 @@ export const useGamificationStore = (
         });
     }, [setUser]);
 
-    const betLevelCoins = useCallback((amount: number) => {
-        let success = false;
+    const getEffectiveCoins = useCallback((): number => {
+        let coins = Number(user?.levelCoins ?? (user as any)?.level_coins ?? 0);
+        try {
+            const raw = localStorage.getItem('levelmak_user');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                const localCoins = Number(parsed.levelCoins ?? parsed.level_coins ?? 0);
+                if (!isNaN(localCoins)) {
+                    coins = Math.max(coins, localCoins);
+                }
+            }
+        } catch (_) {}
+        return coins;
+    }, [user]);
+
+    const betLevelCoins = useCallback((amount: number): boolean => {
+        const effectiveCoins = getEffectiveCoins();
+        if (effectiveCoins < amount) {
+            return false;
+        }
+
+        const newCoins = Math.max(0, effectiveCoins - amount);
+
         setUser(prev => {
             if (!prev) return prev;
-            const currentCoins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
-            if (currentCoins < amount) return prev;
-            success = true;
-            const newCoins = Math.max(0, currentCoins - amount);
+            const coins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
+            const actualNewCoins = Math.max(0, coins - amount);
             const updated = { 
                 ...prev, 
-                levelCoins: newCoins,
-                level_coins: newCoins,
+                levelCoins: actualNewCoins,
+                level_coins: actualNewCoins,
                 stats: {
                     ...(prev.stats || {}),
-                    levelCoins: newCoins
+                    levelCoins: actualNewCoins
                 }
             };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
 
             if (prev.id && !prev.id.includes('anon')) {
                 supabase.from('profiles').update({
-                    level_coins: newCoins,
+                    level_coins: actualNewCoins,
                     stats: {
                         ...(prev.stats || {}),
-                        levelCoins: newCoins
+                        levelCoins: actualNewCoins
                     }
                 }).eq('id', prev.id).then(({ error }) => {
                     if (error) console.error('[betLevelCoins Supabase Sync Error]:', error);
@@ -129,8 +148,20 @@ export const useGamificationStore = (
 
             return updated;
         });
-        return success;
-    }, [setUser]);
+
+        try {
+            const raw = localStorage.getItem('levelmak_user');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                parsed.levelCoins = newCoins;
+                parsed.level_coins = newCoins;
+                if (parsed.stats) parsed.stats.levelCoins = newCoins;
+                safeLocalStorageSet('levelmak_user', JSON.stringify(parsed));
+            }
+        } catch (_) {}
+
+        return true;
+    }, [user, setUser, getEffectiveCoins]);
 
     const grantBadge = useCallback((badgeId: string, title: string, description: string) => {
         setUser(prev => {
@@ -317,26 +348,40 @@ export const useGamificationStore = (
         });
     }, [setUser]);
 
-    const purchaseItem = useCallback((itemId: string, price: number, originalId?: string) => {
-        let success = false;
+    const purchaseItem = useCallback((itemId: string, price: number, originalId?: string): boolean => {
+        const effectiveCoins = getEffectiveCoins();
+        const currentInventory = user?.inventory || (() => {
+            try {
+                const raw = localStorage.getItem('levelmak_user');
+                return raw ? (JSON.parse(raw).inventory || []) : [];
+            } catch (_) { return []; }
+        })();
+
+        if (currentInventory.includes(itemId) || (originalId && currentInventory.includes(originalId))) {
+            return false;
+        }
+
+        if (effectiveCoins < price) {
+            return false;
+        }
+
+        const newCoins = Math.max(0, effectiveCoins - price);
+        const newInventory = [...currentInventory, itemId];
+
         setUser(prev => {
             if (!prev) return null;
-            const currentCoins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
-            if (currentCoins < price) return prev;
-            if (prev.inventory?.includes(itemId) || (originalId && prev.inventory?.includes(originalId))) return prev;
-            
-            success = true;
-            const newCoins = Math.max(0, currentCoins - price);
-            const newInventory = [...(prev.inventory || []), itemId];
+            const coins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
+            const actualNewCoins = Math.max(0, coins - price);
+            const actualInventory = prev.inventory?.includes(itemId) ? prev.inventory : [...(prev.inventory || []), itemId];
             const newStats = {
                 ...(prev.stats || {}),
-                levelCoins: newCoins
+                levelCoins: actualNewCoins
             };
             const updated = {
                 ...prev,
-                levelCoins: newCoins,
-                level_coins: newCoins,
-                inventory: newInventory,
+                levelCoins: actualNewCoins,
+                level_coins: actualNewCoins,
+                inventory: actualInventory,
                 stats: newStats
             };
             safeLocalStorageSet('levelmak_user', JSON.stringify(updated));
@@ -344,19 +389,32 @@ export const useGamificationStore = (
             // Sync immediately and authoritatively to Supabase
             if (prev.id && !prev.id.includes('anon')) {
                 supabase.from('profiles').update({
-                    level_coins: newCoins,
-                    inventory: newInventory,
+                    level_coins: actualNewCoins,
+                    inventory: actualInventory,
                     stats: newStats
                 }).eq('id', prev.id).then(({ error }) => {
                     if (error) console.error('[purchaseItem Supabase Sync Error]:', error);
-                    else console.log('[purchaseItem] Deducted coins & synced to Supabase:', newCoins);
+                    else console.log('[purchaseItem] Deducted coins & synced to Supabase:', actualNewCoins);
                 });
             }
 
             return updated;
         });
-        return success;
-    }, [setUser]);
+
+        try {
+            const raw = localStorage.getItem('levelmak_user');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                parsed.levelCoins = newCoins;
+                parsed.level_coins = newCoins;
+                parsed.inventory = newInventory;
+                if (parsed.stats) parsed.stats.levelCoins = newCoins;
+                safeLocalStorageSet('levelmak_user', JSON.stringify(parsed));
+            }
+        } catch (_) {}
+
+        return true;
+    }, [user, setUser, getEffectiveCoins]);
 
     const equipItem = useCallback((itemId: string, category: string, image?: string, originalId?: string) => {
         setUser(prev => {
@@ -407,20 +465,23 @@ export const useGamificationStore = (
         });
     }, [setUser]);
 
-    const purchasePotion = useCallback((potionId: string, originalId?: string) => {
+    const purchasePotion = useCallback((potionId: string, originalId?: string, priceOverride?: number): boolean => {
         const targetId = originalId || potionId;
         const potion = POTIONS.find(p => p.id === targetId || p.id === potionId || (p as any).originalId === targetId);
-        if (!potion) return false;
+        const itemPrice = priceOverride !== undefined ? priceOverride : (potion ? potion.price : 0);
 
-        let success = false;
+        const effectiveCoins = getEffectiveCoins();
+        if (effectiveCoins < itemPrice) {
+            return false;
+        }
+
+        const remainingCoins = Math.max(0, effectiveCoins - itemPrice);
+        const key = potion ? potion.id : targetId;
+
         setUser(prev => {
             if (!prev) return null;
             const curCoins = Number(prev.levelCoins ?? (prev as any).level_coins ?? 0);
-            if (curCoins < potion.price) return prev;
-
-            success = true;
-            const remainingCoins = Math.max(0, curCoins - potion.price);
-            const key = potion.id; // e.g. 'water_can', 'fertilizer', 'potion_double_xp', etc.
+            const actualRemaining = Math.max(0, curCoins - itemPrice);
             const newConsumables = {
                 ...prev.consumables,
                 [key]: (prev.consumables?.[key] || 0) + 1
@@ -428,12 +489,12 @@ export const useGamificationStore = (
             const newStats = {
                 ...prev.stats,
                 consumables: newConsumables,
-                levelCoins: remainingCoins
+                levelCoins: actualRemaining
             };
             const updated = {
                 ...prev,
-                levelCoins: remainingCoins,
-                level_coins: remainingCoins,
+                levelCoins: actualRemaining,
+                level_coins: actualRemaining,
                 consumables: newConsumables,
                 stats: newStats
             };
@@ -446,18 +507,30 @@ export const useGamificationStore = (
             // Sync immediately and authoritatively to Supabase
             if (prev.id && !prev.id.includes('anon')) {
                 supabase.from('profiles').update({ 
-                    level_coins: remainingCoins,
+                    level_coins: actualRemaining,
                     stats: newStats
                 }).eq('id', prev.id).then(({ error }) => {
                     if (error) console.error('[purchasePotion Sync Error]:', error);
-                    else console.log('[purchasePotion] Successfully synced remaining coins:', remainingCoins);
+                    else console.log('[purchasePotion] Successfully synced remaining coins:', actualRemaining);
                 });
             }
 
             return updated;
         });
-        return success;
-    }, [setUser]);
+
+        try {
+            const raw = localStorage.getItem('levelmak_user');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                parsed.levelCoins = remainingCoins;
+                parsed.level_coins = remainingCoins;
+                if (parsed.stats) parsed.stats.levelCoins = remainingCoins;
+                safeLocalStorageSet('levelmak_user', JSON.stringify(parsed));
+            }
+        } catch (_) {}
+
+        return true;
+    }, [user, setUser, getEffectiveCoins]);
 
     // ✅ Renamed from usePotion to consumePotion — functions starting with 'use' are
     // treated as hooks by React's static analysis, causing false 'conditional hook' errors.

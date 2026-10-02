@@ -2,7 +2,7 @@ import { safeLocalStorageSet } from '../services/storage';
 import React, { createContext, useContext, ReactNode, useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { BattleRequest } from '../types';
 
-import { useAuthStore } from './store/useAuthStore';
+import { useAuthStore, normalizeNotification } from './store/useAuthStore';
 import { useContentStore } from './store/useContentStore';
 import { useGamificationStore } from './store/useGamificationStore';
 import { useUIStore } from './store/useUIStore';
@@ -75,19 +75,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Missing legacy states
   const notifications = useMemo(() => {
+    let list: any[] = [];
     if (auth.user?.stats?.notifications && Array.isArray(auth.user.stats.notifications) && auth.user.stats.notifications.length > 0) {
-      return auth.user.stats.notifications;
-    }
-    if (auth.user?.id) {
+      list = auth.user.stats.notifications;
+    } else if (auth.user?.id) {
       try {
         const stored = localStorage.getItem(`levelmak_notifications_${auth.user.id}`);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
         }
       } catch (_) {}
     }
-    return [];
+    return list.map(normalizeNotification);
   }, [auth.user?.id, auth.user?.stats?.notifications]);
   const [continuousStudyTime, setContinuousStudyTime] = useState(0);
   const [offlinePacks, setOfflinePacks] = useState<string[]>([]);

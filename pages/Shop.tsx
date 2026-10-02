@@ -137,7 +137,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
         const displayName = translatedName.startsWith('items.') ? item.name : translatedName;
 
         if (item.category === 'potion' || item.category === 'garden') {
-            const success = purchasePotion(item.id, item.originalId);
+            const success = purchasePotion(item.id, item.originalId, item.price);
             if (success) {
                 setPurchaseSuccess(displayName);
                 setTimeout(() => setPurchaseSuccess(null), 3000);
@@ -299,7 +299,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                             </div>
 
                             {/* Inventory Count for consumables */}
-                            {item.category === 'potion' && (user?.consumables?.[item.id] || (item.originalId && user?.consumables?.[item.originalId])) && (
+                            {(item.category === 'potion' || item.category === 'garden') && (user?.consumables?.[item.id] || (item.originalId && user?.consumables?.[item.originalId])) && (
                                 <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-secondary/20 text-secondary-light rounded-full text-[10px] font-black uppercase flex items-center gap-1">
                                     {t('shop.stock')}: {user.consumables[item.id] || (item.originalId ? user.consumables[item.originalId] : 0)}
                                 </div>
@@ -312,7 +312,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                             </div>
 
                             {/* Purchase/Equip/Use Button */}
-                            {item.category === 'potion' ? (
+                            {(item.category === 'potion' || item.category === 'garden') ? (
                                 <div className="flex flex-col gap-2 w-full">
                                     <button
                                         onClick={() => handlePurchase(item)}
@@ -333,7 +333,7 @@ const HARDCODED_ITEMS = HARDCODED_SHOP_ITEMS as ShopItem[];
                                         </button>
                                     )}
                                 </div>
-                            ) : item.category !== 'potion' && (inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId))) ? (
+                            ) : (inventory.includes(item.id) || (item.originalId && inventory.includes(item.originalId))) ? (
                                 <button
                                     onClick={() => equipItem(item.id, item.category, item.image, item.originalId)}
                                     className={`w-full py-2.5 md:py-4 rounded-xl md:rounded-2xl flex items-center justify-center gap-2 md:gap-3 text-[9px] md:text-xs font-black uppercase tracking-[0.15em] md:tracking-[0.2em] transition-all ${

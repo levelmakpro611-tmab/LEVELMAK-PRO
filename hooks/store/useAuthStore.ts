@@ -22,6 +22,32 @@ import {
     syncGardenToSupabase 
 } from '../../services/gardenSyncService';
 
+export const normalizeNotification = (notif: any): any => {
+    if (!notif) return notif;
+    const title = String(notif.title || '');
+    const message = String(notif.message || '');
+    const isBonusOrAdminCredit =
+        title.includes('AVERTISSEMENT / SANCTION ADMIN') ||
+        title.includes('SANCTION') ||
+        title.includes('MODÉRATION') ||
+        message.includes('Attribution de') ||
+        message.includes('Level Coins') ||
+        message.includes('LevelCoins') ||
+        message.includes('bonus') ||
+        message.includes('Bonus');
+
+    if (isBonusOrAdminCredit && (message.includes('Level Coins') || message.includes('LevelCoins') || message.includes('Coins') || message.includes('XP') || message.includes('Attribution de'))) {
+        const isXp = message.includes('XP') && !message.includes('Coins');
+        return {
+            ...notif,
+            type: 'admin',
+            title: isXp ? '⚡ Bonus XP Reçu !' : '🎁 Bonus LevelCoins Reçu !',
+            message: message.replace(/^Modération\s*:\s*/i, '').replace(/^Attribution de\s*/i, "L'administration principale vous a accordé un bonus de ")
+        };
+    }
+    return notif;
+};
+
 export const useAuthStore = () => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
@@ -128,11 +154,30 @@ export const useAuthStore = () => {
                                 if (localNotifsStr) {
                                     try { localNotifs = JSON.parse(localNotifsStr); } catch (_) {}
                                 }
-                                const finalNotifs = (data.stats?.notifications && Array.isArray(data.stats.notifications) && data.stats.notifications.length > 0)
+                                const rawNotifs = (data.stats?.notifications && Array.isArray(data.stats.notifications) && data.stats.notifications.length > 0)
                                     ? data.stats.notifications
                                     : (parsedUser?.stats?.notifications && parsedUser.stats.notifications.length > 0)
                                         ? parsedUser.stats.notifications
                                         : localNotifs;
+
+                                let finalNotifs = rawNotifs.map(normalizeNotification);
+
+                                // Ensure bonus notification exists if user has high coins (>= 2000)
+                                const hasBonusNotif = finalNotifs.some((n: any) => 
+                                    n.title?.includes('Bonus') || n.title?.includes('LevelCoins') || n.title?.includes('Level Coins') ||
+                                    n.message?.includes('bonus') || n.message?.includes('Level Coins')
+                                );
+                                const coinsTotal = Number(data.level_coins ?? appUser.levelCoins ?? 0);
+                                if (!hasBonusNotif && coinsTotal >= 2000) {
+                                    finalNotifs.unshift({
+                                        id: `bonus_admin_${appUser.id}`,
+                                        type: 'admin',
+                                        title: '🎁 Bonus LevelCoins Reçu !',
+                                        message: `L'administration principale vous a accordé un bonus de LevelCoins 🪙 ! Votre solde est de ${coinsTotal.toLocaleString()} 🪙.`,
+                                        timestamp: new Date().toISOString(),
+                                        read: false
+                                    });
+                                }
 
                                 // Synchronisation et persistance infaillible du Jardin de l'Esprit & Consommables
                                 const localGardenStr = appUser.id ? localStorage.getItem(`levelmak_garden_${appUser.id}`) : null;
@@ -233,9 +278,27 @@ export const useAuthStore = () => {
                         if (localNotifsStr) {
                             try { localNotifs = JSON.parse(localNotifsStr); } catch (_) {}
                         }
-                        const finalNotifs = (profile.stats?.notifications && Array.isArray(profile.stats.notifications) && profile.stats.notifications.length > 0)
+                        const rawNotifs = (profile.stats?.notifications && Array.isArray(profile.stats.notifications) && profile.stats.notifications.length > 0)
                             ? profile.stats.notifications
                             : localNotifs;
+
+                        let finalNotifs = rawNotifs.map(normalizeNotification);
+
+                        const hasBonusNotif = finalNotifs.some((n: any) => 
+                            n.title?.includes('Bonus') || n.title?.includes('LevelCoins') || n.title?.includes('Level Coins') ||
+                            n.message?.includes('bonus') || n.message?.includes('Level Coins')
+                        );
+                        const coinsTotal = Number(profile.level_coins ?? user.levelCoins ?? 0);
+                        if (!hasBonusNotif && coinsTotal >= 2000) {
+                            finalNotifs.unshift({
+                                id: `bonus_admin_${user.id}`,
+                                type: 'admin',
+                                title: '🎁 Bonus LevelCoins Reçu !',
+                                message: `L'administration principale vous a accordé un bonus de LevelCoins 🪙 ! Votre solde est de ${coinsTotal.toLocaleString()} 🪙.`,
+                                timestamp: new Date().toISOString(),
+                                read: false
+                            });
+                        }
 
                         // Synchronisation et persistance infaillible du Jardin de l'Esprit & Consommables
                         const localGardenStr = user.id ? localStorage.getItem(`levelmak_garden_${user.id}`) : null;
@@ -781,7 +844,32 @@ export const useAuthStore = () => {
                             }
 
                             // Detect if there are genuinely NEW notifications (strictly once per ID)
-                            const newNotifs = finalUser.stats?.notifications || [];
+                            // Also detect if admin gave bonus coins via Realtime
+                            const oldCoins = Number(currentUser?.levelCoins ?? (currentUser as any)?.level_coins ?? 0);
+                            const newCoins = Number(mappedUser.levelCoins ?? (mappedUser as any)?.level_coins ?? 0);
+                            const coinDiff = newCoins - oldCoins;
+
+                            let newNotifs = (finalUser.stats?.notifications || []).map(normalizeNotification);
+
+                            if (coinDiff > 0) {
+                                const bonusNotif = {
+                                    id: `bonus_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                                    type: 'admin',
+                                    title: '🎁 Bonus LevelCoins Reçu !',
+                                    message: `L'administration principale vous a accordé un bonus de +${coinDiff.toLocaleString()} LevelCoins 🪙 ! Nouveau solde : ${newCoins.toLocaleString()} 🪙.`,
+                                    timestamp: new Date().toISOString(),
+                                    read: false
+                                };
+                                newNotifs = [bonusNotif, ...newNotifs].slice(0, 50);
+                                finalUser.stats = {
+                                    ...finalUser.stats,
+                                    notifications: newNotifs
+                                };
+                                if (finalUser.id) {
+                                    localStorage.setItem(`levelmak_notifications_${finalUser.id}`, JSON.stringify(newNotifs));
+                                }
+                            }
+
                             const newlyAdded = newNotifs.filter((n: any) => n?.id && !knownNotifIdsRef.current.has(String(n.id)));
 
                             if (newlyAdded.length > 0) {
