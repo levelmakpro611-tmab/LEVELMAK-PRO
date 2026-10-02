@@ -1454,7 +1454,54 @@ export const adjustUserResources = async (userId: string, type: 'xp' | 'coins', 
             return {};
         }
 
-        // 1. Try Edge Function (Admin Service Role bypasses RLS completely)
+        // 1. Primary method: Use deployed cloud Edge Function 'sanction_user' with Service Role bypass
+        // Cloud implementation: updates = Math.max(0, current - amount)
+        // Therefore:
+        // - To ADD numAmount: pass amount = -numAmount (e.g., -500 adds +500)
+        // - To DEDUCT numAmount: pass amount = numAmount (e.g., 50 deducts 50)
+        try {
+            const sanctionType = type === 'coins' ? 'deduct_coins' : 'deduct_xp';
+            const invertedAmount = -numAmount;
+            const reasonMsg = type === 'coins'
+                ? `Attribution de ${numAmount > 0 ? '+' : ''}${numAmount} Level Coins par l'administration`
+                : `Attribution de ${numAmount > 0 ? '+' : ''}${numAmount} XP par l'administration`;
+
+            const { data: sanctionRes, error: sanctionErr } = await supabase.functions.invoke('submit-comment', {
+                body: {
+                    action: 'sanction_user',
+                    userId,
+                    type: sanctionType,
+                    amount: invertedAmount,
+                    reason: reasonMsg
+                }
+            });
+
+            if (!sanctionErr && sanctionRes?.success) {
+                // Fetch the updated profile to confirm authoritative values directly from Supabase
+                const { data: updatedProfile } = await supabase
+                    .from('profiles')
+                    .select('xp, total_xp, level_coins')
+                    .eq('id', userId)
+                    .single();
+
+                const retXp = updatedProfile ? Number(updatedProfile.total_xp || updatedProfile.xp || 0) : undefined;
+                const retCoins = updatedProfile ? Number(updatedProfile.level_coins || 0) : undefined;
+
+                await logAdminAction('system', 'System', 'user_activity', { type: 'resource_adjust', resource: type, amount: numAmount }, userId);
+
+                return {
+                    totalXp: retXp,
+                    levelCoins: retCoins
+                };
+            }
+            if (sanctionErr) {
+                console.warn('[adjustUserResources] sanction_user invocation error:', sanctionErr);
+            }
+        } catch (edgeEx) {
+            console.warn('[adjustUserResources] sanction_user invocation exception:', edgeEx);
+        }
+
+        // 2. Secondary method: Try adjust_user_resources if deployed
         try {
             const { data: edgeRes, error: edgeErr } = await supabase.functions.invoke('submit-comment', {
                 body: { action: 'adjust_user_resources', userId, type, amount: numAmount }
@@ -1468,14 +1515,9 @@ export const adjustUserResources = async (userId: string, type: 'xp' | 'coins', 
                     levelCoins: retCoins !== undefined ? Number(retCoins) : undefined
                 };
             }
-            if (edgeErr) {
-                console.warn('[adjustUserResources] Edge function warning, attempting direct fallback:', edgeErr);
-            }
-        } catch (edgeEx) {
-            console.warn('[adjustUserResources] Edge function invocation exception:', edgeEx);
-        }
+        } catch (_) {}
 
-        // 2. Direct Supabase Fallback (updates profiles + stats + real-time notification)
+        // 3. Direct Supabase Fallback (updates profiles + stats + real-time notification)
         const { data: userData, error: fetchError } = await supabase
             .from('profiles')
             .select('xp, total_xp, level_coins, stats')
