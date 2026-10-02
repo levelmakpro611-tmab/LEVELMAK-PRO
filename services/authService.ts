@@ -881,12 +881,13 @@ export const updateUserProfile = async (userId: string, updates: Partial<User>):
         if (updates.levelCoins !== undefined) dbUpdates.level_coins = updates.levelCoins;
         if (updates.avatar !== undefined) dbUpdates.avatar_config = updates.avatar;
         if (updates.onboardingCompleted !== undefined) dbUpdates.onboarding_completed = updates.onboardingCompleted;
-        if (updates.stats !== undefined) dbUpdates.stats = updates.stats;
-        if (updates.badges !== undefined) dbUpdates.badges = updates.badges;
-        if (updates.streak !== undefined) dbUpdates.streak = updates.streak;
-        if (updates.inventory !== undefined) dbUpdates.inventory = updates.inventory;
-        if (updates.gradeClass !== undefined) dbUpdates.grade_class = updates.gradeClass;
-        if (updates.education !== undefined) dbUpdates.education = updates.education;
+        if (updates.stats !== undefined || updates.gradeClass !== undefined || updates.education !== undefined) {
+            dbUpdates.stats = {
+                ...(updates.stats || {}),
+                ...(updates.gradeClass !== undefined ? { gradeClass: updates.gradeClass } : {}),
+                ...(updates.education !== undefined ? { education: updates.education } : {})
+            };
+        }
 
         const { error } = await supabase
             .from('profiles')

@@ -564,8 +564,6 @@ export const useAuthStore = () => {
                     xp: u.xp,
                     total_xp: u.totalXp,
                     level_coins: finalCoins,
-                    grade_class: gradeClassVal,
-                    education: educationVal,
                     stats: {
                         ...u.stats,
                         levelCoins: finalCoins,
