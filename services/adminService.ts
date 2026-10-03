@@ -1387,7 +1387,11 @@ export const getLeaderboard = async (limitCount: number = 50): Promise<User[]> =
                 }
                 return true;
             })
-            .sort((a, b) => (Number(b.total_xp || 0) - Number(a.total_xp || 0)))
+            .sort((a, b) => {
+                const diffXp = Number(b.total_xp || 0) - Number(a.total_xp || 0);
+                if (diffXp !== 0) return diffXp;
+                return Number(b.level || 1) - Number(a.level || 1);
+            })
             .map(u => ({
                 id: u.id,
                 name: u.name || u.username || 'Élève',

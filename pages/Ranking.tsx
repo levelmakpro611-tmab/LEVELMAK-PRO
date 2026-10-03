@@ -70,107 +70,131 @@ const Ranking: React.FC = () => {
             {/* Podium Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end relative px-4">
                 {/* Second Place */}
-                {top3[1] && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="order-2 md:order-1 flex flex-col items-center group"
-                    >
-                        <div className="relative mb-4">
-                            <div className="absolute top-0 right-0 w-8 h-8 bg-slate-300 text-slate-600 rounded-full flex items-center justify-center font-black border-2 border-slate-900 z-10 text-xs translate-x-2 -translate-y-2">2</div>
-                            <div className="w-24 h-24 rounded-[2rem] bg-slate-200 border-4 border-slate-300/50 shadow-2xl overflow-hidden relative ring-4 ring-slate-400/10 group-hover:scale-105 transition-transform">
-                                {top3[1].avatar?.image ? (
-                                    <img src={top3[1].avatar.image} alt={top3[1].name || 'Élève'} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-4xl font-black text-slate-400 bg-slate-100">
-                                        {(String(top3[1]?.name || 'Élève')).charAt(0)}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="text-center space-y-1">
-                            <h3 className="font-display font-black text-slate-900 dark:text-white line-clamp-1">{top3[1].name || 'Élève'}</h3>
-                            <div className="flex items-center justify-center gap-2 bg-slate-500/10 px-3 py-1 rounded-full border border-slate-500/20">
-                                <Star size={12} className="text-slate-400" />
-                                <span className="text-[10px] font-black text-slate-500 uppercase">{top3[1].totalXp.toLocaleString()} XP</span>
-                            </div>
-                        </div>
-                        <div className="mt-4 w-full h-24 bg-gradient-to-t from-slate-500/20 to-transparent rounded-t-[2.5rem] border-x border-t border-slate-500/10"></div>
-                    </motion.div>
-                )}
-
-                {/* First Place */}
-                {top3[0] && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="order-1 md:order-2 flex flex-col items-center group z-10"
-                    >
-                        <div className="relative mb-6">
-                            <motion.div
-                                animate={{ rotate: [0, 10, -10, 0] }}
-                                transition={{ repeat: Infinity, duration: 4 }}
-                                className="absolute -top-10 left-1/2 -translate-x-1/2 text-amber-500 drop-shadow-glow"
-                            >
-                                <Crown size={48} className="fill-amber-500/20" />
-                            </motion.div>
-                            <div className="absolute top-0 right-0 w-10 h-10 bg-amber-500 text-slate-950 rounded-full flex items-center justify-center font-black border-4 border-slate-950 z-10 text-sm translate-x-3 -translate-y-3 shadow-glow">1</div>
-                            <div className="w-40 h-40 rounded-[3rem] bg-gradient-to-br from-amber-400 to-orange-600 p-1.5 shadow-[0_0_50px_rgba(245,158,11,0.3)] group-hover:scale-105 transition-transform duration-500">
-                                <div className="w-full h-full rounded-[2.6rem] overflow-hidden bg-slate-900">
-                                    {top3[0].avatar?.image ? (
-                                        <img src={top3[0].avatar.image} alt={top3[0].name || 'Élève'} className="w-full h-full object-cover" />
+                {top3[1] && (() => {
+                    const pLevel = calculateLevelAndXp(top3[1].totalXp || 0).level;
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="order-2 md:order-1 flex flex-col items-center group"
+                        >
+                            <div className="relative mb-4">
+                                <div className="absolute top-0 right-0 w-8 h-8 bg-slate-300 text-slate-600 rounded-full flex items-center justify-center font-black border-2 border-slate-900 z-10 text-xs translate-x-2 -translate-y-2">2</div>
+                                <div className="w-24 h-24 rounded-[2rem] bg-slate-200 border-4 border-slate-300/50 shadow-2xl overflow-hidden relative ring-4 ring-slate-400/10 group-hover:scale-105 transition-transform">
+                                    {top3[1].avatar?.image ? (
+                                        <img src={top3[1].avatar.image} alt={top3[1].name || 'Élève'} className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-6xl font-black text-amber-500">
-                                            {(String(top3[0]?.name || 'Élève')).charAt(0)}
+                                        <div className="w-full h-full flex items-center justify-center text-4xl font-black text-slate-400 bg-slate-100">
+                                            {(String(top3[1]?.name || 'Élève')).charAt(0)}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        </div>
-                        <div className="text-center space-y-2 mb-4">
-                            <h3 className="text-xl font-display font-black text-slate-900 dark:text-white drop-shadow-sm">{top3[0].name || 'Élève'}</h3>
-                            <div className="flex items-center justify-center gap-2 bg-amber-500/20 px-4 py-1.5 rounded-full border border-amber-500/30">
-                                <Zap size={14} className="text-amber-500 fill-amber-500 animate-pulse" />
-                                <span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">{top3[0].totalXp.toLocaleString()} XP</span>
+                            <div className="text-center space-y-1.5">
+                                <h3 className="font-display font-black text-slate-900 dark:text-white line-clamp-1">{top3[1].name || 'Élève'}</h3>
+                                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                                    <span className="text-[10px] font-black bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded-full uppercase tracking-wider border border-slate-300 dark:border-white/10">
+                                        {t('ranking.level')} {pLevel}
+                                    </span>
+                                    <div className="flex items-center justify-center gap-1.5 bg-slate-500/10 px-2.5 py-0.5 rounded-full border border-slate-500/20">
+                                        <Star size={11} className="text-slate-400" />
+                                        <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase">{top3[1].totalXp.toLocaleString()} XP</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div className="w-full h-40 bg-gradient-to-t from-amber-500/20 to-transparent rounded-t-[3rem] border-x border-t border-amber-500/20 relative overflow-hidden">
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-                        </div>
-                    </motion.div>
-                )}
+                            <div className="mt-4 w-full h-24 bg-gradient-to-t from-slate-500/20 to-transparent rounded-t-[2.5rem] border-x border-t border-slate-500/10"></div>
+                        </motion.div>
+                    );
+                })()}
+
+                {/* First Place */}
+                {top3[0] && (() => {
+                    const pLevel = calculateLevelAndXp(top3[0].totalXp || 0).level;
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="order-1 md:order-2 flex flex-col items-center group z-10"
+                        >
+                            <div className="relative mb-6">
+                                <motion.div
+                                    animate={{ rotate: [0, 10, -10, 0] }}
+                                    transition={{ repeat: Infinity, duration: 4 }}
+                                    className="absolute -top-10 left-1/2 -translate-x-1/2 text-amber-500 drop-shadow-glow"
+                                >
+                                    <Crown size={48} className="fill-amber-500/20" />
+                                </motion.div>
+                                <div className="absolute top-0 right-0 w-10 h-10 bg-amber-500 text-slate-950 rounded-full flex items-center justify-center font-black border-4 border-slate-950 z-10 text-sm translate-x-3 -translate-y-3 shadow-glow">1</div>
+                                <div className="w-40 h-40 rounded-[3rem] bg-gradient-to-br from-amber-400 to-orange-600 p-1.5 shadow-[0_0_50px_rgba(245,158,11,0.3)] group-hover:scale-105 transition-transform duration-500">
+                                    <div className="w-full h-full rounded-[2.6rem] overflow-hidden bg-slate-900">
+                                        {top3[0].avatar?.image ? (
+                                            <img src={top3[0].avatar.image} alt={top3[0].name || 'Élève'} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-6xl font-black text-amber-500">
+                                                {(String(top3[0]?.name || 'Élève')).charAt(0)}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="text-center space-y-2 mb-4">
+                                <h3 className="text-xl font-display font-black text-slate-900 dark:text-white drop-shadow-sm">{top3[0].name || 'Élève'}</h3>
+                                <div className="flex flex-wrap items-center justify-center gap-2">
+                                    <span className="text-xs font-black bg-amber-500 text-slate-950 px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                        {t('ranking.level')} {pLevel}
+                                    </span>
+                                    <div className="flex items-center justify-center gap-1.5 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30">
+                                        <Zap size={13} className="text-amber-500 fill-amber-500 animate-pulse" />
+                                        <span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">{top3[0].totalXp.toLocaleString()} XP</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="w-full h-40 bg-gradient-to-t from-amber-500/20 to-transparent rounded-t-[3rem] border-x border-t border-amber-500/20 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+                            </div>
+                        </motion.div>
+                    );
+                })()}
 
                 {/* Third Place */}
-                {top3[2] && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="order-3 flex flex-col items-center group"
-                    >
-                        <div className="relative mb-4">
-                            <div className="absolute top-0 right-0 w-8 h-8 bg-orange-700 text-orange-100 rounded-full flex items-center justify-center font-black border-2 border-slate-900 z-10 text-xs translate-x-2 -translate-y-2">3</div>
-                            <div className="w-24 h-24 rounded-[2rem] bg-orange-950 border-4 border-orange-900/50 shadow-2xl overflow-hidden relative ring-4 ring-orange-900/10 group-hover:scale-105 transition-transform">
-                                {top3[2].avatar?.image ? (
-                                    <img src={top3[2].avatar.image} alt={top3[2].name || 'Élève'} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-4xl font-black text-orange-500">
-                                        {(String(top3[2]?.name || 'Élève')).charAt(0)}
+                {top3[2] && (() => {
+                    const pLevel = calculateLevelAndXp(top3[2].totalXp || 0).level;
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="order-3 flex flex-col items-center group"
+                        >
+                            <div className="relative mb-4">
+                                <div className="absolute top-0 right-0 w-8 h-8 bg-orange-700 text-orange-100 rounded-full flex items-center justify-center font-black border-2 border-slate-900 z-10 text-xs translate-x-2 -translate-y-2">3</div>
+                                <div className="w-24 h-24 rounded-[2rem] bg-orange-950 border-4 border-orange-900/50 shadow-2xl overflow-hidden relative ring-4 ring-orange-900/10 group-hover:scale-105 transition-transform">
+                                    {top3[2].avatar?.image ? (
+                                        <img src={top3[2].avatar.image} alt={top3[2].name || 'Élève'} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-4xl font-black text-orange-500">
+                                            {(String(top3[2]?.name || 'Élève')).charAt(0)}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="text-center space-y-1.5">
+                                <h3 className="font-display font-black text-slate-900 dark:text-white line-clamp-1">{top3[2].name || 'Élève'}</h3>
+                                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                                    <span className="text-[10px] font-black bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-orange-500/30">
+                                        {t('ranking.level')} {pLevel}
+                                    </span>
+                                    <div className="flex items-center justify-center gap-1.5 bg-orange-500/10 px-2.5 py-0.5 rounded-full border border-orange-500/20">
+                                        <Star size={11} className="text-orange-600" />
+                                        <span className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase">{top3[2].totalXp.toLocaleString()} XP</span>
                                     </div>
-                                )}
+                                </div>
                             </div>
-                        </div>
-                        <div className="text-center space-y-1">
-                            <h3 className="font-display font-black text-slate-900 dark:text-white line-clamp-1">{top3[2].name || 'Élève'}</h3>
-                            <div className="flex items-center justify-center gap-2 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
-                                <Star size={12} className="text-orange-600" />
-                                <span className="text-[10px] font-black text-orange-600 uppercase">{top3[2].totalXp.toLocaleString()} XP</span>
-                            </div>
-                        </div>
-                        <div className="mt-4 w-full h-16 bg-gradient-to-t from-orange-900/20 to-transparent rounded-t-[2.5rem] border-x border-t border-orange-900/10"></div>
-                    </motion.div>
-                )}
+                            <div className="mt-4 w-full h-16 bg-gradient-to-t from-orange-900/20 to-transparent rounded-t-[2.5rem] border-x border-t border-orange-900/10"></div>
+                        </motion.div>
+                    );
+                })()}
             </div>
 
             {/* League Selection Tabs */}
