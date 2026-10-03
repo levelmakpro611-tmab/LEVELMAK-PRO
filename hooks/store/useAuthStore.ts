@@ -428,6 +428,20 @@ export const useAuthStore = () => {
     const registerWithEmail = useCallback(async (name: string, email: string, password: string, gender: any, ageRange: any, extra?: any) => {
         const newUser = await signUpWithEmail(email, password, name, gender, ageRange, extra?.phoneNumber, extra?.gradeClass);
         if (newUser) {
+            if (extra?.avatarImage) {
+                newUser.avatar = {
+                    ...(newUser.avatar || { baseColor: '#3B82F6', accessory: 'none', aura: 'none', currentLevel: 1 }),
+                    image: extra.avatarImage
+                };
+                if (newUser.id && !newUser.id.includes('anon')) {
+                    supabase.from('profiles')
+                        .update({ avatar_config: newUser.avatar })
+                        .eq('id', newUser.id)
+                        .then(({ error }) => {
+                            if (error) console.error('Failed to sync avatar on register:', error);
+                        });
+                }
+            }
             setUser(newUser);
             safeLocalStorageSet('levelmak_user', JSON.stringify(newUser));
             triggerSync(newUser.id);

@@ -28,20 +28,25 @@ export const AVATAR_LEVELS = [
 ];
 
 export const LEAGUES = [
-  { id: 'bronze', name: 'Ligue Bronze', minXp: 0, color: '#CD7F32', icon: '🥉' },
-  { id: 'silver', name: 'Ligue Argent', minXp: 500, color: '#C0C0C0', icon: '🥈' },
-  { id: 'gold', name: 'Ligue Or', minXp: 1500, color: '#FFD700', icon: '🥇' },
-  { id: 'diamond', name: 'Ligue Diamant', minXp: 4000, color: '#38BDF8', icon: '💎' },
-  { id: 'master', name: 'Ligue Master', minXp: 10000, color: '#EF4444', icon: '🔥' },
+  { id: 'bronze', name: 'Ligue Bronze', minLevel: 1, maxLevel: 5, minXp: 0, color: '#CD7F32', icon: '🥉', badge: '🥉 Bronze', rangeLabel: 'Niv. 1-5' },
+  { id: 'silver', name: 'Ligue Argent', minLevel: 6, maxLevel: 10, minXp: 2500, color: '#C0C0C0', icon: '🥈', badge: '🥈 Argent', rangeLabel: 'Niv. 6-10' },
+  { id: 'gold', name: 'Ligue Or', minLevel: 11, maxLevel: 20, minXp: 5000, color: '#FFD700', icon: '🥇', badge: '🥇 Or', rangeLabel: 'Niv. 11-20' },
+  { id: 'diamond', name: 'Ligue Diamant', minLevel: 21, maxLevel: 50, minXp: 10000, color: '#38BDF8', icon: '💎', badge: '💎 Diamant', rangeLabel: 'Niv. 21-50' },
+  { id: 'master', name: 'Ligue Master', minLevel: 51, maxLevel: 999, minXp: 25000, color: '#EF4444', icon: '👑', badge: '👑 Légende', rangeLabel: 'Niv. 51+' },
 ];
 
-export const getLeagueFromXp = (xp: number) => {
+export const getLeagueFromLevelOrXp = (xpOrLevel: number, isLevel = false) => {
+  const level = isLevel ? xpOrLevel : calculateLevelAndXp(xpOrLevel).level;
   for (let i = LEAGUES.length - 1; i >= 0; i--) {
-    if (xp >= LEAGUES[i].minXp) {
+    if (level >= LEAGUES[i].minLevel) {
       return LEAGUES[i].id;
     }
   }
   return LEAGUES[0].id;
+};
+
+export const getLeagueFromXp = (xp: number) => {
+  return getLeagueFromLevelOrXp(xp, false);
 };
 
 export const SUBJECTS = [

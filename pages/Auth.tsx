@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User as UserIcon, Sparkles, Rocket, Phone, Lock, Eye, EyeOff, ArrowRight, Book, Mail, Fingerprint, X, Shield } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { User as UserIcon, Sparkles, Rocket, Phone, Lock, Eye, EyeOff, ArrowRight, Book, Mail, Fingerprint, X, Shield, Camera, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../hooks/useStore';
 import { PRIVACY_POLICY_SECTIONS, TERMS_OF_SERVICE_SECTIONS } from '../utils/legalTexts';
@@ -9,6 +9,7 @@ import { logUserActivity } from '../services/activityService';
 import { biometricService } from '../services/biometricService';
 import { supabase } from '../services/supabase';
 import { LegalModal } from '../components/LegalModal';
+import { compressImage } from '../utils/imageCompressor';
 
 const getLegalUrl = (anchor: string) => {
   const isNative = window.location.origin.includes('https://localhost') || window.location.origin.startsWith('capacitor://');
@@ -42,6 +43,8 @@ const Auth: React.FC = () => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [isGoogleRecovery, setIsGoogleRecovery] = useState(false);
   const [registerStep, setRegisterStep] = useState<number>(1);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const role = 'student';
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -93,10 +96,48 @@ const Auth: React.FC = () => {
     setShowPolicyDetail(false);
     setBio('');
     setCity('Conakry');
-    setNeighborhood('');
     setSubjects([]);
     setTutorType('professional');
     setSchoolsText('');
+    setAvatarPreview(null);
+  };
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setLocalLoading(true);
+      const compressed = await compressImage(file, 320, 320, 0.85);
+      setAvatarPreview(compressed);
+      setError(null);
+    } catch (err: any) {
+      console.error('Compression photo error:', err);
+      setError("Erreur lors de la préparation de la photo. Veuillez réessayer.");
+    } finally {
+      setLocalLoading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleSkipPhoto = async () => {
+    setError(null);
+    setLocalLoading(true);
+    try {
+      await registerWithEmail(
+        name.trim(),
+        email.trim().toLowerCase(),
+        password,
+        gender,
+        ageRange,
+        { role: 'student', phoneNumber: phone.trim(), gradeClass, avatarImage: undefined }
+      );
+      console.log('Inscription réussie (photo ignorée) !');
+    } catch (err: any) {
+      console.error('Skip photo registration error:', err);
+      setError(err.message || t('auth.errorUnknown'));
+    } finally {
+      setLocalLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,21 +203,30 @@ const Auth: React.FC = () => {
           return;
         }
 
-        if (!password.trim()) throw new Error(t('auth.pwRequired') || 'Le mot de passe est obligatoire.');
-        if (password.length < 6) throw new Error(t('auth.pwShort') || 'Le mot de passe doit contenir au moins 6 caractères.');
-        if (!confirmPassword.trim()) throw new Error('Veuillez confirmer votre mot de passe.');
-        if (password !== confirmPassword) throw new Error('Les mots de passe ne correspondent pas. Veuillez réessayer.');
-        if (!acceptedPolicies) throw new Error(t('auth.acceptRequired') || 'Veuillez accepter les conditions d\'utilisation.');
+        if (registerStep === 2) {
+          if (!password.trim()) throw new Error(t('auth.pwRequired') || 'Le mot de passe est obligatoire.');
+          if (password.length < 6) throw new Error(t('auth.pwShort') || 'Le mot de passe doit contenir au moins 6 caractères.');
+          if (!confirmPassword.trim()) throw new Error('Veuillez confirmer votre mot de passe.');
+          if (password !== confirmPassword) throw new Error('Les mots de passe ne correspondent pas. Veuillez réessayer.');
+          if (!acceptedPolicies) throw new Error(t('auth.acceptRequired') || 'Veuillez accepter les conditions d\'utilisation.');
 
-        await registerWithEmail(
-          name.trim(),
-          email.trim().toLowerCase(),
-          password,
-          gender,
-          ageRange,
-          { role: 'student', phoneNumber: phone.trim(), gradeClass }
-        );
-        console.log('Inscription réussie !');
+          // Étape 3 : Photo de profil optionnelle (Style Facebook)
+          setRegisterStep(3);
+          return;
+        }
+
+        if (registerStep === 3) {
+          await registerWithEmail(
+            name.trim(),
+            email.trim().toLowerCase(),
+            password,
+            gender,
+            ageRange,
+            { role: 'student', phoneNumber: phone.trim(), gradeClass, avatarImage: avatarPreview || undefined }
+          );
+          console.log('Inscription réussie avec photo !');
+          return;
+        }
       } else if (mode === 'login') {
         console.log('Tentative de connexion...');
         if (!email.trim() || !password.trim()) {
@@ -544,7 +594,7 @@ const Auth: React.FC = () => {
                           )}
                         </div>
                       </div>
-                    ) : (
+                    ) : registerStep === 2 ? (
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -690,6 +740,70 @@ const Auth: React.FC = () => {
                           </p>
                         </div>
                       </div>
+                    ) : (
+                      <div className="space-y-6 text-center animate-fade-in py-2">
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500">
+                            Étape 3 sur 3 • Identité visuelle
+                          </span>
+                          <h3 className="text-xl md:text-2xl font-display font-black text-slate-900 dark:text-white">
+                            Ajoute ta photo de profil
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                            Personnalise ton profil de challenger pour briller sur le classement mondial et dans les duels.
+                          </p>
+                        </div>
+
+                        <input
+                          type="file"
+                          ref={avatarInputRef}
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleAvatarFileChange}
+                        />
+
+                        <div className="flex flex-col items-center justify-center pt-2">
+                          <div
+                            onClick={() => avatarInputRef.current?.click()}
+                            className="w-28 h-28 md:w-32 md:h-32 rounded-3xl bg-slate-800 border-2 border-blue-500/40 shadow-2xl overflow-hidden ring-4 ring-blue-500/20 relative group cursor-pointer hover:ring-blue-500/50 transition-all flex items-center justify-center"
+                          >
+                            {avatarPreview ? (
+                              <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center text-white bg-gradient-to-br from-blue-600 to-indigo-800 p-2">
+                                <span className="text-4xl font-black mb-1">{(name || 'U').charAt(0).toUpperCase()}</span>
+                                <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">Photo</span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <Camera size={28} className="text-white drop-shadow-md" />
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-slate-900 group-hover:scale-110 transition-transform">
+                              {avatarPreview ? <Check size={16} /> : <Camera size={15} />}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => avatarInputRef.current?.click()}
+                              className="px-4 py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 border border-blue-500/30 rounded-xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+                            >
+                              <Camera size={14} />
+                              {avatarPreview ? 'Changer de photo' : 'Choisir depuis la galerie'}
+                            </button>
+                            {avatarPreview && (
+                              <button
+                                type="button"
+                                onClick={() => setAvatarPreview(null)}
+                                className="px-3 py-2 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 text-slate-500 hover:text-red-500 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                              >
+                                Retirer
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </motion.div>
                 ) : (
@@ -814,45 +928,86 @@ const Auth: React.FC = () => {
               )}
 
               <div className="space-y-4">
-                <button
-                  type="submit"
-                  disabled={isLoading || (mode === 'register' && registerStep === 2 && !(password.trim().length >= 6 && confirmPassword.trim() === password.trim() && acceptedPolicies))}
-                  className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all relative z-30 shadow-2xl flex items-center justify-center gap-4 ${
-                    isLoading || (mode === 'register' && registerStep === 2 && !(password.trim().length >= 6 && confirmPassword.trim() === password.trim() && acceptedPolicies))
-                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
-                      : mode === 'register'
-                        ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40 hover:scale-[1.02] active:scale-95 cursor-pointer'
-                        : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/40 hover:scale-[1.02] active:scale-95 cursor-pointer'
-                  }`}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Vérification...</span>
-                    </div>
-                  ) : (
-                    <>
-                      {mode === 'register' ? (registerStep === 1 ? <ArrowRight size={20} /> : <Rocket size={20} className="animate-bounce" />) : <ArrowRight size={20} />}
-                      <span>
-                        {mode === 'login'
-                          ? t('auth.accessDashboard')
-                          : registerStep === 1
-                            ? t('auth.continue')
-                            : t('auth.propelKnowledge')
-                        }
-                      </span>
-                    </>
-                  )}
-                </button>
+                {mode === 'register' && registerStep === 3 ? (
+                  <>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all relative z-30 shadow-2xl flex items-center justify-center gap-4 bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40 hover:scale-[1.02] active:scale-95 cursor-pointer"
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Création du compte...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Rocket size={20} className="animate-bounce" />
+                          <span>{avatarPreview ? 'Finaliser avec ma photo' : 'Finaliser mon inscription'}</span>
+                        </>
+                      )}
+                    </button>
 
-                {mode === 'register' && registerStep > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setRegisterStep(prev => (prev - 1) as any)}
-                    className="w-full text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all"
-                  >
-                    {t('auth.backToPrev')}
-                  </button>
+                    <button
+                      type="button"
+                      disabled={isLoading}
+                      onClick={handleSkipPhoto}
+                      className="w-full py-4 rounded-2xl font-bold text-xs uppercase tracking-[0.15em] transition-all border border-slate-300 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5 active:scale-95 cursor-pointer"
+                    >
+                      Ignorer pour l'instant (passer sans photo)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRegisterStep(2)}
+                      className="w-full text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all pt-1 cursor-pointer"
+                    >
+                      {t('auth.backToPrev')}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="submit"
+                      disabled={isLoading || (mode === 'register' && registerStep === 2 && !(password.trim().length >= 6 && confirmPassword.trim() === password.trim() && acceptedPolicies))}
+                      className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all relative z-30 shadow-2xl flex items-center justify-center gap-4 ${
+                        isLoading || (mode === 'register' && registerStep === 2 && !(password.trim().length >= 6 && confirmPassword.trim() === password.trim() && acceptedPolicies))
+                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                          : mode === 'register'
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/40 hover:scale-[1.02] active:scale-95 cursor-pointer'
+                            : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/40 hover:scale-[1.02] active:scale-95 cursor-pointer'
+                      }`}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Vérification...</span>
+                        </div>
+                      ) : (
+                        <>
+                          {mode === 'register' ? (registerStep === 1 ? <ArrowRight size={20} /> : <ArrowRight size={20} />) : <ArrowRight size={20} />}
+                          <span>
+                            {mode === 'login'
+                              ? t('auth.accessDashboard')
+                              : registerStep === 1
+                                ? t('auth.continue')
+                                : 'Étape suivante : Photo de profil'
+                            }
+                          </span>
+                        </>
+                      )}
+                    </button>
+
+                    {mode === 'register' && registerStep > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setRegisterStep(prev => (prev - 1) as any)}
+                        className="w-full text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all cursor-pointer"
+                      >
+                        {t('auth.backToPrev')}
+                      </button>
+                    )}
+                  </>
                 )}
 
                 <div className="relative py-2">

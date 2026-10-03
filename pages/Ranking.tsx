@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Medal, Crown, Star, ArrowUp, Search, User as UserIcon, Zap, Target, Loader2, RefreshCw } from 'lucide-react';
 import { getLeaderboard } from '../services/adminService';
 import { User } from '../types';
 import { useStore } from '../hooks/useStore';
-import { LEAGUES, getLeagueFromXp } from '../constants';
+import { LEAGUES, getLeagueFromXp, calculateLevelAndXp } from '../constants';
 
 const Ranking: React.FC = () => {
     const { user: currentUser, t } = useStore();
@@ -177,29 +176,35 @@ const Ranking: React.FC = () => {
             <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar">
                 <button
                     onClick={() => setSelectedLeague('all')}
-                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${
+                    className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${
                         selectedLeague === 'all' 
                         ? 'bg-primary text-white border-primary shadow-glow' 
-                        : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10'
+                        : 'bg-white/5 text-slate-400 hover:text-white border-white/10 hover:bg-white/10'
                     }`}
                 >
                     Toutes les Ligues
                 </button>
-                {LEAGUES.map(league => (
-                    <button
-                        key={league.id}
-                        onClick={() => setSelectedLeague(league.id)}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border flex items-center gap-2 ${
-                            selectedLeague === league.id 
-                            ? 'bg-slate-900 text-white border-white/20 shadow-xl' 
-                            : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10'
-                        }`}
-                        style={selectedLeague === league.id ? { color: league.color, borderColor: league.color + '44' } : {}}
-                    >
-                        <span>{league.icon}</span>
-                        {league.name}
-                    </button>
-                ))}
+                {LEAGUES.map(league => {
+                    const isSelected = selectedLeague === league.id;
+                    return (
+                        <button
+                            key={league.id}
+                            onClick={() => setSelectedLeague(league.id)}
+                            className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border flex items-center gap-2 ${
+                                isSelected 
+                                ? 'bg-slate-900 text-white shadow-xl ring-2' 
+                                : 'bg-white/5 text-slate-400 hover:text-white border-white/10 hover:bg-white/10'
+                            }`}
+                            style={isSelected ? { color: league.color, borderColor: league.color, '--tw-ring-color': league.color + '44' } as any : {}}
+                        >
+                            <span>{league.icon}</span>
+                            <span>{league.name}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 font-bold text-slate-300">
+                                {league.rangeLabel}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Leaderboard List */}
@@ -221,6 +226,7 @@ const Ranking: React.FC = () => {
                             const rank = leaderboard.findIndex(lp => lp.id === player.id) + 1;
                             const isMe = player.id === currentUser?.id;
                             const pLeague = LEAGUES.find(l => l.id === getLeagueFromXp(player.totalXp)); 
+                            const pLevel = calculateLevelAndXp(player.totalXp || 0).level;
                             return (
                             <motion.div
                                 key={player.id}
@@ -232,7 +238,7 @@ const Ranking: React.FC = () => {
                                 <div className="flex items-center gap-4 md:gap-6">
                                     <div className="w-10 text-center flex flex-col items-center gap-1">
                                         <span className={`text-sm font-black ${rank <= 3 ? 'text-amber-500' : rank <= 10 ? 'text-white' : 'text-slate-500'}`}>
-                                            #{rank}
+                                             #{rank}
                                         </span>
                                         {pLeague && (
                                             <span className="text-xs" title={pLeague.name}>{pLeague.icon}</span>
@@ -263,7 +269,7 @@ const Ranking: React.FC = () => {
                                             {isMe && <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-md uppercase font-black">{t('ranking.me')}</span>}
                                         </h4>
                                         <div className="flex items-center gap-2">
-                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('ranking.level')} {player.avatar?.currentLevel || 1}</p>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('ranking.level')} {pLevel}</p>
                                             <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
                                             <p className="text-[10px] font-black uppercase tracking-tighter" style={{ color: pLeague?.color }}>{pLeague?.name}</p>
                                         </div>

@@ -543,16 +543,12 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-transparent flex flex-col font-sans text-slate-900 dark:text-slate-200 relative z-0 overflow-hidden transition-colors duration-500">
       {/* Global Background Wallpaper/Avatar */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-background transition-all duration-1000">
-        {user?.wallpaper || user?.avatar?.image ? (
+        {user?.wallpaper ? (
           <div className="absolute inset-0">
             <img 
-              src={user.wallpaper || user.avatar?.image} 
+              src={user.wallpaper} 
               alt="Ambient Background" 
-              className={`w-full h-full object-cover transition-opacity duration-1000 ${
-                user.wallpaper 
-                  ? 'opacity-70 dark:opacity-50 blur-[4px] scale-105' 
-                  : 'opacity-75 dark:opacity-55 blur-[6px] scale-105'
-              }`}
+              className="w-full h-full object-cover transition-opacity duration-1000 opacity-70 dark:opacity-50 blur-[4px] scale-105"
             />
             <div className="absolute inset-0 bg-white/20 dark:bg-[#050b18]/40" />
           </div>

@@ -32,6 +32,7 @@ import { PRIVACY_POLICY_SECTIONS, TERMS_OF_SERVICE_SECTIONS } from '../utils/leg
 import { getSupportEmail } from '../services/adminService';
 import { SchoolLevel } from '../types';
 import { LegalModal } from '../components/LegalModal';
+import { compressImage } from '../utils/imageCompressor';
 
 const getLegalUrl = (anchor: string) => {
   const isNative = window.location.origin.includes('https://localhost') || window.location.origin.startsWith('capacitor://');
@@ -51,8 +52,31 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
     const [biometricEnabled, setBiometricEnabled] = useState(false);
     const [legalTab, setLegalTab] = useState<'privacy' | 'terms'>('privacy');
     const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
-
     const [supportEmail, setSupportEmail] = useState('Tmab6544@gmail.com');
+    const avatarInputRef = React.useRef<HTMLInputElement>(null);
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+    const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user) return;
+        try {
+            setIsUploadingPhoto(true);
+            const compressed = await compressImage(file, 320, 320, 0.85);
+            const newAvatar = {
+                ...(user.avatar || { baseColor: '#3B82F6', accessory: 'none', aura: 'none', currentLevel: 1 }),
+                image: compressed
+            };
+            await updateProfile(user.name, user.phoneNumber, { avatar: newAvatar });
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 3000);
+        } catch (err: any) {
+            console.error('Erreur changement photo:', err);
+            setSaveError(err.message || "Erreur lors de l'import de la photo");
+        } finally {
+            setIsUploadingPhoto(false);
+            if (e.target) e.target.value = '';
+        }
+    };
 
     // Sync input fields whenever user object updates or loads
     React.useEffect(() => {
@@ -256,21 +280,51 @@ const Settings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate
                                     <div className="p-6 md:p-8 border-t border-black/5 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/40 space-y-6">
                                             {section.id === 'profile' && (
                                                 <div className="space-y-6">
-                                                    <div className="flex items-center gap-6">
-                                                        <div className="relative group/avatar">
-                                                            <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-slate-800 border-2 border-white/10 shadow-2xl overflow-hidden ring-4 ring-primary/20">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                                                        <div className="relative group/avatar cursor-pointer self-start sm:self-auto" onClick={() => avatarInputRef.current?.click()}>
+                                                            <input
+                                                                type="file"
+                                                                ref={avatarInputRef}
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={handlePhotoSelect}
+                                                            />
+                                                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-slate-800 border-2 border-white/10 shadow-2xl overflow-hidden ring-4 ring-primary/20 relative group-hover/avatar:ring-primary/50 transition-all">
                                                                 {user?.avatar?.image ? (
-                                                                    <img src={user.avatar.image} alt={user.name} className="w-full h-full object-cover" />
+                                                                    <img src={user.avatar.image} alt={user.name} className="w-full h-full object-cover group-hover/avatar:scale-105 transition-transform" />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center text-2xl md:text-3xl font-black text-white bg-gradient-to-br from-slate-700 to-slate-900">
                                                                         {(String(user?.name || 'U')).charAt(0).toUpperCase()}
                                                                     </div>
                                                                 )}
+                                                                {isUploadingPhoto ? (
+                                                                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                                                                        <Loader2 size={24} className="text-white animate-spin" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
+                                                                        <Camera size={24} className="text-white drop-shadow-md" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary text-white rounded-full flex items-center justify-center shadow-lg border-2 border-slate-900 group-hover/avatar:scale-110 transition-transform">
+                                                                <Camera size={13} />
                                                             </div>
                                                         </div>
-                                                        <div>
+                                                        <div className="space-y-2">
                                                             <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white transition-colors">{t('settings.photoTitle')}</h3>
-                                                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">{t('settings.changePhotoDesc')}</p>
+                                                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
+                                                                Clique sur la photo pour importer une image depuis ta galerie.
+                                                            </p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => avatarInputRef.current?.click()}
+                                                                disabled={isUploadingPhoto}
+                                                                className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all active:scale-95"
+                                                            >
+                                                                <Camera size={13} />
+                                                                {isUploadingPhoto ? 'Importation en cours...' : 'Changer ma photo'}
+                                                            </button>
                                                         </div>
                                                     </div>
 

@@ -557,31 +557,12 @@ export const useGamificationStore = (
             if (!hasItem) return prev;
             
             let updated = { ...prev };
-            if (category === 'avatar' && image) {
-                updated = {
-                    ...prev,
-                    avatar: {
-                        ...prev.avatar,
-                        image: image
-                    }
-                };
-                // ✅ FIX Bug 1: Persist avatar to Supabase immediately so the Realtime
-                // listener doesn't overwrite it with the stale DB value.
-                if (prev.id && !prev.id.includes('anon')) {
-                    supabase.from('profiles')
-                        .update({ avatar_config: updated.avatar })
-                        .eq('id', prev.id)
-                        .then(({ error }) => {
-                            if (error) console.error('[equipItem] avatar sync error:', error);
-                            else console.log('[equipItem] avatar persisted to Supabase');
-                        });
-                }
-            } else if (category === 'wallpaper' && image) {
+            if ((category === 'avatar' || category === 'wallpaper') && image) {
+                // Les visuels de la boutique équipent l'arrière-plan (fond d'écran) et ne modifient jamais la photo de profil personnelle
                 updated = {
                     ...prev,
                     wallpaper: image
                 };
-                // ✅ FIX Bug 1: Persist wallpaper to Supabase immediately
                 if (prev.id && !prev.id.includes('anon')) {
                     supabase.from('profiles')
                         .update({ wallpaper: image })
