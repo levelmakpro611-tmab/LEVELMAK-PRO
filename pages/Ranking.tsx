@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, Medal, Crown, Star, ArrowUp, Search, User as UserIcon, Zap, Target, Loader2, RefreshCw } from 'lucide-react';
 import { getLeaderboard } from '../services/adminService';
 import { User } from '../types';
 import { useStore } from '../hooks/useStore';
